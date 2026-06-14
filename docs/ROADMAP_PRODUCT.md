@@ -1,178 +1,208 @@
 ---
 kind: roadmap
-asof: 2026-05-31 — J-8 avant launch (2026-06-07)
-gonogo: GO_WITH_RISKS
-blockers: 1 code · 5 ops (Tim)
-stats: done=97 partial=28 open=48 ops=5
+asof: 2026-06-14 — launch décalé 2026-06-07 → 2026-08-27 (décision Tim 2026-06-13)
+gonogo: NOT_YET — qualité d'abord avant tout nouveau code
+posture: quality-first (verrouiller les garde-fous AVANT les features)
+blockers: P0 code + ops (Tim)
+stats: done=9 partial=0 open=43 ops=7
 ---
 
 # Roadmap Produit — Musaium
 
 > **Source de vérité unique pour le produit.** État **vérifié-code** (on croit le code, pas la doc ni les marqueurs antérieurs).
-> Façade lisible ici ; la **preuve item-par-item** (178 items, path:line, re-vérif adversariale) vit dans [`ROADMAP_AUDIT_TRAIL.md`](ROADMAP_AUDIT_TRAIL.md). Snapshots = `git log -- docs/ROADMAP_*.md`.
+> **Réécrite le 2026-06-14** après la **consolidation 360** (`artifacts/2026-06-14-consolidation-challenge-360.html`) : 21 claims de l'audit `2026-06-09` re-vérifiés par 2 agents fresh-context à hypothèses opposées (54 agents) + 3 deep-dives root-cause + triage des 11 retours terrain du test photo prod (22 agents) + 6 recherches sourcées. Preuve item-par-item : `file:line` ci-dessous (toute ancre re-lue par ≥2 agents, UFR-013).
 >
-> **Vérification 2026-05-31** — workflow `roadmap-launch-readiness-audit` : 11 clusters × sous-agents lisant le code réel, puis **re-vérification adversariale** de chaque blocker (un 2ᵉ agent relit le code sans croire le 1er) + veille web (concurrence / compliance UE / NPS). **178 items : ✅ 97 « done » (= 93 features livré-vérifié + ♻️ 4 stale-claim, bugs déjà corrigés que la doc traînait) · 🟧 28 partiel · 🔴 48 ouvert · 🧑‍🔧 5 ops.** _(Le frontmatter `stats: done=97` agrège les 4 stale-claims dans `done` — `render-artifact.mjs` ne connaît pas la catégorie `stale`. 97+28+48+5 = 178.)_
->
-> **Verdict launch : 🟧 GO avec risques.** Les 21 « blockers » nominaux se réduisent, après re-vérification, à **1 vrai blocker code + 5 actions ops** (ci-dessous ; C10 fermé 2026-05-31, commit `787e2ba9`). Les 14 autres étaient des *stale-claims* — des bugs déjà corrigés que la doc traînait encore (consent gating, museum_id FK, budgets latence, BOLA scope, MFA mobile retirée).
+> **Décalage launch : 2026-06-07 → 2026-08-27** (~11 semaines). Posture **qualité d'abord** : on ne reproduit pas le pattern de l'audit (« vrai-rouge ignoré » / « jamais-validé présumé vert »). On **verrouille les garde-fous et le système anti-mensonge AVANT de produire des features**.
 
-### Posture de risque qualité — gardes désarmés (honnêteté UFR-013)
+---
 
-> Risques acceptés au launch. À lire avant de citer un « garde » CI comme actif.
+## Décisions actées (2026-06-14)
 
-- 🔴 **TD-70 — Mutation testing (Stryker) DÉSARMÉ.** Le job `mutation` est `if: false` (`.github/workflows/ci-cd-backend.yml`, condition de garde du job) et **n'a pas tourné depuis 2026-05-09**. Les seuils kill-ratio (`.stryker-hot-files.json`) ne sont **enforced nulle part en CI**. Conséquence : la **force réelle des tests (kill-rate) est INCONNUE** — seule la **couverture de lignes** est mesurée (`pnpm run test:coverage`, seuils ~88 stmt / 74 br / 86 fn / 89 lines), et la couverture ≠ la qualité d'assertion. **NE PAS citer Stryker comme un garde actif** (ni dans la doc, ni dans un audit, ni dans un PR). Re-armement = **décision coût réservée à l'humain** (le plan « cache-builder offline » de mai n'a jamais landé) — **à flagger explicitement, ne pas re-armer en passant**. Procédure de re-arm conservée en commentaire dans le job `mutation` (basculer `if: false` → conditionnel).
-- ✅ **TD-63 — fail-CLOSED V2 désormais gardé (CORRIGÉ 2026-06-04).** L'invariant de sécurité ADR-047 (sidecar LLM-Guard injoignable → `deny` ; judge budget-exhausted / mal-configuré → `null` fail-OPEN) est validé par un **job CI BLOQUANT** `guardrail-failclosed` (`ci-cd-backend.yml`, sans `continue-on-error`, sans sidecar ni `OPENAI_API_KEY`) qui lance `museum-backend/tests/ai/guardrail-failclosed-deterministic.ai.test.ts` et **gate `deploy-prod`**. Le job `ai-tests` (live OpenAI + sidecar réel, non-déterministe) reste **advisory** (`continue-on-error: true`) — il ne valide PAS l'invariant à lui seul.
+| # | Décision | Choix | Pourquoi |
+|---|---|---|---|
+| D1 | Posture runway 11 sem | **Qualité d'abord** | Code applicatif bon, garde-fous morts → verrouiller d'abord. quality-not-speed. |
+| D2 | Stryker (mutation) | **Ré-armer nightly hot-files** | Garantie kill-ratio sur le chemin critique IA/argent sans coût/flakiness par-PR. Décision UFR-016 datée (ferme TD-70). |
+| D3 | Système anti-mensonge | **Dur** | Hook `Stop` /team bloquant + bans CI + diff-coverage bloquant. « Plus jamais de half-done/TODO/mensonge. » |
+| D4 | Périmètre session 2026-06-14 | **Roadmap uniquement** | Cette session = consolidation + réécriture roadmap + intégration retours terrain + clôture dette. Pas d'exécution code. |
+| D5 | `enforce_admins=false` + 0 review | **Conservé (posture solo-dev correcte)** | Vérifié live. Le défaut n'est PAS l'absence de 2e reviewer mais (a) le manifeste qui ment + (b) l'absence de garde push-sur-rouge → Q13/Q8. |
+| D6 | Arabe V1 | **Fixer les pluriels CLDR (~5 lignes i18next), garder `ar`** | Coût faible, garde la locale. (À reconfirmer ; sinon retirer de V1 → V1.1.) |
 
 ---
 
 ## North Star
 
-**Musaium V1 = compagnon culturel IA voice-first, dedans ET dehors.** Tu photographies une œuvre (en musée) ou un monument/lieu (en ville) → chat AI conversationnel voice-first (STT + TTS Opus) sur ce que tu vois, mêmes capacités in/out musée, + **suggestions de proximité** (« un monument à côté », « un musée pas loin ») sans navigation. Carnet post-visite dans les deux modes.
+**Musaium V1 = compagnon culturel IA voice-first, dedans ET dehors.** Tu photographies une œuvre (musée) ou un monument/lieu (ville) → chat AI conversationnel voice-first (STT + TTS Opus), mêmes capacités in/out musée, + **suggestions de proximité** sans navigation. Carnet post-visite.
 
-**V2 = parcours guidé navigué** (itinéraire GPS multi-POI + audio streaming auto entre points). Sprint sep-nov 2026 si signal KR2 NPS positif. Distinction nette : **V1 = réactif** (tu photographies ce qui est devant toi) · **V2 = proactif navigué** (l'app te guide d'un point à l'autre et narre en route).
+**V2 = parcours guidé navigué** (itinéraire GPS multi-POI + audio streaming auto). Sprint sep-nov 2026 si signal KR2 NPS positif.
 
-**Audience** — B2C freemium (cible V1, soft-paywall stub à valider data-driven). **B2B musée = hypothèse future, 0 musée démarché à ce jour** (les 3 musées Bordeaux = données de démo). Institutionnel = backlog H2.
+**Audience** — B2C freemium (cible V1, soft-paywall **stub** assumé à valider data-driven). B2B musée = hypothèse future, 0 musée démarché (3 musées Bordeaux = démo). Institutionnel = backlog H2.
 
-**OKR Q2** — KR1 pitch B2B démontrable · KR2 NPS post-session ≥7/10 (instrumenté, PR #301) · KR3 crash-free ≥99.5 % + chat p99 <5s · KR4 100 inscrits B2C semaine 1.
-
----
-
-## 🚦 P0 — Launch blockers restants (avant 2026-06-07)
-
-> Tout le reste du P0 historique (sécurité, GDPR, feature-gates, stabilité) est **vérifié livré sur `dev`** — détail § V1 ci-dessous et dans l'audit trail. Voici les **seuls items qui bloquent encore** le launch.
-
-### Code — 0 blocker d'écriture (1 sign-off CI)
-
-- ✅ **C10 — « un autre musée à côté » câblé** — `home.tsx` passe désormais `onChooseAnother={() => router.push('/(stack)/museums-picker')}` : la CTA suggestion-de-proximité (NorthStar V1) route vers le picker existant (reuse, UFR-016). Test d'intégration AC1 (nav picker) + AC2 (pas de session chat), red prouvé avant câblage. Commit `787e2ba9` sur `dev`, **fermé 2026-05-31**.
-- 🟡 **CNIL âge-15 — flow e2e EXISTE + câblé + exécutable en CI (migration runner E41 shippée)** — *Re-audit code 2026-05-31* : la claim « preuve e2e manquante » conflatait trois couches. **(a) Flow source : existe** — `.maestro/auth-register-minor-dob.yaml` (ajouté `70f5ce2f9`, 2026-05-17) tape-through une DOB mineur `01/01/2015` (**format FR `DD/MM/YYYY`**, l.63) → `tapOn auth-submit` → `assertVisible "aged 15 and over|15 ans et plus"` sur `auth-error-state` → `assertNotVisible` home. Le happy-path FR est doublé par `auth-register-happy.yaml:73` (DOB `10/08/1994`). Les deux couvrent la classe de bug DOB-2026-05-17 (bouton désactivé sur `DD/MM/YYYY`). **(b) Câblage CI : existe** — shard `auth` (`shards.json:11,13`), exécuté par `museum-frontend/scripts/maestro-run-shard.sh` (invoqué `ci-cd-mobile.yml:677` côté iOS ; côté Android via le wrapper émulateur `maestro-emulator-script.sh`, `ci-cd-mobile.yml:474`), sentinelle `maestro-shard-manifest.mjs` (`ci-cd-mobile.yml:157`). Backing : BE e2e `registration-consent.e2e.test.ts:79-116` (14 ans → 422) + BE unit `register-dob-required.usecase.test.ts` + FE Jest `auth.test.tsx:160-172`. **(c) Exécution verte : historiquement bloquée, débloquée par la migration E41** — *historique* : `maestro-shard` ne tournait que sur `schedule || workflow_dispatch`, skippé par-PR, sans runner Android HVF, et **chaque nightly mourait au job `quality`** parce qu'il tape `main` (66 commits stale) où le check expo-doctor `appConfigFieldsNotSyncedCheck` n'est pas silencé — le fix `expo.doctor.appConfigFieldsNotSyncedCheck.enabled:false` est **dev-only** (`package.json`, landé #302). **Résolution** (corrigée 2026-05-31 après dispatch réel `26713171207` sur `dev`) : le dispatch a fait passer `quality`+`build`+`prebuild` **verts** (fix expo-doctor confirmé) MAIS a révélé un **2e blocker latent** — le job `maestro-shard` boote le backend sur un PostgreSQL Homebrew natif (`ci-cd-mobile.yml` étape « Install + start native Postgres ») **sans pgvector** → la migration `AddArtworkEmbeddings` (`CREATE EXTENSION vector`) casse → l'API ne boote pas → **les 4 shards meurent au setup** (le flow âge-15 n'a jamais démarré, donc n'est pas infirmé). Ce bug runner affecte AUSSI le nightly → contrairement à ce qui était écrit ici, le nightly ne serait **pas** auto-vert au merge sans ce fix. **Fix appliqué** : compilation pgvector v0.8.0 contre `postgresql@16` (`ci-cd-mobile.yml`) → après re-dispatch `26715287074`, `quality`+`build`+`prebuild`+**Boot backend** verts (pgvector confirmé). **3e blocker (émulateur macOS) — RÉSOLU, migration E41 SHIPPÉE sur cette branche** : l'émulateur Android ne bootait pas sur `macos-latest` (`adb: device 'emulator-5554' not found` → `Timeout waiting for emulator to boot`) car les runners hébergés macOS n'exposent pas Hypervisor Framework. **Le fix a shippé** : `maestro-shard` tourne désormais sur `ubuntu-latest` (`ci-cd-mobile.yml:324`) qui expose `/dev/kvm` (étape « Enable KVM », `ci-cd-mobile.yml:440`) → AVD x86_64 accéléré nativement, APK x86_64 (`arch: x86_64`, `ci-cd-mobile.yml:466`), backend booté par services GHA `pgvector/pgvector:pg16` + redis (`ci-cd-mobile.yml:348`, mirror docker-compose.dev — la migration `AddArtworkEmbeddings` `CREATE EXTENSION vector` passe). Le job tourne **par-PR sur le sous-ensemble `smoke`** + en full nightly/`push:main` (`if:` à `ci-cd-mobile.yml:322` inclut `pull_request` et `push`→`main` ; sélecteur smoke vs 4 shards `ci-cd-mobile.yml:307-310`), avec alerte issue auto-filée/auto-close (`maestro-full-alert`, `ci-cd-mobile.yml:584`). **Plancher réglementaire prouvé vert** indépendamment de Maestro par le BE e2e `registration-consent.e2e.test.ts:79-116` (14 ans → 422 + 0 row `user_consents`, dans la suite backend verte). **MàJ 2026-06-01** : exécution runtime **LOCALE** prouvée verte — `auth-register-minor-dob` (rejet âge-15) + `auth-register-happy` passent sur sim iOS (iPhone 17 / iOS 26.5, Maestro 2.5.1, build Release dev-variant) après remédiation de la cause racine « faux-vert » (build dev-client launcher → Release JS-embarqué ; intercepteurs systémiques bannière-consent + dialogue iOS Save-Password ; sélecteurs texte → testID ; flows sans `launchApp`). Commits `530c1fa2` (suite 0→34/43 + matrice AI backend 44/44) + `cd63ddf4`. **Aucun code applicatif à écrire.**
-
-### Ops — Tim, hors-code (5)
-
-- 🧑‍🔧 **P0.B13** — provisionner l'alias **`security@musaium.com`** (OVH → Gmail). Requis par la clé PGP publiée, le breach-playbook et l'intake VDP/CRA. ~30 min.
-- 🧑‍🔧 **P0.B14** — signer/confirmer le **DPA Langfuse** (`SUBPROCESSORS.md:52` encore « TBD »). Langfuse traite le contenu des prompts → GDPR Art.28 obligatoire avant données réelles en prod.
-- 🧑‍🔧 **P0.B17** — **révoquer la clé Anthropic** encore vivante côté secret-store Tim (code + `.env.example` déjà nettoyés ; rotation out-of-band).
-- 🧑‍🔧 **P0.B19** — renseigner les **contacts réels** du breach-playbook (`docs/incidents/BREACH_PLAYBOOK.md`) + confirmer le **S3 PAB** (`GetPublicAccessBlock`, pas de Terraform → vérif console/sentinel).
-- 🧑‍🔧 **P1-FA15 / I-OPS5** — **Plausible : décision 2026-06-13 = laissé MUET au build** (funnel KR4 no-op, **non bloquant** au boot — warn-only). ⚠️ **À ACTIVER avant le launch 2026-08-27** : créer le site Plausible `musaium.com` → poser `PLAUSIBLE_DOMAIN` (+ `PLAUSIBLE_ENDPOINT_URL`) côté BE et `EXPO_PUBLIC_PLAUSIBLE_DOMAIN` côté mobile. + **1 restore-drill** confirmant que le backup DB atterrit dans `backups/daily/`.
-
-### ⚖️ Décision à trancher avant launch (pas un blocker)
-
-- ✅ **/chat/compare (image-similarity C3)** — **RÉSOLU 2026-06-14** (décision = posséder le modèle). Le SigLIP ONNX est figé dans une image de base GHCR mono-couche (`museum-backend-base:siglip-v1`) et copié en prod via `COPY --from` (`deploy/Dockerfile.prod`) — plus de bucket GCS à provisionner, plus de 503 « cold ». `EMBEDDINGS_PROVIDER=siglip-onnx` self-hosté par défaut ; `replicate` reste un fallback optionnel. Recette reproductible : `deploy/model-base/README.md`.
+**OKR Q3** — KR1 pitch B2B démontrable · KR2 NPS post-session ≥7/10 · KR3 crash-free ≥99.5 % + chat p99 <5s · KR4 100 inscrits B2C semaine 1.
 
 ---
 
-## ✅ V1 — Livré & vérifié-code (sur `dev`)
+## Le flow de production V1 (doctrine — comment on exécute cette roadmap)
 
-> Une ligne par cluster — chaque ✅ = vérifié contre le code cette session. Détail item-par-item + path:line dans [`ROADMAP_AUDIT_TRAIL.md`](ROADMAP_AUDIT_TRAIL.md).
+> Chaque item P0/P1 non-trivial passe par ce flow. **Fresh agent par tâche, preuve `file:line` ou exécution réelle, zéro guess.** Orchestré via `/team` (UFR-022) OU un `Workflow` multi-agents.
 
-- ✅ **Sécurité & PII (P0.A — 9/9)** — email domain-only (`extractEmailDomain.ts`), DOB hard-gate 400, Sentry scrub URL **+ event.tags** (`packages/musaium-shared/src/observability/sentry-scrubber.ts:37-54`, 16 clés `SENSITIVE_QUERY_KEYS` ; le `museum-backend/src/shared/observability/sentry-scrubber.ts` n'est qu'un re-export de 29 l.), Langfuse `mask` câblé, cost+latency circuit breakers enforced sur les 2 paths (`langchain.orchestrator.ts:162-177,556-559`).
-- ✅ **Sécurité round 2 (P0.I-SEC — 10/12)** — Redis `maxmemory`, coût vision par-image, `POST /art-keywords` gaté rôle+rate-limit, `EXPORT_PSEUDONYM_SALT` ≥32 prod, TOTP replay + access-token denylist, **KE scopé `museum_id`** (#300, cross-tenant bleed clos), deps `ws`/`brace-expansion` pinnées. *(résiduels mineurs : I-SEC4 api-key role, I-SEC6 login-key email → V1.0.x.)*
-- ✅ **GDPR & anonymisation (P0.B — 12/19 code)** — cleanup audio TTS à la suppression compte, unsubscribe Brevo, **DSAR Art.15 complet** (UserMemory/AuditLog/feedback/reports/social/api_keys + artwork_matches), consent BE enforced au call-site LLM, purge S3 orphelins câblée, consent namespace per-user, **bypass raw-coords GDPR Art.7 clos** (#305). *(le reste = ops B13/B14/B17/B19.)*
-- ✅ **Feature-gates (P0.C — 6/10)** — mapping licence URI→slug Wikidata, **`reviews.museum_id` FK** (migration mergée), télémétrie Plausible câblée FE+BE (consent-gated), `museum_manager` dans l'AdminShell. *(C8 stats museum_id = no-op documenté, C1 SigLIP → décision ci-dessus.)*
-- ✅ **Stabilité (P0.I-OPS — corrigé)** — alertes API 5xx/up==0 **présentes** (`api-health.yml`), budgets latence cohérents (`env.ts:163-165`), **index ops** créés (#300 `AddOpsStabilityIndexes`). *(I-OPS3 double-run migration, I-OPS6 pgvector gate, I-OPS8 CI gates → V1.0.x.)*
-- ✅ **a11y / compliance / correctness (P0.I-CMP/I-FIX — 5/9)** — **AI Act Art.50** badge disclosure contraste AA (#298), **40 clés consent i18n 8 locales**, invalidation cache LLM corrigée, clé cache cross-artwork. *(I-CMP3/I-CMP5 résiduels a11y → V1.0.x.)*
-- ✅ **Honnêteté / dead-code (P0.D — 4/5)** — burial SSE FE (−434 LOC), stryker cache dé-tracké (−18,5 MB), Llama-Prompt-Guard supprimé (ADR-051), 3 `describe.skip` retirés.
-- ✅ **Findings critiques (FA — 6)** — bulle assistant vide texte-seul corrigée (FA1, `406fe9b82`), **KR2 NPS livré** (FA4, widget 0-10 + `aggregateNps` + dashboard), **`museum_manager` BOLA fermé** (FA6, scope par tenant + co-branding mobile), MFA mobile **entièrement retirée** (FA2, web-admin-only), DSAR artwork_matches (FA12).
-- ✅ **Plateforme produit (P0.F — 19/21)** — cache LLM v2 + Prom + Grafana, enrichment image fan-out, **SigLIP ONNX + pgvector halfvec(768) HNSW**, KnowledgeRouter cascade KB→judge→WS, **halluc-eval CI gaté** (97-corpus, `ci-cd-backend.yml:658`), paywall stub + quota + tier, **audio-description WCAG** + AI Act badge + i18n 8/8, refonte chat UX (composer/hero/bubble/carnet/QR), géofence hybrid, RBAC + moderation + CSV, landing + B2B page, **distributed tracing FE↔BE**, guardrail fairness dashboard, TTS Opus + voice preference.
+**Les 4 temps (fresh-context, mappés aux phases UFR-022) :**
+1. **Cadrage** (`architect` + `test-analyst` fresh) — user stories + feature rules + testing rules + **tous les invariants + tous les use-cases** (volume exhaustif, mode « comment ça casse »). Output : `spec.md` + `test-contract.md` (matrice UC adversariale, Tier ADR-012). Gate A.
+2. **Tests** (`editor` fresh) — UN test qui FAIL par UC, basé sur les **factories partagées** (une factory est **modulable, pas figée** : on la fait grossir quand l'app grossit, mais elle DOIT laisser les autres tests verts ; si un test pré-existant devient rouge → **escalade**, on ne « corrige » pas le test). Output : tests + `red-test-manifest.json` UC-keyé. Gate B.
+3. **Green** (`editor` fresh, zéro mémoire phase red) — code qui rend les tests verts. **Tests gelés byte-for-byte** (hook). Test suspecté faux → `BLOCK-TEST-WRONG` sans toucher → re-fresh phase red. Gates C/D (tier + incident-regression).
+4. **Review + doc** (`reviewer` + `documenter` fresh) — verdict APPROVED/CHANGES/BLOCK, remonte les erreurs de code, met à jour la doc. **On reboucle à l'étape 1** depuis ses retours. Reviewer rejection loop **illimité**.
 
----
-
-## 🔧 V1.0.x — Hotfix window (2026-06-07 → 06-21)
-
-> Shipped-mais-gap-mineur OU ouvert-non-bloquant. À traiter dans la fenêtre hotfix post-launch.
-
-- 🟧 **C8 — stats multi-tenant museum_id** : RBAC/BOLA fermé, mais `WHERE museum_id` sur users/sessions/messages = no-op (colonnes absentes). Axe analytics par-musée inerte tant que non câblé.
-- 🟧 **I-CMP3 / I-CMP5 — résiduels a11y** : bulle UTILISATEUR masque son texte (`ChatMessageBubble.tsx:237-238`), live-region non-conditionnelle (`StreamingBody.tsx:54`), 4 refs `support@musaium.app` mortes (`accessibility-content.ts`).
-- 🔴 **SEC-PRIVILEGE-ESCALATION** : route `PATCH /users/:id/role` **est** gardée `requireRole('admin')` (pas d'escalade cross-tier), mais `changeUserRole.useCase.ts:19-57` laisse un admin promouvoir `super_admin` sans check de rang acteur↔cible. Ajouter un rank-guard.
-- 🔴 **I-OPS1 — Sentry release/dist** : `sentry-init.ts:35-47` sans `release`/`dist` → les crashes remontent mais symbolication/attribution-build dégradées. Ajouter via plugin EAS Sentry.
-- 🔴 **I-OPS3 / I-OPS6 / I-OPS8** : migrations 2× par deploy (idempotent mais à rendre single-path), pgvector ≥0.7.0 jamais gaté en code, CI gates partiellement théâtre (`ai-tests` jamais en PR, Expo Doctor `continue-on-error`).
-- 🟧 **I-OPS5 — backup shared-fate** : backup DB OK mais **dans le même bucket que les médias** + volume `uploads` non-backupé. 2ᵉ bucket off-site.
-- 🟧 **P1-FA7 / P1-FA9 / P1-FA13** : logger `req.originalUrl` non-scrubbé (`error.middleware.ts:97`), recovery cost-breaker wipe `dailySpend` (`three-state-circuit.ts`), compte smoke seedé prod (guardé env, à supprimer post-deploy).
-- 🔴 **Finitions feature** : `C3.5 useCompareImage` hook orphelin (FE ne peuple jamais `compareResults`), `audioDescriptionMode` write FE→BE zéro call-site (sync cross-device cassé), Accept-Language `fr-FR` strict-equals (`chat-compare.route.ts:77-82`), `reviews.userName` ghost field.
-- 🟡 **Maestro UFR-021** — *MàJ 2026-06-01* : suite désormais **exécutable + verte localement** (34/43 sur sim iOS Release, vrai round-trip LLM prouvé ; `audio-recording-flow.yaml` réparé — n'est plus « cassé »). Restants = bloqués **env/archi, pas des bugs app** : `audio-recording-flow` (hook fixture audio `MAESTRO_AUDIO_FIXTURE` non implémenté dans `features/chat`), `modal-museum-offline-pack` + `modal-paywall-quota-upsell` (routes `(dev)` gated `__DEV__` → redirigent en build Release), 3× `magic-link-*` (tokens one-time à seeder), `museum-picker`/`chat-compare` (geo location / `simctl addmedia` local). **CI : migration runner E41 shippée** — `maestro-shard` sur `ubuntu-latest` + KVM (`ci-cd-mobile.yml:324,440`), smoke per-PR + full nightly/`push:main` (`ci-cd-mobile.yml:322`), APK x86_64 (`ci-cd-mobile.yml:466`), services pgvector+redis (`ci-cd-mobile.yml:348`), alerte issue auto (`maestro-full-alert`, `ci-cd-mobile.yml:584`). Couverture comportement IA verrouillée séparément côté backend (matrice `tests/ai` 44/44, vrai LLM).
-- 🧑‍🔧 **C7.5 / C8.x** — smoke device TTS iPhone réel (Tim), CNIL dry-run, CERT-FR 1Password, calendrier renouvellement PGP 2027.
+**Règles « les agents restent shift-left » :**
+- **Convergence** : toute solution/feature/idée est validée par **2-3 agents qui convergent** ; s'ils divergent, on **reboucle** jusqu'à la bonne solution. Vérification = 2 agents fresh à hypothèses opposées.
+- **Shift-left** : le défaut se fait attraper **le plus tôt possible** (lint < sentinelle < test < CI), jamais reporté « à la review » ou « post-launch ».
+- **Lib-docs obligatoire** : tout agent qui touche/relit du code consulte `lib-docs/<lib>/PATTERNS.md` + `LESSONS.md` (refresh >14j via doc-cache).
+- **Résilience** : un agent qui tombe (relogin / session-limit / throttle / socket closed) → **relancer le workflow** (complet, ou `resumeFromRunId` qui rejoue le préfixe caché).
+- **Anti-raccourci** : « inline pour efficacité tokens », « j'ai utilisé mon training », « le test était faux je l'ai corrigé », « cap 2 boucles atteint » (au reviewer) = **REJET immédiat**. L'objectif est la qualité, pas la vitesse.
 
 ---
 
-## 🔭 V1.1 — Q3 2026 (juin-août) — chat backend modernization + B2B polish + V2 prep
+## Système anti-mensonge / anti-half-done (D3 = DUR)
 
-- ⬜ **W5.1** — décision WebRTC Realtime 4 sem post-launch (reco veille : **skip**, ~5× coût + ré-arch guardrail).
-- ⬜ **W6.2** — localiser system prompt FR/JA/ZH/AR (actuellement EN + `Respond in ${language}`).
-- ⬜ **W6.3** — tsvector + RRF hybrid search sur `artwork_embeddings` (recall@10 78 %→91 %).
-- ⬜ **W6.4** — provider Anthropic + prompt-caching middleware (−90 % coût préfixe cached).
-- ⬜ **W6.5** — refactor dossiers chat 44→33-35 (`git mv` + sed, ~3j).
-- ⬜ **W6.11 / W6.12** — `LLM_CACHE_ENABLED` kill-switch + propagation `outcome=cache_hit` + panels ratio cache.
-- ⬜ **W7.1** — multi-persona voice (Curator / Friend / Kid) — veille confirme l'UX persona (Herodot). Piggyback `guideLevel`.
-- ⬜ **W7.2** — WelcomeCard dynamique (`useDynamicSuggestions` : GPS + last artwork + heure) — dette doctrine hybrid-product.
-- ⬜ **W7.3** — nudge idle mid-conversation (silence >30s).
-- ⬜ **B2B polish** — multi-tenant scoping toutes routes admin, NPS true 0-10 per museum, hard-delete admin Art.17, OpenAPI `/leads/*`, rate-limit Brevo per-pod, i18n pages admin B2B.
-- ⬜ **Sécu hardening** — `event.tags` via `scrubEvent`, HMAC IP at-write, zero-width strip user-path, homoglyph fold, QR replay cross-museum fix, audit chain ADR-054 Phase 1+2, privilege-escalation rank-guard.
-- ⬜ **Premium full** — Stripe + receipts iOS/Android, conditionné aux données du soft-paywall stub.
+> Principe directeur : **chaque mensonge attrapé devient une sentinelle qui le rend structurellement impossible à reproduire.** C'est la réponse à « transformer tous les mensonges de l'audit en résolutions permanentes ». Détail exécutable = lane **Q**.
 
----
+**Les 6 couches (greffées sur l'existant, miroitées `sentinel-mirror.yml` anti-bypass UFR-020) :**
+1. `eslint-plugin-no-only-tests` — bannit `.only`/`fdescribe`/`fit` (vert trompeur = 1 test au lieu de N).
+2. Règle maison `musaium-test-discipline/no-skipped-or-empty-tests` — bannit `describe.skip`/`it.skip`/`xit`/`test.todo` non-baseline + tests vides.
+3. `no-warning-comments` — bannit `TODO`/`FIXME`/`HACK` (half-done).
+4. `no-empty` (catch vide) + anti-placeholder (`PLACEHOLDER`/`DO_NOT_SHIP`/`lorem`).
+5. **diff-coverage bloquant** (lignes changées, `diff_cover`) en CI.
+6. **Hook `Stop` /team bloquant** : impossible de finir une session avec un diff applicatif sans verdicts de gates A-D dans `state.json` + `red-test-manifest.json` UC-keyé (convertit les gates « prose » en blocage dur).
 
-## 🚶 V2 — Walk hors-musée (sprint sep-nov 2026)
+**Une sentinelle par classe de mensonge** (lane Q8) :
 
-> **Démarrage conditionné** : fin Phase 1 + signal KR2 NPS ≥7/10 sur 50 sessions. Code-vérifié absent aujourd'hui (`features/walk/` n'existe pas, 0 migration POI, MapLibre = markers only, TTS 100 % sync).
-
-- ⬜ **`features/walk/`** — ~700 LOC FE (state machine, screens, GPS-arrival, audio queue).
-- ⬜ **Migrations** — `museum_pois`, `walk_routes`, `walk_progress`, `tour_step_audio_cache`.
-- ⬜ **BE module `walk`** — directions adapter (OSRM self-host) + circuit breaker + audio sidecar.
-- ⬜ **TTS streaming** — port renvoie `Readable` (chunked) au lieu de `Buffer`. *(reco veille : reste V1.1/V2, pas un table-stake V1 pour l'UX photo-puis-discute async.)*
-- ⬜ **MapLibre polyline** — `<LineLayer>` + `<ShapeSource>` GeoJSON, glyphs self-hosted.
-- ⬜ **Pause-resume VoiceMap-style** + background GPS (`expo-task-manager`, re-review App Store) + 5 ADRs.
-- ⬜ **Contenu démo** — ~5 tours × 5-8 POI Bordeaux + scripts audio FR/EN.
+| Classe de mensonge (constatée dans l'audit) | Sentinelle qui la tue |
+|---|---|
+| Test qui se saute (IDOR) | `no-skipped-or-empty-tests` + « aucune suite `tests/integration` ne s'auto-skip » |
+| Gate déclaré actif mais mort (Stryker, frozen-gates, alerting) | `stryker-job-honesty` + hook `Stop` + `prometheus-scrape-auth↔gating` |
+| Doc qui ment (manifeste, TECH_DEBT, vitrines, CLAUDE.md) | `branch-protection-manifest-parity` + `tech-debt-closure-check` + `privacy-content↔code` + `doc-inventory-policy` |
+| Binaire ≠ config déclarée (iOS/Android) | `ios-native-snapshot-parity` + `android-blocked-permissions` post-prebuild |
+| Sortie générée hand-editée (design-system) | `tokens-build-fresh` (rebuild + `git diff --exit-code`) |
+| Half-done / TODO / placeholder | `no-warning-comments` + anti-placeholder + diff-coverage |
+| Fix vert sur main mais absent du binaire shippé | `ship-time-build-freshness` (build HEAD descendant du dernier commit app/features/shared) |
 
 ---
 
-## 🌙 LATER — Q4 2026+ / Moonshots
+## 🚦 P0 — Avant launch (2026-08-27) · qualité d'abord
 
-- ⬜ **Infra VPS** — F1 disque dédié docker, F2 photos S3/B2, F4 split multi-tenant, F5 resource limits, F6 disk SLO. *(F3 backups off-VPS = ✅ shippé 2026-04-26.)*
-- ⬜ **M1 B2B-ready** — curator-overrideable LLM, dashboard analytics musée, white-label/co-branding, AR pilot, LSF/BSL overlay, voice-pack artistes domaine public.
-- ⬜ **M2 RAG modernization** — Anthropic Contextual Retrieval, GraphRAG, Jina-CLIP-v2 multilingue, realtime-mini walk-mode (triggers mesurés).
-- ⬜ **M3 moonshots 2027+** — 3DGS scan œuvres, co-présence multi-visiteurs « shared walk », re-mix génératif (whitepaper droit d'auteur), affective computing (⚠️ AI Act Art.5), haptic Apple Watch, voice mood prosody, cross-museum visit graph.
-- ⬜ **Social / offline** — réseau museum-explorer, offline pack musée, LLM cache cross-user warm, i18n web admin complète.
+> Ordre d'attaque : **Q (système qualité) en premier** (tout le reste est exécuté SOUS sa protection), puis les P0 bugs/réglementaire/garde-fous. Chaque item : preuve `file:line` · correctif **durable** (sentinelle/hook, pas rustine) · **test credentialé** qui le verrouille · source.
+
+### Lane Q — Système qualité & anti-dette (protège tout le reste)
+
+- [ ] **Q1 — Anti-lie ESLint L1-L4** : `no-only-tests` + `no-skipped-or-empty-tests` (maison) + `no-warning-comments` (TODO/FIXME) + `no-empty`/anti-placeholder, sur les 3 `eslint.config.mjs`, miroir `sentinel-mirror.yml`. _Source R3. La règle maison s'ajoute à `eslint-plugin-musaium-test-discipline` (existe déjà). Test : self-test plugin + baseline shrink-only._
+- [ ] **Q2 — diff-coverage bloquant** : `diff_cover` sur les lignes changées en CI (seuil de départ 80 %, ratchetable). _Source R3._
+- [ ] **Q3 — Frozen-gate enforcé (hook `Stop`)** : enregistrer un hook `Stop` dans `.claude/settings.json` qui BLOQUE la fin de session si diff applicatif (`museum-backend/src`, `museum-frontend/{app,features,shared,components}`, `museum-web/src`, `tests/`) sans verdicts gates A-D dans `team-state/$RUN_ID/state.json` + `red-test-manifest.json` UC-keyé. _Source deep-dive FROZEN_GATES : les gates A-D (`daa403ea`) sont de la prose `SKILL.md:293/336/459/462`, jamais enregistrées ; seul `post-edit-green-test-freeze.sh` l'est (`settings.json:47`) ; les runs `team-reports/working/` contournent `team-state/$RUN_ID/`. Test : un run /team canonique end-to-end qui prouve les 4 exit codes dans `state.json`._
+- [ ] **Q4 — IDOR/intégration un-skip** : dual-gate `RUN_E2E || RUN_INTEGRATION` sur les 5 suites `tests/integration/*` gardées `RUN_E2E` + sentinelle « aucune suite `tests/integration` ne s'auto-skip en CI ». _Source C11 : `idor-matrix.test.ts:20-21` ; prouvé runtime `RUN_INTEGRATION=true … → 9 skipped`. Template correct : `me-tts-voice.integration.test.ts:16`. Test : la matrice IDOR (9 assertions) DOIT exécuter dans le job integration._
+- [ ] **Q5 — Hygiène doc (delete-or-sentinelize, hybride)** : `scripts/sentinels/doc-inventory-policy.mjs` — tout `*.md` doit être curé dans `doc-last-verified.json` OU match un archive-glob OU supprimé ; baseline **shrink-only**. _Source R2/C2 ; étend `doc-last-verified.mjs` (3 couches, pre-push Gate 25). Couvre les ~45 docs qui mentent sous 30j._
+- [ ] **Q6 — Refonte mémoire agent** : reconstruire `MEMORY.md` (entrées ≤200 c, **zéro état git** dans l'index, détail → topic files), corriger l'entrée protection-branche (live = `enforce_admins=false`/0 review/11 checks), + sentinelle taille/format (échoue si >limite ou entrée >200c). _Source C5/F : 25 763 o → tronqué milieu ligne 97, 62/73 entrées >200c. Cure esquissée `03-memory.md`._
+- [ ] **Q7 — Design-system SSOT** : câbler les component-tokens dans `design-system/build.ts` (`buttonTokens`/`emptyStateTokens`/`errorStateTokens`) + réconcilier la dérive bidirectionnelle (RN composants en avance, CSS web en retard) + sentinelle `tokens-build-fresh.mjs` (rebuild `build:tokens` + `git diff --exit-code` sur les 8 sorties) + corriger la commande CLAUDE.md + en-têtes « DO NOT EDIT ». _Source F-LIBS-02/C16/R4 ; `build.ts:15-19` n'émet jamais les component tokens, `tokens.generated.ts` hand-edité. Test : la sentinelle échoue si une sortie générée diverge de la source._
+- [ ] **Q8 — Sentinelles anti-mensonge (1 par classe)** : `branch-protection-manifest-parity` · `tech-debt-closure-check` · `privacy-content↔code` · `ios-native-snapshot-parity` · `android-blocked-permissions` · `no-embedded-blob-in-docs` · `env-var-parity` · `stryker-job-honesty` · `prometheus-scrape-auth↔gating` · `ship-time-build-freshness`. _Toutes miroitées server-side. Détail = tableau « classe de mensonge »._
+- [ ] **Q9 — Gouvernance archi (complexité, pas taille brute)** : étendre le pattern ESLint backend (`max-lines` 400/600 par couche + `sonarjs/cognitive-complexity` 15/20) à **FE + web** (zéro règle aujourd'hui) via les **bulk-suppressions** natives ESLint v9.24+ (grandfather) ; + `eslint-plugin-boundaries` FE (modèle BE) + sentinelle de cycles features FE. _Source C18/R1 : 400 lignes brut = instrument grossier (FE 7 fichiers >400, BE 24) ; FE = 44 imports inter-features, 5 cycles, 0 garde, chat = god-feature 122 fichiers. **Pas de cap de lignes brut** : cognitive-complexity primaire._
+- [ ] **Q10 — Stryker ré-armé nightly hot-files (D2)** : basculer le job `mutation` `if:false` → cron nightly scopé `.stryker-hot-files.json` (8 fichiers banking-grade) ; décision UFR-016 datée (ferme TD-70) ; sentinelle `stryker-job-honesty` ; retirer le caller défangé `pre-commit-gate.sh:70,73`. _Source C12 (`ci-cd-backend.yml:414`)._
+- [ ] **Q11 — Réparer la chaîne d'alerting + alerte deploy/santé (F-GAP2-06)** : (a) port métriques **interne** privé Docker (scrape sans JWT, `/metrics` public reste super-admin) + sentinelle `prometheus-scrape-auth↔gating` ; (b) **notifications deploy** Telegram succès+échec (`appleboy/telegram-action`) dans `ci-cd-backend.yml`/`web`/`mobile` ; (c) healthcheck cron (`healthchecks.io`) ; (d) `DASHBOARD_BASE_URL` au lieu de `{{ .ExternalURL }}` mort. _Source C1/C2/R5 : `/metrics` super-admin (`app.ts:336-337`) vs scrape sans cred (`prometheus.yml:24-44`) → 29/35 NoData. « Tu n'as jamais reçu d'alerte » = (b) inexistant. Test : smoke compose asserte `up{job=musaium-backend}==1`._
+
+### Lane B — Bugs user (ton test photo prod) — P0
+
+- [ ] **B1 — [P0] Échec photo en prod = 403 stockage objet + upload fatal** : (1) rendre l'upload image chat **NON-FATAL** (le LLM répond depuis le buffer base64) — wrap `imageStorage.save` (`image-processing.service.ts:106-116`) en try/catch, continuer avec `imageRef=''` (persistance dégradée), comme le fix `/chat/compare` ; (2) **réparer le 403 OVH/S3** (« AWS authentication requires a valid Date or x-amz-date header », `s3-operations.ts:105-107`, partie infra OPS-1). _Source triage T5 (conf medium ; root-cause réfuté = PAS « body already read » ; 403 ~195ms avant l'appel LLM ; commit diag `71b176bd` 06-14). Test : integration `imageStorage.save()` qui throw 403 → `postMessage` répond 201 dégradé, jamais 5xx._
+- [ ] **B2 — [P1] Photo dupliquée ×4 au retry** : stamper une `Idempotency-Key` stable (`clientMessageId`) sur le chemin **live** (pas seulement offline-flush) via `buildOptimisticMessage` → `sendMessageStreaming` → `postMessage` ; `retryMessage` réutilise la MÊME clé (pas de `Date.now()` neuf) + garde re-entrance. _Source triage T4 : cause dominante = auto-retry axios (`httpClient.ts:335-367`, maxRetries=2, timeout 15s) qui renvoie SANS clé sur 4G lente → 2-3 messages serveur. `idempotencyMiddleware` backend existe. Test : timeout 4G simulé + retry → 1 seul message serveur._
+- [ ] **B3 — [P1] `image-url` → 400** : ajouter l'id user persisté à `PostMessageResponse` (`chat.contracts.ts:81-110`) + re-keyer l'id optimiste user (`${Date.now()}-user`) vers l'UUID serveur (miroir du re-key assistant `sendMessageStreaming.ts:138-159`). _Source triage T6 : `isUuid(messageId)` rejette l'id optimiste avant DB (`session-access.ts:74-76`) → 400 9ms. Test : e2e credentialé envoie image → tape la fiche/carnet → `image-url` 200._
+- [ ] **B4 — [P1] Image trop grande dans le chat** : capper/halver la taille de la bulle image. _Source triage T4._
+- [ ] **B5 — [P1] Quota double-surface + modale off-brand** : 402 `QUOTA_EXCEEDED` = la **modale seule** (kind dédié `QuotaExceeded`, pas de bannière `error.validation`) + thémer `QuotaUpsellModal` avec les design tokens (retirer la palette hardcodée `:249-261`). _Source triage T1 : `httpClient.ts:291-311` ouvre la modale ET fall-through → `authCodeMessage` sans cas `QUOTA_EXCEEDED` → bannière khaki « Veuillez vérifier votre saisie ». Test : un vrai 402 createSession → SEULE la modale, pas de `error-notice`._
+- [ ] **B7 — [P1] Badge confiance « Faible — IA seule » trompeur** : enterrer (UFR-016) le sous-système citation-chips/confiance (`CitationChip`, `CitationChips`, `citations.ts` confiance, `citation-telemetry.ts`) — vérifier 0 importeur restant. _Source triage T3 : confiance = heuristique FE sur `metadata.sources` ; backend prune les sources non-validées → réponse photo générale = sources vides → pill rouge « low » par défaut. « Juger les connaissances de l'IA » = hors-mission. Test : asserter l'ABSENCE du badge sur une bulle assistant._
+- [ ] **B9 — [P1] Messages d'erreur EN + génériques (i18n)** : (1) cas `Unknown` explicite dans `getErrorMessage` → `t('error.unknown')` (FR existe `:694` mais jamais atteint) ; traiter les messages du mapper comme des **codes**, pas du copy ; (2) i18n « Guided mode »/« Standard mode » (`dashboard-session.ts:43`) + retirer le tag `en-US` brut ; (3) corriger le désync locale-session (défaut `fr`). _Source triage T11 : `httpErrorMapper.ts:218-224` met « Unexpected server error », `errors.ts:237-238` `error.message ||` fait gagner l'anglais. Test : `getErrorMessage(AppError{kind:Unknown})` avec fn FR → string FR._
+- [ ] **B10 — [P1] Réparation réseau pas dans le binaire prod (deploy-lag)** : couper + shipper un nouveau build mobile depuis `main` (contient `60b6bcdc`) → corrige le bandeau « data économe » en 4G + le faux « hors ligne » ; + gate `ship-time-build-freshness`. _Source triage T10B : build `1.3.0+93` coupé 06-07 PREDATE la réparation 06-12 (`git merge-base --is-ancestor` exit 1) → tourne l'ancien `if(isConnectionExpensive) return 'low'`. (Cf Q8/Q11.)_
+- [ ] **B12 — [P1] FaceID renvoie au login** : `BiometricGate` conscient de l'échec — brancher sur `refresh.kind` (success→home, transient→home offline, invalid→bannière « session expirée » i18n) au lieu de `unlockBiometric()` inconditionnel. _Source deep-dive FACEID : `BiometricGate.tsx:72-86` + `AuthContext.tsx:267-282` ; le test `BiometricGate.test.tsx:272-285` canonise le bug. Test : flow Maestro credentialé qui déverrouille Face-ID → atterrit sur home (vrai backend)._
+- [ ] **B13 — [P1] Recherche musée / « View details » vide** : préserver l'`id` réel + la `description` dans `mapSearchEntryToMuseumWithDistance` (`useMuseumDirectory.ts:55-69`, garder l'id négatif synthétique uniquement pour les rows OSM sans id). _Source deep-dive MUSEUM_SEARCH : le mapper force `id:-(index+1)` + `description:null` → `museum-detail.tsx:50-53` voit id négatif → enrichissement désactivé + description vide. Le backend porte bien les données (DB locale + OSM Overpass + Nominatim — découverte NON limitée aux seeds). Test : e2e credentialé login→recherche→tap→fiche PEUPLÉE (couvre « Pointe-à-Callière »)._
+
+### Lane R — Réglementaire / sécurité — P0
+
+- [ ] **R1 — [P0] `/chat/describe` bypass guardrails + scrub PII** : décorateur `GuardedChatOrchestrator` UNE fois au composition root (`chat-module.ts:725`) injecté dans `buildChatService` ET `DescribeService` → « single source of truth » par construction. _Source C7 : `describe.service.ts:46` appelle `orchestrator.generate()` nu. Test : POST `/chat/describe` avec injection → bloqué comme le chemin chat._
+- [ ] **R2 — [P0] Consent IA `profile` non-enforced (RGPD Art.7)** : gater le fetch mémoire **fail-CLOSED** sur le scope `profile` (`enrichment-fetcher.ts:78-84` / `user-memory.service.ts:131`) + canal `profile` dans `provider-resolver.ts`. _Source C13 : le bloc mémoire part au LLM quel que soit le consentement. Test : consent profile=false → 0 bloc mémoire au prompt._
+- [ ] **R3 — [P0] Vitrines réglementaires fausses** : corriger le canonical JSON + store listings — rétention 180j (pas « durée du service »), refresh 14j (pas 30j), **Sentry EU `ingest.de`** (la politique ment en disant « US »), Plausible déclaré + opt-out réel, « photos jamais stockées » corrigé, « Japonais » (pas « Portugais ») ; + sentinelle `privacy-content↔code`. _Source C14 (5/6 confirmés ; Sentry NUANCÉ = audit inversé). Apple 2.3.1 = motif de rejet._
+
+### Lane G — Garde-fous CI + parité native — P0
+
+- [ ] **G1 — [P0] Playwright web bloquant** : `deploy.needs += playwright-pr` (`ci-cd-web.yml:387`) + entrée required `playwright-pr` dans `branch-protection/main.json`. _Source C4 (alerte + build-prod déjà corrigés `0f47a632`). Test : un rouge Playwright bloque merge ET deploy._
 
 ---
+
+## 🟠 P1 — Premier mois post-verrouillage (fenêtre hotfix)
+
+- [ ] **B6 — Monétisation unit-of-value** : tier-gater les tours de message vs la création de session (les routes message/media portent `llmCostGuard` $0.50/j + `dailyChatLimit` 100/j mais pas la différenciation tier). _Source triage T1 : design-debt, attend les données funnel._
+- [ ] **B8 — Épuration écran chat** : supprimer `AiDisclosureFooter` (footer « Réponses générées par IA… » redondant) en **gardant** une disclosure AI Act Art.50 atteignable (badge IA + consent sheet) + fusionner `ArtworkHeroCard` dans `ChatHeader` (un seul header, l'œuvre détectée remplace le titre « Session artistique »). _Source triage T2 : `ChatSessionSurface.tsx:92`, `ChatHeader.tsx:67-94`, `chat.fallback_title`. Garde : Maestro asserte qu'une disclosure Art.50 reste visible._
+- [ ] **B11 — Sidecar LLM-Guard fiabilité prod** : CPU floor (`deploy.resources`) dans `docker-compose.prod.yml` + UX de timeout bénin (le message « Service temporarily unavailable… not flagged » sur un timeout 1500ms est anxiogène). _Source triage T10A._
+- [ ] **B14 — Bruit Google/Apple Sign-In cancel** : classer la cancellation comme outcome bénin (pas de `throw`/report Sentry) à la source (`socialAuthProviders.ts:107-113`) + filtre `beforeSend`. _Source triage T8._
+- [ ] **B16 — Sentinelle anti-DOMException** : crash `new DOMException` **déjà enterré** (`134abe293`, absent du build 93) → ajouter une sentinelle CI bannissant `new DOMException` en source FE + résoudre l'issue Sentry historique. _Source triage T7 (STALE)._
+- [ ] **G2 — Parité native iOS** : ré-activer `appConfigFieldsNotSyncedCheck` + sentinelle `ios-native-snapshot-parity` (prebuild variant prod + diff Universal Links / ATS strict / Certificate Transparency). _Source C8._
+- [ ] **G3 — Android `blockedPermissions`** : déplacer en `android.blockedPermissions` top-level (`app.config.ts:277-282`) + sentinelle post-prebuild sur le manifeste généré. _Source C9._
+- [ ] **G4 — Patchs Podfile pérennes** : promouvoir les 4 patchs inline-only en config-plugins (modèle `withFmtConstevalPatch`) + brancher la sentinelle info-plist orpheline. _Source C10 (5 patchs, dont `maplibre-spm-integration`)._
+- [ ] **R5 — RETURNING DRY** : extraire `shared/db/raw-returning.ts` (`affectedFromReturning`/`rowsFromReturning`) + migrer les 7 sites + règle ESLint maison. **Ne PAS toucher `artKeyword.repository.typeorm.ts:44`** (lecture INSERT flat correcte, inflation réfutée). _Source C15._
+- [ ] **Arabe V1 (D6)** : fixer les pluriels CLDR `ar` (~5 lignes i18next) OU retirer `ar` de V1. _Source audit F-LESSONS-01._
+- [ ] **Web a11y** : `error.tsx`/`not-found.tsx` localisés + redirect locale 301→302/307 + `Vary`. _Source audit F-ARCH-WEB-04/05._
+- [ ] **Scrub Sentry complet** : breadcrumbs `data.url` + `event.contexts` (URLs signées `?token=` peuvent fuiter) + arrondir lat/lng + proscrire free-text en logs (≥4 sites). _Source audit F-SAN-02/03._
+
+---
+
+## 🟡 P2 — Opportuniste
+
+- [ ] **B15 — App Hang (diagnostic)** : `quality:1` sur les 3 pickers (optimisation ; le re-encode est off-main donc PAS la cause prouvée) + `profilesSampleRate` Sentry pour diagnostiquer (pas de JS stack). _Source triage T9._
+- [ ] **Phantom vars** : supprimer les mentions prose `FEATURE_FLAG_KNOWLEDGE_EXTRACTION`/`FEATURE_FLAG_WEB_SEARCH` (les providers web-search Google CSE/SearXNG/DuckDuckGo sont **déjà construits**, #15 `5ce9e957`) + sentinelle `env-var-parity`. _Source C20._
+- [ ] **`noUncheckedIndexedAccess` backend** (146 src + 771 tests, all-or-nothing, helper `requireIndex`) — TD-40, effort multi-session dédié.
+- [ ] **DRY restant** : haversine, backoff, dates FE, `fetchWithTimeout` shadows.
+- [ ] **Gouvernance méta-machinerie** : registre « attrapé/jamais déclenché » par sentinelle, gel inventaire 1-in-1-out, élagage sentinelles 0-catch après 90j.
+- [ ] **CLAUDE.md corrections + README** : corriger le piège INSERT…RETURNING (`:161`, tuple = UPDATE/DELETE only) ; supprimer le blob SSH Raspberry `README.md:169` (gzip corrompu, pas un secret) + sentinelle `no-embedded-blob-in-docs`. _Source C21/C17._
+
+---
+
+## 🧑‍🔧 Ops — Tim (hors-code)
+
+- [ ] **OPS-1 — Réparer le 403 OVH/S3 prod** (credentials/endpoint/date header) — débloque B1 côté infra. _Source triage T5._
+- [ ] **OPS-2 — DPIA/ROPA** : mandater le DPO + signer (ou dater la décision go-launch motivée). _Source C14/F-REG-04._
+- [ ] **OPS-3 — `security@musaium.com`** alias OVH→Gmail (clé PGP, breach-playbook, VDP).
+- [ ] **OPS-4 — DPA Langfuse** confirmé (EU, auto-accepté au signup, archivé `docs/legal/dpa-signed/`).
+- [ ] **OPS-5 — Révoquer la clé Anthropic** encore vivante côté secret-store.
+- [ ] **OPS-6 — Plausible** : créer le site `musaium.com` + poser `PLAUSIBLE_DOMAIN`/`EXPO_PUBLIC_PLAUSIBLE_DOMAIN` AVANT launch (funnel KR4) + 1 restore-drill backup.
+- [ ] **OPS-7 — Re-soumission stores** : age rating (age-gate 15 codé), metadata corrigées (R3) avant toute re-soumission Apple/Google.
+
+---
+
+## ✅ Livré & vérifié-code (sur `main`)
+
+> Carry-over des clusters V1 livrés (détail `ROADMAP_AUDIT_TRAIL.md`) + ce qui a été corrigé/clôturé depuis l'audit 06-09.
+
+- ✅ **Chemin critique IA/argent enterprise** (guardrails V1+V2, quota, scrubber, rate-limiter) — sécurité backend 0 critical/high/medium, typage 88 (audit).
+- ✅ **Sécurité & PII, GDPR DSAR, feature-gates, stabilité, a11y/AI Act** — clusters P0.A/B/C/I/CMP livrés (audit trail).
+- ✅ **Plateforme produit** — cache LLM v3, SigLIP+pgvector HNSW, KnowledgeRouter, paywall stub + quota, audio-description WCAG, refonte chat UX, géofence, RBAC, landing, distributed tracing, TTS Opus.
+- ✅ **Corrigé depuis l'audit (l'audit est partiellement stale)** : Playwright alerte+build-prod (`0f47a632`) · 3 providers web-search #15 (`5ce9e957`) · worker enrichissement musée #16 · `/chat/compare` SigLIP+Wikidata (`056bb4c5`).
+- ✅ **Dette clôturée 2026-06-14** : TD-36 (testIDs) · TD-41 (`c03cc428`) · TD-42/43/54 (`98333b0f`) — vérifiées code (consolidation C19).
+
+---
+
+## 🔭 V1.1 / V2 / LATER (carry-over)
+
+- **V1.1 (Q3)** — system prompt localisé FR/JA/ZH/AR, tsvector+RRF hybrid search, provider Anthropic + prompt-caching, refactor dossiers chat, multi-persona voice, Premium full (Stripe, conditionné aux données soft-paywall), WebRTC Realtime (reco : skip).
+- **V2 (sep-nov 2026)** — `features/walk/` (parcours navigué multi-POI), migrations POI, OSRM, TTS streaming, MapLibre polyline, background GPS. **Conditionné** : KR2 NPS ≥7/10 sur 50 sessions.
+- **LATER** — infra VPS (disque dédié, photos S3, multi-tenant), B2B-ready, RAG modernization, moonshots 2027+.
 
 ## ⛔ KILLED (ne pas redécider sans signal nouveau)
 
 | Item | Date | Raison |
 |---|---|---|
-| SSE streaming chat | 2026-04 | Remplacé par sync chat ; burial FE fait (P0.D1) |
-| Garak orchestrator | 2026-05-17 | Coût réel ~$120/mois vs $2 estimé |
-| Realtime API V1 walk-mode | 2026-05-20 | 5× coût + ré-arch guardrail ; park V2.1+ |
-| MFA mobile user-facing | 2026-05-26 | Web-admin-only V1 (ADR-017 Withdrawn) ; surface retirée |
-| Hexagonal POJO 23 entities V1 | 2026-05-20 | 157 fichiers cross-importants, infaisable V1 |
-| Chat éclatement 4 sous-modules V1 | 2026-05-20 | 909 LOC composition root sain |
-| Voice clone DIY artistes sous licence | 2026-05-03 | Négo successions only |
+| SSE streaming chat | 2026-04 | Remplacé par sync chat |
+| Garak orchestrator | 2026-05-17 | Coût ~$120/mois vs $2 estimé |
+| Realtime API V1 walk-mode | 2026-05-20 | 5× coût + ré-arch guardrail |
+| MFA mobile user-facing | 2026-05-26 | Web-admin-only V1 (ADR-017) |
+| Hexagonal POJO 23 entities V1 | 2026-05-20 | 157 fichiers, infaisable V1 |
 
 ---
 
-## 🌐 Veille (web, 2026-05-31)
+## Comment cette roadmap est consommée
 
-- **Concurrence** — Smartify (700+ orgs), Bloomberg Connects (free B2B), **Herodot AI** (persona selector + photo-to-story), **VoiceMap** (multi-POI pause-resume = pattern V2). Parité V1 atteinte sur photo-activation + conversationnel + voice + 8 locales ; streaming-TTS et auto-narration caméra = correctement V1.1/V2.
-- **Compliance UE** — **AI Act Art.50** transparence (obligatoire 2026-08-02) **déjà implémenté** (badges disclosure) ; période transitoire couvre le launch juin. **CRA** reporting dès 2026-09-11 (breach-process doit exister au launch → B19). **CNIL âge-15** = le seul item réglementaire demandant un sign-off final.
-- **NPS** — benchmark B2C culture/voyage 2026 ; mesure post-session, échantillon ≥50, attention au biais de timing (KR2 instrumenté).
-
----
-
-## 🔬 Qualité & audits (traçabilité)
-
-> Deux audits qualité enchaînés. On croit le code, pas la doc. Les findings code alimentent `TECH_DEBT.md`, pas cette façade.
-
-- **Cartographie 360° (2026-05-31)** — `audit-state/2026-05-31-cartographie-360/CARTOGRAPHIE-360.md`. Maturité **70/100 genuine**, 3 piliers qualité « désarmés » signalés (Stryker `if:false`, e2e Maestro faux-vert, frozen-test honor-system).
-- **Contrôle qualité 360° (2026-06-04)** — `audit-state/2026-06-04-controle-qualite-360/` (ALL-FINDINGS.md = 127 findings path:line ; AUDIT-FINDINGS.md ; findings.json) + rendu lisible `artifacts/2026-06-04-controle-qualite-360.html`. **79/100 (B+)** : code applicatif enterprise-grade vérifié, mais **dette de garde-fous** réelle.
-  - **Re-vérif des 3 piliers de mai** : ✅ e2e Maestro faux-vert **fermé** (double-gate) · ✅ frozen-test = **vrai hook** (limité à `/team`) · ❌ **Stryker toujours `if:false`** (la mémoire le croyait priorisé → faux).
-  - **6 HIGH re-vérifiés (6/6 confirmés)** → tracés `TECH_DEBT.md` : `TD-61` (collision hash audit-chain, candidat CRITICAL, chemin CNIL), `TD-62` (boundaries no-op + fuite domain→useCase), `TD-63` (fail-CLOSED V2 non gardé CI), `TD-70` (Stryker non surfacé), `TD-65` (soft-delete email-squat), `TD-66` (snippet audit PII).
-  - **Dette systémique** (réponse à « une dette trouvée est-elle partout ») : oui pour la classe TypeORM `query('…RETURNING')` lue comme une ligne → `TD-64` (4ᵉ clone : artKeyword) en plus de `TD-12` + bug quota `f74ce7de`. Auditer les `…RETURNING` restants.
-  - **Re-confirmés** (déjà tracés) : `TD-39` (Stryker module-auth), `TD-40` (`noUncheckedIndexedAccess` BE absent — asymétrie BE moins strict que FE/WEB sur la frontière DB/LLM).
-- **Limites** (UFR-013) : seuls 6 HIGH reproduits à la main ; ~120 findings reposent sur preuves path:line agents (échantillonnées). A11y mobile, perf, charge, UX = hors scope. Mutation off → force réelle des tests (kill-rate) inconnue.
-
----
-
-## Comment utiliser cette roadmap
-
-1. **Début sprint** — `/team` lit ce fichier + `ROADMAP_TEAM.md`, propose les items P0/V1.0.x à attaquer. NEXT bloquée tant que P0 incomplet (sauf hotfix).
-2. **Au merge** — fais avancer le marqueur de statut (open → partial → done). Bloqué = `[BLOCKED: raison]` inline.
-3. **Preuve** — tout claim trace à un `path:line` dans [`ROADMAP_AUDIT_TRAIL.md`](ROADMAP_AUDIT_TRAIL.md) (UFR-024). On croit le code, pas la doc.
-4. **Rendu lisible** — `node scripts/render-artifact.mjs docs/ROADMAP_PRODUCT.md --out artifacts/roadmap.html` (dashboard go/no-go + lanes + filtres).
-5. **Fin sprint** — réécriture complète (P0 vidé, NEXT remonte), commit `docs(roadmap): sprint <date>`. La trace des versions = `git log`.
+1. **Début sprint** — `/team` lit ce fichier + `ROADMAP_TEAM.md`. **Lane Q d'abord** (qualité d'abord) ; les autres lanes s'exécutent SOUS sa protection.
+2. **Par item** — flow de production V1 (4 temps fresh-context, 2-3 agents convergents, preuve `file:line`). Un item = un run `/team` ou un `Workflow`.
+3. **Au merge** — coche `[x]` + cite le commit. Bloqué = `[BLOCKED: raison]`.
+4. **Rendu lisible** — `node scripts/render-artifact.mjs docs/ROADMAP_PRODUCT.md --out artifacts/roadmap.html`.
+5. **Fin sprint** — réécriture complète, commit `docs(roadmap): sprint <date>`. Versions = `git log -- docs/ROADMAP_*.md`.
