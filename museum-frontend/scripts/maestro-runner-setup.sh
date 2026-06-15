@@ -65,18 +65,29 @@ DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWO
 #   backfilled onto museums.wikidata_qid above) so a real CompareMatch card is
 #   reachable. catalog:ingest resolves --museum=<Qid> against museums.wikidata_qid
 #   (catalog-ingest.ts), so seed:museums MUST run first (it does, above).
-# Both steps run under `set -e`: if the model can't be pulled or the catalog
-# stays empty the setup fails loudly here rather than emitting a misleading RED
-# in the flow itself.
+# BEST-EFFORT (must NOT break the backend boot for the whole chat shard): the
+# original version ran both steps under `set -e`, so a provisioning failure
+# killed the API boot and took down EVERY chat-shard flow, not just chat-compare.
+# In practice the pull ALWAYS failed — `pull-siglip-model.sh` does `docker pull
+# ghcr.io/...siglip-v1` but this step never runs `docker login ghcr.io`, so it
+# 401s `unauthorized`. We now run provisioning in an `if` (which `set -e` does not
+# treat as a fatal failure): on success chat-compare can reach a real match; on
+# failure we WARN and continue, leaving /chat/compare at HTTP 503 so
+# chat-compare.yaml fails-loud on the missing carousel (the encoder-dead contract
+# is preserved) WITHOUT crashing the shard. Reliable provisioning is a tracked
+# follow-up and needs: (a) a `docker login ghcr.io` before the pull, (b) the
+# catalog-ingest env-arg fix (createEmbeddingsAdapter called with no env).
 # ──────────────────────────────────────────────────────────────────────────────
 if [ "${CHAT_COMPARE_PROVISION:-}" = "1" ]; then
-  echo "[setup] CHAT_COMPARE_PROVISION=1 — pulling SigLIP encoder model…"
-  bash scripts/pull-siglip-model.sh
-
-  echo "[setup] ingesting at least one public-domain artwork embedding (Q3329534)…"
-  DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
-    EMBEDDINGS_PROVIDER=siglip-onnx \
-    pnpm catalog:ingest -- --museum=Q3329534 --license-filter=public-domain,cc-0
+  echo "[setup] CHAT_COMPARE_PROVISION=1 — provisioning SigLIP encoder + 1 PD embedding (best-effort)…"
+  if bash scripts/pull-siglip-model.sh \
+    && DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
+      EMBEDDINGS_PROVIDER=siglip-onnx \
+      pnpm catalog:ingest -- --museum=Q3329534 --license-filter=public-domain,cc-0; then
+    echo "[setup] SigLIP provisioning OK — chat-compare can reach a real match"
+  else
+    echo "[setup] WARN: SigLIP provisioning failed (ghcr.io login / catalog ingest) — /chat/compare will 503 and chat-compare.yaml fails-loud; backend boot continues"
+  fi
 else
   echo "[setup] CHAT_COMPARE_PROVISION not set — skipping SigLIP model + embedding ingest (non-chat shard)"
 fi
