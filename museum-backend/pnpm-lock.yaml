@@ -238,6 +238,9 @@ importers:
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@22.19.17)(ts-node@10.9.2(@swc/core@1.15.32)(@types/node@22.19.17)(typescript@5.9.3))
+      jest-environment-node:
+        specifier: ^29.7.0
+        version: 29.7.0
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0

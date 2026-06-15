@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 
+// Shared, dependency-free audio byte validators (magic-byte container detection
+// + Ogg granulepos parsing). Extracted to a single source of truth so the smoke
+// and its unit tests assert the SAME logic — no more inline replicas.
+const {
+  MIN_GRANULEPOS_2S_48KHZ,
+  MIN_TTS_BYTE_LENGTH,
+  detectAudioContainer,
+  readLastOggGranulePos,
+} = require('./validate-audio.cjs');
+
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_RETRIES = 18;
 const DEFAULT_HEALTH_RETRY_DELAY_MS = 5000;
@@ -354,15 +364,49 @@ async function main() {
     timeoutMs,
     expected: 200,
   });
-  if (health.json?.status !== 'ok' && health.json?.status !== 'degraded') {
-    throw new Error(`Unexpected health payload status: ${JSON.stringify(health.json)}`);
-  }
-  const requireRedis = getEnv('SMOKE_REQUIRE_REDIS', 'false').toLowerCase() === 'true';
-  if (requireRedis && health.json?.checks?.redis !== 'up') {
+  // M-SMOKE-HEALTH-REQUIRE-OK (INV-1) — strict-by-default. `status` is the only
+  // health field emitted in prod (checks.redis is redacted when NODE_ENV=
+  // production, api.router.ts:98/103) and it already collapses redis-down/db-down
+  // into 'degraded' (api.router.ts:85 `degraded = !dbUp || redisDown`). So we
+  // REQUIRE status==='ok' by default and reject 'degraded'. A DB-down or
+  // redis-down prod now fails the smoke loudly instead of passing GREEN.
+  // Explicit opt-out (SMOKE_ALLOW_DEGRADED_HEALTH=true) tolerates 'degraded' for
+  // intentional partial-outage runs; default never tolerates it.
+  const allowDegradedHealth =
+    getEnv('SMOKE_ALLOW_DEGRADED_HEALTH', 'false').toLowerCase() === 'true';
+  const healthStatus = health.json?.status;
+  const allowedStatuses = allowDegradedHealth ? ['ok', 'degraded'] : ['ok'];
+  if (!allowedStatuses.includes(healthStatus)) {
     throw new Error(
-      `Redis is not healthy (checks.redis=${JSON.stringify(health.json?.checks?.redis)}). ` +
-        'Check REDIS_PASSWORD / REDIS_URL — the API returns 200 but Redis auth may be misconfigured.',
+      `Health status not acceptable (status=${JSON.stringify(healthStatus)}, ` +
+        `allowed=${JSON.stringify(allowedStatuses)}). A 'degraded' status means the DB is ` +
+        'down or Redis is down (api.router.ts:85); set SMOKE_ALLOW_DEGRADED_HEALTH=true ' +
+        'only for an intentional partial-outage run.',
     );
+  }
+  // M-SMOKE-HEALTH-REQUIRE-OK — default SMOKE_REQUIRE_REDIS to 'true'. The redis
+  // gate fires by default, but only WHEN the health payload exposes checks.redis
+  // (non-prod; prod redacts it, in which case the status==='ok' gate above
+  // already covers a redis-down via 'degraded'). 'skipped' = cache not wired =
+  // a prod misconfiguration distinct from 'down'; surface both clearly.
+  const requireRedis = getEnv('SMOKE_REQUIRE_REDIS', 'true').toLowerCase() === 'true';
+  if (requireRedis) {
+    const redisCheck = health.json?.checks?.redis;
+    if (redisCheck === 'skipped') {
+      throw new Error(
+        'Redis is reported as "skipped" (cache not wired). SMOKE_REQUIRE_REDIS is on, ' +
+          'so a no-op cache in prod is a misconfiguration — wire REDIS_URL / CACHE_ENABLED. ' +
+          'This is distinct from "down" (auth/connectivity): "skipped" means no cache adapter at all.',
+      );
+    }
+    if (redisCheck === 'down') {
+      throw new Error(
+        'Redis is "down" (connectivity/auth failure). Check REDIS_PASSWORD / REDIS_URL — ' +
+          'the API returns 200 but the cache ping failed.',
+      );
+    }
+    // redisCheck === 'up' → OK. redisCheck === undefined → redacted in prod;
+    // the status==='ok' gate above already proves redis is not 'down'.
   }
   console.log('[smoke:api] health OK');
 
@@ -455,6 +499,34 @@ async function main() {
   // smoke's purpose.
   const compareEnabled = getEnv('SMOKE_COMPARE_ENABLED', 'true').toLowerCase() === 'true';
   if (compareEnabled) {
+    // H1-COMPARE-DEFAULT-200 (INC-2026-06-14 regression guard, INV-2).
+    //
+    // DEFAULT expected = [200]. A 503 from /api/chat/compare means the SigLIP
+    // encoder is dead (similarity.service.ts:432-438 returns the
+    // encoder_unavailable fallback → chat-compare.route.ts:216-223 maps it to
+    // 503 COMPARE_ENCODER_UNAVAILABLE). The previous smoke tolerated that 503 as
+    // "contractual", so a broken prod encoder passed the smoke GREEN — the exact
+    // INC-2026-06-14 incident. Now a 503 throws 'Unexpected status for POST
+    // /api/chat/compare: 503' (fetchMultipart) and exits 1, FAILING loudly.
+    //
+    // The 503 tolerance is gated behind an explicit, named opt-out env
+    // (SMOKE_COMPARE_ALLOW_ENCODER_DOWN, default 'false'). Only when truthy does
+    // the encoder-down 503 become acceptable AND the 503-envelope assertion run.
+    const allowEncoderDown =
+      getEnv('SMOKE_COMPARE_ALLOW_ENCODER_DOWN', 'false').toLowerCase() === 'true';
+    const compareExpected = allowEncoderDown ? [200, 503] : [200];
+
+    // H1-COMPARE-MODELVERSION-PINNED (INV-3). A 200 must carry the EXACT model
+    // version the encoder catalogues (siglip-onnx.adapter.ts:30/151), not merely
+    // a non-empty string. The encoder-fallback stamps modelVersion='' (similarity
+    // .service.ts:436) — but that path is 503, never 200. Pinning the value
+    // proves the encoder actually ran the catalogued model on a healthy 200,
+    // not a silent fallback that leaked a 200.
+    const expectedModelVersion = getEnv(
+      'SMOKE_EXPECTED_MODEL_VERSION',
+      'siglip2-base-patch16-224@v1',
+    );
+
     const compare = await fetchMultipart({
       baseUrl,
       path: '/api/chat/compare',
@@ -470,10 +542,7 @@ async function main() {
         },
       },
       timeoutMs,
-      // 200: encoder + catalog reachable. 503: encoder offline → fallback
-      // contractual response (matches=[], fallbackReason=encoder_unavailable).
-      // Either is contractually valid for the smoke.
-      expected: [200, 503],
+      expected: compareExpected,
     });
     if (compare.status === 200) {
       const matches = compare.json?.matches;
@@ -483,23 +552,30 @@ async function main() {
         );
       }
       // Synthetic 1×1 PNG → matches[] may be empty (no neighbour in catalog),
-      // BUT the response MUST carry modelVersion + durationMs (contract).
-      if (typeof compare.json?.modelVersion !== 'string' || compare.json.modelVersion === '') {
+      // BUT a 200 MUST carry the catalogued modelVersion (proves the encoder ran).
+      const modelVersion = compare.json?.modelVersion;
+      if (modelVersion !== expectedModelVersion) {
         throw new Error(
-          `Compare 200 response missing modelVersion: ${JSON.stringify(compare.json).slice(0, 300)}`,
+          `Compare 200 modelVersion mismatch (expected=${expectedModelVersion}, ` +
+            `got=${JSON.stringify(modelVersion)}). An empty-string modelVersion is the ` +
+            'encoder-fallback signature (similarity.service.ts:436) and must never pass a ' +
+            '200 assertion; a drifted version means the encoder ran a different model.',
         );
       }
       console.log(
-        `[smoke:api] compare OK (status=200, matches=${matches.length}, modelVersion=${compare.json.modelVersion})`,
+        `[smoke:api] compare OK (status=200, matches=${matches.length}, modelVersion=${modelVersion})`,
       );
     } else {
-      // 503 — encoder offline. Verify the contractual fallback envelope.
+      // 503 — only reachable when SMOKE_COMPARE_ALLOW_ENCODER_DOWN is truthy.
+      // Verify the contractual fallback envelope before tolerating it.
       if (compare.json?.error?.code !== 'COMPARE_ENCODER_UNAVAILABLE') {
         throw new Error(
           `Compare 503 response not contractual (expected error.code=COMPARE_ENCODER_UNAVAILABLE): ${JSON.stringify(compare.json).slice(0, 300)}`,
         );
       }
-      console.log('[smoke:api] compare OK (status=503, encoder unavailable — contractual fallback)');
+      console.log(
+        '[smoke:api] compare TOLERATED (status=503, encoder unavailable — SMOKE_COMPARE_ALLOW_ENCODER_DOWN=true)',
+      );
     }
   } else {
     console.log('[smoke:api] compare SKIPPED (SMOKE_COMPARE_ENABLED=false)');
@@ -542,6 +618,65 @@ async function main() {
         `Chat POST 201 message.text empty: ${JSON.stringify(chatPost.json).slice(0, 300)}`,
       );
     }
+    // M-SMOKE-CHAT-TEXT-LENGTH — a real LLM art answer about la Joconde is far
+    // longer than 50 chars. A truncated/stub reply (e.g. a guardrail refusal,
+    // an empty-completion fallback, a degraded model) is caught here. We do NOT
+    // assert citations: it is .nullable() on the healthy path
+    // (main-assistant-output.schema.ts:146-149), so asserting it would false-fail
+    // healthy runs (INV-4).
+    if (assistantText.trim().length <= 50) {
+      throw new Error(
+        `Chat POST 201 assistant text too short (len=${assistantText.trim().length}, expected >50): ` +
+          `${JSON.stringify(assistantText).slice(0, 200)} — suspect a truncated/stub/refusal reply.`,
+      );
+    }
+
+    // M-SMOKE-CHAT-ROUNDTRIP — re-read the session and assert the assistant
+    // message persisted and is re-readable. GET /api/chat/sessions/:id returns
+    // messages[] (chat-session.route.ts:130 → chat-session.service.ts:194-202);
+    // there is NO single-message GET endpoint. This proves the reply was
+    // actually written to the store, not just echoed back in the POST response.
+    const roundTrip = await fetchJson({
+      baseUrl,
+      path: `/api/chat/sessions/${createdSessionId}`,
+      method: 'GET',
+      token: accessToken,
+      timeoutMs,
+      expected: 200,
+    });
+    const persistedMessages = Array.isArray(roundTrip.json?.messages)
+      ? roundTrip.json.messages
+      : null;
+    if (!persistedMessages) {
+      throw new Error(
+        `Chat round-trip GET missing messages[]: ${JSON.stringify(roundTrip.json).slice(0, 300)}`,
+      );
+    }
+    const persistedAssistant = persistedMessages.find((m) => m?.id === assistantMessageId);
+    if (!persistedAssistant) {
+      throw new Error(
+        `Persisted assistant message ${assistantMessageId} not found in session messages[] ` +
+          '— the chat reply was not durably stored.',
+      );
+    }
+    if (persistedAssistant.role !== 'assistant') {
+      throw new Error(
+        `Persisted message ${assistantMessageId} role=${JSON.stringify(persistedAssistant.role)} ` +
+          "(expected 'assistant')",
+      );
+    }
+    if (
+      typeof persistedAssistant.text !== 'string' ||
+      persistedAssistant.text.trim().length === 0
+    ) {
+      throw new Error(
+        `Persisted assistant message ${assistantMessageId} has empty text: ` +
+          `${JSON.stringify(persistedAssistant).slice(0, 200)}`,
+      );
+    }
+    console.log(
+      `[smoke:api] chat round-trip OK (assistant message ${assistantMessageId.slice(0, 8)} persisted + re-read)`,
+    );
 
     // 2. POST /messages/:id/tts → binary MP3 (R3).
     //    Accept 200 happy-path here; we explicitly check 204/501 below to emit
@@ -578,8 +713,8 @@ async function main() {
       );
     }
 
-    // 4. Magic-byte validation per R4 / D2.
-    //    Accept any of the audio container formats the backend has shipped :
+    // 4. Magic-byte validation per R4 / D2, via the shared `validate-audio.cjs`
+    //    `detectAudioContainer`. Accept any container the backend has shipped :
     //      - "OggS" header (0x4f 0x67 0x67 0x53) — Ogg container (current
     //        path : OpenAI Opus, response_format='opus' since C9.12a)
     //      - "ID3" header (0x49 0x44 0x33) — MP3 with ID3v2 tag
@@ -590,11 +725,8 @@ async function main() {
     if (buf.length < 4) {
       throw new Error(`TTS audio too short for magic-byte check (length=${buf.length})`);
     }
-    const isOggS =
-      buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53;
-    const isId3 = buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33;
-    const isMpegFrameSync = buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0;
-    if (!isOggS && !isId3 && !isMpegFrameSync) {
+    const container = detectAudioContainer(buf);
+    if (container === null) {
       const head = Array.from(buf.subarray(0, 4))
         .map((b) => `0x${b.toString(16).padStart(2, '0')}`)
         .join(' ');
@@ -605,8 +737,35 @@ async function main() {
 
     // 5. Length floor per R5 — sub-1KB body almost always = error envelope
     //    misrouted as binary or truncated stream.
-    if (buf.length < 1024) {
-      throw new Error(`TTS audio length ${buf.length} < 1024 (suspect truncated or error envelope)`);
+    if (buf.length < MIN_TTS_BYTE_LENGTH) {
+      throw new Error(
+        `TTS audio length ${buf.length} < ${MIN_TTS_BYTE_LENGTH} (suspect truncated or error envelope)`,
+      );
+    }
+
+    // 5b. M-SMOKE-TTS-GRANULEPOS (INV-5) — magic-bytes + the byte floor are
+    //     cheap pre-filters but a silence/truncated Opus stub carries a valid
+    //     OggS header and can exceed the floor while containing ~0s of audio.
+    //     The backend emits Ogg/Opus (response_format:'opus',
+    //     text-to-speech.openai.ts:50; audio/ogg, :184). Parse the last Ogg
+    //     page's granule position (Opus = sample count at 48 kHz) and require it
+    //     to imply >= ~2s of audio (MIN_GRANULEPOS_2S_48KHZ samples), allowing
+    //     for pre-skip. A silence/empty stub yields granulepos ~0 and fails
+    //     loudly. Pure byte parse — only applies when the container is Ogg.
+    if (container === 'ogg') {
+      const granulePos = readLastOggGranulePos(buf);
+      if (granulePos === null) {
+        throw new Error(
+          'TTS audio looked like Ogg (OggS prefix) but no Ogg page granulepos could be read ' +
+            '(suspect a truncated/corrupt stream).',
+        );
+      }
+      if (granulePos < MIN_GRANULEPOS_2S_48KHZ) {
+        throw new Error(
+          `TTS audio granulepos ${granulePos} implies <2s of audio (suspect silence/stub; ` +
+            `floor=${MIN_GRANULEPOS_2S_48KHZ} samples @48kHz Opus).`,
+        );
+      }
     }
 
     // 6. Happy log per R9 / AC9 — exact one-line shape, anchored regex in test.
@@ -650,14 +809,23 @@ async function main() {
     }
   } finally {
     // R10 / AC8 — DELETE cleanup runs UNCONDITIONALLY, even on TTS failure.
-    // Contract reminder : `/api/chat/sessions/:id` maps to `deleteSessionIfEmpty`,
-    // which intentionally returns `{deleted:false}` when the session has messages
-    // (user + assistant persisted by the chat POST above). Both outcomes are valid:
-    //   - `deleted:true`  → TTS failed BEFORE the chat POST persisted anything.
-    //   - `deleted:false` → happy-path TTS, session has messages, hard-delete is
-    //                       not available on this endpoint. Sessions older than
-    //                       6 months are reaped by the chat-purge job.
-    // Validate the response shape, not the boolean value.
+    //
+    // M-SMOKE-DELETE-ASSERT-FALSE-AND-GET-200 (INV-6). `/api/chat/sessions/:id`
+    // maps to `deleteSessionIfEmpty`, which returns `{deleted:false}` WITHOUT
+    // deleting when the session has messages (chat.repository.typeorm.ts:138-139).
+    // By this point the chat POST above persisted a user + assistant message, so
+    // the session is GUARANTEED non-empty. Therefore:
+    //   - deleted MUST be false. A `true` here would mean the persistence path
+    //     silently lost the messages → fail loudly.
+    //   - the session row MUST survive → a follow-up GET returns 200, never 404.
+    // This replaces the previous "tolerate both true and false" comment: that
+    // tolerance was vacuous; with a guaranteed-non-empty session only false is
+    // correct. (Note: this finally runs unconditionally — if TTS threw BEFORE
+    // the chat POST persisted, deleted could legitimately be true. But the chat
+    // POST + its assertions run at the TOP of the try, before TTS, so any path
+    // that reaches the TTS stage has already persisted the messages. The only
+    // way to reach this finally with an empty session is a throw inside the chat
+    // POST itself — which would have already failed the smoke before here.)
     const deleted = await fetchJson({
       baseUrl,
       path: `/api/chat/sessions/${createdSessionId}`,
@@ -669,8 +837,34 @@ async function main() {
     if (typeof deleted.json?.deleted !== 'boolean') {
       throw new Error(`Delete session response invalid: ${JSON.stringify(deleted.json)}`);
     }
+    if (deleted.json.deleted !== false) {
+      throw new Error(
+        `DELETE on a non-empty session returned deleted=${String(deleted.json.deleted)} ` +
+          '(expected false). A session with persisted user+assistant messages is NOT empty ' +
+          'and MUST NOT be deletable via this endpoint — a true here means the chat ' +
+          'persistence path silently lost the messages.',
+      );
+    }
+
+    // The DELETE was a no-op (deleted=false), so the session row still exists.
+    // A GET MUST return 200 (NOT 404) — proves the messages persisted and the
+    // no-op-delete contract holds.
+    const survives = await fetchJson({
+      baseUrl,
+      path: `/api/chat/sessions/${createdSessionId}`,
+      method: 'GET',
+      token: accessToken,
+      timeoutMs,
+      expected: 200,
+    });
+    if (survives.status !== 200) {
+      throw new Error(
+        `Session ${createdSessionId} did not survive the no-op DELETE (GET status=${survives.status}, ` +
+          'expected 200) — the delete was not a no-op or persistence was lost.',
+      );
+    }
     console.log(
-      `[smoke:api] cleanup delete session OK (deleted=${String(deleted.json.deleted)})`,
+      `[smoke:api] cleanup delete session OK (deleted=false, session survives GET 200)`,
     );
   }
 

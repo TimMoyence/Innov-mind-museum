@@ -17,6 +17,7 @@ import {
   buildRealJudgeFn,
   probeGuardrailSidecar,
   warmGuardrailSidecar,
+  sidecarIsRequired,
   hasRefusalCitation,
   assertGracefulNonEmpty,
   GUARDRAIL_V2_SIDECAR_URL,
@@ -26,7 +27,29 @@ import type { IGuardrailBudgetStore } from '@modules/chat/useCase/guardrail/guar
 import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
 import { InMemoryCacheService } from 'tests/helpers/cache/inMemoryCacheService';
 
-const describeAi = shouldRunAiTests ? describe : describe.skip;
+// The live V2 suite needs RUN_AI_TESTS=true *and* a reachable LLM-Guard sidecar.
+// The sidecar reachability is an async probe (resolved in `beforeAll`), but the
+// describe-level skip must be decided synchronously at collection time. We gate
+// on `sidecarIsRequired()` (set by the CI `ai-tests` job, which starts the real
+// sidecar and exports GUARDRAIL_V2_TEST_SIDECAR_URL — or any local
+// GUARDRAIL_V2_REQUIRE_SIDECAR=true opt-in): when a sidecar is promised the
+// suite RUNS (and `beforeAll` hard-fails, reported, if it is actually down);
+// otherwise it is a documented `describe.skip` so an ad-hoc local `test:ai`
+// without the Python sidecar does not crash on connection-refused.
+const sidecarRequired = sidecarIsRequired();
+const runLiveV2 = shouldRunAiTests && sidecarRequired;
+if (shouldRunAiTests && !sidecarRequired) {
+  // `no-console` allows `warn`/`error` (eslint.config.mjs) and is off for tests;
+  // this operator-facing notice documents why the live V2 suite was skipped
+  // despite RUN_AI_TESTS=true (no sidecar promised). Set
+  // GUARDRAIL_V2_TEST_SIDECAR_URL (CI does) or GUARDRAIL_V2_REQUIRE_SIDECAR=true.
+  console.warn(
+    '[guardrail-v2-live] SKIPPED — RUN_AI_TESTS=true but no sidecar promised. ' +
+      'Start ops/llm-guard-sidecar and set GUARDRAIL_V2_TEST_SIDECAR_URL ' +
+      '(or GUARDRAIL_V2_REQUIRE_SIDECAR=true) to run the live V2 layers.',
+  );
+}
+const describeAi = runLiveV2 ? describe : describe.skip;
 
 /**
  * V2 guardrail layers — REAL end-to-end (no mock). Exercises the two layers the
@@ -49,11 +72,19 @@ describeAi('AI guardrail V2 layers — LIVE (real sidecar + real judge)', () => 
   jest.setTimeout(60_000);
 
   beforeAll(async () => {
+    // This suite only runs when a sidecar was PROMISED (`sidecarIsRequired()` is
+    // true — see the describe gate). So an unreachable sidecar here is a genuine
+    // wiring failure, not an absent local dependency: throw so it is REPORTED.
+    // The CI `ai-tests` job is continue-on-error (it hits live OpenAI + the
+    // sidecar), so this red step stays visible in the PR checks WITHOUT being
+    // silently swallowed — and the deterministic `guardrail-failclosed` job
+    // remains the hard merge gate.
     const up = await probeGuardrailSidecar();
     if (!up) {
       throw new Error(
         `LLM-Guard sidecar unreachable at ${GUARDRAIL_V2_SIDECAR_URL}. ` +
-          `Start it: cd museum-backend/ops/llm-guard-sidecar && ` +
+          `In CI the ai-tests job must start it (docker run of museum-llm-guard) ` +
+          `before this suite; locally: cd museum-backend/ops/llm-guard-sidecar && ` +
           `.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8081`,
       );
     }

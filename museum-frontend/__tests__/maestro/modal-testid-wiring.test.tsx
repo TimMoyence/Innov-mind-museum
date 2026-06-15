@@ -15,9 +15,12 @@
  *   (2) it is wired to the CORRECT behaviour (pressing it fires the expected
  *       handler / flips the expected state).
  *
- * It also renders the two dev-only deeplink routes and proves they actually
- * mount the modal (offline) / trigger the paywall open (paywall) — i.e. the
- * Maestro deeplink target is functional, not an empty route.
+ * NOTE (stream H7, 2026-06-14): the former companion block that rendered the two
+ * `(dev)` deeplink preview routes (`paywall-preview` / `offline-prompt-preview`)
+ * was removed with those routes. The paywall Maestro flow now drives the real
+ * 402 trigger, and the offline-pack flow was dropped (see MODAL_FLOWS_NOTES.md).
+ * The component-level wiring assertions below still hold (the modals themselves
+ * are unchanged).
  *
  * NOT the frozen test — this is an additional, behaviour-exercising companion.
  */
@@ -55,12 +58,6 @@ jest.mock('@/features/paywall/infrastructure/leadsApi', () => ({
   leadsApi: { submitPaywallInterest: jest.fn().mockResolvedValue(undefined) },
 }));
 
-// ── PaywallProvider — paywall-preview dev route calls usePaywall().open() ─────
-const mockPaywallOpen = jest.fn();
-jest.mock('@/features/paywall/application/PaywallProvider', () => ({
-  usePaywall: () => ({ open: mockPaywallOpen }),
-}));
-
 import { ArtworkHeroModal } from '@/features/chat/ui/ArtworkHeroModal';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
 import { SourceCitation } from '@/features/chat/ui/SourceCitation';
@@ -70,8 +67,6 @@ import { MuseumSheet } from '@/features/museum/ui/MuseumSheet';
 import { MuseumSheetActions } from '@/features/museum/ui/MuseumSheetActions';
 import { QuotaUpsellModal } from '@/features/paywall/ui/QuotaUpsellModal';
 import { OfflinePackPrompt } from '@/features/museum/ui/OfflinePackPrompt';
-import OfflinePromptPreviewRoute from '@/app/(dev)/offline-prompt-preview';
-import PaywallPreviewRoute from '@/app/(dev)/paywall-preview';
 
 const artworkModel = {
   imageUrl: 'https://example.test/artwork.jpg',
@@ -281,34 +276,5 @@ describe('C2 modal testID wiring (runtime resolve + handler)', () => {
     await waitFor(() => {
       expect(onDecline).toHaveBeenCalledTimes(1);
     });
-  });
-});
-
-describe('C2 dev-only deeplink routes are functional Maestro targets', () => {
-  it('offline-prompt-preview mounts OfflinePackPrompt with the prod testID (derived anchors resolve)', () => {
-    render(<OfflinePromptPreviewRoute />);
-    // The route is the deeplink target for modal-museum-offline-pack.yaml;
-    // these are the exact ids the flow taps.
-    expect(screen.getByTestId('museum-map-offline-prompt-accept')).toBeTruthy();
-    expect(screen.getByTestId('museum-map-offline-prompt-decline')).toBeTruthy();
-    // Tapping decline must not throw (route owns the dismiss handler).
-    expect(() => {
-      fireEvent.press(screen.getByTestId('museum-map-offline-prompt-decline'));
-    }).not.toThrow();
-  });
-
-  it('paywall-preview opens the paywall with a well-formed quota reason at mount', () => {
-    render(<PaywallPreviewRoute />);
-    expect(mockPaywallOpen).toHaveBeenCalledTimes(1);
-    const reason = mockPaywallOpen.mock.calls[0][0] as {
-      tier: string;
-      currentCount: number;
-      limit: number;
-      resetAt: string;
-    };
-    expect(reason.tier).toBe('free');
-    expect(reason.currentCount).toBe(reason.limit);
-    expect(Number.isNaN(Date.parse(reason.resetAt))).toBe(false);
-    expect(Date.parse(reason.resetAt)).toBeGreaterThan(Date.now());
   });
 });

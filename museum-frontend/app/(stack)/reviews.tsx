@@ -159,6 +159,7 @@ export default function ReviewsScreen() {
             }}
             multiline
             maxLength={500}
+            testID="reviews-comment-input"
             accessibilityLabel={t('a11y.reviews.comment_input')}
           />
 

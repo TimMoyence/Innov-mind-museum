@@ -18,10 +18,24 @@ renaming one breaks the corresponding Maestro flow in the CI matrix.
   **MuseumSheet** are tap-through from their parent screen. The chat ones depend
   on a live backend (detected artwork / enriched images / sourced answer) →
   **nightly**, not PR-blocking.
-- **QuotaUpsellModal** and **OfflinePackPrompt** are deeplink-driven through
-  **dev-only** Expo routes under `app/(dev)/` (gated on `__DEV__`, redirected in
-  release) because their prod triggers (axios-402 interceptor / geo + MMKV
-  state) are non-deterministic in CI.
+- **QuotaUpsellModal** is driven by its **REAL production trigger** (stream H7,
+  2026-06-14): `modal-paywall-quota-upsell.yaml` logs in as a dedicated account
+  whose free-tier monthly session quota is pre-exhausted (CI `Boot backend` runs
+  `E2E_EXHAUST_QUOTA=1 pnpm seed:e2e-maestro-account`), taps the home
+  "Start a new conversation" CTA → `POST /api/sessions` → 402 → the axios
+  interceptor opens the modal. The old `(dev)/paywall-preview` deeplink was
+  removed: it redirected Home in a Release bundle, so the flow passed green
+  VACUOUSLY (the modal never opened). The modal assertion is now HARD.
+- **OfflinePackPrompt** has **no Maestro flow** (stream H7, 2026-06-14). Its only
+  trigger is geo-resolved `nearestCity` + a strong-network NetInfo reading +
+  MMKV "no prior choice" — non-deterministic in a Release CI binary, and the
+  former `(dev)/offline-prompt-preview` route redirected Home in Release (vacuous
+  green). The flow + dev route were removed rather than kept as a vacuous pass.
+  Coverage of `OfflinePackPrompt` is its component-level Jest tests; a Maestro
+  flow can be re-added on a debug/dev-client lane (`__DEV__===true`) if/when one
+  exists. `OfflinePackPrompt.tsx` is NOT a sentinel-walked screen (a `*Prompt.tsx`
+  feature component, out of `screen-test-coverage.mjs` scope), so no baseline
+  change is required.
 - **BiometricSetupSheet** is best-effort: the flow tap-throughs a real login
   happy path, then taps the sheet CTA `optional: true` (Android emulators often
   lack enrolled biometrics).
@@ -43,30 +57,29 @@ renaming one breaks the corresponding Maestro flow in the CI matrix.
 > resolves to nothing. The flow dismisses via `museum-sheet-close` (header button)
 > instead. C3/C4 must keep `museum-sheet-close` reachable inside the modal subtree.
 | **QuotaUpsellModal** | `modal-paywall-quota-upsell.yaml` | `quota-upsell-modal`, `quota-upsell-dismiss`, `quota-upsell-email`, `quota-upsell-consent`, `quota-upsell-submit` | `paywall.dismiss`, `paywall.fieldEmail`, `paywall.consent` |
-| **OfflinePackPrompt** | `modal-museum-offline-pack.yaml` | `museum-map-offline-prompt-accept`, `museum-map-offline-prompt-decline`, `museum-map-offline-prompt-retry` (runtime-derived from the `museum-map-offline-prompt` literal in `MuseumMapView.tsx`) | `museum.offlinePack.accept`, `museum.offlinePack.decline` |
 
-## Runtime-derived anchors (OfflinePackPrompt)
-
-`OfflinePackPrompt` adds **no** new literal: it builds its button testIDs as
-`` `${testID}-accept` `` / `` `${testID}-decline` `` / `` `${testID}-retry` ``
-from the parent `testID` prop. The prod call-site passes
-`testID="museum-map-offline-prompt"` (`MuseumMapView.tsx`), and the dev preview
-route (`app/(dev)/offline-prompt-preview.tsx`) passes the **same** literal, so
-the runtime DOM exposes the identical `museum-map-offline-prompt-*` anchors in
-both prod and the Maestro flow. C3/C4 must keep that template + parent-literal
-contract intact.
+> **QuotaUpsellModal — real trigger (stream H7)** — `modal-paywall-quota-upsell.yaml`
+> no longer deeplinks a `(dev)` route. It drives the production 402 path: login as
+> the pre-exhausted `e2e-paywall@test.musaium.dev` account → home "Start a new
+> conversation" CTA → `POST /api/sessions` → 402 → axios interceptor → modal.
+> The `quota-upsell-modal` assertion is HARD (non-optional). The `OfflinePackPrompt`
+> row + its runtime-derived anchors were dropped with the flow (no reliable Release
+> trigger — see the trigger-strategy note above).
 
 ## Dev-only trigger routes
 
 | Route | Triggers | Guard |
 |---|---|---|
-| `app/(dev)/paywall-preview.tsx` | `usePaywall().open(...)` → QuotaUpsellModal | `__DEV__` + `(dev)/_layout.tsx` `<Redirect href="/">` |
-| `app/(dev)/offline-prompt-preview.tsx` | mounts OfflinePackPrompt directly | `__DEV__` + `(dev)/_layout.tsx` `<Redirect href="/">` |
 | `app/(dev)/force-data-mode.tsx` | sets `useDataModePreferenceStore` preference, then redirects home | `__DEV__` (in-route guard + `(dev)/_layout.tsx` `<Redirect href="/">`) |
 
-These routes are absent from release bundles (the `__DEV__` guard + the group
-layout redirect), so there is no risk of a phantom paywall/offline prompt in
-production.
+> Removed (stream H7, 2026-06-14): `app/(dev)/paywall-preview.tsx` and
+> `app/(dev)/offline-prompt-preview.tsx`. They redirected Home in a Release bundle
+> (`(dev)/_layout.tsx` `<Redirect href="/">`), so the flows that deeplinked them
+> passed green VACUOUSLY against the CI Release APK. The paywall flow now uses the
+> real 402 trigger; the offline-pack flow was removed entirely.
+
+`force-data-mode.tsx` is absent from release bundles (the `__DEV__` guard + the
+group layout redirect), so there is no risk of a phantom dev route in production.
 
 ## W3 low-data deeplink contract (`force-data-mode`)
 

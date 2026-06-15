@@ -1,4 +1,8 @@
-import { shouldRunAiTests, buildAiTestService, assertArtResponse } from './setup/ai-test-helpers';
+import {
+  shouldRunAiTests,
+  buildAiTestService,
+  assertSubstantiveAnswer,
+} from './setup/ai-test-helpers';
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
 
@@ -19,7 +23,7 @@ describeAi('AI conversation context (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(
       /sfumato|technique|paint|layer|chiaroscuro|oil|leonardo|mona lisa/,
     );
@@ -44,7 +48,7 @@ describeAi('AI conversation context (real LLM)', () => {
       context: { locale: 'en-US', museumMode: true },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(/marble|stone|david|michelangelo/);
   });
 
@@ -57,7 +61,7 @@ describeAi('AI conversation context (real LLM)', () => {
       context: { locale: 'en-US', museumMode: true, location: 'Louvre Museum' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
   });
 
   it('follows up in French after initial French context', async () => {
@@ -74,7 +78,7 @@ describeAi('AI conversation context (real LLM)', () => {
       context: { locale: 'fr-FR' },
     });
 
-    assertArtResponse(result.message.text);
+    assertSubstantiveAnswer(result);
     expect(result.message.text.toLowerCase()).toMatch(/louvre|mus[ée]e|paris|salle/);
   });
 });

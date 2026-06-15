@@ -35,8 +35,13 @@ appId: com.musaium.mobile.preview
 #
 # Status: NIGHTLY (backend SigLIP/ONNX-dependent), NOT PR-blocking.
 #
-# Prerequisites:
-#   - SigLIP ONNX encoder live + at least one ingested artwork w/ public-domain image
+# Prerequisites (ALL load-bearing now that Phase 5 hard-asserts a real card):
+#   - SigLIP ONNX encoder live (model file present backend-side) AND at least
+#     one ingested artwork_embeddings row with a public-domain image — both are
+#     provisioned by scripts/maestro-runner-setup.sh (pull-siglip-model.sh +
+#     catalog:ingest). Without a real match the carousel renders header-only and
+#     Phase 5 fails RED (by design — that is the whole point of the per-card
+#     assert vs the old header-only check).
 #   - Fixture .maestro/fixtures/test-artwork.jpg in the sim photo library
 #     (CI / local: `xcrun simctl addmedia booted ...` before the run).
 
@@ -161,14 +166,24 @@ appId: com.musaium.mobile.preview
     text: "Similar artworks|Œuvres similaires"
 
 # ──────────────────────────────────────────────
-# Phase 5: Tap the first match card (optional — seeded catalogue may return zero
-# matches, in which case the carousel shows the no-match empty state). `label:`
-# under tapOn is only a log label, so match the card's accessibilityLabel prefix
-# via `text:`. Re-assert a stable affordance afterward to prove no crash.
+# Phase 5: REQUIRED — assert at least one real match CARD rendered, not just the
+# carousel header. The header (chat.compare.title "Similar artworks" /
+# "Œuvres similaires", asserted in Phase 4) renders in BOTH the empty-state and
+# populated branches of ImageCompareCarousel.tsx (line 46, before the
+# matches.length===0 ternary), so a zero-match carousel would pass Phase 4
+# vacuously. The per-card accessibilityLabel prefix below
+# (ImageCompareCard.tsx:40-43 — "Similar artwork: …" / "Œuvre similaire : …",
+# hardcoded, NOT i18n) renders ONLY when a real CompareMatch card exists, so
+# this hard assert fails RED on an empty/header-only carousel AND on a dead
+# encoder (no carousel at all). NOTE the FR label has a space before the colon
+# ("Œuvre similaire :"). This is the load-bearing assert of the flow.
 # ──────────────────────────────────────────────
+- assertVisible:
+    text: "Similar artwork:.*|Œuvre similaire :.*"
+# Tap the first match card to exercise the press affordance, then re-assert a
+# stable affordance to prove no crash.
 - tapOn:
     text: "Similar artwork:.*|Œuvre similaire :.*"
-    optional: true
 - waitForAnimationToEnd
 - assertVisible:
     text: "Similar artworks|Œuvres similaires|Fermer|Close|Retour|Back"

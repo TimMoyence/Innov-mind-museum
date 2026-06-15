@@ -16,23 +16,17 @@
  * TTS contract ever changes (e.g. switch back to MP3, or move to FLAC), the
  * smoke will catch it post-deploy — but this unit test catches accidental
  * regressions in the signature constants pre-merge.
+ *
+ * 2026-06-14: the detector is no longer an inline replica. The smoke
+ * (`scripts/smoke-api.cjs`) and this test now import the SAME function from the
+ * extracted, dependency-free `scripts/validate-audio.cjs`, so the contract is
+ * locked by sharing the real implementation rather than by replication.
  */
 
-/**
- * Inline re-implementation of the smoke's magic-byte detector. Kept
- * intentionally byte-identical to `scripts/smoke-api.cjs` step 4 so the test
- * locks the contract by replication. If anyone touches the smoke validator,
- * the test SHOULD fail (forcing them to mirror the change here and audit
- * the implications).
- * @param buf
- */
-function detectAudioContainer(buf: Buffer): 'ogg' | 'mp3-id3' | 'mp3-frame-sync' | null {
-  if (buf.length < 4) return null;
-  if (buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53) return 'ogg';
-  if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) return 'mp3-id3';
-  if (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0) return 'mp3-frame-sync';
-  return null;
-}
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- shared pure CJS validator consumed by the .cjs smoke script; required here to lock the identical implementation
+const { detectAudioContainer } = require('../../../scripts/validate-audio.cjs') as {
+  detectAudioContainer: (buf: Buffer) => 'ogg' | 'mp3-id3' | 'mp3-frame-sync' | null;
+};
 
 describe('TTS audio magic-byte signatures — structural lock for smoke validator', () => {
   describe('Ogg container (OpenAI Opus output since C9.12a 2026-05-17)', () => {

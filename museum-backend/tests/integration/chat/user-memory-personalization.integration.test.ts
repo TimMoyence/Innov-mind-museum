@@ -17,10 +17,11 @@
  * Mirrors the seed-helper pattern from sibling T1.4 file
  * (`user-memory-recent-sessions.integration.test.ts`): inline `seedUser` /
  * `seedChatSession` / `seedChatMessage` using `harness.dataSource.getRepository`
- * + raw UPDATE for `@CreateDateColumn` overrides. Gated on `RUN_E2E=true`
- * (matching the existing convention).
+ * + raw UPDATE for `@CreateDateColumn` overrides. Gated on `RUN_E2E=true` OR
+ * `RUN_INTEGRATION=true` (matching the existing convention); the
+ * `RUN_INTEGRATION` arm is what makes this suite run in the CI integration job.
  *
- *   RUN_E2E=true pnpm test:integration -- --testPathPattern=user-memory-personalization
+ *   RUN_INTEGRATION=true pnpm test:integration -- --testPathPattern=user-memory-personalization
  */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
@@ -33,7 +34,7 @@ import { User } from '@modules/auth/domain/user/user.entity';
 import { UserMemory } from '@modules/chat/domain/memory/userMemory.entity';
 import { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 
-const shouldRunE2E = process.env.RUN_E2E === 'true';
+const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('UserMemoryService personalization full lifecycle (Spec C T1.9)', () => {

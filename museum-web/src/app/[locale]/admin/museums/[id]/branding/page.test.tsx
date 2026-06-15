@@ -151,6 +151,70 @@ describe('MuseumBrandingPage', () => {
     expect(body.config.branding?.primaryColor).toBe('#aa0000');
   });
 
+  it('round-trips an edited value: set → submit (in PUT body) → refetch reflects it', async () => {
+    // 1. Initial load returns the museum with the OLD primary color.
+    mockApiGet.mockResolvedValueOnce({ museum: baseMuseum });
+
+    // 2. The PUT (real apiPut → global fetch) succeeds.
+    const persistedMuseum = {
+      ...baseMuseum,
+      config: {
+        kbLocale: 'fr',
+        branding: { primaryColor: '#123456', logoUrl: 'https://cdn/new.svg' },
+      },
+    };
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: () => Promise.resolve({ museum: persistedMuseum }),
+    });
+
+    // 3. The post-save refetch (apiGet again) returns the PERSISTED museum,
+    //    so the form must re-sync from server state.
+    mockApiGet.mockResolvedValueOnce({ museum: persistedMuseum });
+
+    render(<MuseumBrandingPage />);
+    await screen.findByRole('heading', { name: /branding — orsay/i });
+
+    // SET — operator types a brand-new primary color + logo URL into the form.
+    typeInto(await screen.findByLabelText(/primaryColor hex value/i), '#123456');
+    typeInto(screen.getByLabelText(/logo url/i), 'https://cdn/new.svg');
+
+    // The edited values are reflected in the controlled inputs before save.
+    expect(screen.getByLabelText(/primaryColor hex value/i)).toHaveValue('#123456');
+    expect(screen.getByLabelText(/logo url/i)).toHaveValue('https://cdn/new.svg');
+
+    // SUBMIT.
+    fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
+
+    // The PUT must carry the EDITED values (not the originals), with non-branding
+    // config (kbLocale) preserved.
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/museums/7');
+    expect(init.method).toBe('PUT');
+    const sentBody = JSON.parse(init.body as string) as {
+      config: { kbLocale?: string; branding?: { primaryColor?: string; logoUrl?: string } };
+    };
+    expect(sentBody.config.kbLocale).toBe('fr');
+    expect(sentBody.config.branding?.primaryColor).toBe('#123456');
+    expect(sentBody.config.branding?.logoUrl).toBe('https://cdn/new.svg');
+
+    // GET (refetch) → the success banner shows and the persisted value is
+    // re-synced from server state into the inputs.
+    expect(await screen.findByRole('alert')).toHaveTextContent(/branding saved/i);
+    await waitFor(() => {
+      expect(screen.getByLabelText(/primaryColor hex value/i)).toHaveValue('#123456');
+    });
+    expect(screen.getByLabelText(/logo url/i)).toHaveValue('https://cdn/new.svg');
+
+    // Two apiGet calls total: initial load + post-save refetch.
+    expect(mockApiGet).toHaveBeenCalledTimes(2);
+  });
+
   it('surfaces server error from PUT', async () => {
     mockApiGet.mockResolvedValueOnce({
       museum: { ...baseMuseum, config: { branding: {} } },

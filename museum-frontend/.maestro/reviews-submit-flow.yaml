@@ -5,16 +5,21 @@ appId: com.musaium.mobile.preview
 #
 # Real path: Home → Settings (gear) → "Noter Musaium" (settings.rate_musaium) →
 # ReviewsScreen ("Avis"/"Reviews") → "Écrire un avis" (reviews.writeReview) →
-# tap NPS value (testID nps-value-9) → fill comment (placeholder
-# reviews.commentPlaceholder) → "Envoyer l'avis" (reviews.submit) → success
+# tap NPS value (testID nps-value-9) → fill comment (testID reviews-comment-input,
+# >= 10 chars) → "Envoyer l'avis" (reviews.submit) → success
 # "Merci pour votre avis !" (reviews.success). There is NO name field (userName is
 # derived server-side, design D-C2-6). App is FRENCH; selectors use FR|EN alternation.
+#
+# The flow asserts SUCCESS ONLY (reviews.success, or the idempotent
+# reviews.alreadyReviewed on a re-run of the shared seeded account) — a submit
+# failure (reviews.submitFailed / POST 400) FAILS the flow.
 #
 # NOTE: the old flow navigated via a non-existent "Open reviews" row; the real entry
 # is the "Noter Musaium" button on the Settings screen.
 #
 # Prerequisites: backend on localhost:3000 with the e2e account seeded.
-# testIDs: nps-value-9 (NpsScale), nps-scale (scale container).
+# testIDs: nps-value-9 (NpsScale), nps-scale (scale container),
+#          reviews-comment-input (comment TextInput).
 
 # ──────────────────────────────────────────────
 # Phase 1: Fresh launch + login → home
@@ -108,32 +113,44 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "nps-value-9"
 # The comment is REQUIRED and must be >= 10 chars (backend z.string().min(10),
-# reviews.schemas.ts). The multiline comment TextInput re-renders on each
-# keystroke (onChangeText also clears the submit error), which makes a single
-# fast `inputText` drop characters — so focus the field, let it settle, then
-# type. waitForAnimationToEnd between focus and input avoids the truncation race.
+# review.schemas.ts:20). Target the field by its stable testID
+# (reviews-comment-input) — the SAME approach the chat composer (testID
+# chat-input, also a multiline TextInput that re-renders on each keystroke)
+# uses to type a full multi-word message that reaches the backend. The earlier
+# placeholder-regex tap left the field weakly targeted; an id tap focuses it
+# deterministically. The comment is typed as TWO sequential inputText calls that
+# the field concatenates at the cursor (Maestro inputText appends) — the same
+# chunking chat-input-very-long.yaml relies on — which avoids the single-fast-
+# inputText truncation race on the re-rendering multiline field. The full text
+# is 77 chars, well over the backend's 10-char minimum (review.schemas.ts:20).
 - tapOn:
-    text: ".*(Partagez votre expérience|Share your experience).*"
+    id: "reviews-comment-input"
 - waitForAnimationToEnd
-- inputText: "An unforgettable visit, highly recommend this museum experience."
+- inputText: "An unforgettable visit to this museum, "
+- inputText: "highly recommend the whole experience."
 - waitForAnimationToEnd
+- hideKeyboard
 - tapOn:
     text: "Envoyer l'avis|Submit Review"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 5: Assert the form handled the submit response.
+# Phase 5: Assert the submit SUCCEEDED.
 #
-# KNOWN-BLOCKED (local sim tooling): the multiline comment <TextInput>
-# (reviews.tsx:143) deterministically receives only the FIRST character of
-# Maestro's `inputText` ("A") regardless of timing — a Maestro↔RN-multiline
-# interaction limit (a real user types the full comment fine). The 1-char
-# comment fails the backend's z.string().min(10) → POST /api/reviews 400 →
-# "Échec de l'envoi". We therefore accept the submit-error notice
-# (reviews.submitFailed) alongside success / already-reviewed as a valid
-# non-crash terminal state — the full path (NPS select + comment + submit) is
-# still exercised.
+# SUCCESS-ONLY (M-MAESTRO invariant): the terminal assertion must require the
+# happy-path outcome, never accept a failure copy. A POST /api/reviews 400 now
+# renders reviews.submitFailed ("Échec de l'envoi") which is NOT in this matcher
+# → the flow FAILS, as it must. Accepted terminal states:
+#   - reviews.success ("Merci pour votre avis !" / "Thank you for your review!")
+#     — the genuine happy path (submitReview returned ok → `submitted` true,
+#     reviews.tsx:124).
+#   - reviews.alreadyReviewed ("Vous avez déjà soumis un avis" / "You have
+#     already submitted a review", reviews.tsx:129) — the e2e account is shared
+#     and may already hold one review; the backend rejects a 2nd with an
+#     already_reviewed signal, which is an EXPECTED idempotent success state for
+#     a re-run, NOT a submit failure. It still proves the POST round-tripped to
+#     the backend and the form interpreted the domain response (no generic 400).
 - extendedWaitUntil:
     visible:
-      text: ".*(Merci pour votre avis|Thank you for your review|Vous avez déjà soumis un avis|You have already submitted a review|Échec de l'envoi|Failed to submit review).*"
+      text: ".*(Merci pour votre avis|Thank you for your review|Vous avez déjà soumis un avis|You have already submitted a review).*"
     timeout: 40000

@@ -26,17 +26,17 @@ describe('formatDate', () => {
 
   it('formats with fr-FR (long month)', () => {
     const out = formatDate(SAMPLE, 'fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-    expect(out).toMatch(/avril/);
+    expect(out).toBe('30 avril 2026');
   });
 
   it('formats with en-US (long month)', () => {
     const out = formatDate(SAMPLE, 'en-US', { day: '2-digit', month: 'long', year: 'numeric' });
-    expect(out).toMatch(/April/);
+    expect(out).toBe('April 30, 2026');
   });
 
   it('accepts an ISO string input', () => {
     const out = formatDate('2026-04-30T10:00:00Z', 'fr-FR', { day: '2-digit', month: 'long' });
-    expect(out).toMatch(/avril/);
+    expect(out).toBe('30 avril');
   });
 });
 

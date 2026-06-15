@@ -34,6 +34,21 @@ export interface MonthlyQuotaRepo {
     monthStart: Date,
     limit: number,
   ): Promise<{ sessionsMonthCount: number; sessionsMonthStart: Date } | null>;
+  /**
+   * UC-H12-01 (INV-1/INV-2) — compensating decrement for a slot consumed by
+   * `tryConsume` whose downstream handler then failed with a 5xx. Idempotent +
+   * floor-guarded (`GREATEST(count-1, 0)` — never below 0) and month-scoped
+   * (only decrements while `sessions_month_start = monthStart`, so a month
+   * rollover between consume and revert is a no-op and never underflows the new
+   * month). Called at most once per request (latched `res.on('finish')`).
+   *
+   * OPTIONAL by design: the prod `PgMonthlyQuotaRepo` always provides it, but
+   * older stub repos (which only ever drove the 402-on-`null`-consume or the
+   * consume-call-count paths, never reaching the 5xx-revert branch) omit it. The
+   * middleware guards the call (`consumeRepo.revertConsume?.(...)`), so a stub
+   * that never reaches a 5xx after a successful consume is unaffected.
+   */
+  revertConsume?(userId: number, monthStart: Date): Promise<void>;
 }
 
 let repo: MonthlyQuotaRepo | null = null;
@@ -164,9 +179,40 @@ export const monthlySessionQuota = async (
 
   const limit = resolveLimit();
   const monthStart = firstOfCurrentUtcMonth();
-  const consumed = await repo.tryConsume(user.id, monthStart, limit);
+  // Capture a stable repo reference for the deferred revert closure — the
+  // module-level `repo` is reassignable (`setMonthlyQuotaRepo`), and the
+  // response may finish after a swap (e.g. test teardown).
+  const consumeRepo = repo;
+  const consumed = await consumeRepo.tryConsume(user.id, monthStart, limit);
 
   if (consumed) {
+    // UC-H12-01 (INV-1/INV-2) — a slot was just burned in the persisted row,
+    // BEFORE the handler ran. If the handler ultimately fails with a 5xx, the
+    // user got no session, so the consume MUST be compensated. Arm a latched
+    // `res.on('finish')` (mirrors upload-admission.middleware.ts:31) that
+    // decrements EXACTLY ONCE and ONLY on a 5xx. 2xx/4xx (incl. the 402 path,
+    // which never reaches here) leave the counter untouched.
+    let reverted = false;
+    const compensateOnServerError = (): void => {
+      if (reverted) return;
+      if (res.statusCode < 500) return;
+      reverted = true;
+      // Guarded: `revertConsume` is optional on the port (older stubs omit it).
+      // Prod `PgMonthlyQuotaRepo` always provides it. Bind to preserve `this`.
+      const revert = consumeRepo.revertConsume?.bind(consumeRepo);
+      if (!revert) return;
+      void revert(user.id, monthStart).catch((err: unknown) => {
+        // Fail-OPEN: a failed revert must not crash the (already-failed)
+        // response. Worst case the counter stays inflated by one — logged for
+        // ops follow-up, never thrown.
+        logger.warn('monthly_quota_revert_failed', {
+          userId: user.id,
+          monthStart: monthStart.toISOString(),
+          error: err instanceof Error ? err.message : 'unknown',
+        });
+      });
+    };
+    res.on('finish', compensateOnServerError);
     next();
     return;
   }

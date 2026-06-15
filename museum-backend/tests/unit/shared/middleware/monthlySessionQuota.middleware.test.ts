@@ -52,17 +52,46 @@ function makeReq(user?: Partial<UserRecord> & { id?: number }): Request {
 function makeRes(): Response & {
   _status?: number;
   _body?: Record<string, unknown>;
+  statusCode?: number;
+  _finishListeners: (() => void)[];
+  _emitFinish: (statusCode: number) => void;
 } {
-  const res: Response & { _status?: number; _body?: Record<string, unknown> } = {
+  // The middleware registers `res.on('finish', ...)` to compensate the quota
+  // counter on a 5xx handler error (reserve+commit). The mock must therefore
+  // expose a real `on()` (Express Response always has it) and let a test drive
+  // the finish event with a chosen status code.
+  const res: Response & {
+    _status?: number;
+    _body?: Record<string, unknown>;
+    statusCode?: number;
+    _finishListeners: (() => void)[];
+    _emitFinish: (statusCode: number) => void;
+  } = {
+    _finishListeners: [],
     status(code: number) {
       res._status = code;
+      res.statusCode = code;
       return res;
     },
     json(body: Record<string, unknown>) {
       res._body = body;
       return res;
     },
-  } as unknown as Response & { _status?: number; _body?: Record<string, unknown> };
+    on(event: string, listener: () => void) {
+      if (event === 'finish') res._finishListeners.push(listener);
+      return res;
+    },
+    _emitFinish(statusCode: number) {
+      res.statusCode = statusCode;
+      for (const l of res._finishListeners) l();
+    },
+  } as unknown as Response & {
+    _status?: number;
+    _body?: Record<string, unknown>;
+    statusCode?: number;
+    _finishListeners: (() => void)[];
+    _emitFinish: (statusCode: number) => void;
+  };
   return res;
 }
 
