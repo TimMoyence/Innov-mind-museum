@@ -9,10 +9,17 @@ import {
   createAudioPlayer,
 } from 'expo-audio';
 import type { AudioPlayer } from 'expo-audio';
+import { isMaestroAudioFixtureEnabled, resolveMaestroAudioFixtureUri } from './maestroAudioFixture';
 
 /**
  * Hook that manages audio recording and playback for chat voice messages.
  * Handles platform-specific logic for both web (MediaRecorder) and native (expo-audio).
+ *
+ * Test-only seam: when the `EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE` build flag is set
+ * (Maestro E2E only — never in production), `startRecording`/`stopRecording`
+ * bypass the live `expo-audio` / `MediaRecorder` path and return a bundled
+ * pre-recorded clip so the STT → LLM → TTS round-trip is deterministic on a
+ * simulator that has no real microphone. See `./maestroAudioFixture.ts`.
  */
 export const useAudioRecorder = () => {
   const { t } = useTranslation();
@@ -76,6 +83,17 @@ export const useAudioRecorder = () => {
   }, [revokeWebAudioObjectUrl, stopWebAudioStreamTracks]);
 
   const startRecording = useCallback(async () => {
+    // Test-only seam (Maestro E2E): never set in production. Flip the recording
+    // state without driving any real capture device; the fixture URI is resolved
+    // on stop. See ./maestroAudioFixture.ts.
+    if (isMaestroAudioFixtureEnabled()) {
+      revokeWebAudioObjectUrl();
+      setRecordedAudioBlob(null);
+      setRecordedAudioUri(null);
+      setIsRecording(true);
+      return;
+    }
+
     if (Platform.OS === 'web') {
       if (
         typeof navigator === 'undefined' ||
@@ -127,6 +145,18 @@ export const useAudioRecorder = () => {
   }, [nativeRecorder, revokeWebAudioObjectUrl, t]);
 
   const stopRecording = useCallback(async () => {
+    // Test-only seam (Maestro E2E): resolve the bundled fixture clip to a
+    // readable file:// URI instead of reading nativeRecorder.uri. The existing
+    // upload path (appendRnFile → multipart → backend STT) then drives the real
+    // round-trip deterministically. See ./maestroAudioFixture.ts.
+    if (isMaestroAudioFixtureEnabled()) {
+      const fixtureUri = await resolveMaestroAudioFixtureUri();
+      setIsRecording(false);
+      setRecordedAudioBlob(null);
+      setRecordedAudioUri(fixtureUri);
+      return;
+    }
+
     if (Platform.OS === 'web') {
       const mediaRecorder = webMediaRecorderRef.current;
       if (!mediaRecorder || mediaRecorder.state === 'inactive') {

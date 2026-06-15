@@ -1,41 +1,73 @@
 # Maestro audio fixture contract
 
-Maestro cannot drive a real microphone input device, so `audio-recording-flow.yaml`
-relies on the test harness to inject a pre-recorded PCM audio asset during the
-`longPressOn { label: "Hold to talk" }` window.
+Maestro cannot drive a real microphone on a simulator/emulator, so
+`audio-recording-flow.yaml` relies on a build-time **fixture injection seam** in
+the recorder hook. When the seam is enabled the recorder returns a bundled
+pre-recorded clip instead of capturing live audio, so the full STT → LLM → TTS
+round-trip runs deterministically.
 
 ## Contract
 
-When the env var `MAESTRO_AUDIO_FIXTURE=<absolute-path-to-pcm-file>` is set in the
-build (debug variant + Maestro Cloud / local Maestro run), the recorder hook in
-`museum-frontend/features/chat/recording/` reads the PCM buffer from that file
-instead of the live `expo-av` mic stream.
+The seam lives in
+[`features/chat/application/maestroAudioFixture.ts`](../../features/chat/application/maestroAudioFixture.ts)
+and is wired into
+[`features/chat/application/useAudioRecorder.ts`](../../features/chat/application/useAudioRecorder.ts).
 
-## Expected fixture
+It is gated on the build-time env flag:
 
-- Format: 16-bit PCM mono, 16kHz (matches what `gpt-4o-mini-transcribe` expects).
-- Duration: ~2.5 seconds (the longPressOn window is 3000ms; recorder needs a
-  ~500ms tail to flush).
-- Spoken content: "Who painted the Mona Lisa" in English.
-
-Generation (one-off, regen if the assertion in audio-recording-flow.yaml changes):
-
-```bash
-say -v Samantha -o /tmp/audio-fixture.aiff "Who painted the Mona Lisa"
-ffmpeg -i /tmp/audio-fixture.aiff -ar 16000 -ac 1 -c:a pcm_s16le /tmp/audio-fixture.pcm
-mv /tmp/audio-fixture.pcm museum-frontend/.maestro/fixtures/audio-mona-lisa.pcm
+```
+EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE=true
 ```
 
-The fixture file is NOT committed (binary, can be regenerated). CI bootstraps it
-in `.github/workflows/ci-cd-mobile.yml` before running the chat shard.
+`EXPO_PUBLIC_*` vars are inlined into the JS bundle at build time, so the flag
+must be set on the build job (not at `maestro test` runtime). When set:
+
+- `useAudioRecorder.startRecording()` flips `isRecording` to `true` **without**
+  driving `expo-audio` / `MediaRecorder` — no OS microphone is touched, so no
+  permission dialog appears.
+- `useAudioRecorder.stopRecording()` resolves the bundled clip via
+  `expo-asset` (`Asset.fromModule(...).downloadAsync()`) to a readable
+  `file://` URI and exposes it as `recordedAudioUri`.
+
+That URI then flows through the **same** upload path as a live recording
+(`useChatSessionInputHandlers.onSend` → `sendMessageAudio` →
+`chatApi/audio.ts` `appendRnFile` → multipart `POST /chat/sessions/:id/audio`),
+so the backend STT (`gpt-4o-mini-transcribe`) → LLM → TTS (`gpt-4o-mini-tts`)
+pipeline runs unchanged.
+
+When the flag is **absent** (every production build) the seam is inert: the
+recorder is on the live `expo-audio` path and behaves exactly as before. There
+is zero production behaviour change.
+
+## The fixture asset
+
+`assets/audio-fixtures/maestro-mona-lisa.m4a` — committed, mono AAC M4A
+(~1.5 s), spoken content **"Who painted the Mona Lisa"** in English. M4A is the
+same container the native recorder emits, so the upload path's MIME handling
+(`audio/mp4`) needs no special-casing.
+
+It is `require()`'d as a bundled Metro asset (default Expo `assetExts` already
+includes `m4a`), so it ships inside the test build with no CI bootstrap step.
+
+Regeneration (one-off — regen only if the transcript assertion in
+`audio-recording-flow.yaml` changes):
+
+```bash
+say -v Samantha -o /tmp/mona.aiff "Who painted the Mona Lisa"
+afconvert -f m4af -d aac -b 64000 /tmp/mona.aiff \
+  museum-frontend/assets/audio-fixtures/maestro-mona-lisa.m4a
+```
+
+(`afconvert` ships with macOS; `ffmpeg` works too if available.)
 
 ## Why this approach
 
 Direct microphone simulation via Maestro is unsupported and would require either:
+
 1. A custom Maestro driver per-platform (high maintenance), or
 2. A mocked audio backend in production code (anti-pattern — production reads
    the real device).
 
-The harness-side fixture injection isolates the test artifact from prod code and
-matches the precedent set for `museum-backend/scripts/fetch-models.sh` (binary
-assets pulled at build time, never committed).
+The build-time, env-gated seam keeps the test artifact strictly out of the
+production code path (the live recorder branch is untouched) while still
+exercising the real backend STT/LLM/TTS pipeline end to end.

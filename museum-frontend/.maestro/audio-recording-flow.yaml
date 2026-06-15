@@ -1,28 +1,28 @@
 appId: com.musaium.mobile.preview
 ---
-# KNOWN-BLOCKED (local sim Release): the MAESTRO_AUDIO_FIXTURE mic-injection hook
-# documented in .maestro/fixtures/audio.md is NOT implemented in
-# features/chat/application/useAudioRecorder.ts, and Maestro cannot drive a real
-# microphone on the simulator. So STT transcript + TTS playback are not
-# deterministic and are asserted `optional`. The flow still exercises the
-# verifiable wiring: mic press → EU AI Act voice-disclosure gate → record toggle.
-# Audio Recording Flow: open chat -> mic -> voice disclosure -> record toggle
-#                        -> (best-effort STT/TTS round-trip if the fixture is wired)
+# Audio Recording Flow — proves the FULL STT → LLM → TTS voice round-trip.
+#
+# Maestro cannot drive a real microphone on a simulator/emulator, so the build
+# bakes a test-only fixture injection seam (env EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE
+# = "true", set on the Maestro build jobs in .github/workflows/ci-cd-mobile.yml).
+# When set, useAudioRecorder.startRecording/stopRecording return a bundled
+# pre-recorded clip ("Who painted the Mona Lisa") instead of driving expo-audio
+# (see features/chat/application/maestroAudioFixture.ts + .maestro/fixtures/audio.md).
+# That clip uploads through the SAME multipart path as a live recording, so the
+# backend STT (gpt-4o-mini-transcribe) → LLM → TTS (gpt-4o-mini-tts) pipeline runs
+# deterministically. The round-trip assertions below are therefore NON-optional:
+# a dead STT / LLM / TTS fails this flow.
+#
+# Flow: open chat -> mic -> EU AI Act voice-disclosure gate -> record toggle ->
+#       send -> assert STT transcript + assistant reply + TTS "Listen" affordance.
 #
 # Prerequisites:
 #   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
 #   - Backend running on localhost:3000 with STT (gpt-4o-mini-transcribe) and
 #     TTS (gpt-4o-mini-tts) configured
-#
-# IMPORTANT — known gap (see RETURN notes): the audio FIXTURE INJECTION described
-# in `.maestro/fixtures/audio.md` (env `MAESTRO_AUDIO_FIXTURE`) is NOT implemented
-# in `features/chat/application/useAudioRecorder.ts` — no source reference exists.
-# Maestro cannot drive a real microphone, so the deterministic transcript
-# ("Who painted the Mona Lisa") and the TTS playback CANNOT be asserted reliably.
-# This flow therefore exercises the WIRING that IS verifiable on a simulator:
-# mic press -> EU AI Act voice-disclosure gate -> acknowledge -> recording toggles
-# on. The STT/TTS assertions are kept but made `optional` so the flow proves the
-# disclosure + recording affordances without depending on the un-wired fixture.
+#   - The Maestro build sets EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE=true (CI does;
+#     a hand-built APK/app without it leaves the recorder on the live mic path
+#     and the round-trip assertions will fail — that is intended).
 
 # ──────────────────────────────────────────────
 # Phase 0: Launch fresh + log in
@@ -117,50 +117,53 @@ appId: com.musaium.mobile.preview
     id: "composer-mic-button"
 - waitForAnimationToEnd
 
-# Acknowledge the voice disclosure (testID voice-disclosure-start). Optional so
-# the flow is resilient if the disclosure was already acknowledged this session.
+# Acknowledge the voice disclosure (testID voice-disclosure-start). Acknowledging
+# fires rawToggleRecording() automatically (chat/[sessionId].tsx
+# onAcknowledgeVoiceDisclosure), so recording is ON right after this tap.
+# `optional` only for resilience if the disclosure was already acknowledged this
+# session — in either branch recording is active afterwards.
 - tapOn:
     id: "voice-disclosure-start"
     optional: true
 - waitForAnimationToEnd
 
-# expo-av requests microphone permission on first record; accept it.
+# With the EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE seam the recorder never touches the
+# OS mic, so no permission dialog should appear. Kept optional purely so a stray
+# system dialog (rare on iOS) does not wedge the flow.
 - tapOn:
     text: "Allow|OK|Autoriser"
     optional: true
 - waitForAnimationToEnd
 
-# Recording is now active — the mic icon flips to its "stop" / recording label.
-# Tap again to stop and close the audio buffer.
+# Recording is active — tap the mic again to STOP. stopRecording resolves the
+# bundled fixture clip to a file:// URI and surfaces the audio pill. This tap is
+# deterministic (the fixture seam removed the live-capture race), so NOT optional:
+# if it cannot stop the recording, the round-trip cannot run and the flow fails.
 - tapOn:
     id: "composer-mic-button"
-    optional: true
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
-# Phase 3: If a recording was captured, the audio pill surfaces — send it
+# Phase 3: The audio pill surfaced (fixture URI captured) — send it
 # ──────────────────────────────────────────────
 - tapOn:
     id: "send-button"
-    optional: true
 - waitForAnimationToEnd:
     timeout: 30000
 
 # ──────────────────────────────────────────────
-# Phase 4: Best-effort STT/TTS round-trip assertions (optional — fixture gap)
+# Phase 4: STT -> LLM -> TTS round-trip assertions (NON-optional)
 # ──────────────────────────────────────────────
-# These can only pass once the MAESTRO_AUDIO_FIXTURE injection is implemented.
+# The fixture clip says "Who painted the Mona Lisa". If STT is alive the user
+# bubble shows that transcript; if the LLM is alive an assistant bubble appears;
+# if TTS is alive the "Listen" affordance renders. A dead STT/LLM/TTS fails here.
 - extendedWaitUntil:
     visible: "Who painted the Mona Lisa"
-    timeout: 15000
-    optional: true
+    timeout: 20000
 - assertVisible:
     id: "chat-bubble-assistant"
-    optional: true
-- tapOn:
+- assertVisible:
     text: "Écouter|Listen"
-    optional: true
-- waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
 # Phase 5: Cleanup — close the chat

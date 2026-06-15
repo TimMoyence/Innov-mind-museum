@@ -545,7 +545,15 @@ jobs:
     # complete; 25min matches the other live-provider backend jobs. (Deeper fix
     # tracked: ai-tests is advisory-by-design and should not sit in the required
     # check list — guardrail-failclosed is the real deterministic hard gate.)
-    timeout-minutes: 25
+    #
+    # H6: bumped 25 → 40 because this job now ALSO builds + starts the real
+    # LLM-Guard sidecar so the live V2 suite (guardrail-v2-live) exercises the
+    # fail-CLOSED / observeOnly / service_unavailable wiring against a REAL
+    # ProtectAI service (it was never reached before — beforeAll hard-threw on the
+    # always-refused :8081 and continue-on-error swallowed it). The sidecar image
+    # build reuses the type=gha cache produced by ci-cd-llm-guard.yml (mode=max),
+    # so it is a fast cache-hit when unchanged; 40min absorbs a cold build.
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: museum-backend
@@ -553,6 +561,11 @@ jobs:
       RUN_AI_TESTS: 'true'
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       LLM_MODEL: gpt-4o-mini
+      # Make the live V2 suite REQUIRED (hard-fail, reported — not a silent skip)
+      # now that this job provides a real sidecar. The test URL resolver
+      # (tests/ai/setup/ai-test-helpers.ts) honours this var FIRST, and
+      # sidecarIsRequired() treats its presence as "a sidecar was promised".
+      GUARDRAIL_V2_TEST_SIDECAR_URL: http://127.0.0.1:8081
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup pnpm
@@ -568,6 +581,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ── H6: bring up the REAL LLM-Guard sidecar so the live V2 suite tests the
+      # actual fail-CLOSED wiring (sidecar reach @ enforce, observeOnly downgrade,
+      # policy:service_unavailable) instead of being silently swallowed. Build via
+      # buildx reusing the GHA cache from ci-cd-llm-guard.yml (mode=max), then
+      # `docker run` and wait for /health. Loopback :8081 = GUARDRAIL_V2_TEST_SIDECAR_URL.
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
+      - name: Build LLM-Guard sidecar image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
+        with:
+          context: ./museum-backend/ops/llm-guard-sidecar
+          file: ./museum-backend/ops/llm-guard-sidecar/Dockerfile
+          load: true
+          tags: museum-llm-guard:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start LLM-Guard sidecar + wait for /health
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker run -d --name lg-sidecar -p 8081:8081 museum-llm-guard:ci
+          # Scanners load at startup; image preloads HF models so ~30s on a warm
+          # layer. Poll /health, fail loudly (and dump logs) if it never comes up.
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8081/health 2>/dev/null; then
+              echo ""; echo "sidecar healthy after ~$((i*2))s"; exit 0
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' lg-sidecar 2>/dev/null)" != "true" ]; then
+              echo "ERROR: sidecar container exited"; docker logs lg-sidecar; exit 1
+            fi
+            sleep 2
+          done
+          echo "ERROR: sidecar never became healthy within 120s"; docker logs lg-sidecar; exit 1
+
       # I-OPS8 (R9): ai-tests now RUN on PR (paths-filtered above) instead of being
       # workflow_dispatch-only — they were invisible before. They are ADVISORY
       # (continue-on-error), NOT a hard merge gate, because they hit the live OpenAI
@@ -578,9 +624,19 @@ jobs:
       # gate (95 % pass-rate tolerance), live-LLM checks must absorb variance; a
       # blocking gate needs the assertions de-flaked / a pass-rate threshold first
       # (tracked follow-up). The step result stays visible in the PR checks.
+      #
+      # H6: the live V2 suite (guardrail-v2-live) now runs against the REAL sidecar
+      # started above. If that sidecar is down, its beforeAll hard-throws and this
+      # advisory step shows RED in the PR checks (REPORTED) — the deterministic
+      # guardrail-failclosed job below remains the hard merge gate.
       - name: AI Integration Tests
         continue-on-error: true
         run: pnpm run test:ai
+
+      - name: Stop LLM-Guard sidecar
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: docker rm -f lg-sidecar 2>/dev/null || true
 
   # ─── 5.3. Guardrail fail-CLOSED invariant gate (TD-63 / ADR-047) ──────
   # The `ai-tests` job above is ADVISORY (continue-on-error) because it hits

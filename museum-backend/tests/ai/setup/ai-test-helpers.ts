@@ -446,6 +446,29 @@ export const probeGuardrailSidecar = async (url = GUARDRAIL_V2_SIDECAR_URL): Pro
 };
 
 /**
+ * Whether the live V2 suite MUST find a reachable sidecar (so a probe failure is
+ * a HARD, visible error) or MAY cleanly skip-with-warning (local dev where the
+ * operator did not start `ops/llm-guard-sidecar`).
+ *
+ * Required iff the caller explicitly promised a sidecar:
+ *   - `GUARDRAIL_V2_TEST_SIDECAR_URL` is set — the CI `ai-tests` job starts the
+ *     real sidecar container and exports this URL, so an unreachable sidecar
+ *     there is a genuine wiring failure that must fail (and be REPORTED), not be
+ *     swallowed by the job's `continue-on-error`.
+ *   - or `GUARDRAIL_V2_REQUIRE_SIDECAR=true` — an explicit local opt-in to make
+ *     the suite hard-fail instead of skip.
+ *
+ * When neither is set the suite is best-effort: a developer running `test:ai`
+ * without the Python sidecar gets a documented skip-with-warning, never a
+ * confusing hard crash. This keeps the live V2 wiring REPORTED in CI while
+ * staying friendly for ad-hoc local runs.
+ * @returns True iff a missing sidecar should fail the suite (vs. skip it).
+ */
+export const sidecarIsRequired = (): boolean =>
+  !!process.env.GUARDRAIL_V2_TEST_SIDECAR_URL?.trim() ||
+  process.env.GUARDRAIL_V2_REQUIRE_SIDECAR === 'true';
+
+/**
  * Builds a REAL LLM-judge callable (gpt-4o-mini via `judgeWithLlm`) for live V2
  * tests. No mock — exercises the actual `withStructuredOutput` judge path.
  * @param timeoutMs - Judge timeout (default {@link JUDGE_GENEROUS_TIMEOUT_MS}).

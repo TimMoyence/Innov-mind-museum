@@ -2,13 +2,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * C2 — Maestro modal coverage sentinel (UFR-022 frozen-test, phase RED).
+ * C2 — Maestro modal coverage sentinel.
  *
- * This sentinel is the FROZEN oracle for cluster C2 "Maestro flows pour 7 modaux
- * currently uncovered". It asserts three contracts derived verbatim from
+ * This sentinel asserts the contracts derived from
  * audit-state/.../C2-maestro-modals/design.md §2/§3/§4:
  *
- *   (a) flow files exist     — one `.maestro/modal-*.yaml` per modal (design §4)
+ *   (a) flow files exist     — one `.maestro/modal-*.yaml` per modal that HAS a
+ *                              flow (design §4). `hasFlow:false` modals (see H7
+ *                              note) are exempt.
  *   (b) flows reference modal — each flow carries either the `# screen: <Name>`
  *                               magic-comment header or at least one of the modal's
  *                               testID literals (design §4 header + §3 anchors)
@@ -18,13 +19,19 @@ import { join } from 'node:path';
  *                               (`${testID}-accept` etc.) propagated from the
  *                               `museum-map-offline-prompt` literal in MuseumMapView,
  *                               so it is asserted against those existing templates.
- *   (d) dev-only routes exist — the two deeplink-driven flows (QuotaUpsell, OfflinePack)
- *                               require dev-only Expo routes (design §5.2).
  *
- * At baseCommit ed275e278e00d22fe9c288f91afc34f245ff5b07 NONE of the 7 flows nor the
- * 19 new testID literals nor the 2 dev routes exist → this suite FAILS (RED).
- * The GREEN phase adds the flows + testID props + dev routes (NOT this test).
- * Frozen-test discipline: GREEN must not edit this file (post-edit-green-test-freeze.sh).
+ * UPDATE (stream H7, 2026-06-14): the two original dev-only deeplink routes
+ * (`app/(dev)/paywall-preview.tsx`, `app/(dev)/offline-prompt-preview.tsx`) were
+ * REMOVED because they redirected Home in a Release bundle → the flows that
+ * deeplinked them passed green VACUOUSLY against the CI Release APK. Consequences
+ * for this oracle:
+ *   - `QuotaUpsellModal` now drives the REAL 402 trigger (no dev route). Its flow,
+ *     header, and testID literals still exist → (a)/(b)/(c) unchanged.
+ *   - `OfflinePackPrompt` no longer has a Maestro flow (`hasFlow:false`): there is
+ *     no reliable Release trigger. Its COMPONENT testID anchors still exist (it is
+ *     still rendered in production by MuseumMapView), so (c)/(c-derived) still hold;
+ *     only its flow-existence (a) and flow-reference (b) checks are dropped.
+ *   - The former (d) "dev-only routes exist" block is removed (routes deleted).
  */
 
 const FE_ROOT = join(__dirname, '..', '..');
@@ -36,6 +43,14 @@ interface ModalSpec {
   source: string;
   /** Maestro flow filename under .maestro/ (design §4). */
   flow: string;
+  /**
+   * Whether this modal still has a Maestro flow. `false` for OfflinePackPrompt
+   * (stream H7 — no reliable Release trigger; the vacuous flow + its dev route
+   * were removed). When false, the (a) flow-exists + (b) flow-reference checks
+   * are skipped, but the (c) testID-literal checks still run (the component is
+   * unchanged and still mounted in production).
+   */
+  hasFlow?: boolean;
   /** `# screen: <name>` header value the flow should carry (design §4). */
   headerScreenName: string;
   /**
@@ -119,7 +134,10 @@ const MODALS: ModalSpec[] = [
   {
     name: 'OfflinePackPrompt',
     source: 'features/museum/ui/OfflinePackPrompt.tsx',
+    // H7: no Maestro flow (no reliable Release trigger — the vacuous flow + its
+    // (dev) preview route were removed). Component anchors are still asserted.
     flow: 'modal-museum-offline-pack.yaml',
+    hasFlow: false,
     headerScreenName: 'OfflinePackPrompt',
     // No new literal: anchors are runtime-derived from the parent literal.
     newTestIds: [],
@@ -150,22 +168,26 @@ const SIBLING_TEST_IDS: { source: string; testIds: string[] }[] = [
   },
 ];
 
-// Dev-only deeplink routes required by the QuotaUpsell + OfflinePack flows (design §5.2).
-const DEV_ROUTES = ['app/(dev)/paywall-preview.tsx', 'app/(dev)/offline-prompt-preview.tsx'];
-
 const readSource = (rel: string): string => readFileSync(join(FE_ROOT, rel), 'utf8');
+
+// Modals that still ship a Maestro flow (H7: OfflinePackPrompt no longer does).
+const FLOW_MODALS = MODALS.filter((m) => m.hasFlow !== false);
 
 describe('C2 — Maestro modal coverage', () => {
   describe('(a) flow files exist', () => {
-    for (const m of MODALS) {
+    for (const m of FLOW_MODALS) {
       it(`${m.name} has a Maestro flow .maestro/${m.flow}`, () => {
         expect(existsSync(join(MAESTRO, m.flow))).toBe(true);
       });
     }
   });
 
+  it('OfflinePackPrompt has NO Maestro flow file (H7 — vacuous flow removed)', () => {
+    expect(existsSync(join(MAESTRO, 'modal-museum-offline-pack.yaml'))).toBe(false);
+  });
+
   describe('(b) flows reference the right modal', () => {
-    for (const m of MODALS) {
+    for (const m of FLOW_MODALS) {
       it(`${m.flow} references screen ${m.name} (header or testID anchor)`, () => {
         // Reading a missing flow throws ENOENT, which is itself a RED failure.
         const content = readFileSync(join(MAESTRO, m.flow), 'utf8');
@@ -218,11 +240,36 @@ describe('C2 — Maestro modal coverage', () => {
     });
   });
 
-  describe('(d) dev-only deeplink routes exist', () => {
-    for (const route of DEV_ROUTES) {
-      it(`${route} exists (dev trigger route)`, () => {
-        expect(existsSync(join(FE_ROOT, route))).toBe(true);
+  describe('(d) H7 — vacuous dev-route triggers are gone', () => {
+    // These (dev) preview routes redirected Home in a Release bundle, so the
+    // flows that deeplinked them passed green VACUOUSLY against the CI Release
+    // APK. They were removed; re-introducing one would re-open the H7 false-green.
+    for (const route of ['app/(dev)/paywall-preview.tsx', 'app/(dev)/offline-prompt-preview.tsx']) {
+      it(`${route} does NOT exist (removed — vacuous Release trigger)`, () => {
+        expect(existsSync(join(FE_ROOT, route))).toBe(false);
       });
     }
+
+    it('the paywall flow drives the REAL 402 trigger, not a (dev) deeplink', () => {
+      const raw = readFileSync(join(MAESTRO, 'modal-paywall-quota-upsell.yaml'), 'utf8');
+      // Strip YAML comments so an explanatory prose mention of the removed route
+      // does not count — only EXECUTABLE steps matter.
+      const exec = raw
+        .split('\n')
+        .map((line) => {
+          const hash = line.indexOf('#');
+          return hash === -1 ? line : line.slice(0, hash);
+        })
+        .join('\n');
+      // No executable deeplink into the removed dev preview route, and in fact no
+      // `openLink` step at all — the real-trigger flow navigates via the UI.
+      expect(exec).not.toContain('(dev)/paywall-preview');
+      expect(exec).not.toContain('openLink');
+      // Exercises the real session-create CTA (→ POST /api/sessions → 402).
+      expect(exec).toContain('Start a new conversation');
+      // The modal-open assertion is HARD (assertVisible, not optional).
+      expect(exec).toContain('assertVisible');
+      expect(exec).toContain('quota-upsell-modal');
+    });
   });
 });

@@ -204,6 +204,14 @@ jobs:
       APP_VARIANT: development
       EXPO_PUBLIC_API_ENVIRONMENT: staging
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3000
+      # Test-only audio-fixture injection seam (useAudioRecorder.ts): bakes the
+      # bundled "Who painted the Mona Lisa" clip into the recorder so the
+      # audio-recording-flow STT→LLM→TTS round-trip is deterministic (Maestro
+      # cannot drive a real microphone). EXPO_PUBLIC_* vars are inlined into the
+      # JS bundle at assembleRelease, so it MUST be set on this build job. This
+      # APK only runs on the CI emulator and is never shipped, so the seam never
+      # reaches production. See .maestro/fixtures/audio.md.
+      EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
       # @sentry/react-native's gradle integration auto-uploads JS sourcemaps on
       # RELEASE builds and needs SENTRY_AUTH_TOKEN (absent here). Disable it: the
       # Maestro APK only runs on the CI emulator and is never shipped.
@@ -421,6 +429,17 @@ jobs:
           # Same secret ci-cd-backend.yml + promptfoo use. The auth/museum/
           # settings shards never hit the LLM, so spend stays near zero there.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Provision the SigLIP encoder model + one public-domain artwork
+          # embedding ONLY on the `chat` shard (the only shard that runs
+          # chat-compare.yaml — shards.json). maestro-runner-setup.sh gates the
+          # ~354MB model pull + catalog:ingest on this flag so the per-PR `smoke`
+          # subset (which excludes chat-compare) stays lightweight. Without it the
+          # nightly chat-compare carousel renders header-only and its strengthened
+          # per-card assert fails RED — by design.
+          CHAT_COMPARE_PROVISION: ${{ matrix.shard == 'chat' && '1' || '' }}
+          # Seed the dedicated quota-exhausted paywall account ONLY on the
+          # `museum` shard (the only shard that runs modal-paywall-quota-upsell.yaml).
+          SEED_PAYWALL_ACCOUNT: ${{ matrix.shard == 'museum' && '1' || '' }}
         run: |
           ./scripts/maestro-runner-setup.sh
           # Seed the two FIXED Maestro login accounts (direct DB insert, bypasses
@@ -436,6 +455,19 @@ jobs:
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
             pnpm seed:e2e-maestro-account
+          # 3. e2e-paywall@test.musaium.dev / TestPassword123! — DEDICATED account
+          #    for modal-paywall-quota-upsell.yaml with its free-tier monthly
+          #    session quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1), so the flow's
+          #    first `POST /api/sessions` returns 402 → the QuotaUpsellModal opens
+          #    via the REAL axios-402 interceptor (no dev-route deeplink). Separate
+          #    email so the other museum-shard flows that create real sessions are
+          #    not 402'd. Only seeded on the `museum` shard (where the flow runs).
+          if [ "${SEED_PAYWALL_ACCOUNT:-}" = "1" ]; then
+            E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
+              DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+              E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
+              pnpm seed:e2e-maestro-account
+          fi
 
       - name: Enable KVM (hardware-accelerated emulator)
         run: |
@@ -945,6 +977,12 @@ jobs:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
+      # Test-only audio-fixture injection seam (useAudioRecorder.ts) — bakes the
+      # bundled clip so the iOS audio-recording-flow STT→TTS round-trip is
+      # deterministic (Maestro cannot drive a real microphone). Inlined into the
+      # JS bundle at the Debug build step; the sim-only Debug app is never
+      # shipped, so the seam never reaches production. See .maestro/fixtures/audio.md.
+      EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -975,6 +1013,27 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Boot backend (docker-compose + migrations + API)
         run: ./scripts/maestro-runner-setup.sh
+      - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
+        # The iOS nightly suite runs every flow (maestro-run-shard.sh all),
+        # including auth-login-happy and modal-paywall-quota-upsell. Seed the same
+        # fixed accounts the Android shards seed so those flows can log in. The
+        # paywall account is seeded with its quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1)
+        # so modal-paywall-quota-upsell drives the real 402 → QuotaUpsellModal path
+        # (the iOS nightly is a Debug build, but the flow no longer relies on the
+        # removed (dev) preview route — it uses the production 402 trigger).
+        run: |
+          cd museum-backend
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            pnpm seed:e2e-maestro-account
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
+            pnpm seed:e2e-maestro-account
+          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
+            E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
+            pnpm seed:e2e-maestro-account
       - name: Boot iOS Simulator
         run: |
           xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true
