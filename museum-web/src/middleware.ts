@@ -69,7 +69,7 @@ function generateNonce(): string {
  * script injection, so relaxing style-src while tightening script-src is the
  * widely-recommended trade-off (see Next.js official CSP guide).
  */
-function buildCspHeader(nonce: string, isDev: boolean): string {
+function buildCspHeader(nonce: string, isDev: boolean, isHttps: boolean): string {
   const scriptSrc = isDev
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
@@ -85,7 +85,17 @@ function buildCspHeader(nonce: string, isDev: boolean): string {
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
-    'upgrade-insecure-requests',
+    // `upgrade-insecure-requests` rewrites every http subresource reference to
+    // https. It is correct ONLY when the page itself is served over https. On a
+    // plain-http origin (e2e prod-build server on http://localhost:3001) WebKit
+    // and Firefox upgrade same-origin asset requests (/_next/static/css, JS,
+    // /api) to https and they fail with a TLS error — the stylesheet never
+    // applies and the page renders unstyled (axe color-contrast, broken admin
+    // shell). Chromium silently exempts loopback; WebKit/Firefox do not. Emit it
+    // only for https requests, so production (https://musaium.com, behind nginx
+    // TLS → x-forwarded-proto: https) keeps the mixed-content protection while
+    // http origins are left untouched.
+    ...(isHttps ? ['upgrade-insecure-requests'] : []),
   ].join('; ');
 }
 
@@ -98,10 +108,17 @@ function withNonceAndCsp(request: NextRequest, requestHeaders: Headers): NextRes
   const nonce = generateNonce();
   requestHeaders.set('x-nonce', nonce);
 
+  // `upgrade-insecure-requests` must only be emitted on https origins (see
+  // buildCspHeader). Behind the prod nginx TLS terminator the request reaches
+  // Next.js as http with `x-forwarded-proto: https`, so trust that header too.
+  const isHttps =
+    request.nextUrl.protocol === 'https:' ||
+    request.headers.get('x-forwarded-proto') === 'https';
+
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set(
     'Content-Security-Policy',
-    buildCspHeader(nonce, process.env.NODE_ENV !== 'production'),
+    buildCspHeader(nonce, process.env.NODE_ENV !== 'production', isHttps),
   );
   return response;
 }

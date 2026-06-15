@@ -132,6 +132,20 @@ describe('middleware — CSP + nonce', () => {
     expect(csp).toMatch(/object-src 'none'/);
   });
 
+  it('includes upgrade-insecure-requests for https requests (prod mixed-content protection)', () => {
+    const httpsCsp = middleware(buildRequest('https://musaium.com/fr')).headers.get(
+      'content-security-policy',
+    );
+    expect(httpsCsp).toMatch(/upgrade-insecure-requests/);
+  });
+
+  it('omits upgrade-insecure-requests for http origins (WebKit/Firefox upgrade same-origin assets → TLS failure on http://localhost e2e)', () => {
+    const httpCsp = middleware(buildRequest('http://localhost:3001/fr')).headers.get(
+      'content-security-policy',
+    );
+    expect(httpCsp).not.toMatch(/upgrade-insecure-requests/);
+  });
+
   it('produces a different nonce on each call', () => {
     const a = middleware(buildRequest('https://musaium.com/fr')).headers.get(
       'content-security-policy',

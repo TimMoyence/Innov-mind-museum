@@ -1,6 +1,6 @@
 import { chromium, request, type FullConfig } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Client } from 'pg';
 
@@ -97,7 +97,20 @@ async function loginAndSaveStorage(
     ]);
 
     mkdirSync(resolve(__dirname, 'playwright-storage'), { recursive: true });
-    await context.storageState({ path: STORAGE_PATH });
+    const state = await context.storageState();
+    if (url.protocol !== 'https:') {
+      // WebKit/Safari — unlike Chromium — does NOT treat http://localhost as a
+      // secure context, so it silently drops `Secure` cookies served over http.
+      // The backend marks access_token / refresh_token / csrf_token `Secure`
+      // (correct for prod https), which would leave WebKit unauthenticated in the
+      // http e2e env: every admin spec then redirects to /admin/login and the
+      // authenticated AdminShell never renders (the a11y scans pass vacuously on
+      // the login page; element-dependent specs fail). Strip `secure` for the
+      // http test origin only — production cookie attributes are untouched (this
+      // mirrors the admin-authz cookie set with `secure: url.protocol==='https:'`).
+      state.cookies = state.cookies.map((cookie) => ({ ...cookie, secure: false }));
+    }
+    writeFileSync(STORAGE_PATH, JSON.stringify(state));
   } finally {
     await browser.close();
   }

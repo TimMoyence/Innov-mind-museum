@@ -26,17 +26,26 @@ for (const route of ['/en', '/fr'] as const) {
     await page.goto(route);
     await page.waitForLoadState('networkidle');
 
-    // First Tab must land on the skip-link (a link to #main).
-    await page.keyboard.press('Tab');
-    const focused = page.locator(':focus');
-    await expect(focused).toHaveRole('link');
-    await expect(focused).toHaveAttribute('href', '#main');
+    // WCAG 2.4.1: the skip-link must be the FIRST element in DOM tab order. We
+    // assert DOM-order position + keyboard activation rather than
+    // `keyboard.press('Tab')` because WebKit/Safari only moves Tab focus to links
+    // when the OS-level "Full Keyboard Access" setting is on (off by default), so
+    // a Tab-based assertion measures the engine's keyboard-access preference, not
+    // the app. The app has no positive tabindex, so first-in-DOM == first-tabbed.
+    const focusable = page.locator(
+      'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable.first();
+    await expect(first).toHaveRole('link');
+    await expect(first).toHaveAttribute('href', '#main');
 
     // Its accessible name resolves to a non-empty dict-driven string.
-    const accessibleName = (await focused.textContent())?.trim() ?? '';
+    const accessibleName = (await first.textContent())?.trim() ?? '';
     expect(accessibleName.length).toBeGreaterThan(0);
 
-    // Activating it moves focus/scroll to the <main id="main"> landmark.
+    // Activating it (keyboard) moves focus/scroll to the <main id="main"> landmark.
+    await first.focus();
+    await expect(first).toBeFocused();
     await page.keyboard.press('Enter');
     const main = page.locator('main#main');
     await expect(main).toBeVisible();

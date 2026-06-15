@@ -163,6 +163,18 @@ test.describe('AdminShell — museum_manager access (T-B6 — R-C9 / D-C9)', () 
       },
     ]);
 
+    // WebKit/Safari drops Secure cookies over http://localhost (no localhost
+    // secure-context exception, unlike Chromium), so the backend's Secure
+    // access_token / refresh_token never reach the AdminShell's /api/auth/me
+    // check and the authenticated layout never renders (the 403 / login redirect
+    // path). Re-stamp the context cookies as non-secure for the http test origin
+    // only — same rationale as e2e/global-setup.ts; production cookies untouched.
+    if (url.protocol !== 'https:') {
+      const cookies = await context.cookies();
+      await context.clearCookies();
+      await context.addCookies(cookies.map((cookie) => ({ ...cookie, secure: false })));
+    }
+
     await page.goto('/en/admin');
     await page.waitForLoadState('networkidle');
 
