@@ -134,6 +134,12 @@ const cosine = (a: Float32Array, b: Float32Array): number => {
 };
 
 describeFn('recall@5 (T7.4 — crop-robustness, real ONNX model + pgvector)', () => {
+  // The beforeAll boots a Postgres testcontainer + runs migrations + builds the
+  // ONNX encoder; on a cold CI runner that exceeds Jest's default 5s hook
+  // timeout (which fails the hook AND leaves `encoder` undefined → the afterAll
+  // shutdown crashes). Match the sibling integration suites' generous budget.
+  jest.setTimeout(180_000);
+
   let harness: Awaited<ReturnType<typeof createIntegrationHarness>>;
   let repo: ArtworkEmbeddingRepository;
   let encoder: EmbeddingsPort;
@@ -167,8 +173,10 @@ describeFn('recall@5 (T7.4 — crop-robustness, real ONNX model + pgvector)', ()
 
   afterAll(async () => {
     // Release the native ONNX session so the worker doesn't hang (CLAUDE.md
-    // Stryker/open-handle gotcha). Optional + idempotent + fail-open.
-    await encoder.shutdown?.();
+    // Stryker/open-handle gotcha). Optional + idempotent + fail-open. Guard
+    // `encoder` itself: if beforeAll failed/timed out it is undefined, and an
+    // unguarded `encoder.shutdown` would throw a second, masking error.
+    await encoder?.shutdown?.();
   });
 
   beforeEach(async () => {
