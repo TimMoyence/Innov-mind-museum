@@ -35,6 +35,29 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Cold-start resilience (post-deploy): a freshly-recreated backend has a brief
+// window where connection pools / the OpenAI client / BullMQ workers are still
+// warming, so a single functional call can hit a TRANSIENT 5xx, a gateway HTML
+// page, or a network blip (observed post-deploy: TTS `fetch failed`, DELETE
+// non-JSON `<html>`, POST 500). The health probe already retries 24×; the
+// functional checks did not. We bound-retry ONLY transient classes so a single
+// blip does not roll back a good deploy — a PERSISTENT failure (real bug) still
+// fails after exhausting the attempts (fail-loud preserved). NOT retried: 4xx,
+// redirects, or wrong-value assertions.
+const SMOKE_TRANSIENT_RETRIES = Math.max(1, Number(getEnv('SMOKE_TRANSIENT_RETRIES', '3')) || 3);
+const SMOKE_TRANSIENT_RETRY_DELAY_MS =
+  Math.max(0, Number(getEnv('SMOKE_TRANSIENT_RETRY_DELAY_MS', '2500')) || 2500);
+
+/** True for network-level fetch failures + abort/timeout — always transient. */
+function isNetworkError(err) {
+  if (!err) return false;
+  if (err.name === 'AbortError') return true; // request timed out (controller.abort)
+  const m = `${err.message || ''} ${err.cause && err.cause.message ? err.cause.message : ''}`;
+  return /fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|network|terminated|other side closed/i.test(
+    m,
+  );
+}
+
 function buildUrl(baseUrl, path) {
   return new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
@@ -122,7 +145,7 @@ async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAUL
  *
  * R5 (C7.1) — see docs/roadmap-night/specs/R5.md §3.6 (D5).
  */
-async function fetchBinary({ baseUrl, path, method = 'POST', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+async function fetchBinaryOnce({ baseUrl, path, method = 'POST', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -183,7 +206,7 @@ async function fetchBinary({ baseUrl, path, method = 'POST', token, body, timeou
   }
 }
 
-async function fetchJson({ baseUrl, path, method = 'GET', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+async function fetchJsonOnce({ baseUrl, path, method = 'GET', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -220,21 +243,99 @@ async function fetchJson({ baseUrl, path, method = 'GET', token, body, timeoutMs
       try {
         json = JSON.parse(text);
       } catch (error) {
-        throw new Error(`Non-JSON response from ${method} ${path}: ${text.slice(0, 300)}`);
+        // A gateway/proxy HTML page (e.g. nginx 502/504) during the cold-start
+        // window — transient, retry-eligible.
+        const e = new Error(`Non-JSON response from ${method} ${path}: ${text.slice(0, 300)}`);
+        e.transient = true;
+        throw e;
       }
     }
 
     const expectedCodes = Array.isArray(expected) ? expected : [expected];
     if (!expectedCodes.includes(response.status)) {
-      throw new Error(
+      const e = new Error(
         `Unexpected status for ${method} ${path}: ${response.status}. Body: ${text.slice(0, 500) || '<empty>'}`,
       );
+      // Only 5xx is transient; an unexpected 4xx is a real client-contract error.
+      if (response.status >= 500) e.transient = true;
+      throw e;
     }
 
     return { status: response.status, json };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Bound-retry wrapper around {@link fetchJsonOnce}. Retries ONLY transient
+ * failures (`err.transient` — set on a 5xx unexpected status or a non-JSON
+ * gateway page — or a network/abort error). A 4xx, a redirect, or a wrong-value
+ * assertion is NOT retried and fails immediately. A persistent transient still
+ * fails after `SMOKE_TRANSIENT_RETRIES` attempts, so fail-loud is preserved.
+ */
+async function fetchJson(opts) {
+  const retries = opts.retries ?? SMOKE_TRANSIENT_RETRIES;
+  let lastErr;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await fetchJsonOnce(opts);
+    } catch (err) {
+      lastErr = err;
+      const transient = err.transient === true || isNetworkError(err);
+      if (transient && attempt < retries) {
+        console.log(
+          `[smoke:api] transient on ${opts.method || 'GET'} ${opts.path} ` +
+            `(attempt ${attempt}/${retries}): ${String(err.message).slice(0, 140)} — ` +
+            `retrying in ${SMOKE_TRANSIENT_RETRY_DELAY_MS}ms`,
+        );
+        await sleep(SMOKE_TRANSIENT_RETRY_DELAY_MS);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Bound-retry wrapper around {@link fetchBinaryOnce}. Unlike fetchJson, the
+ * binary helper RETURNS on an unexpected status (the caller asserts), so we
+ * retry when the returned status is an unexpected 5xx, or on a network error.
+ */
+async function fetchBinary(opts) {
+  const retries = opts.retries ?? SMOKE_TRANSIENT_RETRIES;
+  const expectedCodes = Array.isArray(opts.expected) ? opts.expected : [opts.expected];
+  let lastResult;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      const result = await fetchBinaryOnce(opts);
+      lastResult = result;
+      const transient = !expectedCodes.includes(result.status) && result.status >= 500;
+      if (transient && attempt < retries) {
+        console.log(
+          `[smoke:api] transient binary on ${opts.method || 'POST'} ${opts.path} ` +
+            `(attempt ${attempt}/${retries}): status ${result.status} — ` +
+            `retrying in ${SMOKE_TRANSIENT_RETRY_DELAY_MS}ms`,
+        );
+        await sleep(SMOKE_TRANSIENT_RETRY_DELAY_MS);
+        continue;
+      }
+      return result;
+    } catch (err) {
+      if (isNetworkError(err) && attempt < retries) {
+        console.log(
+          `[smoke:api] transient binary network on ${opts.method || 'POST'} ${opts.path} ` +
+            `(attempt ${attempt}/${retries}): ${String(err.message).slice(0, 140)} — ` +
+            `retrying in ${SMOKE_TRANSIENT_RETRY_DELAY_MS}ms`,
+        );
+        await sleep(SMOKE_TRANSIENT_RETRY_DELAY_MS);
+        continue;
+      }
+      throw err;
+    }
+  }
+  return lastResult;
 }
 
 async function waitForHealthyApi({ baseUrl, timeoutMs, retries, retryDelayMs }) {
