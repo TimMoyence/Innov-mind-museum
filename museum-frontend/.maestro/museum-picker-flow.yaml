@@ -58,14 +58,17 @@ appId: com.musaium.mobile.preview
     timeout: 20000
 
 # ──────────────────────────────────────────────
-# Phase 2: Search "Musée" → the nearby/search effect returns the seeded Bordeaux
+# Phase 2: Search "Mus" → the nearby/search effect returns the seeded Bordeaux
 # LOCAL rows (now carrying `id` → toPickable maps them to selectable rows). Tap
 # the first row and assert we land in the chat screen (tap-through happy path).
 # Local rows sort first by distance, so index 0 is a `museum-picker-row-<id>`.
+# NB: ASCII-only — Maestro Android rejects non-ASCII inputText ("Unicode
+# character input is not supported", mobile-dev-inc/maestro#146). "Mus" is a
+# substring of "Musée d'Aquitaine" / "CAPC musée", so the local rows still match.
 # ──────────────────────────────────────────────
 - tapOn:
     id: "museum-picker-search"
-- inputText: "Musée"
+- inputText: "Mus"
 - hideKeyboard
 - waitForAnimationToEnd
 - extendedWaitUntil:
