@@ -39,6 +39,13 @@ for (const route of ['/en', '/fr'] as const) {
     await expect(first).toHaveRole('link');
     await expect(first).toHaveAttribute('href', '#main');
 
+    // Guard the "first-in-DOM == first-tabbed" inference: a positive tabindex
+    // would reorder the tab sequence ahead of the skip-link without this test
+    // noticing (WCAG best practice forbids positive tabindex anyway).
+    await expect(page.locator('[tabindex]:not([tabindex="-1"]):not([tabindex="0"])')).toHaveCount(
+      0,
+    );
+
     // Its accessible name resolves to a non-empty dict-driven string.
     const accessibleName = (await first.textContent())?.trim() ?? '';
     expect(accessibleName.length).toBeGreaterThan(0);

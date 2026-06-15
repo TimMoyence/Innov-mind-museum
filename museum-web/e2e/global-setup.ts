@@ -100,14 +100,17 @@ async function loginAndSaveStorage(
     const state = await context.storageState();
     if (url.protocol !== 'https:') {
       // WebKit/Safari — unlike Chromium — does NOT treat http://localhost as a
-      // secure context, so it silently drops `Secure` cookies served over http.
-      // The backend marks access_token / refresh_token / csrf_token `Secure`
-      // (correct for prod https), which would leave WebKit unauthenticated in the
-      // http e2e env: every admin spec then redirects to /admin/login and the
-      // authenticated AdminShell never renders (the a11y scans pass vacuously on
-      // the login page; element-dependent specs fail). Strip `secure` for the
-      // http test origin only — production cookie attributes are untouched (this
-      // mirrors the admin-authz cookie set with `secure: url.protocol==='https:'`).
+      // secure context, so it silently drops `Secure` cookies served over http,
+      // leaving WebKit unauthenticated: every admin spec then redirects to
+      // /admin/login and the authenticated AdminShell never renders (a11y scans
+      // pass vacuously on the login page; element-dependent specs fail).
+      // The backend only marks access/refresh/csrf `Secure` in production
+      // (museum-backend auth-cookies.ts: `secure: isProduction()`), so against a
+      // non-prod e2e backend (CI's `pnpm dev`) this strip is a harmless no-op;
+      // against a production-mode backend (e.g. the local docker-compose dev
+      // container) it is load-bearing. Defensive either way, scoped to the http
+      // origin only so production cookie attributes are never touched (mirrors
+      // the admin-authz cookie set with `secure: url.protocol === 'https:'`).
       state.cookies = state.cookies.map((cookie) => ({ ...cookie, secure: false }));
     }
     writeFileSync(STORAGE_PATH, JSON.stringify(state));

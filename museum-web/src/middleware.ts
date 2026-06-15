@@ -111,9 +111,10 @@ function withNonceAndCsp(request: NextRequest, requestHeaders: Headers): NextRes
   // `upgrade-insecure-requests` must only be emitted on https origins (see
   // buildCspHeader). Behind the prod nginx TLS terminator the request reaches
   // Next.js as http with `x-forwarded-proto: https`, so trust that header too.
-  const isHttps =
-    request.nextUrl.protocol === 'https:' ||
-    request.headers.get('x-forwarded-proto') === 'https';
+  // x-forwarded-proto can be a comma-list across chained proxies; the first hop
+  // is the original client-facing scheme.
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const isHttps = request.nextUrl.protocol === 'https:' || forwardedProto === 'https';
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set(
