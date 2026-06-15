@@ -17,6 +17,14 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 - launchApp:
     clearState: true
+# Pin the device to Bordeaux (Musée d'Aquitaine / CAPC / Cité du Vin are within
+# the 5 km nearby radius) so the "Nearby Museums" refetch returns local cards
+# deterministically — Phase 3 (clear search → list restores with museum-card)
+# otherwise depends on whatever location the emulator defaults to and the nearby
+# query returns zero rows after eraseText.
+- setLocation:
+    latitude: 44.8378
+    longitude: -0.5792
 - extendedWaitUntil:
     visible:
       text: "Bon retour|Welcome back|Pas de compte|Sign up"

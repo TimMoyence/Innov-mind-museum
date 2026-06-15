@@ -407,6 +407,19 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
+      # The chat shard provisions the SigLIP ONNX encoder from the pinned
+      # (private) GHCR base image so chat-compare.yaml can reach a real match.
+      # pull-siglip-model.sh (gated CHAT_COMPARE_PROVISION=1) 401s without an
+      # authenticated docker — mirror recall-e2e.yml's GHCR login. Other shards
+      # do not pull the ~355 MB model, so the login is chat-only.
+      - name: Login to GHCR (chat shard — SigLIP base image)
+        if: matrix.shard == 'chat'
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
       - name: Boot backend (PG/Redis services + migrations + API + e2e seed)
         working-directory: museum-frontend
         env:
