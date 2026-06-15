@@ -128,7 +128,7 @@ describe('toMiddlewareDescriptor (B-R3 — L2 values incl. the 4 new profiles)',
 });
 
 describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profiles)', () => {
-  it('shapes BOTH streams for edge: upstream 90/8 = 11.25 KB/s, downstream 200/8 = 25 KB/s', () => {
+  it('shapes BOTH streams for edge: upstream round(90/8)=11 KB/s, downstream 200/8=25 KB/s (Toxiproxy int64)', () => {
     const toxics = toToxics(edge);
 
     const up = bandwidthToxic(toxics, 'upstream');
@@ -136,11 +136,15 @@ describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profi
     expect(up).toBeDefined();
     expect(down).toBeDefined();
 
-    // kbps → KB/s is performed ONCE per direction, here only.
-    expect(rateOf(up)).toBeCloseTo(edge.bwUpKbps / 8, 6);
-    expect(rateOf(up)).toBeCloseTo(11.25, 6);
-    expect(rateOf(down)).toBeCloseTo(edge.bwDownKbps / 8, 6);
-    expect(rateOf(down)).toBeCloseTo(25, 6);
+    // kbps → KB/s is performed ONCE per direction, here only, rounded to a whole
+    // KB/s because Toxiproxy's `rate` is a Go int64 (a fractional 11.25 → HTTP 400).
+    expect(rateOf(up)).toBe(Math.round(edge.bwUpKbps / 8));
+    expect(rateOf(up)).toBe(11);
+    expect(rateOf(down)).toBe(Math.round(edge.bwDownKbps / 8));
+    expect(rateOf(down)).toBe(25);
+    // Every emitted rate MUST be an integer or Toxiproxy rejects the toxic (regression guard).
+    expect(Number.isInteger(rateOf(up))).toBe(true);
+    expect(Number.isInteger(rateOf(down))).toBe(true);
 
     // Exactly the two bandwidth streams (no extras, none dropped).
     const bandwidthStreams = toxics
@@ -156,12 +160,15 @@ describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profi
     ['wifi-metered', wifiMetered, 2000 / 8, 5000 / 8],
     ['cellular-degraded', cellularDegraded, 30 / 8, 75 / 8],
   ] as const)(
-    'shapes new profile "%s" with kbps/8 rates on both streams',
+    'shapes new profile "%s" with round(kbps/8) integer rates on both streams',
     (_name, profile, expectedUpKBs, expectedDownKBs) => {
       const toxics = toToxics(profile);
 
-      expect(rateOf(bandwidthToxic(toxics, 'upstream'))).toBeCloseTo(expectedUpKBs, 6);
-      expect(rateOf(bandwidthToxic(toxics, 'downstream'))).toBeCloseTo(expectedDownKBs, 6);
+      // Toxiproxy `rate` is a Go int64 → the mapper rounds kbps/8 to a whole KB/s.
+      expect(rateOf(bandwidthToxic(toxics, 'upstream'))).toBe(Math.round(expectedUpKBs));
+      expect(rateOf(bandwidthToxic(toxics, 'downstream'))).toBe(Math.round(expectedDownKBs));
+      expect(Number.isInteger(rateOf(bandwidthToxic(toxics, 'upstream')))).toBe(true);
+      expect(Number.isInteger(rateOf(bandwidthToxic(toxics, 'downstream')))).toBe(true);
     },
   );
 
