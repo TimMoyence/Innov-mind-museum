@@ -74,7 +74,10 @@ appId: com.musaium.mobile.preview
 - tapOn:
     text: "Rechercher des musées...|Search museums..."
 - inputText: "Bordeaux"
-- hideKeyboard
+# NB: NO hideKeyboard here. On Android Maestro `hideKeyboard` sends BACK, which
+# pops the Museums directory tab back to the Dashboard (verified via screenshot
+# diff 2026-06-15) — the assertion then runs on the wrong screen. The directory
+# title sits above the keyboard, so we assert it with the keyboard still up.
 - waitForAnimationToEnd
 - assertVisible:
     text: "Musées à proximité|Nearby Museums"
@@ -83,7 +86,9 @@ appId: com.musaium.mobile.preview
 # Phase 3: Clear the query → the full nearby list reloads with cards.
 # ──────────────────────────────────────────────
 - eraseText
-- hideKeyboard
+# No hideKeyboard (Android BACK pops the tab — see Phase 2). After clearing the
+# query the nearby list (geo pinned to Bordeaux above) reloads its cards; the
+# first card sits above the keyboard.
 - extendedWaitUntil:
     visible:
       id: "museum-card"
