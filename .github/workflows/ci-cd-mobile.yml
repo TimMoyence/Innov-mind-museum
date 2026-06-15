@@ -970,7 +970,13 @@ jobs:
   maestro-ios-nightly:
     if: ${{ github.event_name == 'schedule' }}
     needs: quality
-    runs-on: macos-latest
+    # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
+    # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
+    # compile expo-modules-core@55.0.20 (swift_version 6.0). The app targets
+    # Xcode 26 everywhere else (Xcode Cloud for prod; withFmtConstevalPatch exists
+    # specifically for "Xcode 26+"), so this nightly was the only stale-toolchain
+    # surface. macos-26 is GA and macos-latest migrates to it in June 2026 anyway.
+    runs-on: macos-26
     timeout-minutes: 60
     defaults:
       run:
