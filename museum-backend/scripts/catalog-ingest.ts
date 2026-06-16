@@ -32,6 +32,7 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 
+import { env } from '@src/config/env';
 import { logger } from '@shared/logger/logger';
 
 import {
@@ -489,11 +490,15 @@ async function main(): Promise<void> {
     };
   const repository = new ArtworkEmbeddingRepositoryPg(AppDataSource);
 
-  const { createEmbeddingsAdapter } =
-    (await import('@modules/chat/adapters/secondary/embeddings/embeddings.factory')) as {
-      createEmbeddingsAdapter: () => EmbeddingsPort;
-    };
-  const encoder = createEmbeddingsAdapter();
+  const { createEmbeddingsAdapter } = await import(
+    '@modules/chat/adapters/secondary/embeddings/embeddings.factory'
+  );
+  // createEmbeddingsAdapter requires the validated AppEnv — it reads
+  // env.visualSimilarity for the provider + ONNX model path. The prior no-arg
+  // call passed `undefined`, so the encoder could not resolve its provider
+  // (EMBEDDINGS_PROVIDER=siglip-onnx) and the catalog ingest produced no real
+  // embeddings → chat-compare.yaml never reached a populated carousel.
+  const encoder = createEmbeddingsAdapter(env);
 
   // T-A8 — resolve the tenant scope for the run :
   //   1. `--museum-id=<int>` explicit → use as-is (validated in parseCliArgs).

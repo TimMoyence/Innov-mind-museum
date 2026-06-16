@@ -15,6 +15,14 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 - launchApp:
     clearState: true
+# Pin the device to Bordeaux. The picker's LOCAL rows (the seeded demo museums,
+# which carry an `id` → are selectable as museum-picker-row-<id>) only appear when
+# the nearby query has a location; without it the search returns non-local,
+# id-less museums and the row tap never navigates to chat. The flow header always
+# assumed this geo but never set it (verified 2026-06-15 on-device).
+- setLocation:
+    latitude: 44.8378
+    longitude: -0.5792
 - extendedWaitUntil:
     visible:
       text: "Bon retour|Welcome back|Pas de compte|Sign up"
@@ -58,23 +66,41 @@ appId: com.musaium.mobile.preview
     timeout: 20000
 
 # ──────────────────────────────────────────────
-# Phase 2: Search "Musée" → the nearby/search effect returns the seeded Bordeaux
+# Phase 2: Search "Mus" → the nearby/search effect returns the seeded Bordeaux
 # LOCAL rows (now carrying `id` → toPickable maps them to selectable rows). Tap
 # the first row and assert we land in the chat screen (tap-through happy path).
 # Local rows sort first by distance, so index 0 is a `museum-picker-row-<id>`.
+# NB: ASCII-only — Maestro Android rejects non-ASCII inputText ("Unicode
+# character input is not supported", mobile-dev-inc/maestro#146). "Mus" is a
+# substring of "Musée d'Aquitaine" / "CAPC musée", so the local rows still match.
 # ──────────────────────────────────────────────
 - tapOn:
     id: "museum-picker-search"
-- inputText: "Musée"
-- hideKeyboard
+- inputText: "Mus"
+# NB: NO hideKeyboard. On Android Maestro `hideKeyboard` sends BACK, which pops
+# the /(stack)/museums-picker route back to home (verified via screenshot diff on
+# the sibling museum-search-geo flow, 2026-06-15) — the row assertion then runs on
+# the wrong screen. The first picker row sits above the keyboard, so we assert +
+# tap it with the keyboard still up.
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: "museum-picker-row-.*"
     timeout: 20000
+# Tap a SEEDED demo museum (Musée d'Aquitaine, wikidata Q3329534) by its unique
+# name — its row is backed by a real chat context (the generic index:0 row was an
+# OpenStreetMap POI, museum-picker-row-osm-osm:<lat>:<lng>, whose tap does NOT open
+# a museum chat). tapOn-text is exempt from Maestro's ASCII inputText limit.
+# The search keyboard is still open here (hideKeyboard is unusable — on Android it
+# sends BACK, which pops the picker route): Android consumes the FIRST tap to
+# dismiss that keyboard, so the row's onPress never fires. We tap twice — the
+# second tap (optional, a no-op if the first already navigated) selects the museum
+# and opens the chat. Verified on-device 2026-06-15.
 - tapOn:
-    id: "museum-picker-row-.*"
-    index: 0
+    text: ".*Aquitaine.*"
+- tapOn:
+    text: ".*Aquitaine.*"
+    optional: true
 # First chat entry shows a one-time "Réponses générées par IA" disclosure modal
 # that overlays the composer — dismiss it so the chat-input becomes tappable.
 # (Verified at runtime 2026-06-01 on iOS 26 sim: without this the flow stalls on

@@ -163,6 +163,19 @@ test.describe('AdminShell — museum_manager access (T-B6 — R-C9 / D-C9)', () 
       },
     ]);
 
+    // WebKit/Safari drops Secure cookies over http://localhost (no localhost
+    // secure-context exception, unlike Chromium). The backend only marks auth
+    // cookies Secure in production (auth-cookies.ts: `secure: isProduction()`),
+    // so this re-stamp is a no-op against a non-prod e2e backend and load-bearing
+    // against a production-mode one — defensive either way, scoped to the http
+    // test origin only (production cookies untouched). Same rationale as
+    // e2e/global-setup.ts.
+    if (url.protocol !== 'https:') {
+      const cookies = await context.cookies();
+      await context.clearCookies();
+      await context.addCookies(cookies.map((cookie) => ({ ...cookie, secure: false })));
+    }
+
     await page.goto('/en/admin');
     await page.waitForLoadState('networkidle');
 

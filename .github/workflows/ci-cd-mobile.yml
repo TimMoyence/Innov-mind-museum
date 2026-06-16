@@ -407,6 +407,19 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
+      # The chat shard provisions the SigLIP ONNX encoder from the pinned
+      # (private) GHCR base image so chat-compare.yaml can reach a real match.
+      # pull-siglip-model.sh (gated CHAT_COMPARE_PROVISION=1) 401s without an
+      # authenticated docker — mirror recall-e2e.yml's GHCR login. Other shards
+      # do not pull the ~355 MB model, so the login is chat-only.
+      - name: Login to GHCR (chat shard — SigLIP base image)
+        if: matrix.shard == 'chat'
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
       - name: Boot backend (PG/Redis services + migrations + API + e2e seed)
         working-directory: museum-frontend
         env:
@@ -970,7 +983,13 @@ jobs:
   maestro-ios-nightly:
     if: ${{ github.event_name == 'schedule' }}
     needs: quality
-    runs-on: macos-latest
+    # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
+    # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
+    # compile expo-modules-core@55.0.20 (swift_version 6.0). The app targets
+    # Xcode 26 everywhere else (Xcode Cloud for prod; withFmtConstevalPatch exists
+    # specifically for "Xcode 26+"), so this nightly was the only stale-toolchain
+    # surface. macos-26 is GA and macos-latest migrates to it in June 2026 anyway.
+    runs-on: macos-26
     timeout-minutes: 60
     defaults:
       run:

@@ -364,9 +364,17 @@ export interface MiddlewareDescriptor {
   readonly [key: string]: unknown;
 }
 
-/** kbps → KB/s. THE SINGLE conversion site (DRY) — only `toToxics` calls it. */
+/**
+ * kbps → KB/s. THE SINGLE conversion site (DRY) — only `toToxics` calls it.
+ * Toxiproxy's bandwidth toxic `rate` is a Go `int64` (KB/s): a fractional rate
+ * (e.g. edge 90 kbps / 8 = 11.25) is rejected by the admin API with HTTP 400
+ * ("cannot unmarshal number 11.25 into Go struct field BandwidthToxic.attributes.rate
+ * of type int64"). Round to the nearest whole KB/s, flooring any non-zero
+ * bandwidth to ≥1 so a tiny profile never collapses to a 0-rate (blocking) toxic;
+ * offline (0 kbps) stays 0 — the intended zero-rate blocking toxic.
+ */
 function kbpsToKBytesPerSec(kbps: number): number {
-  return kbps / 8;
+  return kbps === 0 ? 0 : Math.max(1, Math.round(kbps / 8));
 }
 
 /** Per-kbit time cost (ms) for a given bandwidth; `Infinity` when bandwidth is 0. */

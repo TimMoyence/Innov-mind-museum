@@ -14,8 +14,10 @@
  *     the downlink (chat SSE / image bytes) are each shaped to their own bandwidth;
  *   - the bandwidth rates are obtained FROM `toToxics`, NOT from an inline kbps→KB/s
  *     literal (the source must not re-implement the `/ 8` conversion — DRY single-site);
- *   - `edge` yields a latency toxic + an upstream bandwidth toxic (rate = 90/8 =
- *     11.25) + a downstream bandwidth toxic (rate = 200/8 = 25);
+ *   - `edge` yields a latency toxic + an upstream bandwidth toxic (rate =
+ *     round(90/8) = 11) + a downstream bandwidth toxic (rate = 200/8 = 25) —
+ *     Toxiproxy's `rate` is a Go int64, so the conversion rounds to a whole KB/s
+ *     (a fractional 11.25 is rejected by the admin API with HTTP 400);
  *   - `offline` (lossPct 1, bw 0) yields blocking toxics on BOTH streams (zero-rate
  *     bandwidth so the proxy drops both directions — no traffic passes either way).
  *
@@ -153,7 +155,7 @@ describe('profile-to-toxics CLI (W3-01)', () => {
     },
   );
 
-  it('derives both stream bandwidth rates from toToxics (edge: up 90/8=11.25, down 200/8=25 KB/s)', () => {
+  it('derives both stream bandwidth rates from toToxics (edge: up round(90/8)=11, down 200/8=25 KB/s; Toxiproxy int64)', () => {
     const admin = parseToxics(['edge']);
     const expected = toToxics(NETWORK_PROFILES.edge);
 
@@ -165,19 +167,23 @@ describe('profile-to-toxics CLI (W3-01)', () => {
     );
     expect(expectedUp).toBeDefined();
     expect(expectedDown).toBeDefined();
-    // Sanity: the mapper converts kbps→KB/s once, per direction (bwUpKbps/8, bwDownKbps/8).
-    expect(expectedUp?.attributes.rate).toBeCloseTo(NETWORK_PROFILES.edge.bwUpKbps / 8, 5);
-    expect(expectedUp?.attributes.rate).toBeCloseTo(11.25, 5);
-    expect(expectedDown?.attributes.rate).toBeCloseTo(NETWORK_PROFILES.edge.bwDownKbps / 8, 5);
-    expect(expectedDown?.attributes.rate).toBeCloseTo(25, 5);
+    // The mapper converts kbps→KB/s once, per direction, rounding to a whole KB/s
+    // because Toxiproxy's `rate` is a Go int64 (a fractional 11.25 → HTTP 400).
+    expect(expectedUp?.attributes.rate).toBe(Math.round(NETWORK_PROFILES.edge.bwUpKbps / 8));
+    expect(expectedUp?.attributes.rate).toBe(11);
+    expect(expectedDown?.attributes.rate).toBe(Math.round(NETWORK_PROFILES.edge.bwDownKbps / 8));
+    expect(expectedDown?.attributes.rate).toBe(25);
+    // Every emitted rate MUST be an integer or Toxiproxy rejects the toxic (regression guard).
+    expect(Number.isInteger(expectedUp?.attributes.rate)).toBe(true);
+    expect(Number.isInteger(expectedDown?.attributes.rate)).toBe(true);
 
     const adminUp = admin.find((t) => t.type === 'bandwidth' && t.stream === 'upstream');
     const adminDown = admin.find((t) => t.type === 'bandwidth' && t.stream === 'downstream');
     expect(adminUp).toBeDefined();
     expect(adminDown).toBeDefined();
     // The CLI must surface the SAME per-direction values it got from the mapper.
-    expect(adminUp?.attributes.rate).toBeCloseTo(expectedUp?.attributes.rate ?? Number.NaN, 5);
-    expect(adminDown?.attributes.rate).toBeCloseTo(expectedDown?.attributes.rate ?? Number.NaN, 5);
+    expect(adminUp?.attributes.rate).toBe(expectedUp?.attributes.rate);
+    expect(adminDown?.attributes.rate).toBe(expectedDown?.attributes.rate);
 
     // edge must carry a latency toxic too.
     expect(admin.some((t) => t.type === 'latency')).toBe(true);
