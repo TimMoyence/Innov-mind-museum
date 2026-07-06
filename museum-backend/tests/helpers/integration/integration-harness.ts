@@ -64,6 +64,23 @@ const buildHarness = async (
   const { AppDataSource } = await import('@src/data/db/data-source');
 
   if (!AppDataSource.isInitialized) {
+    // `@src/config/env` snapshots PGDATABASE eagerly at its FIRST import (no
+    // dotenv in NODE_ENV=test — see jest-env-pgdatabase.setup.ts pinning it to
+    // the `museum_test` default). If any module in a test file's import chain
+    // pulled `env` in before this harness set PGDATABASE=container.database,
+    // AppDataSource was constructed with the stale default and would connect to
+    // a non-existent `museum_test` DB (AggregateError: database "museum_test"
+    // does not exist). Force the container coordinates explicitly so the harness
+    // is robust to import order rather than assuming env was still unfrozen.
+    // Regression: the visual-similarity/catalog-ingest suite (its SUT import
+    // chain freezes env first), which reddened test-coverage → coverage-merge.
+    AppDataSource.setOptions({
+      host: container.host,
+      port: container.port,
+      username: container.user,
+      password: container.password,
+      database: container.database,
+    });
     await AppDataSource.initialize();
   }
   // Use transaction: 'none' so that migrations with `transaction = false`
