@@ -63,7 +63,10 @@ jobs:
           shellcheck .claude/skills/team/lib/quality-scores.sh
 
       - name: Install promptfoo
-        run: npm install -g promptfoo@latest
+        # Pinned (not @latest): a floating promptfoo bump silently changed how
+        # `transformResponse`/`output` reach javascript asserts and reddened this
+        # nightly for a month with no repo change. Bump deliberately + re-verify.
+        run: npm install -g promptfoo@0.121.17
 
       - name: Run reviewer regression eval
         working-directory: .claude/skills/team/team-promptfoo

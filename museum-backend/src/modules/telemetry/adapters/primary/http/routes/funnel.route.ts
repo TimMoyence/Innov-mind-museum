@@ -72,6 +72,11 @@ const stripPropsPii = (props: PropsBag | undefined): PropsBag | undefined => {
   const cleaned: PropsBag = {};
   for (const [key, value] of Object.entries(props)) {
     if (PII_CANARY_KEYS.has(key)) continue;
+    // SEC (CodeQL js/remote-property-injection): reject prototype-polluting keys
+    // before writing to the plain-object bag. Telemetry props are attacker-shaped
+    // JSON, so a `__proto__`/`constructor`/`prototype` key must never reach the
+    // dynamic assignment below.
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
     cleaned[key] = value;
   }
   return cleaned;

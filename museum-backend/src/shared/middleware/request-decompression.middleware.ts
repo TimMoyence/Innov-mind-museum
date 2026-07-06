@@ -110,7 +110,15 @@ export function requestDecompressionMiddleware(
     next(unsupportedEncoding(encoding));
     return;
   }
-  const factory: DecompressorFactory = DECOMPRESSORS[encoding];
+  const factory: DecompressorFactory | undefined = DECOMPRESSORS[encoding];
+  // SEC (CodeQL js/unvalidated-dynamic-method-call): `encoding` is already gated
+  // by isSupportedEncoding() above, but validate the looked-up factory is a
+  // callable own-value before invoking it — defence-in-depth against any drift
+  // between the allow-list and the DECOMPRESSORS map, and the guard CodeQL reads.
+  if (typeof factory !== 'function') {
+    next(unsupportedEncoding(encoding));
+    return;
+  }
 
   const cap = parseByteLimit(env.jsonBodyLimit);
   const decompressor = factory();

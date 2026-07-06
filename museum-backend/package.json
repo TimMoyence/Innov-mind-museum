@@ -84,7 +84,7 @@
   "pnpm": {
     "overrides": {
       "langsmith": ">=0.6.3",
-      "protobufjs": ">=8.0.2",
+      "protobufjs": ">=8.4.1",
       "handlebars": ">=4.7.9",
       "fast-uri": ">=3.1.2",
       "uuid": "^11.1.1",
@@ -169,7 +169,7 @@
     "langfuse": "~3.38.20",
     "langfuse-langchain": "~3.38.0",
     "linkedom": "^0.18.12",
-    "multer": "2.1.1",
+    "multer": "2.2.0",
     "onnxruntime-node": "^1.26.0",
     "opossum": "^9.0.0",
     "otpauth": "^9.4.1",

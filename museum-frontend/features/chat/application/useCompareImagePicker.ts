@@ -77,7 +77,11 @@ export const useCompareImagePicker = () => {
       resolveCompressionMode({ resolved, preference, metered }),
       true,
     );
-    let uri = firstAsset.uri;
+    // Both branches assign `uri`, so no useless initial value (CodeQL
+    // js/useless-assignment-to-local): the optimized URI on success, the raw
+    // asset URI if optimization fails — a failed optimization never blocks the
+    // compare flow (parity useImagePicker).
+    let uri: string;
     try {
       const { uploadUri } = await optimizeImageAdaptive(firstAsset.uri, decision);
       uri = uploadUri;

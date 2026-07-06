@@ -22,18 +22,30 @@ providers:
   - id: 'exec:bash ../lib/reviewer-eval-shim.sh'
     config:
       timeoutMs: 120000
-      transformResponse: 'JSON.parse(output)'
 
 prompts:
   - 'feature_id={{feature_id}}|category={{category}}|description={{description}}|diff={{diff_excerpt}}|spec={{spec_excerpt}}'
 
 tests: file://corpus.json
 
+# The shim emits reviewer JSON as a single stdout line. Each `javascript` assert
+# receives `output` as that RAW STRING — so we parse it in-assert rather than via
+# provider `transformResponse: 'JSON.parse(output)'`, which recent promptfoo no
+# longer applies to the `output` seen by javascript asserts (the bare-expression
+# form silently no-ops, leaving `output` a string → `output.scoresOnFiveAxes`
+# undefined → every assert failed, 0/20 for a month). The `typeof …=== "string"`
+# guard keeps this correct if a future promptfoo pre-parses `output` to an object.
 defaultTest:
   assert:
     - type: javascript
-      value: 'output.scoresOnFiveAxes && typeof output.scoresOnFiveAxes.weightedMean === "number"'
+      value: |
+        const o = typeof output === "string" ? JSON.parse(output) : output;
+        return o.scoresOnFiveAxes && typeof o.scoresOnFiveAxes.weightedMean === "number";
     - type: javascript
-      value: 'output.scoresOnFiveAxes.weightedMean >= 0 && output.scoresOnFiveAxes.weightedMean <= 100'
+      value: |
+        const o = typeof output === "string" ? JSON.parse(output) : output;
+        return o.scoresOnFiveAxes.weightedMean >= 0 && o.scoresOnFiveAxes.weightedMean <= 100;
     - type: javascript
-      value: '["correctness","security","maintainability","testCoverage","docQuality"].every(k => typeof output.scoresOnFiveAxes[k]?.score === "number")'
+      value: |
+        const o = typeof output === "string" ? JSON.parse(output) : output;
+        return ["correctness","security","maintainability","testCoverage","docQuality"].every(k => typeof o.scoresOnFiveAxes[k]?.score === "number");

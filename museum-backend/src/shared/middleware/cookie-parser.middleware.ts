@@ -40,6 +40,11 @@ export function parseCookieHeader(header: string | undefined): Record<string, st
     if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
       value = value.slice(1, -1);
     }
+    // SEC: reject prototype-polluting cookie names. `out` is already a null-proto
+    // object (line above), so a `__proto__` cookie would only create an own key —
+    // but the explicit guard is what CodeQL's remote-property-injection query
+    // recognizes as sanitized, and it hardens against any future non-null target.
+    if (name === '__proto__' || name === 'constructor' || name === 'prototype') continue;
     // SEC: first occurrence wins (Express cookie-parser parity) — prevents an attacker
     // from overriding a same-name cookie via duplicate Set-Cookie (browsers preserve
     // order; first is most specific Path/Domain).

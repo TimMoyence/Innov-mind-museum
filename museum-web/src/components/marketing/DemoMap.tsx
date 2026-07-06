@@ -34,20 +34,36 @@ export default function DemoMap() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const map = new Map({
-      container: mapRef.current,
-      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [2.3376, 48.862],
-      zoom: 12.5,
-      // Allow drag/pan for tactile feel, but lock zoom & rotate to avoid scroll hijack
-      scrollZoom: false,
-      doubleClickZoom: false,
-      touchZoomRotate: false,
-      dragRotate: false,
-      keyboard: false,
-      dragPan: true,
-      attributionControl: false,
-    });
+    // maplibre-gl needs a live WebGL context. Where none is available — headless
+    // CI browsers with no GPU (the nightly Firefox a11y run), users who disabled
+    // WebGL, hardened/old browsers — `new Map()` THROWS synchronously. Unguarded,
+    // that error escapes the effect and trips the route error boundary, so the
+    // whole public page renders "Something went wrong" (empty <title>, skip-link
+    // resolves to the boundary's "Try again" button). The demo map is decorative
+    // — the overlay chrome below renders regardless — so we fail soft: report once
+    // to Sentry and skip the live map rather than crash the page.
+    let map: Map;
+    try {
+      map = new Map({
+        container: mapRef.current,
+        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        center: [2.3376, 48.862],
+        zoom: 12.5,
+        // Allow drag/pan for tactile feel, but lock zoom & rotate to avoid scroll hijack
+        scrollZoom: false,
+        doubleClickZoom: false,
+        touchZoomRotate: false,
+        dragRotate: false,
+        keyboard: false,
+        dragPan: true,
+        attributionControl: false,
+      });
+    } catch (err) {
+      Sentry.captureException(
+        err instanceof Error ? err : new Error('maplibre-gl Map init failed (no WebGL context?)'),
+      );
+      return;
+    }
 
     // TD-MGL-02 — surface maplibre-gl tile / style / network errors to Sentry
     // instead of swallowing them silently in the console.
