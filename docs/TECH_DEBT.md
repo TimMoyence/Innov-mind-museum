@@ -384,7 +384,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-36 — `QuotaUpsellModal` manque testIDs
 
-- [ ] **Statut** : ouvert (créé 2026-05-17, audit-360 S3 follow-up #3)
+- [x] **Statut** : fermé 2026-06-14 (vérifié code, consolidation 360 C19) — testIDs présents : `quota-upsell-{modal,dismiss,email,consent,submit}` (`QuotaUpsellModal.tsx:172,180,202,222,234`). Noms réels `quota-upsell-*` (le critère d'origine `paywall-modal-*` + `reset-meta` était spéculatif ; `reset-meta` non requis). _NB : le thème hardcodé de la modale (off-brand) est une dette DISTINCTE → tracée roadmap lane B (B5)._
 - **Référence code** : `museum-frontend/features/paywall/ui/QuotaUpsellModal.tsx`.
 - **Symptôme** : modal sans testIDs → Maestro flows ne peuvent pas asserter ses éléments avec précision (fallback texte → fragile i18n).
 - **Sprint d'origine** : audit-360 S3 follow-up #3.
@@ -433,7 +433,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-41 — `sanitizePromptInput` ne strip pas `[`/`]` (W3 LOW-1 / NTH-1)
 
-- [ ] **Statut** : ouvert (créé 2026-05-18, run `2026-05-17-w3-geo-walk-intra`).
+- [x] **Statut** : fermé 2026-06-14 (commit `c03cc428`, vérifié code) — `PROMPT_SECTION_MARKERS` + `BRACKETED_TOKEN` regex défangent les marqueurs structurels (`input.ts:18-34`), préservant `[EMAIL]`/`[PHONE]` du scrubber + l'enveloppe nonce-gated.
 - **Référence code** :
   ```
   museum-backend/src/shared/validation/input.ts  # sanitizePromptInput
@@ -455,7 +455,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-42 — `cachedGeofenceMode` jamais invalidé (W3 MIN-1)
 
-- [ ] **Statut** : ouvert (créé 2026-05-18, run `2026-05-17-w3-geo-walk-intra`).
+- [x] **Statut** : fermé 2026-06-14 (commit `98333b0f`, vérifié code) — résolu-par-design : contrat « cache boot-permanent intentionnel, pas de TTL » documenté en JSDoc (`museum.repository.pg.ts:176-182`) ; le test-seam `_resetGeofenceModeCacheForTests()` couvre le cas tests (cf TD-54).
 - **Référence code** (lignes corrigées 2026-05-21, db verdict) :
   ```
   museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:24       # singleton cachedGeofenceMode
@@ -476,7 +476,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-43 — `geo_detect_museum_total{outcome="miss"}` confond "no match" et "throw" (W3 NTH-2)
 
-- [ ] **Statut** : ouvert (créé 2026-05-18, run `2026-05-17-w3-geo-walk-intra`).
+- [x] **Statut** : fermé 2026-06-14 (commit `98333b0f`, vérifié code) — label `'error'` séparé : `geoDetectMuseumTotal.labels('error').inc()` sur le catch path (`detect-museum.useCase.ts:91`), `miss` reste un signal no-match propre.
 - **Référence code** :
   ```
   museum-backend/src/modules/museum/useCase/detect/detect-museum.useCase.ts:84-91  # catch path, geoDetectMuseumTotal.labels('miss').inc() au :89 (lignes corrigées 2026-05-21, db verdict)
@@ -650,7 +650,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
 
 ### TD-54 — `cachedGeofenceMode` singleton module-level peut fuiter entre tests
 
-- [ ] **Statut** : ouvert (créé 2026-05-19, /review PR #290 finding MEDIUM)
+- [x] **Statut** : fermé 2026-06-14 (commit `98333b0f`, vérifié code) — `_resetGeofenceModeCacheForTests()` (`museum.repository.pg.ts:200`) câblé dans le `beforeEach` du test repo (contrat documenté JSDoc `:182`), le cache ne fuit plus entre tests rejouant les migrations geofence.
 - **Référence code** : `museum-backend/src/modules/museum/adapters/secondary/pg/museum.repository.pg.ts:24` (singleton) + `:192 _resetGeofenceModeCacheForTests()` (test seam existant) — lignes corrigées 2026-05-21 (db verdict).
 - **Symptôme** : `cachedGeofenceMode` est lazy-init au premier query + jamais ré-évalué. Le commentaire dit "immuable at runtime" — vrai en prod, mais en CI/integration tests qui drop/recreate la column geofence (transitions postgis ↔ jsonb via migrations rejouées dans le même worker Jest), le cache survit et le repo query la mauvaise branche. Flaky tests possible.
 - **Sprint d'origine** : W3 (audit-360 geo-walk-intra).
@@ -1325,13 +1325,13 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 - ~~TD-SW-01 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 - ~~TD-QRW-01 (fermé, archivé 2026-05-21 sweep multi-agent)~~ → [archive](TECH_DEBT_ARCHIVE.md#archivé-2026-05-21-sweep-multi-agent)
 ## TD-UUID-01 — uuid deps vs pnpm.overrides version inconsistency (LOW)
-**Fix** : align `museum-backend/package.json:88 ^11.1.1` (pnpm.overrides) OR drop override.
+**Fix** : align `museum-backend/package.json:90 ^11.1.1` (pnpm.overrides) OR drop override.
 
 ## TD-MID-01 — reflect-metadata test imports consolidate to setupFiles (LOW)
 **Fix** : single Jest setupFiles entry instead of 4 ad-hoc.
 
 ## TD-MID-02 — p-limit ^3 too loose (Renovate cap risk) (LOW)
-**Fix** : tighten `museum-backend/package.json:172` to `^3.1.0`.
+**Fix** : tighten `museum-backend/package.json:176` to `^3.1.0`.
 
 ---
 
