@@ -9,3 +9,14 @@ CVE-2026-33671
 # and rely on `crypto.randomUUID()` for generation. v14 is ESM-only and breaks
 # the ts-jest CommonJS test runner — staying on v11 is the correct trade-off.
 GHSA-w5hq-g745-h8pq
+
+# sigstore CVE-2026-48815 — certificateOIDs verification-constraint enforcement,
+# fixed in 4.1.1. Same class as the picomatch entry above: sigstore@3.1.0 is
+# bundled inside the Node.js base image's npm (npm ≥9 ships it for
+# `npm audit signatures` / provenance), NOT an application dependency (0 hits in
+# any of our lockfiles). npm is never invoked at container runtime — the service
+# runs `node dist/...` — so npm's signature-verification path is unreachable in
+# prod. Our own image signing uses the cosign BINARY (sigstore/cosign-installer),
+# a separate component. Revisit when the pinned node:22 base digest bundles a
+# patched npm (npm bundling sigstore ≥4.1.1).
+CVE-2026-48815
