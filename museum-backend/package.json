@@ -146,7 +146,7 @@
   },
   "dependencies": {
     "@langchain/core": "1.2.1",
-    "@langchain/google-genai": "2.1.26",
+    "@langchain/google-genai": "2.2.0",
     "@langchain/openai": "1.4.2",
     "@mozilla/readability": "^0.6.0",
     "@musaium/shared": "file:../packages/musaium-shared",
