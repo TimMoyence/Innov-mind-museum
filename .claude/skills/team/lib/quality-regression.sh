@@ -33,11 +33,16 @@ fi
 [ -f "$OUTPUT_JSON" ]  || { echo "output not found: $OUTPUT_JSON" >&2; exit 2; }
 [ -f "$BASELINE_JSON" ] || { echo "baseline not found: $BASELINE_JSON" >&2; exit 2; }
 
-# Extract per-axis means from promptfoo output. Each test result has a parsed
-# `output` matching reviewer JSON. We average across all tests.
+# Extract per-axis means from promptfoo output. Each test result's `output` is
+# the reviewer JSON — recent promptfoo (≥0.121) hands it to `.response.output`
+# as a RAW STRING, not a pre-parsed object (same shift that broke the config
+# asserts), so parse it here with `fromjson`. The `type=="string"` guard keeps
+# this working if a future promptfoo pre-parses it back to an object.
 current=$(jq -c '
+  def parseOut: if type == "string" then (fromjson? // null) else . end;
   def axisMean(name):
-    [ .results.results[]?.response.output as $o
+    [ (.results.results[]?.response.output | parseOut) as $o
+      | select($o != null)
       | if (name == "weightedMean") then $o.scoresOnFiveAxes.weightedMean
         else $o.scoresOnFiveAxes[name].score end
       | select(. != null) ]

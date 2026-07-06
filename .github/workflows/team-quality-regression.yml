@@ -86,9 +86,22 @@ jobs:
           rc=$?
           cat regression-result.json | jq .
           if [ $rc -ne 0 ]; then
-            echo "::error::Quality regression detected — at least one axis dropped >5pts vs baseline."
-            jq -c '.perAxis | to_entries | map(select(.value.breach)) | map({axis: .key, current: .value.current, baseline: .value.baseline, delta: .value.delta})' regression-result.json
-            exit 1
+            err=$(jq -r '.error // ""' regression-result.json)
+            breaches=$(jq -c '.perAxis | to_entries | map(select(.value.breach)) | map({axis: .key, current: .value.current, baseline: .value.baseline, delta: .value.delta})' regression-result.json)
+            # Mock mode is harness-sanity only (workflow default off-schedule): its
+            # scores are deterministic-but-arbitrary hashes that will not track the
+            # real-derived baseline, so a >5pt "drift" is expected and NOT enforced.
+            # A genuine parse error (.error set) still fails even in mock — that
+            # means the harness itself is broken (the class of bug that kept this
+            # nightly red for a month). Real mode (schedule) enforces both.
+            if [ "$REVIEWER_EVAL_MODE" = "mock" ] && [ -z "$err" ]; then
+              echo "::warning::Mock-mode baseline drift (arbitrary mock scores vs real baseline) — not enforced; harness parse OK."
+              echo "::notice::breaches=$breaches"
+            else
+              echo "::error::Quality regression detected — axis drop >5pts vs baseline, or unparseable promptfoo output ($err)."
+              echo "$breaches"
+              exit 1
+            fi
           fi
 
       - name: Upload artifacts
