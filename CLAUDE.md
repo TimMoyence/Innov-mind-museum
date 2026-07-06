@@ -160,6 +160,8 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 - **MFA = web-admin-only en V1 (museum-frontend)** — la surface MFA mobile user-facing (écrans enrôlement/challenge/banner, route `mfa-enroll`, client `mfaApi`, hook screen-capture, flow Maestro) a été **retirée** (décision produit 2026-05-26, UFR-016, cf. ADR-017 Withdrawn-for-V1). `authService.login()` gère `mfaRequired` gracieusement (AppError `Forbidden`/`MFA_WEB_ONLY` → message i18n `error.auth.mfa_web_only`, jamais le token brut `MFA_REQUIRED`). L'enforcement backend (ADR-014) + l'admin web restent actifs. Aucun écran mobile n'affiche plus de secret TOTP.
 - **TypeORM `dataSource.query()` : SELECT renvoie `rows[]`, mais INSERT/UPDATE/DELETE…RETURNING renvoie le tuple `[rows[], affectedCount]`** — forme différente selon le type de requête (pg, TypeORM 0.3.28). Tout code qui fait `const r = await dataSource.query('UPDATE … RETURNING …')` puis lit `r[0]` comme une row, ou teste `r.length === 0`, est buggé : `r.length` vaut toujours 2 et `r[0]` est le **tableau** de rows (`[]` si 0 match). Lire via une garde `const rows = Array.isArray(r[0]) ? r[0] : r;` puis `rows.length === 0`. Bug réel : le quota free-tier (`monthly-session-quota.repo.pg.ts` `tryConsume`) ne bloquait jamais (402 jamais émis ; `result[0]=[]` truthy → `next()` → 201, compteur jamais incrémenté) — fix commit `f74ce7de`. Détail + incident antérieur (prune cron) : `lib-docs/typeorm/PATTERNS.md §4.10` + `LESSONS.md` (2026-05-08). Auditer les autres `query('…RETURNING')` raw.
 - **NetInfo `isConnectionExpensive` = axe COÛT (metered), PAS un axe lent/qualité (museum-frontend)** — iOS marque TOUT cellulaire `_expensive=true` (2G comme 5G parfaite, netinfo `ios/RNCConnectionState.m:47`) ; Android = `isActiveNetworkMetered()` (wifi hotspot inclus). Résoudre le data mode `low` dessus punissait chaque user cellulaire sain (TTS off, réponses courtes — bug corrigé run 2026-06-12). Règle : `resolveDataMode(pref, netInfo, quality)` (`features/chat/application/DataModeProvider.tsx`) n'utilise QUE disponibilité + étiquette 2g/3g + moteur de qualité passif (`shared/infrastructure/connectivity/networkQuality.ts`, hystérésis 1400/1000 ms + dwell 30 s) ; metered = signal séparé `deriveMetered()` qui ne gate QUE prefetch + compression upload (jamais TTS/header/badge — INV-01/02, spec `team-state/working/undefined-network-detection-reliability/spec.md`).
+- **promptfoo ≥0.121 : `.results.results[].response.output` = STRING brute, plus un objet pré-parsé** — casse tout consumer qui lit `output.scoresOnFiveAxes` directement OU qui compte sur `transformResponse: 'JSON.parse(output)'` (la forme expression-nue n'est plus appliquée aux asserts `javascript`). Symptômes : éval à `0/N` (les asserts js voient `output.x === undefined`) OU `unable_to_parse_promptfoo_output` côté script aval. **A gardé `team-quality-regression` rouge 1 mois** en cassant DEUX parsers du même run (les asserts de `team-promptfoo/promptfooconfig.yaml` ET l'extracteur `lib/quality-regression.sh`). Fix : parser dans le consumer avec garde de type — `const o = typeof output === 'string' ? JSON.parse(output) : output;`. **Corollaire : épingler `promptfoo@<version>` dans les workflows, jamais `@latest`** — un bump flottant est une variable nightly-only non-vérifiable (c'est le bump qui a introduit ce changement de format « sans changement de code »).
+- **`npm audit fix` (museum-frontend) churne l'arbre → doublon de module natif** — il réordonne les résolutions et peut installer une 2e version d'un module natif (vu : `@expo/log-box` 55.0.10 top-level vs 55.0.12 nested) → `expo-doctor` « Check that no duplicate dependencies » ROUGE, or le gate mobile ne tolère QUE le check Metro-symlinks → quality job cassé. **Toujours fixer les CVE frontend via `overrides` chirurgicaux** (version minimale-patchée lue dans l'advisory : `<X` vuln → `>=X`), jamais `npm audit fix`. Pour un transitif majeur-sensible, borner (`undici: ">=6.27.0 <7"` garde le majeur 6 attendu par `@sentry/cli`). Vérif obligatoire après : `npm audit --audit-level=high` exit 0 + `expo-doctor` sans doublon + `tsc` + diff `package-lock.json` contenu (une consolidation net-négative = bon signe ; un gros churn = alerte). Réf run 2026-07-06 (5 CVE HIGH fermées : form-data/linkify-it/tmp/undici/ws).
 
 ## Environment Setup
 
@@ -299,7 +301,7 @@ See [`docs/MIGRATION_GOVERNANCE.md`](docs/MIGRATION_GOVERNANCE.md) for full rule
 
 Chat pipeline = defense-in-depth (ADR-015 amendment, dual V2 layers parallel) :
 
-1. **V1 keyword guardrail** (`art-topic-guardrail.ts`) — keyword pre-filter (insults/off-topic/injection/external actions). ~5ms sync. Runs first.
+1. **V1 keyword guardrail** (`art-topic-guardrail.ts`) — keyword pre-filter (insults/off-topic/injection/external actions). ~5ms sync. Runs first. `normalize()` defangs obfuscation BEFORE the keyword scan (H10) : zero-width strip (U+200B-200D/2060/FEFF), curated Cyrillic+Greek→Latin homoglyph fold (look-alikes only, NOT a transliteration — real Cyrillic/Greek/CJK/Arabic words still pass), and base64-candidate decode (≥16-char runs, kept only if ≥85% printable ASCII + has a letter — hex hashes / artwork tokens decode to garbage and are dropped, so no over-block).
 2. **Structural prompt isolation** — system + section prompts AVANT user content dans LLM message array. Boundary marker `[END OF SYSTEM INSTRUCTIONS]`.
 3. **Input sanitization** — fields user-controlled (`location`, `locale`) → Unicode normalize + zero-width strip + truncate via `sanitizePromptInput()`.
 4. **V2 LLM Guard sidecar** (`llm-guard.adapter.ts`) — ProtectAI Python sidecar (self-hosted free), scan prompt-injection/PII/toxicity/bias. Fail-CLOSED (ADR-047). Active si `GUARDRAILS_V2_LLM_GUARD_URL` set. 1500ms timeout + circuit breaker.
@@ -360,7 +362,7 @@ TypeORM **v1.0.0 released 2026-05-19** ; le repo 0.3.x est archivé. Musaium = `
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Innov-mind-museum** (36627 symbols, 58551 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **Innov-mind-museum** (36650 symbols, 56977 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -398,5 +400,25 @@ This project is indexed by GitNexus as **Innov-mind-museum** (36627 symbols, 585
 | Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
+| Work in the Chat area (274 symbols) | `.claude/skills/generated/chat/SKILL.md` |
+| Work in the Scripts area (157 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
+| Work in the Migrations area (155 symbols) | `.claude/skills/generated/migrations/SKILL.md` |
+| Work in the Admin area (108 symbols) | `.claude/skills/generated/admin/SKILL.md` |
+| Work in the Sentinels area (102 symbols) | `.claude/skills/generated/sentinels/SKILL.md` |
+| Work in the Pg area (101 symbols) | `.claude/skills/generated/pg/SKILL.md` |
+| Work in the Application area (101 symbols) | `.claude/skills/generated/application/SKILL.md` |
+| Work in the Visual-similarity area (82 symbols) | `.claude/skills/generated/visual-similarity/SKILL.md` |
+| Work in the Guardrail area (78 symbols) | `.claude/skills/generated/guardrail/SKILL.md` |
+| Work in the Search area (64 symbols) | `.claude/skills/generated/search/SKILL.md` |
+| Work in the Ports area (62 symbols) | `.claude/skills/generated/ports/SKILL.md` |
+| Work in the Auth area (62 symbols) | `.claude/skills/generated/auth/SKILL.md` |
+| Work in the Session area (58 symbols) | `.claude/skills/generated/session/SKILL.md` |
+| Work in the Infrastructure area (54 symbols) | `.claude/skills/generated/infrastructure/SKILL.md` |
+| Work in the Middleware area (48 symbols) | `.claude/skills/generated/middleware/SKILL.md` |
+| Work in the Llm area (46 symbols) | `.claude/skills/generated/llm/SKILL.md` |
+| Work in the Museum area (45 symbols) | `.claude/skills/generated/museum/SKILL.md` |
+| Work in the Jobs area (43 symbols) | `.claude/skills/generated/jobs/SKILL.md` |
+| Work in the Image area (43 symbols) | `.claude/skills/generated/image/SKILL.md` |
+| Work in the Audit area (39 symbols) | `.claude/skills/generated/audit/SKILL.md` |
 
 <!-- gitnexus:end -->
