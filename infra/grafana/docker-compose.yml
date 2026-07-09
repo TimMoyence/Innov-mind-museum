@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v2.55.1@sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3
     container_name: musaium-prometheus
     restart: unless-stopped
     command:
@@ -33,7 +33,7 @@ services:
       - obs
 
   grafana:
-    image: grafana/grafana:11.6.14
+    image: grafana/grafana:11.6.16@sha256:d67af92050b8d93b393dc741864752a69c9da1ffa39c1bb9af49ad5d9e47d2c3
     container_name: musaium-grafana
     restart: unless-stopped
     depends_on:
@@ -64,7 +64,7 @@ services:
       - obs
 
   alertmanager:
-    image: prom/alertmanager:v0.32.1
+    image: prom/alertmanager:v0.32.1@sha256:51a825c2a40acc3e338fdd00d622e01ec090f72be2b3ea46be0839cd47a4d286
     container_name: musaium-alertmanager
     restart: unless-stopped
     command:
