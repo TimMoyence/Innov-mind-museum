@@ -37,8 +37,11 @@ appId: com.musaium.mobile.preview
 
 - hideKeyboard
 
+# iOS: hideKeyboard fires the password field's onSubmitEditing (login submits) so
+# auth-submit is already gone; Android needs the explicit tap. optional handles both.
 - tapOn:
     id: "auth-submit"
+    optional: true
 # iOS native "Save Password?" dialog
 - tapOn:
     text: "Plus tard|Not Now"

@@ -27,8 +27,16 @@ appId: com.musaium.mobile.preview
 
 - hideKeyboard
 
+# iOS: `hideKeyboard` sends a "return" key event and the password field's
+# onSubmitEditing already fires the login, so by the time we reach this step the
+# app has navigated to home and `auth-submit` is gone (verified 2026-07-11 on an
+# iOS 18.6 sim — backend logged POST /auth/login 200 with the tap never issued).
+# Android's `hideKeyboard` does NOT submit, so the explicit tap is required there.
+# `optional: true` taps it when present (Android) and skips it when already
+# submitted (iOS) — the caller's post-login assertion proves login either way.
 - tapOn:
     id: "auth-submit"
+    optional: true
 
 - waitForAnimationToEnd:
     timeout: 10000
