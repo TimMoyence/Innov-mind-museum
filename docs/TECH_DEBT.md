@@ -155,7 +155,7 @@ Une dette doit être **prouvable par le code** : si le grep ne retourne rien, on
   
   # BE-blocked (endpoint pas déclaré OU type binary non supporté)
   museum-frontend/features/museum/infrastructure/museumApi.ts:151,166  # getEnrichment + getEnrichmentStatus, openapi.json ABSENT
-  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:94   # synthesizeSpeech, openapi.json:4014 mais return audio/mpeg binary que openApiRequest ne type pas
+  museum-frontend/features/chat/infrastructure/chatApi/audio.ts:107  # synthesizeSpeech, openapi.json:4014 mais return audio/mpeg binary que openApiRequest ne type pas
   ```
 - **Symptôme** : TD-1 a migré `userProfileApi.ts` mais la doctrine type-safe API client n'est pas codebase-wide. 4 callsites consomment encore `httpRequest` brut, drift potentiel entre BE response shape et FE consumers non détectable au tsc.
 - **Sprint d'origine** : audit Pattern 4 (post-TD-1 / TD-2 BE work), 2026-05-16.
@@ -1201,7 +1201,7 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
 ---
 
 ## TD-FL-01 — FlashList ListEmptyComponent/Header/Footer inline JSX (MINOR x4)
-**Sites** : reviews.tsx:255,257 ; ticket-detail.tsx:219-223 ; ChatMessageList.tsx:255+ ; TicketsListView.tsx:178+.
+**Sites** : reviews.tsx:260,261 ; ticket-detail.tsx:219-223 ; ChatMessageList.tsx:255+ ; TicketsListView.tsx:178+.
 **Fix** : hoist OR useMemo the JSX elements.
 
 ## TD-FL-02 — Chat lists should use maintainVisibleContentPosition v2 (INFO, V1.1)
