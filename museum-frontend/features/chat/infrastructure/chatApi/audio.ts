@@ -87,6 +87,14 @@ export const postAudioMessage = async (
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/audio`, {
     method: 'POST',
     body: formData,
+    // Explicit multipart Content-Type. Axios in React Native does not recognise
+    // RN's FormData polyfill, so without this it defaults a POST body to
+    // `application/x-www-form-urlencoded`; RN's native NetworkingModule then
+    // builds a MultipartBody from the FormData and `MultipartBody.setType`
+    // throws `multipart != application/x-www-form-urlencoded`, so the voice
+    // upload fails on-device ("Network unavailable"). The image-compare upload
+    // (imageComparisonApi.ts) already sets this same header for the same reason.
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 
   return ensureContract(data, isPostMessageResponseDTO, 'post-audio-message');

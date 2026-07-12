@@ -27,8 +27,14 @@ appId: com.musaium.mobile.preview
 
 - hideKeyboard
 
+# hideKeyboard dismisses the keyboard so `auth-submit` is tappable. The password
+# field wires no onSubmitEditing (see LoginForm.tsx / FormInput.tsx), so the
+# explicit button tap is the real login trigger on both platforms.
+# `optional: true` taps it when present and tolerates it already being gone —
+# the caller's post-login assertion proves login either way.
 - tapOn:
     id: "auth-submit"
+    optional: true
 
 - waitForAnimationToEnd:
     timeout: 10000

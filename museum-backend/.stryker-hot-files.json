@@ -41,6 +41,26 @@
       "path": "src/modules/auth/useCase/session/session-issuer.service.ts",
       "killRatioMin": 80,
       "rationale": "Refresh-token rotation contract: assertRefreshTokenUsable + issueSession. Mutation = token-reuse vulnerability or stuck-open idle window. Banking-grade — co-pinned with refresh-token repo and authSession façade."
+    },
+    {
+      "path": "src/modules/auth/useCase/session/token-jwt.service.ts",
+      "killRatioMin": 80,
+      "rationale": "JWT sign/verify (iss/aud pinning, alg allowlist). Mutation = forged or none-alg token accepted. Ramp wave 1 (2026-07-12) — measured 91.9% (clean-room)."
+    },
+    {
+      "path": "src/modules/chat/useCase/guardrail/guardrail-evaluation.service.ts",
+      "killRatioMin": 80,
+      "rationale": "Guardrail evaluation orchestration (V1 keyword + V2 judge/sidecar routing, ADR-015). Mutation = safety-layer bypass. Ramp wave 1 (2026-07-12) — measured 82.5%."
+    },
+    {
+      "path": "src/modules/chat/adapters/secondary/guardrails/llm-guard.adapter.ts",
+      "killRatioMin": 80,
+      "rationale": "V2 LLM Guard sidecar adapter (fail-closed, circuit breaker, ADR-047). Mutation = injection/PII scan silently skipped. Ramp wave 1 (2026-07-12) — measured 86.5%."
+    },
+    {
+      "path": "src/modules/chat/useCase/llm/llm-judge-guardrail.ts",
+      "killRatioMin": 80,
+      "rationale": "V2 LLM-as-judge guardrail (fail-open, budget-gated). Mutation = uncertain-allow judgment corrupted. Ramp wave 1 (2026-07-12) — measured 94.7%."
     }
   ]
 }

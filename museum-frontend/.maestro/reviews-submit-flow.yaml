@@ -43,8 +43,12 @@ appId: com.musaium.mobile.preview
     id: "password-input"
 - inputText: "TestPassword123!"
 - hideKeyboard
+# hideKeyboard dismisses the keyboard so auth-submit is tappable; the explicit tap
+# is the real login trigger on both platforms (no onSubmitEditing is wired — see
+# LoginForm.tsx). optional:true tolerates the button already being gone.
 - tapOn:
     id: "auth-submit"
+    optional: true
 - tapOn:
     text: "Plus tard|Not Now"
     optional: true
@@ -68,20 +72,21 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Paramètres|Settings"
     timeout: 40000
-# The "Noter Musaium" button's accessibilityLabel (a11y.settings.rate_musaium =
-# "Ouvrir les avis" / "Open reviews") COLLAPSES the subtree, so the visible
-# "Noter Musaium" Text is NOT separately queryable — match the a11y label.
-# Blind `swipe UP ×2` overshot the row into the Third-party-AI consent section
-# (observed via failure screenshot); scrollUntilVisible stops AS SOON as the row
-# is on screen, so it lands on it deterministically regardless of section order.
+# The "Noter Musaium" row is a Pressable with accessibilityLabel
+# a11y.settings.rate_musaium ("Ouvrir les avis" / "Open reviews"). On ANDROID the
+# label COLLAPSES the subtree so only the label is queryable; on iOS the label is
+# NOT exposed as a `text` element but the child Text (settings.rate_musaium =
+# "Noter Musaium" / "Rate Musaium") IS — so match EITHER (label on Android, visible
+# title on iOS). Blind `swipe UP ×2` overshot the row into the Third-party-AI
+# consent section; scrollUntilVisible stops AS SOON as the row is on screen.
 - scrollUntilVisible:
     element:
-      text: "Ouvrir les avis|Open reviews"
+      text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
     direction: DOWN
     visibilityPercentage: 1
     timeout: 20000
 - tapOn:
-    text: "Ouvrir les avis|Open reviews"
+    text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
 - extendedWaitUntil:
     visible:
       text: "Avis|Reviews"

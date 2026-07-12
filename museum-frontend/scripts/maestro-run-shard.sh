@@ -49,6 +49,25 @@ FAIL_COUNT=0
 echo "[shard:$SHARD] flows to run:"
 echo "$FLOWS"
 
+# auth-account-delete.yaml DESTROYS apple.test@apple.com (its header warns the
+# harness MUST re-seed it after each run); auth-login-happy logs into that same
+# account, so on a 2nd shard attempt — or the iOS-nightly `all` union — it would
+# fail "invalid credentials". Re-seed it at the start of every run (idempotent:
+# createSmokeAccount hard-deletes any residue then inserts a fresh verified user).
+# Best-effort: a WARN never fails the shard; scoped to the shards that run the
+# destructive flow. Requires the backend DB env, which the CI shard-run step sets.
+case "$SHARD" in
+  auth | all)
+    if (cd "$SCRIPT_DIR/../../museum-backend" &&
+      E2E_SEED_ALLOW=1 E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
+        pnpm seed:e2e-maestro-account); then
+      echo "[shard:$SHARD] re-seeded apple.test@apple.com (auth-account-delete recovery)"
+    else
+      echo "[shard:$SHARD] WARN: apple.test re-seed failed — auth-login-happy may fail after auth-account-delete"
+    fi
+    ;;
+esac
+
 # Each flow gets one retry before being marked FAIL. Maestro flows on a CI
 # emulator have a transient-flake floor (deep-link mount timing, a dropped first
 # tap right after boot, animation races) that a single re-run clears. Only
