@@ -250,7 +250,14 @@ export default function ReviewsScreen() {
           data={reviews}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          ListHeaderComponent={renderHeader}
+          // Pass the RENDERED element, not the function. `renderHeader` is
+          // re-created every render, so `ListHeaderComponent={renderHeader}`
+          // handed FlashList a new component *type* each render → it remounted
+          // the whole header subtree on every keystroke, so the comment
+          // TextInput lost focus after the first character (a user could only
+          // ever type one letter). Passing the element lets React reconcile the
+          // same tree in place and preserve focus. Ref: reviews-submit-flow.
+          ListHeaderComponent={renderHeader()}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           contentContainerStyle={styles.listContent}

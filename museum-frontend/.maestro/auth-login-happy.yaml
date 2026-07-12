@@ -37,8 +37,12 @@ appId: com.musaium.mobile.preview
 
 - hideKeyboard
 
+# hideKeyboard dismisses the keyboard so auth-submit is tappable; the explicit tap
+# is the real login trigger on both platforms (no onSubmitEditing is wired — see
+# LoginForm.tsx). optional:true tolerates the button already being gone.
 - tapOn:
     id: "auth-submit"
+    optional: true
 # iOS native "Save Password?" dialog
 - tapOn:
     text: "Plus tard|Not Now"

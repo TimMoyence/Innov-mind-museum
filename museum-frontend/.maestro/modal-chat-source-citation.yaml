@@ -66,16 +66,11 @@ appId: com.musaium.mobile.preview
 # tap lands on the "Musées" tab → nearby-museums directory. Exercise it
 # best-effort, then deterministically: Musées tab → museum card → sheet →
 # "Démarrer un chat ici" → chat composer.
-- scrollUntilVisible:
-    element:
-      text: "Commencer une nouvelle conversation|Start a new conversation"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 30
-- tapOn:
-    text: "Commencer une nouvelle conversation|Start a new conversation"
-    optional: true
-- waitForAnimationToEnd
+# Navigate straight to the Museums tab (the passing museum-chat-flow does exactly
+# this). The old best-effort "Start a new conversation" tap actually opened a chat
+# on this binary and the AI-disclosure sheet mounted OVER the screen, covering the
+# "Musées" bottom tab so the deterministic tap below failed. The Museums tab is
+# reachable directly from home — no CTA detour needed.
 - tapOn:
     text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
