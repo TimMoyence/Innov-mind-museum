@@ -147,7 +147,7 @@
   "dependencies": {
     "@langchain/core": "1.2.2",
     "@langchain/google-genai": "2.2.0",
-    "@langchain/openai": "1.5.3",
+    "@langchain/openai": "1.5.5",
     "@mozilla/readability": "^0.6.0",
     "@musaium/shared": "file:../packages/musaium-shared",
     "@opentelemetry/api": "^1.9.0",
