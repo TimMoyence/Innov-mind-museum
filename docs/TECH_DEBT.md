@@ -1550,3 +1550,17 @@ Runbook : [`docs/operations/UNIVERSAL_LINKS_VERIFICATION.md`](operations/UNIVERS
   ```
 - **Symptôme (vérifié 2026-06-12)** : `daily-art` + `opening-hours-parser` échouent AUSSI en isolation (`--testPathPattern`, 4 fails/28) alors que `git diff --stat` sur ces modules = 0 ligne — préexistant au cycle, cause non investiguée (suspect : dépendance date/heure/timezone locale, à confirmer). `auth.route` est un flake d'ordre sous Redis-off (bruit BullMQ/ioredis `ECONNREFUSED 6379`, classe open-handles connue) : rouge dans un run batch scope chat/routes/contract, vert solo et vert dans le full run suivant.
 - **Comment fermer** : (a) root-cause les 2 suites date/heure-dépendantes (clock injectée ou dates fixes timezone-safe) ; (b) auth.route : isoler la dépendance d'ordre (probable état partagé app/Redis entre suites) — recouper avec la dette « full unit-integration `--forceExit=false` = 845 fails/102 suites ».
+
+## TD-MUT-RAMP-100 — Étendre la mutation Stryker vers 100% (registry ramp + full-src sandbox-compat) (MEDIUM, post-launch)
+
+- **Objectif** : couverture mutation "100% à jour à terme". Aujourd'hui la mutation est **volontairement scopée** à une liste curée de fichiers critiques (`.stryker-hot-files.json` = le cadran) parce que le full-src (`stryker/config.mjs`, ~64 700 fichiers) est ingérable localement (60-90 min) ET bloqué (cf. ci-dessous). Ramp en cours : **8 → 12** hot-files (vague 1 : `token-jwt.service`, `guardrail-evaluation.service`, `llm-guard.adapter`, `llm-judge-guardrail`).
+- **Blocage full-src** : ~57 tests meta/sentinel (`tests/unit/{architecture,compliance,legal,net-shaping,scripts,sentinels}/` + `*-sentinel`/`*-adoption`/`_legacy-*`/`*-banned`/`pr[0-9]*`/`td20-*` épars dans auth/chat/shared) lisent des fichiers `src`/repo via `fs.readFileSync(REPO_ROOT/…)` ou spawn des scripts CLI. `REPO_ROOT` résout faux dans le sandbox `.stryker-tmp/sandbox-*/` (museum-backend-rooted) → `ENOENT` → « initial test run failed » → tout run full-src abort. Ces tests ne couvrent **aucun mutant `src`** (ils assertent sur la structure/policy/config).
+- **Workaround actuel (prouvé 2026-07-12)** : configs par-vague `stryker/hot-*.config.mjs` avec `enableFindRelatedTests: true` → Stryker lance `jest --findRelatedTests <fichier muté>`, donc **seuls les tests important le fichier muté** tournent — les ~57 sentinels ne s'exécutent jamais. `setupFiles` = pin PGDATABASE + chat env ; 2 excludes route/cache (leak BullMQ/ioredis). Cache incrémental `reports/stryker-incremental.json` accumulé entre vagues (runs suivants cheap).
+- **Comment fermer (vers 100%)** : (a) guarder les ~57 tests sandbox-incompatibles d'un skip-under-Stryker (helper partagé détectant `.stryker-tmp`/`STRYKER_MUTATOR_RUNNER`), OU (b) les regrouper dans un jest project dédié exclu du `mutate:`, OU (c) rendre leur résolution `REPO_ROOT` sandbox-aware ; puis re-armer le gate CI (`.github/workflows/ci-cd-backend.yml:405-421`, `if: false`) et **ratcheter par vagues** (registry ++ ) + monter les `killRatioMin` (80 → 85 → 90).
+- **Référence code** :
+  ```
+  museum-backend/stryker/hot-2files.config.mjs        # pattern findRelatedTests + setup + excludes
+  museum-backend/stryker/hot-wave1.config.mjs         # vague 1 (+4 fichiers)
+  museum-backend/.stryker-hot-files.json              # le registry (le cadran)
+  .github/workflows/ci-cd-backend.yml:421             # `if: false` — gate à ré-armer
+  ```
