@@ -5,8 +5,10 @@
 #   - which package/path it surfaces in
 #   - why we accept the risk (runtime impact analysis)
 #
-# If a CVE lands here it's because it's in a build-time-only dependency that
-# is never executed at request-time in the sidecar process.
+# Most entries here are build-time-only dependencies never executed at
+# request-time. The one documented exception (CVE-2026-4372) is a RUNTIME
+# dependency whose only attack vector (untrusted model loading) is unreachable
+# in this sidecar — see its entry below for the explicit accepted-risk analysis.
 
 # CVE-2026-24049 — wheel: Privilege Escalation via malicious wheel file.
 # Surfaces inside pip/_vendor/wheel-*/METADATA and setuptools/_vendor/wheel-*/METADATA.
@@ -21,3 +23,19 @@ CVE-2026-24049
 # setuptools). Runtime impact: ZERO. The sidecar never parses tar archives —
 # uvicorn + llm-guard + FastAPI operate entirely on JSON request bodies.
 CVE-2026-23949
+
+# CVE-2026-4372 — transformers 4.51.3: RCE via untrusted model deserialization
+# (fixed upstream in transformers 5.3.0). RUNTIME dependency (BERT inference),
+# NOT build-time — so the generic doctrine above does not apply; this is an
+# explicit accepted-risk, signed off 2026-07-12.
+# Why unreachable here: the RCE requires loading an attacker-controlled model.
+# This sidecar loads ONLY its own pinned protectai models (PromptInjection,
+# Anonymize, Toxicity, NoRefusal, Bias, Sensitive, Relevance), baked at image
+# build time from the CI-controlled source; no model path, repo id, or weights
+# are ever taken from a request. The sidecar is network-isolated (internal-only,
+# reached solely by the backend over the compose network) and its HTTP surface
+# accepts JSON scan payloads only — never model files or model identifiers.
+# Cannot fix by bumping: llm-guard 0.3.16 (latest) hard-pins transformers==4.51.3
+# (Requires-Dist), and no llm-guard release yet supports transformers >=5.3.0.
+# Re-evaluate + drop this entry when llm-guard ships transformers-5 support.
+CVE-2026-4372
