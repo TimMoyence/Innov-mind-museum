@@ -57,16 +57,11 @@ appId: com.musaium.mobile.preview
 # hands off to a context picker before chatting). Exercise the home affordance
 # best-effort, then make the directory deterministic via the "Musées" tab, pick a
 # museum card -> sheet -> "Démarrer un chat ici" -> chat.
-- scrollUntilVisible:
-    element:
-      text: "Commencer une nouvelle conversation|Start a new conversation"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 30
-- tapOn:
-    text: "Commencer une nouvelle conversation|Start a new conversation"
-    optional: true
-- waitForAnimationToEnd
+# Navigate straight to the Museums tab (the passing museum-chat-flow does exactly
+# this). The old best-effort "Start a new conversation" tap actually opened a chat
+# on this binary and the AI-disclosure sheet mounted OVER the screen, covering the
+# "Musées" bottom tab so the deterministic tap below failed. The Museums tab is
+# reachable directly from home — no CTA detour needed.
 - tapOn:
     text: ".*(Musées|Museums).*"
 - extendedWaitUntil:
@@ -139,15 +134,25 @@ appId: com.musaium.mobile.preview
     timeout: 30000
 
 # ──────────────────────────────────────────────
-# Phase 5: Scroll up the thread to load older history (best-effort)
+# Phase 5: Scroll up the thread to reach the oldest message
 # ──────────────────────────────────────────────
-- swipe:
-    direction: DOWN
-    optional: true
-- waitForAnimationToEnd
-
-# Earliest user message must still be reachable in the thread.
-- assertVisible: "Tell me about the Mona Lisa."
+# The chat list (ChatMessageList.tsx) is a NON-inverted FlashList that
+# auto-scrolls to the newest message on every send. After 3 turns with real
+# (long) LLM answers the first USER bubble is several viewports up, so a single
+# swipe only reveals ~one screen of older content — not the top bubble. Keep
+# scrolling toward the top until the earliest user bubble is on screen.
+# NOTE: `scrollUntilVisible.direction` is the CONTENT-scroll direction (opposite
+# to `swipe.direction`, which is the gesture) — UP scrolls toward the oldest
+# message. Maestro matches a `text:` selector as a FULL-match regex against an
+# element's whole text, so this targets the user bubble ("Tell me about the Mona
+# Lisa.") specifically — the assistant's "Quick summary: Tell me about the Mona
+# Lisa. …" echo does not match.
+- scrollUntilVisible:
+    element:
+      text: "Tell me about the Mona Lisa."
+    direction: UP
+    timeout: 25000
+    visibilityPercentage: 40
 
 # ──────────────────────────────────────────────
 # Phase 6: Close chat and return

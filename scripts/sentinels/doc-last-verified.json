@@ -3,7 +3,7 @@
   "docs": {
     "docs/ROADMAP_PRODUCT.md": "2026-06-15",
     "docs/ARCHITECTURE.md": "2026-05-27",
-    "docs/TECH_DEBT.md": "2026-07-06",
+    "docs/TECH_DEBT.md": "2026-07-12",
     "docs/legal/ROPA.md": "2026-07-06",
     "docs/compliance/SUBPROCESSORS.md": "2026-07-06",
     "SECURITY.md": "2026-06-05",
@@ -19,7 +19,7 @@
     "docs/adr/ADR-047-llm-guard-circuit-breaker-fail-closed.md": "2026-06-14",
     "docs/adr/ADR-048-guardrail-strategy-interface.md": "2026-06-14",
     "docs/adr/ADR-060-gdpr-erasure-dsar-compliance-chain.md": "2026-05-31",
-    "docs/adr/ADR-063-langfuse-mask-central-stripfreetext.md": "2026-07-06",
+    "docs/adr/ADR-063-langfuse-mask-central-stripfreetext.md": "2026-07-12",
     "docs/adr/ADR-064-access-token-denylist-fail-open.md": "2026-06-14"
   }
 }

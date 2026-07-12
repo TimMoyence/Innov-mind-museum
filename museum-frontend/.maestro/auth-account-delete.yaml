@@ -84,13 +84,20 @@ appId: com.musaium.mobile.preview
 # Phase 3: Scroll to Danger Zone + tap Delete account
 # ──────────────────────────────────────────────
 # Low visibility threshold — the Danger Zone heading sits at the bottom of the
-# settings scroll and rarely reaches 100% visibility.
+# settings scroll and rarely reaches 100% visibility. The settings list is a
+# long GlassCard (blur) column; without waitToSettleTimeoutMs Maestro snapshots
+# the view hierarchy mid-swipe (while the blur/animation is still settling) and
+# misses the heading even though it is fully rendered — the debug screenshot
+# shows "Danger Zone" + "Delete Account" on screen at the moment of the timeout.
+# Let each scroll step settle before the visibility check (Maestro's own tip).
 - scrollUntilVisible:
     element:
       text: "Zone de danger|Danger Zone"
     direction: DOWN
-    timeout: 20000
+    timeout: 30000
     visibilityPercentage: 1
+    speed: 25
+    waitToSettleTimeoutMs: 800
 - assertVisible:
     text: "Zone de danger|Danger Zone"
 
