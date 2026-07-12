@@ -53,7 +53,7 @@ services:
     # pgvector/pgvector:pg16 = Debian Bookworm slim PG16 + pgvector preinstalled.
     # Required for C3 visual similarity (artwork_embeddings.embedding halfvec(768)).
     # Data volume from postgres:16-alpine is binary-compatible (same PG major + data dir layout).
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
     container_name: dev-postgres
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -72,7 +72,7 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: dev-redis
     # Force `--requirepass` so the dev container matches the prod compose
     # contract (deploy/docker-compose.prod.yml:331-334). Without it, ioredis
@@ -105,7 +105,7 @@ services:
     restart: unless-stopped
 
   adminer:
-    image: adminer:latest
+    image: adminer:latest@sha256:983261ecc40a4aaf11e25aeda8ef821f5a43a9f024b3967c81cbcc0e6ce43ba3
     container_name: dev-adminer
     depends_on:
       db:
@@ -123,7 +123,7 @@ services:
   #   - 3100 = the SHAPED listener that forwards upstream to backend:3000.
   # Toxiproxy MUST NEVER appear in a prod artifact (sentinel:toxiproxy-no-prod).
   toxiproxy:
-    image: ghcr.io/shopify/toxiproxy:2.9.0
+    image: ghcr.io/shopify/toxiproxy:2.9.0@sha256:b44c283298cea49e2defaba1b3028783798346f2a926684e3a345fd8441af3b8
     container_name: dev-toxiproxy
     profiles: [weaknet]
     depends_on:
