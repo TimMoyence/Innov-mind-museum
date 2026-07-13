@@ -76,3 +76,15 @@ Response shape (both endpoints):
 ```
 
 The Node adapter (`llm-guard.adapter.ts`) maps `reason` substrings to the finite `AdvancedGuardrailBlockReason` union via a lookup table — any unknown reason collapses to `prompt_injection` (safest default). `error` is reserved for fail-CLOSED cases (network, timeout, HTTP ≥ 400, malformed JSON).
+
+## Security / supply-chain notes
+
+- **Trivy scan**: the CI `build` job scans this image (CRITICAL,HIGH). Accepted
+  CVEs live in `.trivyignore`, each with a runtime-impact rationale. The image is
+  ~3GB (baked model weights), so the scan runs with a raised 15m timeout
+  (`ci-cd-llm-guard.yml`) — the 5m default flakes with "context deadline exceeded".
+- **CVE-2026-4372** (transformers 4.51.3 RCE, fixed 5.3.0) is an accepted risk:
+  the RCE needs an attacker-controlled model, but this sidecar loads only its own
+  pinned protectai models and never takes a model path/id from a request. It is
+  upstream-blocked — `llm-guard` 0.3.16 hard-pins `transformers==4.51.3`. Drop the
+  ignore once `llm-guard` supports transformers ≥ 5.3.0.
