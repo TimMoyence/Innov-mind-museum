@@ -706,6 +706,14 @@ jobs:
       # difference from the `prebuild` job and the fix for the false-green netshape
       # run: the emulator reaches 10.0.2.2:3100 (Toxiproxy) → host backend :3000.
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3100
+      # The other half of the weak-net fix, and the reason this suite could never
+      # have been green: all four netshape flows deeplink `(dev)/force-data-mode`
+      # to force the low-data mode, but this APK is an `assembleRelease`
+      # (`--dev false` → `__DEV__ === false`), so the whole `(dev)` group redirected
+      # Home. The forced mode was never applied and the (non-optional)
+      # `low-data-badge` assertion could not pass — shaping the link fixed the
+      # transport while the trigger itself stayed dead. See shared/lib/e2eBuildFlags.ts.
+      EXPO_PUBLIC_E2E_DEV_ROUTES: 'true'
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -1017,10 +1025,42 @@ jobs:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
+      # Standalone sim-e2e build config — mirrors the Android build job (E40).
+      # The iOS Maestro suite MUST run a RELEASE build: only a Release build
+      # embeds the JS bundle (AppDelegate `#else` → `main.jsbundle`) so the app
+      # launches standalone WITHOUT Metro. A Debug build loads from Metro
+      # (AppDelegate `#if DEBUG` → RCTBundleURLProvider) — with no packager in
+      # CI it hangs on the dev launcher, which is why this nightly was red every
+      # run since it was first enabled (it never once went green as a Debug build).
+      #
+      # But a bare Release CONFIGURATION promotes the variant to `production`
+      # (api-url.config.js resolveVariant rule 2) → prod backend URL + prod
+      # bundle id (≠ the flows' `com.musaium.mobile.preview` appId) + ATS
+      # localhost block. `EXPO_PUBLIC_E2E_LOCAL_BACKEND=1` is the dedicated
+      # sim-e2e signal that keeps the standalone Release build on the
+      # `development` variant (localhost backend + preview bundle id +
+      # NSAllowsLocalNetworking) WITHOUT weakening the prod-safety guard — a real
+      # EAS/Xcode-Cloud prod build never sets it. The EXPO_PUBLIC_* URL/env are
+      # inlined into the JS bundle at the Release build step, so they MUST be set
+      # on this job (the macOS simulator shares the runner's host loopback, so
+      # `localhost:3000` reaches the backend directly — no 10.0.2.2 indirection).
+      APP_VARIANT: development
+      EXPO_PUBLIC_E2E_LOCAL_BACKEND: '1'
+      EXPO_PUBLIC_API_ENVIRONMENT: staging
+      EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
+      # Keeps the `(dev)` route group alive in this RELEASE bundle. The group is
+      # otherwise gated on `__DEV__`, which a Release build sets to false — so the
+      # deeplink-triggered dev routes redirect Home and the flows that drive them
+      # silently test nothing. app/(dev)/_layout.tsx documents the two modal-preview
+      # routes that already "passed green VACUOUSLY on the Release APK" for exactly
+      # this reason; `force-data-mode` (the netshape trigger) had inherited the same
+      # defect. Never set outside these Maestro jobs — `scripts/sentinels/
+      # e2e-flags-not-in-env.mjs` fails the build if it leaks into a committed file.
+      EXPO_PUBLIC_E2E_DEV_ROUTES: 'true'
       # Test-only audio-fixture injection seam (useAudioRecorder.ts) — bakes the
       # bundled clip so the iOS audio-recording-flow STT→TTS round-trip is
       # deterministic (Maestro cannot drive a real microphone). Inlined into the
-      # JS bundle at the Debug build step; the sim-only Debug app is never
+      # JS bundle at the Release build step; the sim-only e2e app is never
       # shipped, so the seam never reaches production. See .maestro/fixtures/audio.md.
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
     steps:
@@ -1037,15 +1077,54 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Expo prebuild iOS
         run: npx expo prebuild --platform ios --clean
-      - name: Build iOS Debug app for Simulator
+      - name: Build iOS Release app for Simulator (standalone, embedded JS bundle)
+        # Release — NOT Debug. A Release build runs `react-native-xcode.sh`
+        # bundling → embeds `main.jsbundle`, and AppDelegate's `#else` branch
+        # loads that embedded bundle, so the app launches standalone with no
+        # Metro packager. (Debug would load from Metro and hang in CI.) The
+        # variant stays `development` via EXPO_PUBLIC_E2E_LOCAL_BACKEND=1 (job
+        # env) so the standalone build targets the local backend + the preview
+        # bundle id the flows expect. Sim build needs no code signing.
+        # ENTRY_FILE — the expo-updates "Generate updates resources" build phase
+        # (`create-updates-resources-ios.sh`) runs FULL manifest bundling in
+        # Release (only-fingerprint in Debug, which is why the old Debug nightly
+        # never hit this). It shells out via `bash -l -c` to
+        # `createUpdatesResources.js`, passing `$ENTRY_FILE`. With expo-updates
+        # 55.0.18 + @expo/config, an empty ENTRY_FILE lets the entry path get its
+        # `.js` stripped → Metro 404 → the phase fails the whole build. The
+        # committed Podfile carries a `post_install` `export ENTRY_FILE=…` patch,
+        # but `expo prebuild --clean` (the step above) regenerates the Podfile and
+        # wipes it (CLAUDE.md gotcha § GitNexus/Podfile). Setting ENTRY_FILE in
+        # the build env is the reproducible fix — it propagates through the
+        # phase's login shell to the script (verified). Prod Xcode Cloud is
+        # unaffected: it builds from the committed, already-patched Pods.
+        # SENTRY_DISABLE_AUTO_UPLOAD — the RN "Bundle React Native code and
+        # images" phase wraps a Sentry source-map upload that re-bundles via
+        # Metro and needs SENTRY_AUTH_TOKEN. This sim-only e2e app is never
+        # shipped, so its source maps are worthless; disabling the upload keeps
+        # the phase from failing on a missing token (and avoids a redundant
+        # second Metro pass). Prod builds (Xcode Cloud) keep the upload.
+        #
+        # NO `CODE_SIGNING_ALLOWED=NO` — the app MUST be signed. That flag
+        # produces a fully unsigned binary with zero entitlements, so
+        # expo-secure-store's `setValueWithKeyAsync` fails at runtime
+        # ("required entitlement not present" → the Keychain access group is
+        # missing) → the auth token never persists → every auth flow dies on the
+        # login screen. A simulator build with NO signing flag defaults to the
+        # "Sign to Run Locally" ad-hoc identity — which needs NO certificate,
+        # team, or secret (works on a bare CI runner) yet grants the app Keychain
+        # access. Verified locally: login + Hide Keyboard + Keychain all green
+        # once the flag is dropped. (Do NOT add DEVELOPMENT_TEAM/provisioning —
+        # a simulator build ignores it and uses Sign-to-Run-Locally anyway.)
         run: |
           cd ios
+          ENTRY_FILE="node_modules/expo-router/entry.js" \
+          SENTRY_DISABLE_AUTO_UPLOAD="true" \
           xcodebuild -workspace Musaium.xcworkspace \
             -scheme Musaium \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
             build
       - name: Install Maestro CLI
         run: |
@@ -1096,11 +1175,26 @@ jobs:
           # Keep the host backend light (no eager BullMQ/redis churn); e2e never
           # exercises knowledge-extraction. Mirrors the Android Boot-backend step.
           EXTRACTION_WORKER_ENABLED: 'false'
-          # The iOS nightly runs the `all` union incl. chat + chat-compare, so it
-          # needs the LLM key and the SigLIP encoder + one artwork embedding
-          # (maestro-runner-setup.sh gates the ~354MB pull on CHAT_COMPARE_PROVISION).
+          # The iOS run drives the chat flows, so it needs a live LLM key.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CHAT_COMPARE_PROVISION: '1'
+          # Lift the free-tier session cap for the whole run.
+          #
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to **3**, and
+          # nearly every chat/netshape flow opens a NEW conversation through
+          # `helpers/chat-entry.yaml` (museum-sheet-start-chat → POST /api/sessions).
+          # Unlike Android — whose matrix fans out into separate jobs, each with its
+          # own fresh Postgres service — the iOS nightly runs every flow in ONE job
+          # against ONE database, so the counter accumulates: from the 4th
+          # conversation on, the backend answers 402, the QuotaUpsellModal covers the
+          # composer, `chat-input` never appears and every remaining chat flow fails.
+          # A hard cap, not flakiness.
+          #
+          # This does NOT weaken modal-paywall-quota-upsell: `seed-e2e-maestro-account`
+          # reads this same variable and seeds the paywall account's counter TO the
+          # limit (scripts/seed-e2e-maestro-account.ts `resolveFreeTierLimit`), so the
+          # 402 it asserts still fires. Both processes must therefore see the SAME
+          # value — hence it is repeated on the seed step below.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: ./scripts/maestro-runner-setup.sh
       - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
         # The iOS nightly suite runs every flow (maestro-run-shard.sh all),
@@ -1108,8 +1202,15 @@ jobs:
         # fixed accounts the Android shards seed so those flows can log in. The
         # paywall account is seeded with its quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1)
         # so modal-paywall-quota-upsell drives the real 402 → QuotaUpsellModal path
-        # (the iOS nightly is a Debug build, but the flow no longer relies on the
-        # removed (dev) preview route — it uses the production 402 trigger).
+        # (the flow no longer relies on the removed (dev) preview route — it
+        # uses the production 402 trigger).
+        env:
+          # MUST match the value the API process was booted with (see the Boot
+          # backend step). `seed-e2e-maestro-account` seeds the paywall account's
+          # counter TO this limit, so if the two disagree the seeded count lands
+          # BELOW the cap the backend enforces and the 402 that
+          # modal-paywall-quota-upsell asserts never fires.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: |
           cd museum-backend
           E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
@@ -1124,12 +1225,25 @@ jobs:
             E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
             pnpm seed:e2e-maestro-account
       - name: Boot iOS Simulator
+        # Resolve the runtime at run time — do NOT hard-code one. The old
+        # `simctl create maestro-sim "iPhone 15" "iOS17.5"` asked for a runtime the
+        # runner does not have: macos-26 ships only iOS 26.x simulator runtimes
+        # (and macos-15 only 18.x). Both `create` and `boot` were suffixed with
+        # `|| true`, so the "runtime not found" was swallowed and the job died two
+        # steps later on `simctl install booted` → "No devices are booted", which
+        # points at nothing. Every command here is now fail-loud.
         run: |
-          xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true
-          xcrun simctl boot "maestro-sim" || true
+          set -euo pipefail
+          PICK=$(node scripts/pick-ios-simulator.mjs)
+          RUNTIME=$(echo "$PICK" | sed -n 1p)
+          DEVICE=$(echo "$PICK" | sed -n 2p)
+          xcrun simctl create maestro-sim "$DEVICE" "$RUNTIME"
+          xcrun simctl boot maestro-sim
+          xcrun simctl bootstatus maestro-sim -b
+          xcrun simctl list devices booted
       - name: Install app on simulator
         run: |
-          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
+          APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" -type d | head -1)
           xcrun simctl install booted "$APP_PATH"
       - name: Seed Maestro fixtures into simulator photo library
         # T9.x — Inject the chat-compare fixture into the booted simulator

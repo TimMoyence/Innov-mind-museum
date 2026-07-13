@@ -30,6 +30,21 @@ elif [ "$SHARD" = "smoke" ]; then
   # `smoke` list lives OUTSIDE `.shards[]` so its flows (which are also in the
   # `auth` shard) don't trip the shard-manifest dedup sentinel.
   FLOWS=$(jq -r '.smoke[]' "$MAESTRO_DIR/shards.json")
+elif [ "$SHARD" = "ios-main" ]; then
+  # iOS nightly, UNSHAPED pass. Everything except:
+  #
+  #  - the `netshape` shard — those flows only mean anything against a binary baked
+  #    at the Toxiproxy SHAPED listener. Run them separately, in the same job,
+  #    against the shaped build (`maestro-run-shard.sh netshape`). Running them here
+  #    would traverse the unshaped :3000 link and pass while shaping nothing, which
+  #    is the exact false-green the Android weak-net job was split out to avoid.
+  #
+  #  - `.iosIncompatible[]` — flows that cannot work on a macOS runner AT ALL.
+  #    Today that is `chat-compare`, whose SigLIP encoder is provisioned by
+  #    `docker pull` (museum-backend/scripts/pull-siglip-model.sh) and GitHub's
+  #    macOS runners ship without Docker. Without the encoder `/chat/compare`
+  #    answers 503 and the flow fails-loud BY DESIGN. Android covers it.
+  FLOWS=$(jq -r '[.shards[] | select(.name != "netshape") | .flows[]] - (.iosIncompatible // []) | .[]' "$MAESTRO_DIR/shards.json")
 elif [ "$SHARD" = "netshapeSmoke" ]; then
   # W3 — conditional per-PR weak-net smoke: the 2 fastest netshape flows, run
   # only when chat/connectivity/net-shaping paths change (paths-filtered in

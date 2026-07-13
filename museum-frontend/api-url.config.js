@@ -103,9 +103,21 @@ function resolveVariant(env) {
     return 'preview';
   }
 
-  // 2. Xcode Release signal beats a .env-sourced `development` (Q2 / R1).
+  // 2. Xcode Release signal beats a .env-sourced `development` (Q2 / R1) —
+  // UNLESS this is a Maestro sim-e2e build, flagged by the dedicated
+  // `EXPO_PUBLIC_E2E_LOCAL_BACKEND`. iOS Maestro needs a Release build
+  // (AppDelegate `#else` embeds the JS bundle → standalone, no Metro), but a
+  // bare Release CONFIGURATION would promote the variant to `production`
+  // (prod URL + prod bundle id + ATS localhost block + startup config throw).
+  // The flag is set ONLY on the Maestro build jobs + the local e2e build and
+  // NEVER on a real EAS/Xcode-Cloud prod build (those set an explicit
+  // `APP_VARIANT`/`EAS_BUILD_PROFILE` handled by rule 1 above), so it rescues
+  // the standalone sim-e2e build back to `development` (localhost backend +
+  // preview bundle id + NSAllowsLocalNetworking) without weakening the
+  // prod-safety guard — when the flag is absent, Release still promotes.
+  const e2eLocalBackend = /^(1|true)$/i.test(String(e.EXPO_PUBLIC_E2E_LOCAL_BACKEND || '').trim());
   const config = typeof e.CONFIGURATION === 'string' ? e.CONFIGURATION.trim() : '';
-  if (config.length > 0 && !/debug/i.test(config)) {
+  if (!e2eLocalBackend && config.length > 0 && !/debug/i.test(config)) {
     return 'production';
   }
 

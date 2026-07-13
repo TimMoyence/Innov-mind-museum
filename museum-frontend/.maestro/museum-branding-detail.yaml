@@ -30,7 +30,16 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard`. On iOS,
+# Maestro's hideKeyboard gesture lands on `auth-submit` (it sits directly under
+# the password field, exactly where the keyboard was) and fires the login early —
+# the submit then races the step, so `hideKeyboard` itself flakes and/or
+# `auth-submit` is already unmounted by the next command. The app does NOT submit
+# on return (LoginForm.tsx wires `onPress` only, no `onSubmitEditing`): this is a
+# Maestro-iOS artefact. Tapping the non-interactive title dismisses the keyboard
+# deterministically and leaves the explicit submit below as the real trigger.
+- tapOn:
+    text: "Welcome back|Bon retour"
 - tapOn:
     id: "auth-submit"
 - tapOn:
@@ -71,10 +80,22 @@ appId: com.musaium.mobile.preview
 # Unique marker = the "Start Chat Here" CTA (museumDirectory.start_chat), which
 # carries the museum's brand primary color (co-branding).
 # ──────────────────────────────────────────────
-- extendedWaitUntil:
-    visible:
-      text: "Démarrer un chat ici|Start Chat Here"
-    timeout: 40000
+# The start-chat CTA sits BELOW the fold on this screen (hero + details + photo +
+# "À propos" render first), so the previous `extendedWaitUntil` could never see it:
+# it waited 40s for an element that no amount of waiting would bring on screen —
+# only a scroll would. Scroll to its testID (`museum-detail-start-chat`, added to
+# app/(stack)/museum-detail.tsx) so the selector is not coupled to the i18n
+# catalogue, then assert the branded title too so the string stays covered.
+- scrollUntilVisible:
+    element:
+      id: "museum-detail-start-chat"
+    direction: DOWN
+    visibilityPercentage: 50
+    speed: 25
+    waitToSettleTimeoutMs: 800
+    timeout: 30000
+- assertVisible:
+    id: "museum-detail-start-chat"
 - assertVisible:
     text: "Démarrer un chat ici|Start Chat Here"
 # UFR-021 anchor for app/(stack)/museum-detail.tsx — the Museums tab → card →
@@ -85,9 +106,13 @@ appId: com.musaium.mobile.preview
 # start-chat CTA regardless of params).
 - openLink:
     link: "musaium:///(stack)/museum-detail"
-- extendedWaitUntil:
-    visible:
-      text: "Démarrer un chat ici|Start Chat Here"
+# Same reason as above: scroll to the CTA's testID — it is below the fold and its
+# title is not queryable on iOS (accessibilityLabel collapses the subtree).
+- scrollUntilVisible:
+    element:
+      id: "museum-detail-start-chat"
+    direction: DOWN
+    visibilityPercentage: 50
     timeout: 40000
 
 # ──────────────────────────────────────────────
@@ -95,7 +120,7 @@ appId: com.musaium.mobile.preview
 # (The first-time AI-disclosure consent sheet covers chat-input — accept first.)
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Démarrer un chat ici|Start Chat Here"
+    id: "museum-detail-start-chat"
 - tapOn:
     text: "Accepter tout|Accept all"
     optional: true

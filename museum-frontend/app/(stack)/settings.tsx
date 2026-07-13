@@ -256,6 +256,14 @@ export default function SettingsScreen() {
         </GlassCard>
 
         <Pressable
+          // The only row on this screen without a testID — every sibling has one
+          // (settings-delete-account, hero-settings-button…). Without it the e2e
+          // flow had to select this row by its visible title / a11y label, which
+          // couples the test to the i18n catalogue: renaming a string, or shipping
+          // a new locale, silently breaks the flow. The testID decouples the
+          // selector; the title itself is still asserted separately in
+          // reviews-submit-flow, so the i18n string stays covered.
+          testID="settings-rate-musaium"
           style={[styles.primaryButton, { backgroundColor: theme.primary }]}
           onPress={() => {
             open('/(stack)/reviews');

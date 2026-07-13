@@ -39,12 +39,34 @@ function ensureFmtPatch(podfile) {
   if (podfile.includes(PATCH_TAG)) {
     return podfile;
   }
-  const anchor = /post_install do \|installer\|\n(\s+react_native_post_install\([\s\S]*?\)\n)/;
+
+  // Anchor on the `post_install` opener itself.
+  //
+  // The previous anchor was
+  //   /post_install do \|installer\|\n(\s+react_native_post_install\([\s\S]*?\)\n)/
+  // i.e. it required `react_native_post_install(` to follow the opener with only
+  // WHITESPACE in between. That stopped matching the day another config plugin
+  // (@maplibre/maplibre-react-native) began injecting its own
+  // `# @generated begin …` comment block in that exact gap — `\s+` cannot cross a
+  // comment line. From then on the regex never matched and the branch below
+  // returned the Podfile UNCHANGED **silently**, so every `expo prebuild` shipped
+  // an unpatched Podfile while the plugin still looked wired up. Anchoring on the
+  // opener alone is immune to whatever any other plugin injects after it, and the
+  // patch body only rewrites a file on disk — it has no ordering dependency on
+  // `react_native_post_install`.
+  const anchor = /post_install do \|installer\|\n/;
   const match = anchor.exec(podfile);
   if (!match) {
-    // Template unrecognised — skip silently rather than corrupt the Podfile.
-    return podfile;
+    // Fail LOUD. A config plugin that silently does nothing is worse than no
+    // plugin at all: the build looks healthy and then breaks somewhere else,
+    // hours later, on a toolchain you cannot reproduce locally.
+    throw new Error(
+      '[withFmtConstevalPatch] `post_install do |installer|` not found in the generated ' +
+        'Podfile — the Expo template changed. Fix this anchor. Refusing to ship an ' +
+        'unpatched Podfile silently.',
+    );
   }
+
   const insertPoint = match.index + match[0].length;
   return podfile.slice(0, insertPoint) + PATCH_BLOCK + podfile.slice(insertPoint);
 }

@@ -28,6 +28,7 @@ interface RuntimeEnv {
   EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
   EXPO_PUBLIC_API_BASE_URL_PROD?: string;
   EXPO_PUBLIC_API_ENVIRONMENT?: string;
+  EXPO_PUBLIC_E2E_LOCAL_BACKEND?: string;
 }
 
 interface ApiUrlConfigModule {
@@ -62,6 +63,45 @@ describe('api-url.config — resolveVariant precedence (D2)', () => {
   it('C3: a .env-sourced APP_VARIANT=development loses to a Release CONFIGURATION (R1 / Q2)', () => {
     expect(
       apiUrlConfig.resolveVariant({ CONFIGURATION: 'Release', APP_VARIANT: 'development' }),
+    ).toBe('production');
+  });
+
+  it('CE1: the Maestro e2e flag makes a Release CONFIGURATION resolve development (iOS sim-e2e standalone → localhost backend)', () => {
+    // iOS Maestro needs a Release build (AppDelegate `#else` embeds the JS
+    // bundle → standalone, no Metro), but a Release CONFIGURATION would promote
+    // the variant to `production` (prod URL + prod bundle id + ATS localhost
+    // block + startup config throw). The dedicated, unambiguous
+    // `EXPO_PUBLIC_E2E_LOCAL_BACKEND` flag — set ONLY on the Maestro build jobs
+    // and the local e2e build, NEVER on a real EAS/Xcode-Cloud prod build —
+    // rescues the sim-e2e case back to `development` without weakening the
+    // prod-safety guard (C3 below still promotes when the flag is absent).
+    expect(
+      apiUrlConfig.resolveVariant({ CONFIGURATION: 'Release', EXPO_PUBLIC_E2E_LOCAL_BACKEND: '1' }),
+    ).toBe('development');
+    expect(
+      apiUrlConfig.resolveVariant({
+        CONFIGURATION: 'Release',
+        EXPO_PUBLIC_E2E_LOCAL_BACKEND: 'true',
+      }),
+    ).toBe('development');
+  });
+
+  it('CE2: an explicit production APP_VARIANT still beats the e2e flag (a deliberate prod build is never downgraded)', () => {
+    expect(
+      apiUrlConfig.resolveVariant({
+        CONFIGURATION: 'Release',
+        APP_VARIANT: 'production',
+        EXPO_PUBLIC_E2E_LOCAL_BACKEND: '1',
+      }),
+    ).toBe('production');
+  });
+
+  it('CE3: a falsy / absent e2e flag leaves the Release prod-safety guard intact (R1)', () => {
+    expect(
+      apiUrlConfig.resolveVariant({ CONFIGURATION: 'Release', EXPO_PUBLIC_E2E_LOCAL_BACKEND: '0' }),
+    ).toBe('production');
+    expect(
+      apiUrlConfig.resolveVariant({ CONFIGURATION: 'Release', EXPO_PUBLIC_E2E_LOCAL_BACKEND: '' }),
     ).toBe('production');
   });
 

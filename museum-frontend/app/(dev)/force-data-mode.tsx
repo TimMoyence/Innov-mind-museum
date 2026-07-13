@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import { useDataModePreferenceStore } from '@/features/settings/dataModeStore';
+import { areDevRoutesReachable } from '@/shared/lib/e2eBuildFlags';
 
 /**
  * W1-DEV-01 — Dev-only Maestro trigger route for the low-data mode.
@@ -33,9 +34,9 @@ import { useDataModePreferenceStore } from '@/features/settings/dataModeStore';
  * See `.maestro/MODAL_FLOWS_NOTES.md` for the deeplink contract.
  */
 export default function ForceDataModeRoute() {
-  // Hooks must run unconditionally (rules-of-hooks); the release-bundle guard is
+  // Hooks must run unconditionally (rules-of-hooks); the shipped-bundle guard is
   // applied to the render output below and to the store mutation inside the
-  // effect, so NO store write ever happens outside `__DEV__` (R4).
+  // effect, so NO store write ever happens in a shipped app (R4).
   const { value, persist } = useLocalSearchParams<{
     value?: 'low' | 'normal';
     persist?: string;
@@ -44,7 +45,12 @@ export default function ForceDataModeRoute() {
   const persistForced = persist === '1';
 
   useEffect(() => {
-    if (!__DEV__) {
+    // NOT `!__DEV__`: both e2e binaries are RELEASE builds (`--dev false`), so
+    // `__DEV__` is false there and this write was silently skipped — the netshape
+    // flows forced nothing and their `low-data-badge` assert could never pass.
+    // `areDevRoutesReachable()` also honours the build-time e2e seam, which a
+    // shipped bundle never carries. See shared/lib/e2eBuildFlags.ts.
+    if (!areDevRoutesReachable()) {
       return;
     }
     // Forced preference applied at mount for the deterministic deeplink trigger;

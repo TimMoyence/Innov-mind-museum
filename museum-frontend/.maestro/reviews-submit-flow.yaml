@@ -72,21 +72,30 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Paramètres|Settings"
     timeout: 40000
-# The "Noter Musaium" row is a Pressable with accessibilityLabel
-# a11y.settings.rate_musaium ("Ouvrir les avis" / "Open reviews"). On ANDROID the
-# label COLLAPSES the subtree so only the label is queryable; on iOS the label is
-# NOT exposed as a `text` element but the child Text (settings.rate_musaium =
-# "Noter Musaium" / "Rate Musaium") IS — so match EITHER (label on Android, visible
-# title on iOS). Blind `swipe UP ×2` overshot the row into the Third-party-AI
-# consent section; scrollUntilVisible stops AS SOON as the row is on screen.
+# Scroll to the "Noter Musaium" row by its testID (`settings-rate-musaium`, added
+# to app/(stack)/settings.tsx — every sibling row already had one). Selecting it by
+# its visible title couples this flow to the i18n catalogue; the title itself is
+# asserted separately just below, so the string stays covered either way.
+#
+# Scroll params mirror auth-account-delete's (the one scroll on this screen that is
+# known-good): speed 25 + waitToSettleTimeoutMs 800 + a 30s budget. The previous
+# settings here — speed 40, no settle time, 20s — raced the list: the scroll blew
+# past the row and the visibility check ran mid-fling. visibilityPercentage 50 so
+# the row is genuinely tappable when the scroll stops (at 1% it only has to peek).
 - scrollUntilVisible:
     element:
-      text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
+      id: "settings-rate-musaium"
     direction: DOWN
-    visibilityPercentage: 1
-    timeout: 20000
+    visibilityPercentage: 50
+    speed: 25
+    waitToSettleTimeoutMs: 800
+    timeout: 30000
+# Keep proving the branded label actually renders (and in the right locale) — the
+# testID alone would still pass if the row rendered blank or with a raw i18n key.
+- assertVisible:
+    text: "Noter Musaium|Rate Musaium"
 - tapOn:
-    text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
+    id: "settings-rate-musaium"
 - extendedWaitUntil:
     visible:
       text: "Avis|Reviews"

@@ -169,6 +169,18 @@ Surprises infrastructure (pas les bugs métier) qui ont fait perdre du temps. Aj
 2. Backend DB exposed on port **5433** (not 5432) when using docker-compose.
 3. Frontend mobile local dev : **voir [`museum-frontend/RUN_LOCAL.md`](museum-frontend/RUN_LOCAL.md)** (3-file template pattern `.env` / `.env.local-dev` / `.env.prod-test` + `npm run dev:local` qui pre-flight le Docker stack). Quickstart : `cd museum-frontend && npm run env:local && npm run dev:local`.
 
+## Zéro run CI spéculatif (UFR-023)
+
+**Aucun run GitHub Actions "pour voir". Un `git push` sur une branche suivie EST un run facturé.**
+
+**Pourquoi** — $63.76 brûlés (2026-07-13) en itérant sur GitHub pour diagnostiquer le nightly Maestro. Le job iOS tourne sur un **runner macOS, facturé ×10 les minutes Linux, ~60 min/run** : quelques runs rouges exploratoires suffisent à vider le quota. Et c'est plus LENT (boucle 60 min vs minutes en local).
+
+**Règle** :
+- **Diagnostiquer en local, toujours.** Tout est reproductible : sim iOS (`xcodebuild -sdk iphonesimulator` + `xcrun simctl`), émulateur Android, backend `docker compose -f museum-backend/docker-compose.dev.yml`, Toxiproxy natif (`brew install toxiproxy` — les runners macOS n'ont pas Docker).
+- Un run GitHub est une **confirmation finale** d'un état déjà **vert en local et prouvé** (sortie réelle / screenshot), jamais une exploration.
+- **Accord explicite de Tim** avant tout push / `gh workflow run` / `workflow_dispatch`.
+- Doute sur un comportement CI-only (secret, env, runner) → poser la question **sourcée**, ne pas "tester en poussant".
+
 ## Hook bypass interdit (UFR-020)
 
 **BYPASS HOOK INTERDIT** — aucune forme tolérée : `git commit --no-verify` / `-n` ❌, `git push --no-verify` ❌, `SKIP_PRE_COMMIT=1`/`SKIP_PRE_PUSH=1` ❌, `git -c core.hookspath=/dev/null` ❌.

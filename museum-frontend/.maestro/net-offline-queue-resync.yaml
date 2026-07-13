@@ -19,11 +19,19 @@ appId: com.musaium.mobile.preview
 # Prereqs: seeded account; backend reachable through the shaped proxy with a
 # working LLM provider.
 
-# ── Force low-data mode + reach the chat composer ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
-- waitForAnimationToEnd
+# ── Reach the chat composer, THEN force low-data ──
+# ORDER IS LOAD-BEARING, and `persist=1` is not optional. Forcing BEFORE the helper
+# cancelled itself twice: the dev route resets the preference to 'auto' on unmount
+# unless `persist=1` (it redirects immediately, so it unmounts at once), and
+# `chat-entry` opens with `launchApp: clearState: true`, which wipes the
+# AsyncStorage the preference lives in. The low-data path this flow claims to
+# exercise was never switched on.
 - runFlow:
     file: helpers/chat-entry.yaml
+- openLink: "musaium:///(dev)/force-data-mode?value=low&persist=1"
+- waitForAnimationToEnd
+- runFlow:
+    file: helpers/chat-reentry.yaml
 
 # ── Go offline BEFORE sending → message must queue, not error ──
 - setAirplaneMode: enabled
