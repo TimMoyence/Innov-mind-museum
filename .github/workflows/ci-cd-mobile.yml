@@ -1063,6 +1063,13 @@ jobs:
         run: |
           set -euo pipefail
           brew install --quiet postgresql@16 redis
+          # Make @16 the LINKED postgres so `brew install pgvector` builds its
+          # extension against @16. The runner ships a different default postgres,
+          # so without this pgvector's vector.control landed outside @16's sharedir
+          # (iter-1 failed exactly here). Unlink any other PG first to avoid clash.
+          brew unlink postgresql 2>/dev/null || true
+          brew unlink postgresql@14 2>/dev/null || true
+          brew link --overwrite --force postgresql@16
           export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
           brew install --quiet pgvector
           brew services start postgresql@16
