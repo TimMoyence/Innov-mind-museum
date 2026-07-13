@@ -1,4 +1,4 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import { httpRequest, LLM_REQUEST_TIMEOUT_MS } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { ContentPreference } from '@/shared/types/content-preference';
@@ -162,6 +162,9 @@ export const postMessage = async (params: PostMessageParams): Promise<PostMessag
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
     method: 'POST',
     body: payload,
+    // Blocks on the full model response — httpClient's 15s CRUD default cuts real
+    // turns off mid-answer. See LLM_REQUEST_TIMEOUT_MS.
+    timeoutMs: LLM_REQUEST_TIMEOUT_MS,
     ...(Object.keys(headers).length > 0 ? { headers } : {}),
   });
 

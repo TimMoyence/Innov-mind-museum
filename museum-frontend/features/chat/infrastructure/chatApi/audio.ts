@@ -1,4 +1,4 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import { httpRequest, LLM_REQUEST_TIMEOUT_MS } from '@/shared/api/httpRequest';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { createAppError } from '@/shared/types/AppError';
 import type { ContentPreference } from '@/shared/types/content-preference';
@@ -87,6 +87,10 @@ export const postAudioMessage = async (
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/audio`, {
     method: 'POST',
     body: formData,
+    // The slowest call in the app: STT -> LLM -> TTS in ONE request. Measured at
+    // 14.1s against a LOCAL backend — 0.9s under httpClient's 15s CRUD default.
+    // See LLM_REQUEST_TIMEOUT_MS.
+    timeoutMs: LLM_REQUEST_TIMEOUT_MS,
     // Explicit multipart Content-Type. Axios in React Native does not recognise
     // RN's FormData polyfill, so without this it defaults a POST body to
     // `application/x-www-form-urlencoded`; RN's native NetworkingModule then
@@ -109,6 +113,11 @@ export const synthesizeSpeech = async (messageId: string): Promise<ArrayBuffer |
     const response = await httpRequest<ArrayBuffer>(`${CHAT_BASE}/messages/${messageId}/tts`, {
       method: 'POST',
       responseType: 'arraybuffer',
+      // TTS is a model call (gpt-4o-mini-tts) and synthesises the WHOLE answer
+      // before returning any audio — the longer the reply, the longer the wait.
+      // The 15s CRUD default silently drops playback on the long answers that
+      // most need it. See LLM_REQUEST_TIMEOUT_MS.
+      timeoutMs: LLM_REQUEST_TIMEOUT_MS,
     });
     // 204 No Content: Axios returns empty/zero-length data
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive response check
