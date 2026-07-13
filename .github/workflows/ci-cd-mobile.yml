@@ -450,6 +450,23 @@ jobs:
           # nightly chat-compare carousel renders header-only and its strengthened
           # per-card assert fails RED — by design.
           CHAT_COMPARE_PROVISION: ${{ matrix.shard == 'chat' && '1' || '' }}
+          # Lift the free-tier session cap for the run.
+          #
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to **3**, and
+          # 17 of the 18 flows in the `chat` shard open a NEW conversation through
+          # `helpers/chat-entry.yaml` (museum-sheet-start-chat → POST /api/sessions).
+          # A shard runs every one of its flows in ONE job against ONE fresh
+          # Postgres service, so the counter accumulates across the shard: from the
+          # 4th conversation on the backend answers 402, the QuotaUpsellModal covers
+          # the composer, `chat-input` never appears, and the remaining ~14 chat
+          # flows fail. A hard cap, not flakiness — and it applies to Android exactly
+          # as it does to iOS.
+          #
+          # This does NOT weaken modal-paywall-quota-upsell: `seed-e2e-maestro-account`
+          # reads this same variable and seeds the paywall account's counter TO the
+          # limit, so the 402 that flow asserts still fires. Both processes must see
+          # the SAME value — hence it is repeated on the seed step.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
           # Seed the dedicated quota-exhausted paywall account ONLY on the
           # `museum` shard (the only shard that runs modal-paywall-quota-upsell.yaml).
           SEED_PAYWALL_ACCOUNT: ${{ matrix.shard == 'museum' && '1' || '' }}
@@ -914,6 +931,12 @@ jobs:
           REDIS_PORT: '6379'
           EXTRACTION_WORKER_ENABLED: 'false'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to 3, and each
+          # of the four netshape flows opens a NEW conversation via
+          # `helpers/chat-entry.yaml` (→ POST /api/sessions) against this job's one
+          # fresh Postgres. The 4th would be answered 402 and fail on a quota, not on
+          # anything weak-net. Same cap the chat shard and the iOS run hit.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: |
           ./scripts/maestro-runner-setup.sh
           cd ../museum-backend
@@ -1010,7 +1033,14 @@ jobs:
     # Runs nightly (cron) and on a manual dispatch that targets iOS — the latter
     # lets us verify an iOS-specific CI fix on a branch without waiting for the
     # cron (the job otherwise only runs on `main`'s schedule).
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
+    # MANUAL DISPATCH ONLY — the nightly `schedule` trigger is deliberately gone.
+    # See the cost note on `timeout-minutes` below: one run is ~1 500 billable
+    # macOS minutes against a 2 000 min/month allowance, so an unattended cron
+    # would burn three quarters of the quota every night — which is exactly what it
+    # was doing, red, without anyone reading the result. Re-enable the cron only
+    # once this runs on a self-hosted macOS runner (where it is free), or explicitly
+    # accept the bill.
+    if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
     # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
     # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
@@ -1019,7 +1049,24 @@ jobs:
     # specifically for "Xcode 26+"), so this nightly was the only stale-toolchain
     # surface. macos-26 is GA and macos-latest migrates to it in June 2026 anyway.
     runs-on: macos-26
-    timeout-minutes: 60
+    # ⚠️ COST — READ BEFORE ENABLING THIS ON A CRON.
+    #
+    # GitHub bills macOS runners at a 10× multiplier. Measured locally (2026-07-14,
+    # same work this job does): cold Release build with RN compiled from source
+    # (`ios.buildReactNativeFromSource: true`) ~30 min, incremental shaped build
+    # ~8 min, backend/PG/Redis/brew provisioning ~10 min, and 52 flows at ~2 min
+    # each (the 18-flow auth shard took ~35 min) ~104 min → **~150 min of
+    # wall-clock ⇒ ~1 500 BILLABLE minutes per run**, against a 2 000 min/month
+    # free allowance. ONE run eats 75 % of the monthly quota; a weekly cadence is
+    # already 3× over it. The previous `timeout-minutes: 60` did not make it
+    # cheaper — it cancelled the job at 60 min, so the minutes were spent AND the
+    # result was red.
+    #
+    # This suite runs end-to-end on a developer Mac for free (proven: full build +
+    # 52 flows + native Toxiproxy + docker backend). A SELF-HOSTED macOS runner is
+    # the only cadence-independent fix. Until one exists, keep this job on manual
+    # dispatch and do not put it back on a nightly cron.
+    timeout-minutes: 150
     defaults:
       run:
         working-directory: museum-frontend
@@ -1241,10 +1288,43 @@ jobs:
           xcrun simctl boot maestro-sim
           xcrun simctl bootstatus maestro-sim -b
           xcrun simctl list devices booted
-      - name: Install app on simulator
+      - name: Stash the unshaped app
+        # Both binaries share the same bundle id, so they cannot coexist on the
+        # simulator — keep this one aside before the shaped build overwrites the
+        # product directory.
+        run: cp -R ios/build/Build/Products/Release-iphonesimulator/Musaium.app /tmp/musaium-main.app
+
+      - name: Build the SHAPED app (netshape flows only)
+        # The weak-net flows are meaningless unless the DEVICE traverses Toxiproxy.
+        # `EXPO_PUBLIC_API_BASE_URL` is inlined into the JS bundle at build time, so
+        # a binary baked at :3000 talks to the backend directly and the toxics shape
+        # a link nobody uses — a silent no-op that passes green. This is the same
+        # trap the Android weak-net job was split out to avoid (`prebuild-netshape`
+        # bakes 10.0.2.2:3100); this is its iOS twin, baked at the local shaped
+        # listener.
+        #
+        # It is CHEAP: only the JS differs, the native code is byte-identical, and
+        # reusing `-derivedDataPath build` makes this an INCREMENTAL build — Xcode
+        # re-runs the bundling phase and relinks, it does not recompile RN from
+        # source again. Two full cold builds would not fit the job budget; this does.
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://localhost:3100
         run: |
-          APP_PATH=$(find ios/build/Build/Products/Release-iphonesimulator -name "*.app" -type d | head -1)
-          xcrun simctl install booted "$APP_PATH"
+          cd ios
+          ENTRY_FILE="node_modules/expo-router/entry.js" \
+          SENTRY_DISABLE_AUTO_UPLOAD="true" \
+          xcodebuild -workspace Musaium.xcworkspace \
+            -scheme Musaium \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            build
+          cd ..
+          cp -R ios/build/Build/Products/Release-iphonesimulator/Musaium.app /tmp/musaium-shaped.app
+
+      - name: Install the unshaped app on the simulator
+        run: xcrun simctl install booted /tmp/musaium-main.app
+
       - name: Seed Maestro fixtures into simulator photo library
         # T9.x — Inject the chat-compare fixture into the booted simulator
         # so the PHPicker surfaces it as the most-recent asset. Skipped if
@@ -1253,8 +1333,29 @@ jobs:
           if [ -f .maestro/fixtures/test-artwork.jpg ]; then
             xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg
           fi
-      - name: Run all Maestro flows (sequential)
-        run: ./scripts/maestro-run-shard.sh all
+
+      - name: Run the main iOS suite (unshaped)
+        # `ios-main`, not `all`: the netshape shard runs below against the shaped
+        # binary, and `chat-compare` is excluded (its SigLIP encoder is provisioned
+        # by `docker pull`, and macOS runners have no Docker — Android covers it).
+        run: ./scripts/maestro-run-shard.sh ios-main
+
+      - name: Bring up the Toxiproxy shaped link (EDGE)
+        # Native Toxiproxy — macOS runners have no Docker, same constraint that put
+        # Postgres/Redis on Homebrew above. Seeded from the SAME ratified profile the
+        # Android weak-net job uses (scripts/net-shaping/profile-to-toxics.mjs), so
+        # both platforms shape identically. The script fails LOUD if the proxy or its
+        # toxics do not come up: a weak-net suite that silently shaped nothing is
+        # worse than no suite at all.
+        run: |
+          brew install --quiet toxiproxy
+          ../scripts/net-shaping/toxiproxy-up.sh edge
+
+      - name: Run the netshape flows against the shaped app
+        run: |
+          xcrun simctl uninstall booted com.musaium.mobile.preview
+          xcrun simctl install booted /tmp/musaium-shaped.app
+          ./scripts/maestro-run-shard.sh netshape
       - name: Upload iOS Maestro logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4

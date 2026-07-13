@@ -90,10 +90,17 @@ appId: com.musaium.mobile.preview
     speed: 25
     waitToSettleTimeoutMs: 800
     timeout: 30000
-# Keep proving the branded label actually renders (and in the right locale) — the
-# testID alone would still pass if the row rendered blank or with a raw i18n key.
+# Keep proving the row's i18n string actually renders — the testID alone would
+# still pass if it rendered blank or with a raw key.
+#
+# Assert the ACCESSIBILITY LABEL (`a11y.settings.rate_musaium` = "Ouvrir les avis"
+# / "Open reviews"), NOT the visible title. Verified on the simulator: the
+# Pressable is `accessible` with an accessibilityLabel, which collapses its
+# subtree into a single element — so the child <Text> ("Noter Musaium") is NOT
+# queryable, while the label IS (collapsing promotes it onto the element). An
+# assertion on the visible title fails here even with the row plainly on screen.
 - assertVisible:
-    text: "Noter Musaium|Rate Musaium"
+    text: "Ouvrir les avis|Open reviews"
 - tapOn:
     id: "settings-rate-musaium"
 - extendedWaitUntil:
