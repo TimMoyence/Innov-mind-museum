@@ -59,10 +59,15 @@ appId: com.musaium.mobile.preview
 # carnet link below the fold, and assertVisible only checks the viewport. The
 # UFR-021 anchor for home lives in chat-flow.yaml; this helper only needs to
 # reach the chat composer.
+# Timeout sized for the WORST case: post-login bootstrap under the netshape
+# edge profile (200/90 kbps, 200 ms latency, 1% loss) stacks several sequential
+# API calls + occasional TCP retransmits, so cold-start home can take ~45 s.
+# extendedWaitUntil resolves as soon as the hero is visible, so unshaped shards
+# (chat/museum/…) pay nothing — this only widens the ceiling for weak-net.
 - extendedWaitUntil:
     visible:
       text: "Votre compagnon de musée|Your museum companion"
-    timeout: 40000
+    timeout: 75000
 
 # ── Phase 2: Reach the chat composer via the DETERMINISTIC museum path ──
 # We deliberately do NOT use the home default-conversation CTA: it is the last

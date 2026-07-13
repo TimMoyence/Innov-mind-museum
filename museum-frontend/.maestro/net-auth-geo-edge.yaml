@@ -72,10 +72,12 @@ appId: com.musaium.mobile.preview
     optional: true
 
 # ── Reach home under the shaped link (login round-trip completed) ──
+# Widened to 75s: post-login bootstrap under the EDGE profile can stack several
+# sequential API round-trips + 1% loss retransmits before home renders.
 - extendedWaitUntil:
     visible:
       text: "Votre compagnon de musée|Your museum companion"
-    timeout: 45000
+    timeout: 75000
 
 # ── Geo path: open the Museums directory → a nearby museum resolves under EDGE ──
 - tapOn:

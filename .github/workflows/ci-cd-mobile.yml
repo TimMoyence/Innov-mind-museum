@@ -504,6 +504,16 @@ jobs:
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
         env:
           MATRIX_SHARD: ${{ matrix.shard }}
+          # maestro-run-shard.sh re-seeds apple.test@apple.com (destroyed by
+          # auth-account-delete) at the start of the auth/all shard — it reaches
+          # the host Postgres and NEEDS this DB env. Without it the re-seed dies
+          # "Missing PGDATABASE", so on a step-retry (Boot-backend does not re-run)
+          # auth-login-happy + auth-account-delete fail at login. Mirrors Boot-backend.
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
         with:
           api-level: 33
           # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
@@ -523,6 +533,14 @@ jobs:
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
         env:
           MATRIX_SHARD: ${{ matrix.shard }}
+          # Same DB env as attempt 1 — the step-retry is exactly when the apple.test
+          # re-seed matters (auth-account-delete already destroyed it, Boot-backend
+          # does not re-run). This is the load-bearing half of the auth-shard fix.
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
         with:
           api-level: 33
           arch: x86_64
@@ -1030,7 +1048,51 @@ jobs:
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Boot backend (docker-compose + migrations + API)
+      - name: Provision native Postgres (pgvector) + Redis — macOS runner has no Docker
+        # macOS hosted runners ship without Docker and GHA `services:` are Linux-only,
+        # so the iOS job must run PG/Redis natively via Homebrew. Regression: commit
+        # ccc63df24 dropped this native-PG provisioning when it moved the Android
+        # shards to ubuntu+KVM, but left maestro-runner-setup.sh defaulting to
+        # `docker compose` — so Boot backend died `docker: command not found` (exit 127)
+        # on every nightly since 2026-07-07, before any flow ran.
+        # pgvector MUST link against postgresql@16 — the AddArtworkEmbeddings migration
+        # does CREATE EXTENSION vector + halfvec(768) at boot.
+        run: |
+          set -euo pipefail
+          brew install --quiet postgresql@16 redis
+          export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
+          brew install --quiet pgvector
+          brew services start postgresql@16
+          brew services start redis
+          for _ in $(seq 1 30); do
+            pg_isready -h localhost -p 5432 >/dev/null 2>&1 && break
+            sleep 1
+          done
+          createuser -s museum_dev || true
+          psql -d postgres -c "ALTER USER museum_dev WITH PASSWORD 'museum_dev_password';"
+          createdb -O museum_dev museum_dev || true
+          # Fail loud if pgvector did not link to @16 (else the migration dies cryptically).
+          test -f "$(pg_config --sharedir)/extension/vector.control" \
+            || { echo "::error::pgvector vector.control not found for postgresql@16"; exit 1; }
+
+      - name: Boot backend (native PG/Redis + migrations + API)
+        env:
+          SKIP_DOCKER_COMPOSE: '1'
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          # Keep the host backend light (no eager BullMQ/redis churn); e2e never
+          # exercises knowledge-extraction. Mirrors the Android Boot-backend step.
+          EXTRACTION_WORKER_ENABLED: 'false'
+          # The iOS nightly runs the `all` union incl. chat + chat-compare, so it
+          # needs the LLM key and the SigLIP encoder + one artwork embedding
+          # (maestro-runner-setup.sh gates the ~354MB pull on CHAT_COMPARE_PROVISION).
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHAT_COMPARE_PROVISION: '1'
         run: ./scripts/maestro-runner-setup.sh
       - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
         # The iOS nightly suite runs every flow (maestro-run-shard.sh all),
@@ -1042,14 +1104,14 @@ jobs:
         # removed (dev) preview route — it uses the production 402 trigger).
         run: |
           cd museum-backend
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
             pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
             pnpm seed:e2e-maestro-account
