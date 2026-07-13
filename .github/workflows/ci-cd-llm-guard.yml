@@ -50,6 +50,9 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
           trivyignores: museum-backend/ops/llm-guard-sidecar/.trivyignore
+          # Sidecar image is ~3GB (baked model weights); the 5m default scan
+          # deadline is borderline and flakes ("context deadline exceeded").
+          timeout: '15m'
 
       - name: Smoke test /health endpoint
         run: |
