@@ -12,7 +12,7 @@
 
 ## Pre-flight
 
-1. Confirm staging Redis instance is reachable and you can SSH to the prod VPS.
+1. Confirm you can SSH to the prod VPS. **V1 has no staging environment** (prod = stage until B2B revenue), so there is no staging Redis to rehearse against.
 2. Confirm `REDIS_PASSWORD` is the **only** secret on this rotation (do not bundle with other rotations — easier to revert).
 3. Generate the new password locally:
 
@@ -39,26 +39,27 @@ Update both:
 
 The VPS `.env` is the source of truth at runtime; GitHub secret is the source of truth for re-deploys.
 
-### 3. Apply on staging first
+### 3. Apply on prod
+
+> **No staging rehearsal in V1** (prod = stage until B2B revenue). Apply directly
+> to prod during an off-peak window (UTC 02:00–05:00 typical) with the rollback
+> (§Rollback) staged and ready. Re-introduce a staging-first rehearsal step here
+> once a staging environment exists.
 
 ```bash
-ssh deploy@staging.musaium.com
+ssh deploy@prod.musaium.com
 cd /srv/museum
 sed -i.bak "s/^REDIS_PASSWORD=.*/REDIS_PASSWORD=${NEW_PW}/" .env
-docker compose -f docker-compose.prod.yml up -d --force-recreate redis backend-staging
+docker compose -f docker-compose.prod.yml up -d --force-recreate redis backend
 ```
 
-Watch the backend logs for `[redis] connected` for ~60 s. If you see `NOAUTH Authentication required` or `WRONGPASS`, the env was not picked up — fall back via `git checkout -- .env.bak`.
+Watch the backend logs for `[redis] connected` for ~60 s. If you see `NOAUTH Authentication required` or `WRONGPASS`, the env was not picked up — fall back via `mv .env.bak .env` then re-recreate.
 
-### 4. Validate staging
+### 4. Validate prod
 
 - Hit `/api/health` — expect `database: 'up'`
 - Make a test login → ensure session creation works (uses Redis rate-limit bucket)
-- Watch Sentry for spikes in `RedisError` over the next 10 min
-
-### 5. Apply on prod
-
-Same steps as staging, on `prod.musaium.com`. Do this during an off-peak window (UTC 02:00–05:00 typical).
+- Watch Sentry for spikes in `RedisError` over the next 30 min (no staging soak, so watch longer than a rehearsed rotation would need)
 
 ### 6. Verify and close
 
