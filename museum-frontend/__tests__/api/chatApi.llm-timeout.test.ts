@@ -80,7 +80,7 @@ describe('chat calls that wait on a model carry their own timeout', () => {
   it('postMessage — a text turn still waits on the full model response', async () => {
     await chatApi.postMessage({
       sessionId: 'session-1',
-      content: 'Who painted the Mona Lisa?',
+      text: 'Who painted the Mona Lisa?',
     });
 
     // `toBe(CONST)` alone would pass VACUOUSLY while both sides are undefined —
