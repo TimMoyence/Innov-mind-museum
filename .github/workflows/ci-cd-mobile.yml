@@ -999,7 +999,10 @@ jobs:
 
   # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:
-    if: ${{ github.event_name == 'schedule' }}
+    # Runs nightly (cron) and on a manual dispatch that targets iOS — the latter
+    # lets us verify an iOS-specific CI fix on a branch without waiting for the
+    # cron (the job otherwise only runs on `main`'s schedule).
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')) }}
     needs: quality
     # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
     # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
