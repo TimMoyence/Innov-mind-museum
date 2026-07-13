@@ -1058,21 +1058,19 @@ jobs:
         # shards to ubuntu+KVM, but left maestro-runner-setup.sh defaulting to
         # `docker compose` — so Boot backend died `docker: command not found` (exit 127)
         # on every nightly since 2026-07-07, before any flow ran.
-        # pgvector MUST link against postgresql@16 — the AddArtworkEmbeddings migration
-        # does CREATE EXTENSION vector + halfvec(768) at boot.
+        # Runs postgresql@17 + pgvector — the AddArtworkEmbeddings migration does
+        # CREATE EXTENSION vector + halfvec(768) at boot (see the run block for why @17).
         run: |
           set -euo pipefail
-          brew install --quiet postgresql@16 redis
-          # Make @16 the LINKED postgres so `brew install pgvector` builds its
-          # extension against @16. The runner ships a different default postgres,
-          # so without this pgvector's vector.control landed outside @16's sharedir
-          # (iter-1 failed exactly here). Unlink any other PG first to avoid clash.
-          brew unlink postgresql 2>/dev/null || true
-          brew unlink postgresql@14 2>/dev/null || true
-          brew link --overwrite --force postgresql@16
-          export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
-          brew install --quiet pgvector
-          brew services start postgresql@16
+          # Use postgresql@17, NOT @16: Homebrew's pgvector bottle ships its
+          # extension only for the CURRENT postgres majors (17/18). On @16 the
+          # vector.control never lands in pg_config's sharedir. Verified locally on
+          # macOS 26 / arm64: `brew install postgresql@17 pgvector` puts
+          # vector.control in @17's sharedir and `CREATE EXTENSION vector` +
+          # `halfvec(768)` both succeed (the AddArtworkEmbeddings migration).
+          brew install --quiet postgresql@17 pgvector redis
+          export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+          brew services start postgresql@17
           brew services start redis
           for _ in $(seq 1 30); do
             pg_isready -h localhost -p 5432 >/dev/null 2>&1 && break
@@ -1081,9 +1079,9 @@ jobs:
           createuser -s museum_dev || true
           psql -d postgres -c "ALTER USER museum_dev WITH PASSWORD 'museum_dev_password';"
           createdb -O museum_dev museum_dev || true
-          # Fail loud if pgvector did not link to @16 (else the migration dies cryptically).
+          # Fail loud if pgvector's control file is not where pg_config looks.
           test -f "$(pg_config --sharedir)/extension/vector.control" \
-            || { echo "::error::pgvector vector.control not found for postgresql@16"; exit 1; }
+            || { echo "::error::pgvector vector.control not found for postgresql@17"; exit 1; }
 
       - name: Boot backend (native PG/Redis + migrations + API)
         env:
