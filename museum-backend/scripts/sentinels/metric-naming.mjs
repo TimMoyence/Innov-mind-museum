@@ -15,7 +15,7 @@
  *          - `musaium_rerank_latency_ms` (F1 known debt — mis-united duration);
  *          - `llm_cost_user_daily_usd` (WAVE 6 C4 — a monetary AMOUNT, not a
  *            duration; `_usd` is its legitimate base unit, NOT base-unit debt).
- *   Inventory freeze — the exact 44 (type,name) pairs are pinned.
+ *   Inventory freeze — the exact 48 (type,name) pairs are pinned.
  *   Prefix ratchet — `musaium_`-prefixed count must not exceed 16 (F2: nudge
  *        new metrics toward the bare-prefix target convention).
  *
@@ -38,7 +38,12 @@ const SRC = resolve(__dirname, '../../src/shared/observability/prometheus-metric
  */
 const NON_SECONDS_HISTOGRAMS = new Set(['musaium_rerank_latency_ms', 'llm_cost_user_daily_usd']);
 
-/** Audit §2 frozen inventory: 44 (type,name) pairs, post-W1+W3+W6 merge; -1 = TD-69 buried TenantRateLimiter (musaium_tenant_rate_limit_rejects_total). */
+/**
+ * Audit §2 frozen inventory: **48** (type,name) pairs (counted 2026-07-14, +1 =
+ * INC-2026-07-14 degraded-chat counter). The former "44" in this comment was stale
+ * prose — the array had 47 entries before this run; the authoritative count is the
+ * array itself, which the freeze compares set-wise against the registry source.
+ */
 const FROZEN = [
   ['Counter', 'http_requests_total'],
   ['Histogram', 'http_request_duration_seconds'],
@@ -94,6 +99,11 @@ const FROZEN = [
   // musaium_guardrail_budget_redis_fallback_total, but kept bare to hold the
   // musaium_ cap at 16. See METRIC_NAMING_AUDIT.md §2.
   ['Counter', 'guardrail_friction_redis_fallback_total'],
+  // 2026-07-14 (INC-2026-07-14-otel-openai-structured, R8) — degraded-chat-response
+  // counter: the machine signal that the chat is serving canned fallbacks. Before it,
+  // a 100 % section-failure rate emitted only a logger.warn + a Sentry span attribute,
+  // so the 2-month outage was found by accident. Bare prefix per F2 Option A.
+  ['Counter', 'chat_response_degraded_total'],
 ];
 const MAX_MUSAIUM_PREFIXED = 16;
 

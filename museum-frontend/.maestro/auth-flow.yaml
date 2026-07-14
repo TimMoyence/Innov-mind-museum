@@ -160,13 +160,28 @@ appId: com.musaium.mobile.preview
       text: "Settings|Paramètres"
     timeout: 10000
 
-# Scroll to find Sign out button
+# Scroll to the Sign out button — the LAST element of a long screen.
+#
+# The bare `scrollUntilVisible` that used to be here took Maestro's defaults:
+# visibilityPercentage 100, speed 40, no settle wait, no timeout. On the last row
+# of a long ScrollView that means "scroll fast, and only accept the element when
+# it is 100% on screen" — it overshoots, bounces, and gives up. It passed most of
+# the time, which is the worst kind of failure: it read as flakiness.
+#
+# Same recipe as auth-account-delete.yaml (proven on THIS screen): target the
+# button's own testID, require it merely to be properly visible (50%), scroll
+# slowly, and let the list settle. `visibilityPercentage: 50` is not a weakening —
+# a 50%-visible button is tappable; a 100% requirement is what made it flake.
 - scrollUntilVisible:
     element:
-      text: "Sign out|Se déconnecter"
+      id: "settings-sign-out"
     direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    speed: 25
+    waitToSettleTimeoutMs: 800
 - tapOn:
-    text: "Sign out|Se déconnecter"
+    id: "settings-sign-out"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────

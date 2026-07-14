@@ -402,6 +402,59 @@ Critical values:
 - `OBJECT_STORAGE_DRIVER=s3`
 - complete S3 credentials
 
+#### `OTEL_ENABLED` — read this before you set it (INC-2026-07-14)
+
+`OTEL_ENABLED` is **not** in `.env.production.example`, and its code default is `false`
+(`museum-backend/src/config/env.ts` — `toBoolean(process.env.OTEL_ENABLED, false)`). Setting it to
+`true` arms the whole `@opentelemetry/auto-instrumentations-node` bundle. That bundle shipped
+`@opentelemetry/instrumentation-openai` **active by default** from 0.66.0 onward, and that
+instrumentation **double-reads the OpenAI HTTP response body** — killing **100 % of structured-output
+LLM calls** (`TypeError: Body is unusable`). In this codebase that is the chat, the walk assistant, the
+V2 LLM-judge guardrail (**fail-open — its outage silently lowers security**) and the
+knowledge-extraction classifier. Every user gets the canned `createSummaryFallback` template.
+
+The offending instrumentation is now disabled unconditionally in code
+(`src/shared/observability/otel-instrumentation-policy.ts`, programmatic map = priority 1, so **no
+environment variable can re-arm it**) and a pre-push gate (`pnpm sentinel:otel-roster`) fails the build
+if the active roster ever changes again. Upstream bug: `opentelemetry-js-contrib#3586` — **OPEN, no
+fixed release exists** (identical faulty code from 0.15.0 through 0.18.0).
+
+> Check what production actually has — the `.env` on the VPS is hand-maintained; CI only patches
+> `IMAGE_TAG`:
+> ```bash
+> cd /srv/museum && docker compose exec -T backend printenv | grep '^OTEL'
+> ```
+
+#### ⚠️ Purge the LLM cache when you deploy a fix to an LLM outage (INC-2026-07-14-llm-cache-degraded-poisoning)
+
+**A degraded answer used to be cached like a real one.** `TTL_GENERIC_S` is **7 days**. So after any
+period where the LLM was failing, shipping the fix is **not enough**: every already-asked question keeps
+returning the empty template, served from Redis, for up to a week. The code now refuses to cache a
+`degraded` response — but it does not clean the past.
+
+```bash
+# On the VPS, AFTER the fixed image is running. Scoped DEL — never `FLUSHALL`
+# (Redis also holds rate-limit counters, quota counters, nonces and denylists).
+cd /srv/museum
+docker compose exec -T redis sh -c \
+  'redis-cli --no-auth-warning -a "$REDIS_PASSWORD" --scan --pattern "llm:v3:*" | \
+   xargs -r -n 500 redis-cli --no-auth-warning -a "$REDIS_PASSWORD" DEL'
+
+# Verify: must print 0
+docker compose exec -T redis sh -c \
+  'redis-cli --no-auth-warning -a "$REDIS_PASSWORD" --scan --pattern "llm:v3:*" | wc -l'
+```
+
+Then confirm the chat actually answers — do not trust the absence of errors:
+
+```bash
+docker compose logs --since 10m backend | grep -c llm_section_success   # must be > 0
+docker compose logs --since 10m backend | grep -c 'Body is unusable'    # must be 0
+```
+
+The new `chat_response_degraded_total` counter makes this alertable from now on:
+`rate(chat_response_degraded_total[15m]) / clamp_min(rate(chat_request_duration_seconds_count[15m]), 1) > 0.5`.
+
 ### Immutable image tags — `IMAGE_TAG` / `WEB_IMAGE_TAG` / `LLM_GUARD_IMAGE_TAG`
 
 Depuis 2026-04-24, `docker-compose.prod.yml` référence les images via une variable d’environnement **obligatoire** (plus de fallback `:latest`) :

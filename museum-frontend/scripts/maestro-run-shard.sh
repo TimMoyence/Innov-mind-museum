@@ -71,8 +71,16 @@ echo "$FLOWS"
 # createSmokeAccount hard-deletes any residue then inserts a fresh verified user).
 # Best-effort: a WARN never fails the shard; scoped to the shards that run the
 # destructive flow. Requires the backend DB env, which the CI shard-run step sets.
+#
+# `ios-main` is in this list because it CONTAINS the auth shard, and therefore
+# contains the destructive flow. Leaving it out made the iOS suite a one-shot: the
+# first run ends with apple.test@apple.com deleted, so the NEXT run's
+# auth-login-happy (which runs 7 flows earlier, at index 2) hits "invalid
+# credentials" and the suite opens red on a database it just poisoned itself. A
+# single green run followed by a red re-run on identical code is the worst
+# possible signal — it reads as flake and buys a re-run that cannot pass.
 case "$SHARD" in
-  auth | all)
+  auth | all | ios-main)
     if (cd "$SCRIPT_DIR/../../museum-backend" &&
       E2E_SEED_ALLOW=1 E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
         pnpm seed:e2e-maestro-account); then
@@ -80,6 +88,48 @@ case "$SHARD" in
     else
       echo "[shard:$SHARD] WARN: apple.test re-seed failed — auth-login-happy may fail after auth-account-delete"
     fi
+
+    # ── Magic-link tokens (2026-07-14) ───────────────────────────────────────
+    # The three magic-link flows deep-link a KNOWN token literal
+    # (`?token=e2e-verify-token`, `e2e-reset-token`, `e2e-confirm-token`). The seed
+    # plants the SHA-256 DIGEST of that literal using the PRODUCTION primitive
+    # (`hashEmailTokenForLookup`) — the backend does not know it is being tested, it
+    # validates a real single-use token against a real expiry.
+    #
+    # Until now the flows' own headers said "no local mechanism seeds such tokens",
+    # so every success assertion carried `optional: true` and NEITHER FLOW COULD
+    # FAIL. They counted as UFR-021 coverage while proving only "the app did not
+    # crash on launch". The seed removes the excuse; the `optional`s are gone.
+    #
+    # ⚠️ BLAST RADIUS — the three are NOT equivalent:
+    #   • verify-email          harmless: re-marks the shared account verified.
+    #   • reset-password        DESTRUCTIVE: replaces the password. On the shared
+    #                           account `TestPassword123!` would stop working and
+    #                           EVERY later flow would fail at login.
+    #   • confirm-email-change  DESTRUCTIVE: sets `email = pending_email` AND revokes
+    #                           every refresh token.
+    # Hence a DEDICATED throwaway account for each destructive one. All three screens
+    # are PUBLIC routes (the token identifies the user), so no flow ever logs into
+    # those accounts — the damage stays inside them.
+    #
+    # Tokens are single-use (NULLed on consumption) → re-seed on EVERY run, which is
+    # exactly what this block does.
+    for seed in \
+      "E2E_SEED_VERIFY_TOKEN=1|e2e-test-login@test.musaium.dev|verify-email (shared account, harmless)" \
+      "E2E_SEED_RESET_TOKEN=1|e2e-reset@test.musaium.dev|reset-password (DEDICATED — destructive)" \
+      "E2E_SEED_EMAIL_CHANGE=1|e2e-change@test.musaium.dev|confirm-email-change (DEDICATED — destructive)"; do
+      flag="${seed%%|*}"
+      rest="${seed#*|}"
+      email="${rest%%|*}"
+      label="${rest#*|}"
+      if (cd "$SCRIPT_DIR/../../museum-backend" &&
+        E2E_SEED_ALLOW=1 E2E_LOGIN_EMAIL="$email" env "$flag" \
+          pnpm seed:e2e-maestro-account); then
+        echo "[shard:$SHARD] seeded magic-link token — $label"
+      else
+        echo "[shard:$SHARD] WARN: magic-link seed failed — $label (its flow will fail, and it SHOULD)"
+      fi
+    done
     ;;
 esac
 

@@ -171,8 +171,29 @@ appId: com.musaium.mobile.preview
     visible:
       id: "chat-bubble-assistant"
     timeout: 40000
+# INC-2026-07-14 — asserting the bubble EXISTS proves NOTHING: the canned fallback
+# template the backend serves when the LLM is unreachable IS a valid assistant
+# bubble. 17 of the 18 chat flows stayed GREEN for weeks against a 100%-dead LLM
+# because of exactly this assertion. The helper asserts the bubble exists AND that
+# what it says is not that template. DO NOT revert to a bare assertVisible.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml
+
+# …and, since this flow asks a FACTUAL question ("Who painted the Mona Lisa?"),
+# assert the FACT. The helper above is the floor — "an assistant is on screen and
+# it is not the model-unreachable template". This is the ceiling: the assistant
+# said something TRUE about what was asked.
+#
+# This is the single assertion that would have caught INC-2026-07-14 on day one.
+# The dead backend answered: "Quick summary: Who painted the Mona Lisa? Next step:
+# compare composition details with a nearby work." It restated the question. It
+# never once said "Leonardo da Vinci" — and 17 flows called that a pass.
+#
+# Deliberately just the painter's name, in both spellings: the phrasing around it
+# belongs to the model and must stay free. `.*…*` because Maestro's text selector
+# is a regex anchored on the WHOLE string.
 - assertVisible:
-    id: "chat-bubble-assistant"
+    text: ".*(Leonardo|Léonard).*"
 
 # ──────────────────────────────────────────────
 # Phase 6: Send a follow-up message

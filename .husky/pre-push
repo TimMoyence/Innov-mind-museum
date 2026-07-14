@@ -42,6 +42,8 @@
 #  31. hexagonal domain-purity (BE backstop)         — node museum-backend/scripts/sentinels/hexagonal-domain-purity.mjs
 #  32. api-url production-safety (mobile, build-time) — node museum-frontend/scripts/sentinels/api-url-production-safety.mjs
 #  33. integration-gate discipline (BE dark suites)   — node museum-backend/scripts/sentinels/integration-gate-discipline.mjs
+#  34. OTel instrumentation roster allowlist (BE)     — cd museum-backend && pnpm sentinel:otel-roster
+#  35. e2e build seams absent from env files (mobile) — node scripts/sentinels/e2e-flags-not-in-env.mjs
 #  + Advisory (NON-BLOCKING): cluster-skills index freshness — node scripts/gen-cluster-skills-index.mjs --check
 #
 # Git LFS: this hook ALSO runs `git lfs pre-push` so LFS objects (see
@@ -458,9 +460,36 @@ gate_end "Gate 33"
 # if any integration file references RUN_E2E without also honouring
 # RUN_INTEGRATION, so a future RUN_E2E-only gate fails the build instead of
 # silently skipping. run 2026-06-14-dark-integration-suites.
-gate_start "Gate 34/34 integration-gate discipline (backend)"
+gate_start "Gate 34/36 integration-gate discipline (backend)"
 node museum-backend/scripts/sentinels/integration-gate-discipline.mjs || exit 1
 gate_end "Gate 34"
+
+# ─── Gate 35 — OTel instrumentation roster allowlist (BE) ───────────────────
+# `@opentelemetry/instrumentation-openai` entered the auto-instrumentation bundle
+# in 0.66.0 — ACTIVE BY DEFAULT, via an auto-merged transitive minor — and killed
+# EVERY structured-output LLM call of the chat for ~2 months, in silence (it
+# double-reads the HTTP response body; withStructuredOutput reads it again →
+# `TypeError: Body is unusable`). A denylist would not have caught it: nothing was
+# there to deny. This gate computes the EFFECTIVE roster from the INSTALLED bundle
+# and diffs it against a recorded allowlist — so any addition, removal or rename
+# fails BEFORE the merge, naming the delta. It also proves each key of our policy
+# actually exists in the bundle (a short name / typo / upstream rename is a SILENT
+# no-op disable). run 2026-07-14-otel-openai-instrumentation-kills-structured-llm.
+gate_start "Gate 35/36 OTel instrumentation roster allowlist (backend)"
+( cd museum-backend && pnpm run sentinel:otel-roster ) || exit 1
+gate_end "Gate 35"
+
+# ─── Gate 36 — e2e build seams must never live in an env file (mobile) ──────
+# CLAUDE.md and ci-cd-mobile.yml both CLAIMED this sentinel existed ("fails the
+# build if it leaks into a committed file"). It did not — no file, no gate. Which
+# is precisely why `EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE=true` sat in
+# museum-frontend/.env unnoticed: Metro inlines every EXPO_PUBLIC_* found there
+# into the JS bundle, with no runtime opt-out, so EVERY local archive was shipping
+# a STUBBED MICROPHONE. This gate is the only thing that can see that file — it is
+# untracked, so CI is blind to it. run 2026-07-14.
+gate_start "Gate 36/36 e2e build seams absent from env files (mobile)"
+node scripts/sentinels/e2e-flags-not-in-env.mjs || exit 1
+gate_end "Gate 36"
 
 # ─── Advisory (NON-BLOCKING) — cluster-skills index freshness ──────────────
 # Les cartes de cluster GitNexus (.claude/skills/generated/) + leur index routable
@@ -482,7 +511,7 @@ fi
 total=$(( $(date +%s) - start_ts ))
 echo ""
 echo "[pre-push] ═══════════════════════════════════════════════════"
-echo "[pre-push] ✅ All 34 gates passed in ${total}s — push authorized"
+echo "[pre-push] ✅ All 35 gates passed in ${total}s — push authorized"
 echo "[pre-push] ═══════════════════════════════════════════════════"
 
 # ─── Git LFS — upload LFS objects for this push ────────────────────────────

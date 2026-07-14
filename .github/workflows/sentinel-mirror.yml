@@ -186,6 +186,26 @@ jobs:
       - name: 'Mirror — integration-gate discipline (BE, dark suites, STREAM H9)'
         run: node museum-backend/scripts/sentinels/integration-gate-discipline.mjs
 
+      # Gate 35 — the roster allowlist. Computed from the INSTALLED bundle (a
+      # transitive bump is invisible to anything that reads our own source), so this
+      # step is the one that would have caught `instrumentation-openai` arriving
+      # ACTIVE in auto-instrumentations-node 0.66.0 and killing every structured LLM
+      # call for ~2 months. INC-2026-07-14-otel-openai-structured.
+      - name: 'Mirror Gate 35 — OTel instrumentation roster allowlist (BE)'
+        working-directory: museum-backend
+        run: pnpm run sentinel:otel-roster
+
+      # Gate 36 — e2e build seams must never be written to an env file. Metro
+      # inlines every EXPO_PUBLIC_* it finds in .env into the JS bundle with no
+      # runtime opt-out, so a test seam in a file IS a production defect (a stubbed
+      # microphone, dev routes in Release, a localhost API base URL).
+      # NOTE the local hook is the ONLY thing that can see museum-frontend/.env —
+      # it is untracked, so this mirror sees only the committed half (.env.example,
+      # app.config.ts, app.json, eas.json). It is a partial mirror BY DESIGN, and
+      # that is precisely why the pre-push gate is the load-bearing one here.
+      - name: 'Mirror Gate 36 — e2e build seams absent from env files (mobile, committed half)'
+        run: node scripts/sentinels/e2e-flags-not-in-env.mjs
+
       - name: 'Mirror — api-url production-safety (mobile, build-time localhost guard)'
         run: node museum-frontend/scripts/sentinels/api-url-production-safety.mjs
 

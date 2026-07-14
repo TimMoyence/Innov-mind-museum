@@ -56,6 +56,22 @@ team-reports
 **/yarn-debug.log
 **/yarn-error.log
 
+# ─── Python developer artifacts ────────────────────────────────────────────
+# `museum-backend/ops/llm-guard-sidecar/.venv` is 1.0 GB (a virtualenv carrying the
+# `transformers` model weights). It is gitignored — but .gitignore has NO effect on
+# a Docker build context, and nothing here excluded it, so every `docker build` was
+# streaming it in and writing it into an overlay2 layer. That is what filled the
+# disk on 2026-07-14 (`failed to solve: ResourceExhausted: … no space left on
+# device`, on a rebuild of the *backend* image, which does not use Python at all).
+#
+# The sidecar does not need it either: its own Dockerfile installs from
+# requirements.txt INSIDE the image. The local venv is a developer artifact and
+# belongs in no build context.
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+
 # ─── Misc ──────────────────────────────────────────────────────────────────
 **/*.tsbuildinfo
 **/Thumbs.db

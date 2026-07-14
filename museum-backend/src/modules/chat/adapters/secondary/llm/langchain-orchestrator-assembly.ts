@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import { createSummaryFallback } from '@modules/chat/useCase/llm/llm-sections';
 import { extractMetadata } from '@modules/chat/useCase/orchestration/assistant-response';
 import { logger } from '@shared/logger/logger';
+import { chatResponseDegradedTotal } from '@shared/observability/prometheus-metrics';
 import { env } from '@src/config/env';
 
 import { EMPTY_RESPONSE_FALLBACK } from './langchain-orchestrator-support';
@@ -112,6 +113,40 @@ export function buildDiagnosticsSections(
   });
 }
 
+/**
+ * Metric label. Deliberately `missing_result` (underscore) while the LOG keeps its
+ * historical `missing-result` (hyphen) — a log consumer may depend on that spelling,
+ * and neither is "corrected" into the other in passing.
+ */
+type DegradedReason = 'timeout' | 'error' | 'missing_result';
+
+const degradedReason = (
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>,
+): DegradedReason => {
+  const summaryResult = bySection.get('summary');
+  if (summaryResult === undefined) return 'missing_result';
+  return summaryResult.status === 'timeout' ? 'timeout' : 'error';
+};
+
+/**
+ * R8 — the machine signal. Emitted ONLY on a degraded response, right next to the
+ * Sentry attribute that used to be the only trace of it. `.inc()` is wrapped: a
+ * metrics failure must never take the chat path down with it.
+ *
+ * @param bySection - the section results this response was assembled from
+ */
+const recordDegradedResponse = (
+  bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>,
+): void => {
+  try {
+    chatResponseDegradedTotal.inc({ section: 'summary', reason: degradedReason(bySection) });
+  } catch (err) {
+    logger.warn('chat_response_degraded_counter_failed', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+};
+
 export function assembleResponse(params: AssembleResponseInput): OrchestratorOutput {
   const { input, sectionPlan, bySection, recentHistory, normalizedText, startedAt } = params;
   const {
@@ -151,5 +186,15 @@ export function assembleResponse(params: AssembleResponseInput): OrchestratorOut
   Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
   Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
 
-  return { text, metadata };
+  if (degraded) {
+    recordDegradedResponse(bySection);
+  }
+
+  // INC-2026-07-14 — `degraded` rides on the OUTPUT, not on `metadata.diagnostics`.
+  // `diagnostics` is attached above ONLY when `env.llm.includeDiagnostics` is true,
+  // and that flag is hard-disabled outside development (`env.ts:194-195`). A consumer
+  // reading the flag from `metadata.diagnostics` would therefore be correct in tests
+  // and blind in production. The LLM response cache depends on this signal to avoid
+  // memoising the canned fallback for up to 7 days (`TTL_GENERIC_S`).
+  return { text, metadata, degraded };
 }

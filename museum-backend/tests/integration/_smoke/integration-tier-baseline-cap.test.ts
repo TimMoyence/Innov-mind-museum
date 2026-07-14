@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -88,15 +89,70 @@ const BASELINE_PATH = join(REPO_ROOT, 'scripts/sentinels/.integration-tier-basel
 // when the SigLIP ONNX moved off the never-provisioned GCS bucket onto the
 // pinned GHCR base image (deploy/model-base/, COPY'd into Dockerfile.prod).
 // A cap shrink is always allowed.
-const PHASE_1_BASELINE_CAP = 23;
+//
+// 2026-07-14 (run 2026-07-14-otel-openai-instrumentation-kills-structured-llm,
+// UC-44b / T1.6): bumped 23 → 24 to admit
+// observability/otel-openai-structured-output.integration.test.ts. That driver
+// crosses a REAL boundary — the Node module loader (require-in-the-middle), the
+// real `openai` SDK and a real HTTP round-trip — but it crosses it IN A CHILD
+// PROCESS, by design: `InstrumentationBase` patches the loader from its
+// constructor, so building the OTel bundle inside a Jest worker contaminates every
+// test that worker runs afterwards (the bench error of debug-log.md §2). The
+// tier-signature sentinel reads the driver's TEXT, where no DataSource appears —
+// hence an exemption, with the reason stated, not a downgraded tier (which would
+// have thrown away the only honest proof of the fix). Cap moves in the SAME commit
+// as the entry (feedback_tier_baseline_cap_discipline).
+const PHASE_1_BASELINE_CAP = 24;
+
+/** The driver whose exemption the 23 → 24 bump pays for. */
+const OTEL_PROBE_DRIVER =
+  'museum-backend/tests/integration/observability/otel-openai-structured-output.integration.test.ts';
+
+interface TierBaseline {
+  exempt: { path: string; reason: string }[];
+}
+
+const readBaseline = (): TierBaseline =>
+  JSON.parse(readFileSync(BASELINE_PATH, 'utf-8')) as TierBaseline;
 
 describe('integration tier-signature baseline cap', () => {
   it('baseline length never grows beyond the Phase 1 cap', () => {
-    const baseline = JSON.parse(readFileSync(BASELINE_PATH, 'utf-8')) as {
-      exempt: { path: string }[];
-    };
+    const baseline = readBaseline();
     expect(Array.isArray(baseline.exempt)).toBe(true);
     expect(baseline.exempt.length).toBeLessThanOrEqual(PHASE_1_BASELINE_CAP);
+  });
+
+  it('UC-44b — the OTel probe driver is exempted WITH an honest, specific reason', () => {
+    const entry = readBaseline().exempt.find((e) => e.path === OTEL_PROBE_DRIVER);
+    expect(entry).toBeDefined();
+    const reason = entry?.reason ?? '';
+    // "TODO" / "legacy" / a one-liner is how a baseline turns into a dumping ground.
+    expect(reason.length).toBeGreaterThan(30);
+    expect(reason).not.toMatch(/^\s*(todo|legacy|n\/a|wip)\b/i);
+    expect(reason).toMatch(/child process|process enfant/i);
+  });
+
+  it('UC-44b — the tier-signature sentinel is green with that entry', () => {
+    let code = 0;
+    let out = '';
+    try {
+      out = execFileSync(
+        'node',
+        [join(REPO_ROOT, 'scripts/sentinels/integration-tier-signature.mjs')],
+        {
+          cwd: REPO_ROOT,
+          encoding: 'utf-8',
+        },
+      );
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string; stderr?: string };
+      code = e.status ?? 1;
+      out = `${e.stdout ?? ''}${e.stderr ?? ''}`;
+    }
+    if (code !== 0) {
+      throw new Error(`integration-tier-signature failed (exit ${String(code)}):\n${out}`);
+    }
+    expect(code).toBe(0);
   });
 
   // Keep harness import happy for tier-signature sentinel: this file lives under

@@ -115,6 +115,13 @@ appId: com.musaium.mobile.preview
     visible:
       id: "chat-bubble-assistant"
     timeout: 40000
+# The `extendedWaitUntil` above is a WAIT, not an assertion — and a wait that
+# resolves on the canned fallback template is a wait that proves nothing. This
+# flow paginates a HISTORY: if the messages it is paging through are all empty
+# templates, the pagination is green over garbage. (INC-2026-07-14 — 17/18 chat
+# flows were green for weeks against a 100%-dead LLM.)
+- runFlow:
+    file: helpers/assert-llm-answered.yaml
 
 # ──────────────────────────────────────────────
 # Phase 3: Send message #2

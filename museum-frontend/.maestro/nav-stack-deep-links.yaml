@@ -80,10 +80,27 @@ appId: com.musaium.mobile.preview
     id: "museum-sheet-view-details"
 - waitForAnimationToEnd
 # museum-detail unique marker: the "Start Chat Here" CTA (museumDirectory.start_chat).
-- extendedWaitUntil:
-    visible:
-      text: "Démarrer un chat ici|Start Chat Here"
+#
+# This used to be an `extendedWaitUntil` on the CTA's TEXT, with no scroll.
+# `extendedWaitUntil` WAITS — it does not scroll. And museum-detail carries DYNAMIC
+# enrichment copy (the AI-generated museum blurb): the moment that copy is
+# substantial, the CTA drops below the fold and the assertion can never be
+# satisfied, however long it waits. The flow was red against a perfectly healthy
+# app — and it would go red again the day the blurb simply grows.
+#
+# The CTA already carries its own testID (museum-detail.tsx) — the flow just was
+# not using it. Scroll to it, with the params proven on this codebase's long
+# screens (auth-account-delete.yaml).
+- scrollUntilVisible:
+    element:
+      id: "museum-detail-start-chat"
+    direction: DOWN
     timeout: 40000
+    visibilityPercentage: 50
+    speed: 25
+    waitToSettleTimeoutMs: 800
+- assertVisible:
+    id: "museum-detail-start-chat"
 # Back → Museums directory. museum-detail is a full-screen stack route (no tab
 # bar) and its hardware `back` is unreliable; tap the top-left back arrow
 # (accessibilityLabel common.back = "Retour" / "Back").

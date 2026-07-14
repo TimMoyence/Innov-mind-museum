@@ -1,3 +1,11 @@
+// ⚠️ MUST STAY THE FIRST IMPORT. `resolveEnrichMuseumUseCase` short-circuits when
+// EXTRACTION_WORKER_ENABLED is false — and the project now defaults it to false to
+// stop 48 app-booting suites from each leaking a reconnecting ioredis client (see
+// tests/helpers/jest-env-pgdatabase.setup.ts). Without the route mounted, every
+// assertion below gets a 404. `@src/config/env` reads process.env at MODULE LOAD and
+// imports are hoisted, so this side-effect import is the only seam early enough.
+import '../../helpers/env/enable-extraction-worker';
+
 import request from 'supertest';
 
 import { adminToken, makeToken } from '../../helpers/auth/token.helpers';

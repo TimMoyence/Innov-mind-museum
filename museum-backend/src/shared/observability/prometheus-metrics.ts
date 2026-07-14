@@ -504,6 +504,39 @@ export const llmCostAnonBypassTotal = new Counter({
 });
 
 /**
+ * INC-2026-07-14 (R8) — the smallest thing that makes "the chat is serving canned
+ * templates" ALERTABLE.
+ *
+ * For ~2 months, 100 % of chat sections failed (`@opentelemetry/instrumentation-openai`
+ * double-read the HTTP body) and the product answered every user with
+ * `createSummaryFallback`. What did the system emit? One `logger.warn` and one
+ * Sentry span attribute (`llm.degraded`). No counter ⇒ no possible alert ⇒ the
+ * outage was found by accident.
+ *
+ * Incremented ONCE per assembled response with `degraded === true`, in
+ * `assembleResponse` (`langchain-orchestrator-assembly.ts`). A HEALTHY response
+ * increments NOTHING — a counter that ticks on nominal traffic cannot be
+ * thresholded, so the alert never gets written, so the next outage is again found
+ * by accident.
+ *
+ * Denominator for a "sustained 100 % fallback" rule = the EXISTING
+ * `chat_request_duration_seconds_count`, hence ONE new metric, not two:
+ *   rate(chat_response_degraded_total[15m])
+ *     / clamp_min(rate(chat_request_duration_seconds_count[15m]), 1) > 0.5
+ *
+ * Cardinality: sections (`summary` in V1) × 3 reasons = 3 series. NO user-derived
+ * label (prom-client/LESSONS F1 — `userId`/`requestId`/message text are a storage
+ * bomb). BARE `chat_` prefix per METRIC_NAMING_AUDIT F2 Option A (`musaium_` is
+ * frozen at 16), like `guardrail_judge_degraded_total` above.
+ */
+export const chatResponseDegradedTotal = new Counter({
+  name: 'chat_response_degraded_total',
+  help: 'Total chat responses assembled with degraded=true (canned fallback served instead of an LLM answer), by section and reason (timeout | error | missing_result).',
+  labelNames: ['section', 'reason'] as const,
+  registers: [registry],
+});
+
+/**
  * WAVE 6 · C4 (discovery/cost.md D4) — per-user daily LLM spend distribution.
  *
  * LABELLESS Histogram in USD. Observed exactly once per ALLOWED `assertAllowed`

@@ -49,12 +49,18 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "send-button"
 
-# Queued — the banner carries a pending count, never a raw failure token.
+# ── THE FIRST HALF OF WHAT THIS FLOW CLAIMS: the message QUEUES while offline ──
+# This used to be `optional: true`. With every positive step optional, the flow's
+# ONLY hard assertion was the `assertNotVisible` below — and a negative assertion
+# passes on a blank screen, on the wrong screen, and on an app that crashed back to
+# Home. The flow could not fail, so it proved nothing.
+#
+# If the message does not visibly queue while offline, the offline queue is broken.
+# That is a REAL PRODUCT BUG — fix the queue, do not restore `optional`.
 - extendedWaitUntil:
     visible:
       text: ".*(en attente|pending).*"
     timeout: 12000
-    optional: true
 - assertNotVisible:
     text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
 
@@ -67,11 +73,14 @@ appId: com.musaium.mobile.preview
     notVisible:
       id: "offline-banner"
     timeout: 25000
-    optional: true
 
-# A real assistant reply lands after the queued message flushes.
+# ── THE SECOND HALF: the queued message actually FLUSHES and gets answered ──
+# This is the whole point of the word "resync" in the filename. It was optional.
 - extendedWaitUntil:
     visible:
       id: "chat-bubble-assistant"
     timeout: 90000
-    optional: true
+# …and the answer must be a real one, not the "model unreachable" template — a
+# resync that delivers an empty fallback has resynced nothing worth having.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml

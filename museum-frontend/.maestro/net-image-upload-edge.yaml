@@ -78,14 +78,27 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "send-button"
 
-# ── Bounded wait for the assistant message (compression keeps it under budget) ──
+# ── THE ASSERTION THIS FLOW EXISTS FOR ───────────────────────────────────────
+# The image upload MUST complete over a shaped Edge link, and the assistant MUST
+# answer. This wait used to carry `optional: true`, which — together with the
+# `optional` on every other positive step — left the flow with exactly ONE hard
+# assertion: the `assertNotVisible` below. A negative assertion passes on a blank
+# screen, on the wrong screen, and on an app that crashed back to Home. This flow
+# could not fail, and therefore proved nothing.
+#
+# It is now hard. If the Edge upload genuinely does not complete inside 90 s, that
+# is a REAL PRODUCT BUG on a slow network — the correct response is to fix the
+# upload (compression, retry, chunking), NOT to put `optional` back.
 - extendedWaitUntil:
     visible:
       id: "chat-bubble-assistant"
     timeout: 90000
-    optional: true
+# …and what came back must be a real answer, not the "model unreachable" template.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml
 
-# Never a raw token if the shaped upload struggles.
+# Never a raw token if the shaped upload struggles. (Kept — but note this line
+# alone is what the flow used to rest on, and it is worth nothing on its own.)
 - assertNotVisible:
     text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
 

@@ -42,10 +42,21 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
-# hideKeyboard dismisses the keyboard so auth-submit is tappable; the explicit tap
-# is the real login trigger on both platforms (no onSubmitEditing is wired — see
-# LoginForm.tsx). optional:true tolerates the button already being gone.
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard`. On iOS,
+# Maestro's hideKeyboard gesture lands on `auth-submit` — the button sits directly
+# under the password field, exactly where the keyboard was — and fires the login
+# EARLY. The submit then races the step: `hideKeyboard` itself flakes, and/or
+# `auth-submit` is already unmounted by the time the next command runs. The app is
+# innocent: LoginForm.tsx wires no `onSubmitEditing`, so nothing submits on return.
+#
+# The tap works BECAUSE the auth form lives in a ScrollView with
+# `keyboardShouldPersistTaps="handled"` (app/auth.tsx) — without that, a tap while
+# the keyboard is up is swallowed and the step is a silent no-op. 26 flows were
+# converted to this recipe; this one was missed.
+- tapOn:
+    text: "Welcome back|Bon retour"
+# The explicit tap is the real login trigger on both platforms.
+# optional:true tolerates the button already being gone.
 - tapOn:
     id: "auth-submit"
     optional: true

@@ -299,6 +299,7 @@ export default function SettingsScreen() {
           </Pressable>
 
           <Pressable
+            testID="settings-sign-out"
             style={[
               styles.logoutButton,
               { borderColor: theme.error, backgroundColor: theme.errorBackground },

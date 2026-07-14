@@ -59,6 +59,7 @@
         "!/^pg$/",
         "!/^reflect-metadata/",
         "!/^openai$/",
+        "!/^@opentelemetry//",
         "!/^@google/generative-ai/",
         "!/^@deepseek-ai/api/",
         "!/^expo/",
@@ -126,12 +127,20 @@
         "!/^pg$/",
         "!/^reflect-metadata/",
         "!/^openai$/",
+        "!/^@opentelemetry//",
         "!/^@google/generative-ai/",
         "!/^@deepseek-ai/api/",
         "!/^expo/",
         "!/^react-native/",
         "!/^@react-native/"
       ]
+    },
+    {
+      "description": "OpenTelemetry — manual review, 7d cool-down, NO auto-merge. INC-2026-07-14: `@opentelemetry/instrumentation-openai` reached us as a TRANSITIVE dependency of auto-instrumentations-node (0.66.0, ACTIVE BY DEFAULT), via an auto-merged minor, and killed 100 % of the chat's structured LLM calls for ~2 months. NAME THE LIMIT, or we will believe we are protected: the offender is NOT in our package.json, and `lockFileMaintenance` is automerge:true — a lockfile regeneration can pull a NEW instrumentation in without any named packageRule applying. NO Renovate rule by package name can close that hole. `pnpm sentinel:otel-roster` (pre-push Gate 35 + CI mirror) is what closes it: it recomputes the effective roster from the INSTALLED bundle and fails on any addition, removal or rename. This rule only slows the most likely vector; the sentinel catches every vector.",
+      "matchPackageNames": ["/^@opentelemetry//"],
+      "labels": ["manual-review", "dependencies", "observability"],
+      "minimumReleaseAge": "7 days",
+      "automerge": false
     },
     {
       "description": "OpenAI + Google + Deepseek SDKs — manual review (LLM contract risk)",

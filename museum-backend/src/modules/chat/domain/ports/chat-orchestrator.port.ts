@@ -93,6 +93,27 @@ export interface OrchestratorOutput {
    * validated by walkAssistantOutputSchema. Undefined for other intents.
    */
   suggestions?: string[];
+  /**
+   * INC-2026-07-14 — `true` when the LLM failed and `text` is the canned
+   * `createSummaryFallback` template rather than a model answer.
+   *
+   * This MUST live on the output itself and NOT inside
+   * `metadata.diagnostics.degraded`: `metadata.diagnostics` is attached only when
+   * `env.llm.includeDiagnostics` is true, and that flag is hard-coded to `false`
+   * outside development (`env.ts:194-195`, deliberately — it stops a NODE_ENV typo
+   * from leaking prompt fragments). Reading the signal from there would therefore
+   * be GREEN in tests and INERT in production — a guard that guards nothing.
+   *
+   * The one consumer that must honour it is the LLM response cache
+   * (`ChatMessageService.tryLlmCacheStore`): caching a fallback pins the outage in
+   * Redis for up to `TTL_GENERIC_S` (7 days), so the product stays broken for every
+   * already-asked question long after the root cause is fixed.
+   *
+   * Optional on the port (test fakes and the non-section paths may omit it); the
+   * real adapter (`assembleResponse`) always sets it. `undefined` is treated as
+   * "not degraded" — a cache write, i.e. the pre-existing behaviour.
+   */
+  degraded?: boolean;
 }
 
 export interface ChatOrchestrator {
