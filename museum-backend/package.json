@@ -145,7 +145,7 @@
     "typescript-eslint": "^8.58.1"
   },
   "dependencies": {
-    "@langchain/core": "1.2.2",
+    "@langchain/core": "1.2.3",
     "@langchain/google-genai": "2.2.0",
     "@langchain/openai": "1.5.5",
     "@mozilla/readability": "^0.6.0",
