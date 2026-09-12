@@ -64,8 +64,8 @@ jobs:
     outputs:
       chat: ${{ steps.filter.outputs.chat }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
-      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad  # v3.0.4
         id: filter
         with:
           filters: |
@@ -92,7 +92,7 @@ jobs:
       postgres:
         # pgvector/pgvector:pg16 — required because the C3 migration declares
         # `halfvec(768)` columns (see CLAUDE.md gotcha + ADR-037).
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
         env:
           POSTGRES_USER: musaium
           POSTGRES_PASSWORD: musaium_ci
@@ -108,7 +108,7 @@ jobs:
         # BullMQ queues (audit-cron, chat-purge-cron, museum-enrichment) boot
         # eagerly when `pnpm dev` starts — without Redis the backend retries
         # ECONNREFUSED forever and never answers /health.
-        image: redis:7-alpine
+        image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
         ports:
           - 6379:6379
         options: >-
@@ -134,13 +134,13 @@ jobs:
       PROMPTFOO_DISABLE_TELEMETRY: '1'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
 
       - name: Install backend deps
         working-directory: museum-backend
@@ -264,7 +264,7 @@ jobs:
 
       - name: Upload promptfoo report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: promptfoo-systemprompt-leak-${{ github.run_id }}
           path: museum-backend/scripts/llm-security/reports
