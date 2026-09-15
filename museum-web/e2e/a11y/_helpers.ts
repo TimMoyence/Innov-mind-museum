@@ -27,6 +27,9 @@ function loadDisableRules(): DisableRulesFile {
 }
 
 export async function expectNoA11yViolations(page: Page, route: string): Promise<void> {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForTimeout(100);
+
   const disable = loadDisableRules()
     .rules.filter((r) => r.route === route)
     .map((r) => r.rule);
