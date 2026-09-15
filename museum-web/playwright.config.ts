@@ -24,6 +24,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.WEB_BASE_URL ?? 'http://localhost:3001',
     storageState: 'e2e/playwright-storage/storageState.json',
+    contextOptions: { reducedMotion: 'reduce' },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     actionTimeout: 10_000,
