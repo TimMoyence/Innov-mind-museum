@@ -80,7 +80,7 @@ echo "$FLOWS"
 # single green run followed by a red re-run on identical code is the worst
 # possible signal — it reads as flake and buys a re-run that cannot pass.
 case "$SHARD" in
-  auth | all | ios-main)
+  auth | all | ios-main | smoke)
     if (cd "$SCRIPT_DIR/../../museum-backend" &&
       E2E_SEED_ALLOW=1 E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
         pnpm seed:e2e-maestro-account); then
