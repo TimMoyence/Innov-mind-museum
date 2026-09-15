@@ -5,14 +5,19 @@ import {
 } from '@shared/cache/probabilistic-refresh';
 import { logger } from '@shared/logger/logger';
 
-import type { OverpassMuseumResult, OverpassSearchParams } from './overpass-types';
+import type {
+  OverpassMuseumResult,
+  OverpassQueryResult,
+  OverpassSearchParams,
+} from './overpass-types';
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
- * `value: []` covers BOTH "live returned empty" and "live failed" — both trigger short
- * negative TTL to shield Overpass from quiet-region / transient-outage hammering.
- * Distinct from cache miss (entry exists in store). `storedAtMs` enables probabilistic
- * refresh on TTL-unaware cache port.
+ * `value: []` represents a successful live query with no matches and triggers
+ * the short negative TTL to shield Overpass from quiet-region hammering.
+ * Infrastructure failures are deliberately not written to this cache.
+ * Distinct from cache miss (entry exists in store). `storedAtMs` enables
+ * probabilistic refresh on TTL-unaware cache port.
  *
  * Compat alias — kept so the rest of the codebase (and the existing tests in
  * `tests/unit/shared/overpass-cache.test.ts`) can keep importing
@@ -60,7 +65,7 @@ export interface OverpassBackgroundRefreshArgs {
   cacheKey: string;
   positiveTtlSeconds: number;
   negativeTtlSeconds: number;
-  refresh: (params: OverpassSearchParams) => Promise<OverpassMuseumResult[]>;
+  refresh: (params: OverpassSearchParams) => Promise<OverpassMuseumResult[] | OverpassQueryResult>;
 }
 
 /**
@@ -80,7 +85,16 @@ export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArg
   });
   trigger({
     cacheKey,
-    refresh: () => refresh(params),
+    refresh: async () => {
+      const result = await refresh(params);
+      if (Array.isArray(result)) return result;
+      if (result.allEndpointsFailed) {
+        // Throwing here intentionally skips cache.set in the shared helper.
+        // A transient Overpass outage must not become a cached empty result.
+        throw new Error('all Overpass endpoints failed');
+      }
+      return result.museums;
+    },
     positiveTtlSeconds,
     negativeTtlSeconds,
   });

@@ -56,7 +56,11 @@ export interface SearchMuseumsResult {
   count: number;
 }
 
-const DEFAULT_RADIUS = 30_000;
+// Keep the implicit radius small enough for the Overpass provider's latency
+// budget. A legacy client may omit `radius`; 30 km made that request fan out
+// to a slow, multi-endpoint query and regularly exceeded the 6 s timeout.
+// Explicit callers can still request up to MAX_RADIUS (50 km).
+const DEFAULT_RADIUS = 5_000;
 const MAX_RADIUS = 50_000;
 /** Two OSM entries within this distance are always merged (duplicate OSM nodes for the same building). */
 const DEDUP_OSM_OSM_METERS = 100;

@@ -44,7 +44,10 @@ const APP_ANDROID_PACKAGE = 'com.musaium.mobile';
 const APP_ANDROID_PACKAGE_PREVIEW = 'com.musaium.mobile.preview';
 const BRAND_ICON =
   './assets/images/museum-ia/apple-devices/AppIcon.appiconset/icon-ios-1024x1024.png';
-const BRAND_SPLASH_IMAGE = './assets/images/museum-ia/android/playstore-icon.png';
+// Keep the splash source in the maintained asset set. The former Android
+// Play Store icon is not shipped anymore, while this logo remains available
+// for iOS, Android and web builds.
+const BRAND_SPLASH_IMAGE = './assets/images/logo.png';
 const BRAND_ANDROID_ADAPTIVE_FOREGROUND =
   './assets/images/museum-ia/android/mipmap-xxxhdpi/ic_launcher_foreground.png';
 const BRAND_BACKGROUND_COLOR = '#1E1B19';
@@ -126,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // (`com.musaium.mobile.preview`) is absent from the published AASA, so a
       // non-prod build claiming `applinks:musaium.com` would fail verification.
       associatedDomains: variant === 'production' ? ['applinks:musaium.com'] : undefined,
-      buildNumber: '93',
+      buildNumber: '94',
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -246,7 +249,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               },
             ]
           : undefined,
-      versionCode: 93,
+      versionCode: 94,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',

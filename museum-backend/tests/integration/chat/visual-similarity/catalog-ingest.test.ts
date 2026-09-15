@@ -150,6 +150,11 @@ const wireFetchMock = (
 };
 
 describe('catalog-ingest CLI (T7.1 — integration)', () => {
+  // The shared integration harness runs migrations against an ephemeral
+  // PostgreSQL instance. Under the complete integration matrix its startup
+  // can exceed Jest's 5 s default even though the ingest assertions are fast.
+  jest.setTimeout(60_000);
+
   let harness: Awaited<ReturnType<typeof createIntegrationHarness>>;
   let repo: ArtworkEmbeddingRepository;
 

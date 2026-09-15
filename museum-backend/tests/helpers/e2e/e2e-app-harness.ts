@@ -309,7 +309,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
   // their dependencies. The harness still injects its own mock-orchestrator
   // ChatService into the Express app below — `buildChatService` is just here
   // to populate the singleton's other slots (repository, imageStorage, etc.).
-  const { buildChatService } = await import('@modules/chat');
+  const { buildChatService, stopArtKeywordsRefresh } = await import('@modules/chat');
   buildChatService(appDataSource);
 
   // Phase 6 chaos: allow callers to override the orchestrator.
@@ -418,6 +418,10 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
 
   const stop = async (): Promise<void> => {
     stopped = true;
+    // The real process shutdown does this in src/index.ts. The reusable E2E
+    // harness must do it too, otherwise the module-level refresh timer keeps
+    // querying the test database after the harness has destroyed it.
+    stopArtKeywordsRefresh();
     if (server!) {
       await new Promise<void>((resolve, reject) => {
         server!.close((error) => {

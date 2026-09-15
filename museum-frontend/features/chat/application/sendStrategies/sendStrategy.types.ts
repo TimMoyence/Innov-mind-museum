@@ -79,11 +79,8 @@ export interface SendMessageContext {
   setError: (error: string | null) => void;
   setDailyLimitReached: Dispatch<SetStateAction<boolean>>;
 
-  // Streaming coordination
-  streamTextRef: RefObject<string>;
+  // Pending assistant response coordination
   streamingIdRef: RefObject<string | null>;
-  scheduleFlush: () => void;
-  flushStreamText: () => void;
   resetStreaming: () => void;
 
   // Review prompt counter

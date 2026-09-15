@@ -68,7 +68,7 @@ export default function DemoMap() {
     // TD-MGL-02 — surface maplibre-gl tile / style / network errors to Sentry
     // instead of swallowing them silently in the console.
     map.on('error', (e) => {
-      Sentry.captureException(e.error ?? new Error('maplibre-gl error (no .error payload)'));
+      Sentry.captureException(e.error);
     });
 
     map.on('load', () => {

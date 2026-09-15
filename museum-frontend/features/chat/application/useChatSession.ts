@@ -22,10 +22,9 @@ import {
   sendMessageAudio,
   sendMessageCache,
   sendMessageOffline,
-  sendMessageStreaming,
+  sendMessageSync,
   type SendMessageContext,
 } from './sendStrategies';
-import { useStreamingState } from './useStreamingState';
 import { useOfflineSync } from './useOfflineSync';
 import { useSessionLoader } from './useSessionLoader';
 
@@ -37,9 +36,9 @@ import type * as ExpoSpeech from 'expo-speech';
 export type { ChatUiMessage, ChatUiMessageMetadata };
 
 /**
- * Orchestrates chat session state by composing useSessionLoader, useStreamingState
- * and useOfflineSync, then dispatches outgoing messages to one of four strategies
- * (cache / offline / audio / streaming) via `pickSendStrategy`.
+ * Orchestrates chat session state by composing useSessionLoader, the buffered
+ * chat sender and useOfflineSync, then dispatches outgoing messages to one of
+ * four strategies (cache / offline / audio / sync) via `pickSendStrategy`.
  */
 export const useChatSession = (sessionId: string) => {
   const { t } = useTranslation();
@@ -76,8 +75,10 @@ export const useChatSession = (sessionId: string) => {
   // Session-level museumMode takes priority over settings (museum-initiated sessions)
   const museumMode = sessionMuseumMode ?? settingsMuseumMode;
 
-  const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
-    useStreamingState(setMessages);
+  const streamingIdRef = useRef<string | null>(null);
+  const resetStreaming = useCallback(() => {
+    streamingIdRef.current = null;
+  }, []);
 
   const locationString = useMemo(() => formatLocation(latitude, longitude), [latitude, longitude]);
   const imageFallbackLabel = t('chat.optimistic.image_placeholder');
@@ -203,10 +204,7 @@ export const useChatSession = (sessionId: string) => {
         setIsStreaming,
         setError,
         setDailyLimitReached,
-        streamTextRef,
         streamingIdRef,
-        scheduleFlush,
-        flushStreamText,
         resetStreaming,
         successfulSendsRef,
       };
@@ -217,7 +215,7 @@ export const useChatSession = (sessionId: string) => {
         const outcome = await sendMessageCache({ text: trimmedText }, context);
         if (outcome.kind === 'hit' || outcome.kind === 'queued') return true;
         if (outcome.kind === 'failed') return false;
-        // miss → fall through to streaming
+        // miss → fall through to the live sync request
       }
 
       if (strategy === 'offline') {
@@ -234,10 +232,7 @@ export const useChatSession = (sessionId: string) => {
       }
 
       return runWithSending(() =>
-        sendMessageStreaming(
-          { text: trimmedText, imageUri: params.imageUri, isFirstTurn },
-          context,
-        ),
+        sendMessageSync({ text: trimmedText, imageUri: params.imageUri, isFirstTurn }, context),
       );
     },
     [
@@ -259,10 +254,7 @@ export const useChatSession = (sessionId: string) => {
       cacheStore,
       classifyText,
       setError,
-      streamTextRef,
       streamingIdRef,
-      scheduleFlush,
-      flushStreamText,
       resetStreaming,
       runWithSending,
     ],

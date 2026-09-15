@@ -18,6 +18,18 @@ export interface OverpassMuseumResult {
   wheelchair?: string;
 }
 
+/**
+ * Outcome of a live Overpass query.
+ *
+ * An empty successful response means "there are no matching museums" and is
+ * safe to cache briefly. `allEndpointsFailed` means the infrastructure was
+ * unavailable and MUST NOT be cached as a negative result.
+ */
+export interface OverpassQueryResult {
+  museums: OverpassMuseumResult[];
+  allEndpointsFailed: boolean;
+}
+
 /** WGS84 bbox `[minLng, minLat, maxLng, maxLat]`. */
 export type OverpassBoundingBox = [number, number, number, number];
 

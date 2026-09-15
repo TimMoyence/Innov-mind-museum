@@ -55,19 +55,19 @@ describe('pickSendStrategy', () => {
   it('ignores low-data path when an image is attached', () => {
     const attempt: SendAttempt = { text: 'Hi', imageUri: 'file://a.jpg' };
     const context = baseContext({ isLowData: true, museumName: 'Louvre', isFirstTurn: true });
-    expect(pickSendStrategy(attempt, context)).toBe('streaming');
+    expect(pickSendStrategy(attempt, context)).toBe('sync');
   });
 
   it('ignores low-data path when not first turn', () => {
     const attempt: SendAttempt = { text: 'Hi' };
     const context = baseContext({ isLowData: true, museumName: 'Louvre', isFirstTurn: false });
-    expect(pickSendStrategy(attempt, context)).toBe('streaming');
+    expect(pickSendStrategy(attempt, context)).toBe('sync');
   });
 
   it('ignores low-data path without a museum context', () => {
     const attempt: SendAttempt = { text: 'Hi' };
     const context = baseContext({ isLowData: true, museumName: null, isFirstTurn: true });
-    expect(pickSendStrategy(attempt, context)).toBe('streaming');
+    expect(pickSendStrategy(attempt, context)).toBe('sync');
   });
 
   it("returns 'offline' when the app flag is on (even with audio)", () => {
@@ -86,13 +86,13 @@ describe('pickSendStrategy', () => {
     expect(pickSendStrategy(attempt, baseContext())).toBe('audio');
   });
 
-  it("returns 'streaming' for text + image by default", () => {
+  it("returns 'sync' for text + image by default", () => {
     const attempt: SendAttempt = { text: 'Describe', imageUri: 'file://x.jpg' };
-    expect(pickSendStrategy(attempt, baseContext())).toBe('streaming');
+    expect(pickSendStrategy(attempt, baseContext())).toBe('sync');
   });
 
-  it("returns 'streaming' for text-only without cache eligibility", () => {
+  it("returns 'sync' for text-only without cache eligibility", () => {
     const attempt: SendAttempt = { text: 'hey' };
-    expect(pickSendStrategy(attempt, baseContext())).toBe('streaming');
+    expect(pickSendStrategy(attempt, baseContext())).toBe('sync');
   });
 });

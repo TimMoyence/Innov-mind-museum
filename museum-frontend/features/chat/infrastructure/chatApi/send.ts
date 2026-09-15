@@ -43,16 +43,7 @@ export interface PostMessageParams {
   idempotencyKey?: string;
 }
 
-export interface SendMessageSmartParams extends PostMessageParams {
-  onToken?: (text: string) => void;
-  onDone?: (payload: {
-    messageId: string;
-    createdAt: string;
-    metadata: Record<string, unknown>;
-  }) => void;
-  onGuardrail?: (text: string, reason: string) => void;
-  signal?: AbortSignal;
-}
+export type SendMessageSmartParams = PostMessageParams;
 
 /** Creates a new chat session and validates the response against the contract. */
 export const createSession = async (
@@ -176,12 +167,9 @@ interface SmartSendDeps {
 }
 
 /**
- * Smart message sender — always synchronous. The dormant SSE streaming path
- * was buried (D1): the only transport is the non-streaming `postMessage`.
- * The `onToken`/`onDone`/`onGuardrail`/`signal` callbacks accepted by
- * {@link SendMessageSmartParams} are intentionally ignored here so the LIVE
- * `sendMessageStreaming.ts` strategy keeps type-checking and runs unchanged
- * via the sync fallback block it already documents as the live path.
+ * Smart message sender — always synchronous. The retired SSE transport is not
+ * part of the client contract; this façade delegates to the buffered
+ * `postMessage` request used by the live chat strategy.
  *
  * Dependencies are injected so the index façade can wire them while keeping
  * each capability module decoupled.

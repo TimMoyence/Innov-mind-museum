@@ -14,11 +14,16 @@
  * module registry — `require` inside `isolateModules`, not a dynamic `import`
  * (jest has no ESM VM modules enabled here).
  */
-const loadFlags = (): typeof import('@/shared/lib/e2eBuildFlags') => {
-  let mod!: typeof import('@/shared/lib/e2eBuildFlags');
+interface E2eBuildFlags {
+  areE2eDevRoutesEnabled: () => boolean;
+  areDevRoutesReachable: () => boolean;
+}
+
+const loadFlags = (): E2eBuildFlags => {
+  let mod!: E2eBuildFlags;
   jest.isolateModules(() => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- module-scope env read must be re-evaluated per case; dynamic import() needs --experimental-vm-modules
-    mod = require('@/shared/lib/e2eBuildFlags') as typeof import('@/shared/lib/e2eBuildFlags');
+    mod = require('@/shared/lib/e2eBuildFlags') as E2eBuildFlags;
   });
   return mod;
 };

@@ -29,7 +29,7 @@ COPY --from=ghcr.io/timmoyence/museum-backend-base:siglip-v1 \
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
 COPY packages/musaium-shared /packages/musaium-shared
 
-COPY museum-backend/package.json museum-backend/pnpm-lock.yaml ./
+COPY museum-backend/package.json museum-backend/pnpm-lock.yaml museum-backend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY museum-backend ./
@@ -50,7 +50,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
 COPY packages/musaium-shared /packages/musaium-shared
 
-COPY museum-backend/package.json museum-backend/pnpm-lock.yaml ./
+COPY museum-backend/package.json museum-backend/pnpm-lock.yaml museum-backend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # ---------- Runtime stage ----------

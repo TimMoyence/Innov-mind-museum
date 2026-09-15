@@ -11,7 +11,7 @@ import type { SendMessageContext } from './sendStrategy.types';
  * response surfaces on the dashboard. No message payload (RGPD/secret-safe),
  * option-arg pattern only (no global scope mutation — lib-docs §Anti-patterns).
  */
-export const logEmptyAssistantResponse = (strategy: 'streaming' | 'audio' | 'cache'): void => {
+export const logEmptyAssistantResponse = (strategy: 'sync' | 'audio' | 'cache'): void => {
   Sentry.captureMessage('chat.emptyAssistantResponse', {
     level: 'warning',
     tags: { flow: 'chat.sendMessage', strategy },
@@ -19,7 +19,7 @@ export const logEmptyAssistantResponse = (strategy: 'streaming' | 'audio' | 'cac
 };
 
 /**
- * Shared error handler for `sendMessageAudio` and `sendMessageStreaming`.
+ * Shared error handler for `sendMessageAudio` and the synchronous chat sender.
  * Removes the transient streaming placeholder, marks the optimistic user
  * message as failed and routes the error to `setError` / daily-limit state.
  */

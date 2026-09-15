@@ -1593,7 +1593,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Post a text message and receive the assistant response as an SSE stream */
+    /**
+     * Deprecated streaming endpoint; use the synchronous message endpoint
+     * @deprecated
+     */
     post: {
       parameters: {
         query?: never;
@@ -1618,7 +1621,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description SSE stream of token, guardrail, done, and error events */
+        /** @description Deprecated SSE response; this endpoint is no longer used by the application */
         200: {
           headers: {
             [name: string]: unknown;
@@ -2965,7 +2968,7 @@ export interface paths {
           lat?: number;
           /** @description Longitude (must be provided with lat) */
           lng?: number;
-          /** @description Search radius in meters (default 30000) */
+          /** @description Search radius in meters (default 5000) */
           radius?: number;
           /** @description Text search query (name filter or geocode input) */
           q?: string;

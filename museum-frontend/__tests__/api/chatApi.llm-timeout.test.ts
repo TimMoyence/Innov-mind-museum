@@ -25,7 +25,7 @@ const mockHttpRequest = jest.fn();
 // would also stub out `LLM_REQUEST_TIMEOUT_MS`, and every assertion below would
 // then compare `undefined` to `undefined` and pass while proving nothing.
 jest.mock('@/shared/api/httpRequest', () => ({
-  ...jest.requireActual<typeof import('@/shared/api/httpRequest')>('@/shared/api/httpRequest'),
+  ...jest.requireActual('@/shared/api/httpRequest'),
   httpRequest: (...args: unknown[]) => mockHttpRequest(...args),
 }));
 

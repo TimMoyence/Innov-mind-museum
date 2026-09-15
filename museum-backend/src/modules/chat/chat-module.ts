@@ -342,6 +342,7 @@ export class ChatModule {
    */
   private _guardrailProvider: GuardrailProvider | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
+  private _artKeywordsRefreshStopped = false;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
   /**
    * TD-OP-01 — concrete Wikidata breaker reference retained so the opossum
@@ -402,6 +403,7 @@ export class ChatModule {
   }
 
   stopArtKeywordsRefresh(): void {
+    this._artKeywordsRefreshStopped = true;
     if (this._artKeywordsRefreshTimer) {
       clearInterval(this._artKeywordsRefreshTimer);
       this._artKeywordsRefreshTimer = undefined;
@@ -638,15 +640,18 @@ export class ChatModule {
     dynamicArtKeywords: Set<string>;
     onArtKeywordDiscovered: (keyword: string, locale: string) => void;
   } {
+    this._artKeywordsRefreshStopped = false;
     const dynamicArtKeywords = new Set<string>();
     const refreshKeywords = async () => {
       try {
         const rows = await artKeywordRepo.findByLocale('%');
+        if (this._artKeywordsRefreshStopped) return;
         dynamicArtKeywords.clear();
         for (const row of rows) {
           dynamicArtKeywords.add(row.keyword);
         }
       } catch (error) {
+        if (this._artKeywordsRefreshStopped) return;
         logger.warn('art_keywords_refresh_failed', {
           error: error instanceof Error ? error.message : String(error),
         });

@@ -4042,7 +4042,8 @@
     "/api/chat/sessions/{id}/messages/stream": {
       "post": {
         "tags": ["Chat"],
-        "summary": "Post a text message and receive the assistant response as an SSE stream",
+        "summary": "Deprecated streaming endpoint; use the synchronous message endpoint",
+        "deprecated": true,
         "x-feature-flag": "streaming",
         "security": [
           {
@@ -4095,7 +4096,7 @@
         },
         "responses": {
           "200": {
-            "description": "SSE stream of token, guardrail, done, and error events",
+            "description": "Deprecated SSE response; this endpoint is no longer used by the application",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -5821,7 +5822,7 @@
               "minimum": 1000,
               "maximum": 50000
             },
-            "description": "Search radius in meters (default 30000)"
+            "description": "Search radius in meters (default 5000)"
           },
           {
             "in": "query",

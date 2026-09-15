@@ -225,6 +225,7 @@ export function useFetchData<T>(
     // the spread; this is a known and accepted limitation upstream. We do
     // NOT depend on `optionsRef.current` (read inline via ref to keep
     // refetch identity stable when callers pass inline option objects).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the public hook intentionally accepts a dynamic dependency list
     [url, ...deps],
   );
 

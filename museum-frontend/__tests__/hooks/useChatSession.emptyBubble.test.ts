@@ -13,7 +13,7 @@ import type { PostMessageResponseDTO } from '@/features/chat/domain/contracts';
 // transport via `mockSendMessageSmart.mockResolvedValue(...)`. We NEVER fire
 // `onDone` — `sendMessageSmart` ignores it (send.ts:169-172). A test using
 // onDone reproduces the fake world that let P0-FA1 ship green. The live finalize
-// path is the sync-fallback block `sendMessageStreaming.ts:117-153`, whose
+// path is the buffered finalize block `sendMessageSync.ts:117-153`, whose
 // internal truthy guard `if (response.message.text)` (`:128`) is the residual
 // hole this cycle closes.
 //

@@ -27,9 +27,9 @@
   "dependencies": {
     "@musaium/shared": "file:../packages/musaium-shared",
     "@sentry/nextjs": "^10.49.0",
-    "maplibre-gl": "^5.23.0",
+    "maplibre-gl": "^6.4.1",
     "motion": "^12.39.0",
-    "next": "^15.5.18",
+    "next": "^15.5.24",
     "next-plausible": "^3.12.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
@@ -68,14 +68,5 @@
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": "eslint --fix"
-  },
-  "pnpm": {
-    "overrides": {
-      "brace-expansion@1": ">=1.1.12 <2",
-      "brace-expansion@2": "<6",
-      "protocol-buffers-schema": ">=3.6.1",
-      "postcss": ">=8.5.10",
-      "fast-uri": ">=3.1.2"
-    }
   }
 }
