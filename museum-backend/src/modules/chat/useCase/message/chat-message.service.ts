@@ -450,6 +450,16 @@ export class ChatMessageService {
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
     if (!llmCache) return;
+    // INC-2026-07-14 — a degraded answer is the canned fallback template, not a model
+    // answer; caching it pins the outage in Redis for up to 7 days (`TTL_GENERIC_S`).
+    // Same principle as the cool-down guard above ("a refusal must never be cached").
+    // Read from `aiResult.degraded`, NOT `metadata.diagnostics?.degraded` — the latter
+    // is inert in prod. Full rationale: `OrchestratorOutput.degraded` JSDoc.
+    // (No log here: `chat_response_degraded_total` already fires on the degraded
+    // response itself, and skipping the store is its mechanical consequence.)
+    if (aiResult.degraded === true) {
+      return;
+    }
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return;

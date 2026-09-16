@@ -1,5 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 
+import { areDevRoutesReachable } from '@/shared/lib/e2eBuildFlags';
+
 /**
  * C2 — Dev-only route group `(dev)`.
  *
@@ -15,16 +17,26 @@ import { Redirect, Stack } from 'expo-router';
  * paywall trigger (a pre-exhausted quota → `QuotaUpsellModal`), and the
  * offline-pack flow was dropped (no reliable Release trigger; geo + MMKV state).
  *
- * The whole group is gated on `__DEV__`: in a release bundle every route under
- * `(dev)/` redirects to `/`, so the dev routes are unreachable in prod. Mirrors
- * the `__DEV__` guard already used by `PerfOverlay` (`MuseumMapView.tsx`).
+ * The group is unreachable in a shipped app: every route under `(dev)/` redirects
+ * to `/` unless this is a dev build OR a bundle explicitly built for the e2e suite.
+ *
+ * `__DEV__` ALONE is not the right gate, and the note above is exactly why. Both
+ * e2e binaries are RELEASE builds (iOS `xcodebuild -configuration Release`,
+ * Android weak-net `./gradlew assembleRelease`) → `--dev false` → `__DEV__ === false`
+ * → these routes redirected Home there too. `force-data-mode` survived the H7
+ * cleanup but inherited the same defect: the four `netshape` flows deeplink it, so
+ * the low-data mode was never forced and their (non-optional) `low-data-badge`
+ * assertion could not pass on EITHER platform. `areDevRoutesReachable()` adds the
+ * build-time e2e seam (`EXPO_PUBLIC_E2E_DEV_ROUTES`, inlined by Metro, set only on
+ * the Maestro build jobs) so an e2e Release bundle can reach them while a shipped
+ * one still cannot — see `shared/lib/e2eBuildFlags.ts`.
  *
  * Expo Router note: route groups `(name)` do not appear in the URL — these
  * routes are reached via `musaium:///(dev)/<route>` deeplinks (same custom
  * scheme + `openLink` pattern as `museum-picker-flow.yaml`).
  */
 export default function DevLayout() {
-  if (!__DEV__) {
+  if (!areDevRoutesReachable()) {
     return <Redirect href="/" />;
   }
   return <Stack screenOptions={{ headerShown: false }} />;

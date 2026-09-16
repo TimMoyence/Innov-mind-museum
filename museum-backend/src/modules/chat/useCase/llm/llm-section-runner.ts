@@ -48,14 +48,35 @@ interface SectionSuccessEvent extends SectionStartEvent {
   latencyMs: number;
 }
 
+/**
+ * The causal detail of a failed attempt (R7). Diagnostics ONLY — it travels to
+ * the logging hooks and stops there; `SectionRunFailure.error` (the string the
+ * client-facing `ChatAssistantDiagnostics` exposes) is unchanged.
+ *
+ * SECURITY — this shape is an ALLOWLIST, and that is the whole point. See
+ * `toErrorDetail()`.
+ */
+export interface SectionErrorDetail {
+  name: string;
+  message: string;
+  /** Truncated: head frames only — the point of rupture is always near the top. */
+  stack?: string;
+  /** `.cause` chain, depth <= 3, `{ name, message }` per link and nothing else. */
+  causes?: { name: string; message: string }[];
+}
+
 interface SectionRetryEvent extends SectionStartEvent {
   latencyMs: number;
   error: string;
+  /** OPTIONAL — the `Promise.allSettled` rejected branch builds a failure without hooks. */
+  detail?: SectionErrorDetail;
 }
 
 interface SectionFailureEvent extends SectionStartEvent {
   latencyMs: number;
   error: string;
+  /** OPTIONAL — see `SectionRetryEvent.detail`; the stream consumer never reads it. */
+  detail?: SectionErrorDetail;
 }
 
 export interface SectionRunnerHooks {
@@ -92,6 +113,103 @@ const toErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
+/** Head frames kept. The breaking frame is always in the first few. */
+const MAX_STACK_LINES = 20;
+/** Hard character cap — a 100 % failure rate must not become a log bill. */
+const MAX_STACK_CHARS = 4096;
+const MAX_CAUSE_DEPTH = 3;
+const STACK_TRUNCATION_MARKER = '    … [stack truncated]';
+
+const truncateStack = (stack: string): string => {
+  const lines = stack.split('\n');
+  const kept = lines.slice(0, MAX_STACK_LINES);
+  let text = kept.join('\n');
+  let truncated = kept.length < lines.length;
+
+  const budget = MAX_STACK_CHARS - STACK_TRUNCATION_MARKER.length - 1;
+  if (text.length > budget) {
+    text = text.slice(0, budget);
+    truncated = true;
+  }
+
+  return truncated ? `${text}\n${STACK_TRUNCATION_MARKER}` : text;
+};
+
+/** Non-empty, never invented. `String()` (not a template literal) — a Symbol throws on interpolation. */
+const errorName = (value: unknown): string => {
+  if (value instanceof Error && value.name !== '') {
+    return value.name;
+  }
+  if (typeof value === 'object' && value !== null) {
+    const named = (value as { name?: unknown }).name;
+    if (typeof named === 'string' && named !== '') {
+      return named;
+    }
+  }
+  return `NonError(${typeof value})`;
+};
+
+const errorMessage = (value: unknown): string =>
+  value instanceof Error ? value.message || value.name : String(value);
+
+/**
+ * Walks `.cause`, keeping `{ name, message }` per link. Bounded by depth AND by
+ * a `seen` set: `e.cause === e` (and the two-link mutual variant) are real shapes,
+ * and a serialiser that loops on them turns an LLM outage into a PROCESS outage.
+ *
+ * @param root - the thrown value whose causal chain to walk
+ * @returns at most MAX_CAUSE_DEPTH links, outermost first
+ */
+const toCauseChain = (root: unknown): { name: string; message: string }[] => {
+  const chain: { name: string; message: string }[] = [];
+  const seen = new Set<unknown>([root]);
+
+  let current: unknown =
+    typeof root === 'object' && root !== null ? (root as { cause?: unknown }).cause : undefined;
+
+  while (current !== undefined && current !== null && chain.length < MAX_CAUSE_DEPTH) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    chain.push({ name: errorName(current), message: errorMessage(current) });
+    current = typeof current === 'object' ? (current as { cause?: unknown }).cause : undefined;
+  }
+
+  return chain;
+};
+
+/**
+ * R7 — the causal detail of a failed section, built by a strict field ALLOWLIST.
+ *
+ * NO GENERIC SERIALISER IS PERMITTED HERE — not whole-object JSON serialisation, not
+ * Node's object inspector, not an object spread of the error. All three drain an
+ * `openai` `APIError`, which carries `.request` (hence the outbound request BODY,
+ * hence the USER'S PROMPT), `.headers` (hence the API key) and `.error`. Any of them
+ * would turn "preserve the cause" into a prompt / PII / secret egress straight into
+ * the server log — the one real risk this diagnosability fix introduces, closed by
+ * construction. A generic serialiser also throws outright on a cyclic value,
+ * manufacturing a brand-new error INSIDE the error handler and losing the original.
+ *
+ * (The three forbidden idioms are named, and their absence from this file asserted,
+ * in `tests/unit/chat/llm-error-detail.test.ts` — deliberately not spelled out here,
+ * since that assertion greps this source.)
+ *
+ * Sibling of `toErrorMessage`, NOT a replacement: that one still produces the
+ * `SectionRunFailure.error` string exposed through `ChatAssistantDiagnostics`.
+ *
+ * @param error - the thrown value
+ * @returns name + message + truncated stack + bounded cause chain, and nothing else
+ */
+export const toErrorDetail = (error: unknown): SectionErrorDetail => {
+  const stack = error instanceof Error && typeof error.stack === 'string' ? error.stack : undefined;
+
+  return {
+    name: errorName(error),
+    message: errorMessage(error),
+    stack: stack === undefined ? undefined : truncateStack(stack),
+    causes: toCauseChain(error),
+  };
+};
+
 const isTimeoutError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -118,24 +236,33 @@ interface AttemptContext {
   requestId?: string;
 }
 
+/** One classified failed attempt: what went wrong, how long it took, and WHY (R7). */
+interface AttemptFailure {
+  latencyMs: number;
+  isTimeout: boolean;
+  message: string;
+  detail: SectionErrorDetail;
+}
+
+const toFailureEvent = (ctx: AttemptContext, failure: AttemptFailure): SectionFailureEvent => ({
+  name: ctx.taskName,
+  attempt: ctx.attempt,
+  timeoutMs: ctx.timeoutMs,
+  payloadBytes: ctx.payloadBytes,
+  latencyMs: failure.latencyMs,
+  error: failure.message,
+  requestId: ctx.requestId,
+  detail: failure.detail,
+});
+
 const buildFailureResult = (
   ctx: AttemptContext,
-  latencyMs: number,
-  isTimeout: boolean,
-  errorMsg: string,
+  failure: AttemptFailure,
   hooks?: SectionRunnerHooks,
 ): SectionRunFailure => {
-  const event = {
-    name: ctx.taskName,
-    attempt: ctx.attempt,
-    timeoutMs: ctx.timeoutMs,
-    payloadBytes: ctx.payloadBytes,
-    latencyMs,
-    error: errorMsg,
-    requestId: ctx.requestId,
-  };
+  const event = toFailureEvent(ctx, failure);
 
-  if (isTimeout) {
+  if (failure.isTimeout) {
     hooks?.onTimeout?.(event);
   } else {
     hooks?.onError?.(event);
@@ -143,10 +270,10 @@ const buildFailureResult = (
 
   return {
     name: ctx.taskName,
-    status: isTimeout ? 'timeout' : 'error',
-    error: errorMsg,
+    status: failure.isTimeout ? 'timeout' : 'error',
+    error: failure.message,
     attempts: ctx.attempt,
-    latencyMs,
+    latencyMs: failure.latencyMs,
     timeoutMs: ctx.timeoutMs,
     payloadBytes: ctx.payloadBytes,
   };
@@ -170,32 +297,28 @@ const createTimeoutRace = (
 const classifyAttemptError = (
   controller: AbortController,
   error: unknown,
-): { isTimeout: boolean; status: SectionRunStatus; message: string } => {
+  latencyMs: number,
+): AttemptFailure & { status: SectionRunStatus } => {
   const isTimeout = controller.signal.aborted || isTimeoutError(error);
   return {
+    latencyMs,
     isTimeout,
     status: isTimeout ? 'timeout' : 'error',
     message: toErrorMessage(error),
+    detail: toErrorDetail(error),
   };
 };
 
 const fireRetryHooks = (
   hooks: SectionRunnerHooks | undefined,
   ctx: AttemptContext,
-  latencyMs: number,
-  isTimeout: boolean,
-  errorMsg: string,
+  failure: AttemptFailure,
 ): void => {
-  const event = {
-    name: ctx.taskName,
-    attempt: ctx.attempt,
-    timeoutMs: ctx.timeoutMs,
-    payloadBytes: ctx.payloadBytes,
-    latencyMs,
-    error: errorMsg,
-    requestId: ctx.requestId,
-  };
-  if (isTimeout) {
+  // The RETRY path emits its own event: enriching only the FINAL failure would
+  // leave retry logs blind, and the first attempt is often the one carrying the
+  // true cause.
+  const event = toFailureEvent(ctx, failure);
+  if (failure.isTimeout) {
     hooks?.onTimeout?.(event);
   } else {
     hooks?.onError?.(event);
@@ -278,20 +401,13 @@ const executeTask = async <TValue>(
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      const latencyMs = now() - startedAt;
-      const classified = classifyAttemptError(controller, error);
+      const classified = classifyAttemptError(controller, error, now() - startedAt);
 
       if (attempts >= maxAttempts || !shouldRetry(error, classified.status)) {
-        return buildFailureResult(
-          ctx,
-          latencyMs,
-          classified.isTimeout,
-          classified.message,
-          options.hooks,
-        );
+        return buildFailureResult(ctx, classified, options.hooks);
       }
 
-      fireRetryHooks(options.hooks, ctx, latencyMs, classified.isTimeout, classified.message);
+      fireRetryHooks(options.hooks, ctx, classified);
       await sleepWithBackoff(sleep, options.retryBaseDelayMs, attempts, deadlineMs - now());
     }
   }

@@ -114,7 +114,7 @@ describe('createCachedOverpassClient', () => {
   });
 
   describe('live failure path', () => {
-    it('caches the empty array with the short negative TTL when Overpass all-endpoints fails', async () => {
+    it('does not cache the empty array when Overpass all-endpoints fails', async () => {
       global.fetch = jest
         .fn()
         .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
@@ -125,16 +125,7 @@ describe('createCachedOverpassClient', () => {
 
       // The raw client returns [] on full failure (see queryOverpassMuseums).
       expect(result).toEqual([]);
-      expect(cache.set).toHaveBeenCalledTimes(1);
-
-      const [, stored, ttl] = cache.set.mock.calls[0] as [
-        string,
-        { value: unknown; storedAtMs: number; ttlSeconds: number },
-        number,
-      ];
-      expect(stored.value).toEqual([]);
-      expect(stored.ttlSeconds).toBe(3_600);
-      expect(ttl).toBe(3_600);
+      expect(cache.set).not.toHaveBeenCalled();
     });
 
     it('caches an empty successful response with the short negative TTL (not positive)', async () => {

@@ -59,6 +59,10 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
   setAccessToken: (...args: unknown[]) => mockSetAccessToken(...args),
   clearAccessToken: (...args: unknown[]) => mockClearAccessToken(...args),
   getAccessToken: () => mockGetAccessToken(),
+  // Bootstrap awaits this before reading any token (iOS Keychain outlives an
+  // app-data wipe). No-op here: its own behaviour is covered by
+  // `authTokenStore.freshInstall.test.ts`.
+  purgeStaleCredentialsOnFreshInstall: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('@/features/auth/infrastructure/biometricStore', () => ({

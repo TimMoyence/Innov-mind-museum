@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import { AppDataSource } from '@data/db/data-source';
 import { User } from '@modules/auth/domain/user/user.entity';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
+import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 
 import { createSmokeAccount } from './seed-smoke-account';
 
@@ -63,6 +64,62 @@ const PASSWORD = process.env.E2E_LOGIN_PASSWORD ?? 'TestPassword123!';
 const EXHAUST_QUOTA = process.env.E2E_EXHAUST_QUOTA === '1';
 
 /**
+ * Magic-link token modes (`E2E_SEED_VERIFY_TOKEN=1`, `E2E_SEED_EMAIL_CHANGE=1`)
+ * ────────────────────────────────────────────────────────────────────────────
+ * `magic-link-verify-email.yaml` and `magic-link-confirm-email-change.yaml` were
+ * VACUOUS: every assertion in them carried `optional: true`, so neither flow could
+ * fail. They counted as UFR-021 coverage (the sentinel matches the route literal)
+ * while proving nothing but "the app did not crash on launch". Their own headers
+ * admitted why — "no local mechanism seeds such tokens" — so the assertions had
+ * been relaxed until they meant nothing.
+ *
+ * There is no need to mock anything. Both endpoints look the user up by the SHA-256
+ * DIGEST of the raw token (`hashEmailTokenForLookup`, single-use-email-token.ts) and
+ * require a live expiry:
+ *
+ *   verifyEmail:              WHERE verification_token   = :hash AND verification_token_expires > NOW()
+ *   consumeEmailChangeToken:  WHERE email_change_token   = :hash AND email_change_token_expiry  > NOW()
+ *
+ * So we seed the DIGEST of a token the flow already carries, through the very same
+ * helper production uses — the backend cannot tell it is being tested, and it runs
+ * its real validation. Reimplementing the sha256 here would fork the source of truth
+ * and drift silently the day the hashing changes.
+ *
+ * Both tokens are SINGLE-USE (the repositories NULL them on consume), so this must
+ * be re-seeded before every suite run. `maestro-run-shard.sh` does exactly that.
+ *
+ * BLAST RADIUS — the two are NOT alike:
+ *   - verify-email is harmless on the shared login account: it re-marks an already
+ *     verified row as verified and clears the token.
+ *   - confirm-email-change is DESTRUCTIVE: `consumeEmailChangeToken` sets
+ *     `email = pending_email` and the use case then revokes every refresh token the
+ *     user holds. Pointing it at the shared account would rename it mid-suite and
+ *     sign it out — every later flow would fail to log in. It therefore MUST be
+ *     seeded on a DEDICATED throwaway account. The screen is a public route (no auth
+ *     needed — the token identifies the user), so the flow never logs in as it and
+ *     the damage stays contained.
+ */
+const SEED_VERIFY_TOKEN = process.env.E2E_SEED_VERIFY_TOKEN === '1';
+const SEED_EMAIL_CHANGE = process.env.E2E_SEED_EMAIL_CHANGE === '1';
+const SEED_RESET_TOKEN = process.env.E2E_SEED_RESET_TOKEN === '1';
+
+/** Raw tokens the Maestro deep-links carry. Kept in sync with the flow YAMLs. */
+const VERIFY_TOKEN_RAW = process.env.E2E_VERIFY_TOKEN ?? 'e2e-verify-token';
+// These three defaults are the literals the deep-links already carry — the flow
+// YAML is the contract, this script follows it:
+//   magic-link-verify-email.yaml:37         ?token=e2e-verify-token
+//   magic-link-reset-password.yaml:40       ?token=e2e-reset-token
+//   magic-link-confirm-email-change.yaml:37 ?token=e2e-confirm-token
+const EMAIL_CHANGE_TOKEN_RAW = process.env.E2E_EMAIL_CHANGE_TOKEN ?? 'e2e-confirm-token';
+const RESET_TOKEN_RAW = process.env.E2E_RESET_TOKEN ?? 'e2e-reset-token';
+
+/** Where `confirm-email-change` moves the dedicated account's address to. */
+const EMAIL_CHANGE_PENDING = process.env.E2E_EMAIL_CHANGE_PENDING ?? 'e2e-changed@test.musaium.dev';
+
+/** 24h — the same window `register.useCase.ts` gives a real verification link. */
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
  * First day of the current UTC month, `YYYY-MM-DD` (the `date`-column form
  * TypeORM stores + the middleware compares against). MUST stay byte-identical to
  * `monthly-session-quota.middleware.ts` `firstOfCurrentUtcMonth()`.
@@ -107,6 +164,57 @@ async function main(): Promise<void> {
     const passwordHash = await bcrypt.hash(PASSWORD, BCRYPT_ROUNDS);
     await AppDataSource.getRepository(User).update({ id: userId }, { password: passwordHash });
 
+    // Raw SQL on the snake_case columns, and NOT `repo.update()`: TypeORM's
+    // `.set()`/`update()` path silently SKIPS `undefined` and has a documented
+    // history of no-op'ing these very columns (see the verifyEmail comment in
+    // user.repository.pg.ts:116). A seed that silently writes nothing would hand
+    // the flow an invalid token and send us hunting a phantom app bug.
+    const tokenExpiry = new Date(Date.now() + TOKEN_TTL_MS);
+
+    if (SEED_VERIFY_TOKEN) {
+      await AppDataSource.query(
+        `UPDATE "users"
+            SET "verification_token" = $2,
+                "verification_token_expires" = $3
+          WHERE "id" = $1`,
+        [userId, hashEmailTokenForLookup(VERIFY_TOKEN_RAW), tokenExpiry],
+      );
+    }
+
+    if (SEED_RESET_TOKEN) {
+      // `resetPassword.useCase.ts:31` hashes with `{ trim: false }` — the raw token
+      // is digested VERBATIM. A token carrying stray whitespace would hash to
+      // something the endpoint never looks up, so keep RESET_TOKEN_RAW whitespace-free.
+      //
+      // DESTRUCTIVE, like the email change: `consumeResetTokenAndUpdatePassword`
+      // REPLACES the account's password. Seeding this on the shared login account
+      // would invalidate TestPassword123! mid-suite and every later flow would fail
+      // to log in. Dedicated throwaway account only.
+      await AppDataSource.query(
+        `UPDATE "users"
+            SET "reset_token" = $2,
+                "reset_token_expires" = $3
+          WHERE "id" = $1`,
+        [userId, hashEmailTokenForLookup(RESET_TOKEN_RAW, { trim: false }), tokenExpiry],
+      );
+    }
+
+    if (SEED_EMAIL_CHANGE) {
+      await AppDataSource.query(
+        `UPDATE "users"
+            SET "pending_email" = $2,
+                "email_change_token" = $3,
+                "email_change_token_expiry" = $4
+          WHERE "id" = $1`,
+        [
+          userId,
+          EMAIL_CHANGE_PENDING,
+          hashEmailTokenForLookup(EMAIL_CHANGE_TOKEN_RAW),
+          tokenExpiry,
+        ],
+      );
+    }
+
     if (EXHAUST_QUOTA) {
       // Force the free-tier monthly session quota to "exhausted" so the very next
       // `POST /api/sessions` returns 402 (the REAL paywall trigger the Maestro
@@ -128,9 +236,22 @@ async function main(): Promise<void> {
           `— QUOTA EXHAUSTED (tier=free, sessions_month_count=${limit}, sessions_month_start=${monthStart}; next POST /api/sessions → 402)`,
       );
     } else {
+      // Name the magic-link tokens in stdout. They are single-use and invisible in
+      // the DB (only their digest is stored), so a run that silently seeded none is
+      // indistinguishable from one that seeded both — until a flow fails and someone
+      // spends an hour blaming the app.
+      const seeded = [
+        SEED_VERIFY_TOKEN ? `verify-email token="${VERIFY_TOKEN_RAW}"` : null,
+        SEED_RESET_TOKEN ? `reset-password token="${RESET_TOKEN_RAW}"` : null,
+        SEED_EMAIL_CHANGE
+          ? `email-change token="${EMAIL_CHANGE_TOKEN_RAW}" → pending_email=${EMAIL_CHANGE_PENDING}`
+          : null,
+      ].filter(Boolean);
+
       // eslint-disable-next-line no-console -- one-shot seed CLI, stdout is the contract
       console.log(
-        `[seed-e2e-maestro-account] ${EMAIL} ready (id=${userId}, verified, consented, fixed password)`,
+        `[seed-e2e-maestro-account] ${EMAIL} ready (id=${userId}, verified, consented, fixed password)` +
+          (seeded.length > 0 ? ` — SEEDED ${seeded.join(', ')} (24h, single-use)` : ''),
       );
     }
   } finally {

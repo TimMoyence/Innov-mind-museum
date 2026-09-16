@@ -41,7 +41,11 @@ try {
   fail(2, 'dotenv not found in node_modules — run pnpm install first.');
 }
 
-const candidate = path.resolve(process.argv[2] || path.join(projectRoot, '.env.production'));
+// pnpm may leave the conventional `--` separator in argv depending on
+// whether the script is invoked through `pnpm` or `pnpm run`. Ignore it so
+// both documented forms resolve the actual candidate path.
+const candidateArg = process.argv.slice(2).find((arg) => arg !== '--');
+const candidate = path.resolve(candidateArg || path.join(projectRoot, '.env.production'));
 if (!fs.existsSync(candidate)) {
   fail(2, `candidate env file not found: ${candidate}`);
 }

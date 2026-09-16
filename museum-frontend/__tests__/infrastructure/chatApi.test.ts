@@ -413,39 +413,21 @@ describe('chatApi', () => {
 
   // ── sendMessageSmart (post-burial: ALWAYS sync) ──────────────────────────────
   //
-  // After the dormant SSE path is buried (D1), `sendMessageSmart` is a thin
-  // façade over the sync `postMessage` transport: it ignores any streaming
-  // callbacks and never consults a streaming feature flag. These assertions
-  // pin that always-sync contract.
+  // `sendMessageSmart` is a thin façade over the buffered `postMessage`
+  // transport. These assertions pin that always-sync contract.
 
   describe('sendMessageSmart', () => {
-    it('returns the sync postMessage DTO even when onToken is supplied', async () => {
-      // The streaming flag being "enabled" must NOT route to a stream path —
-      // the SSE transport no longer exists, so the only path is sync.
-      const originalStreamingFlag = process.env.EXPO_PUBLIC_CHAT_STREAMING;
-      process.env.EXPO_PUBLIC_CHAT_STREAMING = 'true';
+    it('returns the sync postMessage DTO', async () => {
+      const response = makePostMessageResponse();
+      mockHttpRequest.mockResolvedValue(response);
 
-      try {
-        const response = makePostMessageResponse();
-        mockHttpRequest.mockResolvedValue(response);
+      const result = await chatApi.sendMessageSmart({
+        sessionId: 'sess-1',
+        text: 'Hello',
+      });
 
-        const result = await chatApi.sendMessageSmart({
-          sessionId: 'sess-1',
-          text: 'Hello',
-          onToken: () => {
-            /* never invoked — streaming buried, always sync */
-          },
-        });
-
-        expect(result).toBeTruthy();
-        expect(mockHttpRequest).toHaveBeenCalled();
-      } finally {
-        if (originalStreamingFlag === undefined) {
-          delete process.env.EXPO_PUBLIC_CHAT_STREAMING;
-        } else {
-          process.env.EXPO_PUBLIC_CHAT_STREAMING = originalStreamingFlag;
-        }
-      }
+      expect(result).toBeTruthy();
+      expect(mockHttpRequest).toHaveBeenCalled();
     });
 
     it('uses the sync path when imageUri is provided', async () => {
@@ -456,16 +438,13 @@ describe('chatApi', () => {
         sessionId: 'sess-1',
         text: 'What is this?',
         imageUri: '/path/to/photo.jpg',
-        onToken: () => {
-          /* noop */
-        },
       });
 
       expect(result).toBeTruthy();
       expect(mockHttpRequest).toHaveBeenCalled();
     });
 
-    it('uses the sync path when no onToken callback is supplied', async () => {
+    it('uses the sync path for text messages', async () => {
       const response = makePostMessageResponse();
       mockHttpRequest.mockResolvedValue(response);
 

@@ -13,21 +13,19 @@ import type { SendMessageContext, SendResult } from './sendStrategy.types';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 
-interface StreamingAttempt {
+interface SyncAttempt {
   text?: string;
   imageUri?: string;
   isFirstTurn: boolean;
 }
 
 /**
- * Streaming strategy — SSE path via `sendMessageSmart` for text / image messages.
- * Shows a streaming placeholder that is progressively filled via `onToken`
- * callbacks and finalized via `onDone`. On cache-eligible first-turn text-only
- * museum sessions, stores the answer in `chatLocalCache` for future low-data
- * hits.
+ * Synchronous chat strategy — the server returns one buffered response for text
+ * and image messages. The temporary assistant row is a typing placeholder only;
+ * there is no SSE transport in V1.
  */
-export const sendMessageStreaming = async (
-  attempt: StreamingAttempt,
+export const sendMessageSync = async (
+  attempt: SyncAttempt,
   context: SendMessageContext,
 ): Promise<SendResult> => {
   const optimisticMessage = buildOptimisticMessage({
@@ -41,7 +39,6 @@ export const sendMessageStreaming = async (
 
   try {
     const streamingPlaceholderId = `${String(Date.now())}-streaming`;
-    context.streamTextRef.current = '';
     context.streamingIdRef.current = streamingPlaceholderId;
 
     const streamingPlaceholder: ChatUiMessage = {
@@ -75,50 +72,13 @@ export const sendMessageStreaming = async (
         context.contentPreferences.length > 0
           ? ([...context.contentPreferences] as ContentPreference[])
           : undefined,
-      onToken: (chunk) => {
-        context.streamTextRef.current += chunk;
-        context.scheduleFlush();
-      },
-      onDone: (payload) => {
-        const finalText = context.streamTextRef.current;
-        context.resetStreaming();
-
-        // A5 (R22) — telemetry-only consume of `metadata.phase`. The phase is
-        // a BE-owned audit signal ; the FE displays its own simulated phase
-        // via `useStatusPhase` (R10-R17). When the field is absent (legacy
-        // messages, R23) we silently skip — no throw, no log.
-        logPhaseTelemetry(payload.metadata, {
-          sessionId: context.sessionId,
-          messageId: payload.messageId,
-        });
-
-        context.setMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamingPlaceholderId
-              ? {
-                  ...m,
-                  id: payload.messageId,
-                  text: finalText,
-                  createdAt: payload.createdAt,
-                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-                  metadata: (payload.metadata as ChatUiMessageMetadata) ?? null,
-                  suggestions: (payload.metadata.suggestions as string[] | undefined) ?? undefined,
-                }
-              : m,
-          ),
-        );
-      },
-      onGuardrail: (guardrailText) => {
-        context.streamTextRef.current = guardrailText;
-        context.flushStreamText();
-      },
     });
 
-    // Non-streaming fallback (image messages or streaming not available)
+    // Buffered response path: replace the typing placeholder with the assistant answer.
     if (response && context.streamingIdRef.current) {
       context.resetStreaming();
-      // A5 (R22) — same telemetry hook as the SSE `onDone` branch above. The
-      // BE today returns sync (SSE deprecated), so this is the live path.
+      // A5 (R22) — record the same phase metadata for the buffered response
+      // returned by the live backend path.
       logPhaseTelemetry(response.metadata, {
         sessionId: context.sessionId,
         messageId: response.message.id,
@@ -150,7 +110,7 @@ export const sendMessageStreaming = async (
           );
         });
       } else {
-        logEmptyAssistantResponse('streaming');
+        logEmptyAssistantResponse('sync');
         context.setMessages((prev) => prev.filter((m) => m.id !== streamingPlaceholderId));
       }
 

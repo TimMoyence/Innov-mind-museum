@@ -120,7 +120,7 @@
 
 | Item | Verdict | Re-vérif | Lane | Preuve code (path:line) |
 |---|---|---|---|---|
-| **P0-FA1** | ✅ DONE | — | V1 | Commit 406fe9b82 merged to dev: guard widened from `(!streamingIdRef.current ／／ imageUri)` to `(response && context.streamingIdRef.current)` in sendMessageStreaming.ts:118. Fix converges text+image on single finalize block. Commit is ancestor of HEAD. |
+| **P0-FA1** | ✅ DONE | — | V1 | Commit 406fe9b82 merged to dev: guard widened from `(!streamingIdRef.current ／／ imageUri)` to `(response && context.streamingIdRef.current)` in sendMessageSync.ts. Fix converges text+image on single finalize block. Commit is ancestor of HEAD. |
 | **P0-FA2** 🚩 | 🔴 OPEN | ✅ DONE | V1 | MfaChallengeScreen.tsx not found anywhere in codebase. Directory listing shows no mfa-enroll.tsx or challenge file in app/(stack)/. Search for 'MfaChallengeScreen' returns zero results across frontend. |
 | **P0-FA3** | ✅ DONE | — | V1 | Fix verified in llm-prompt-builder.ts:203-204. When resolvedLocation undefined (consent refused), code checks `isCoordinateString(input.context?.location)` and returns empty string, preventing coordinate leakage. Comment confirms GDPR Art.7 inversion protection. |
 | **P0-FA4** | ✅ DONE | — | V1 | PR #301 (440cd016d) merged to dev. NpsScale.tsx exists with 0-10 button component. getNps.useCase.ts implements aggregateNps() with museumId scope. Endpoint GET /api/admin/nps callable via getNps.useCase.ts. NPS attribution via reviews.session_id FK in createReview.useCase.ts. |

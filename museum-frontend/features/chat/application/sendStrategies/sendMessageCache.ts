@@ -8,7 +8,7 @@ import {
 import { logEmptyAssistantResponse } from './sendStrategy.shared';
 import type { SendMessageContext } from './sendStrategy.types';
 
-/** Outcome of the cache strategy — callers use this to decide whether to fall through to streaming. */
+/** Outcome of the cache strategy — callers use this to decide whether to fall through to sync. */
 export type CacheOutcome =
   | { kind: 'hit' }
   | { kind: 'queued' }
@@ -21,7 +21,7 @@ export type CacheOutcome =
  * 1. Looks up a prior answer in `chatLocalCache`.
  * 2. On hit → renders user + cached assistant messages locally, returns `hit`.
  * 3. On miss + offline → enqueues the attempt, returns `queued`.
- * 4. On miss + online → returns `miss` so the caller falls through to streaming.
+ * 4. On miss + online → returns `miss` so the caller falls through to sync.
  */
 export const sendMessageCache = async (
   attempt: { text: string },
@@ -40,7 +40,7 @@ export const sendMessageCache = async (
     const cachedMetadata = (cached.metadata as ChatUiMessageMetadata | undefined) ?? null;
     // Cycle 5 (D4/D7) — a corrupted hit (empty/whitespace answer, no media) must
     // not render a phantom bubble. Treat it as a `miss` so the caller falls
-    // through to streaming and fetches a real answer, instead of caching-in a
+    // through to sync and fetches a real answer, instead of caching-in a
     // blank reply that would block the turn.
     if (!isRenderableAssistantContent(cached.answer, cachedMetadata)) {
       logEmptyAssistantResponse('cache');

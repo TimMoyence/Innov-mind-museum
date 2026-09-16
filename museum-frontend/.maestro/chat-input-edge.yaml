@@ -36,5 +36,10 @@ appId: com.musaium.mobile.preview
     visible:
       id: "chat-bubble-assistant"
     timeout: 40000
-- assertVisible:
-    id: "chat-bubble-assistant"
+# INC-2026-07-14 — asserting the bubble EXISTS proves NOTHING: the canned fallback
+# template the backend serves when the LLM is unreachable IS a valid assistant
+# bubble. 17 of the 18 chat flows stayed GREEN for weeks against a 100%-dead LLM
+# because of exactly this assertion. The helper asserts the bubble exists AND that
+# what it says is not that template. DO NOT revert to a bare assertVisible.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml

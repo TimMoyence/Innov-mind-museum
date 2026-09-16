@@ -124,7 +124,17 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard` — same pattern
+# the registration phase above already uses for the DOB editor. On iOS Maestro's
+# `hideKeyboard` gesture lands on `auth-submit` (it sits directly under the
+# password field, exactly where the keyboard was) and fires the login early: the
+# submit then races the step, so `hideKeyboard` itself flakes and `auth-submit`
+# is already unmounted by the next command. The app does NOT submit on return
+# (LoginForm.tsx wires `onPress` only, no `onSubmitEditing`) — this is a
+# Maestro-iOS artefact. Tapping the non-interactive title dismisses the keyboard
+# deterministically and leaves the explicit submit below as the real trigger.
+- tapOn:
+    text: "Welcome back|Bon retour"
 - tapOn:
     id: "auth-submit"
 - tapOn:
@@ -150,13 +160,28 @@ appId: com.musaium.mobile.preview
       text: "Settings|Paramètres"
     timeout: 10000
 
-# Scroll to find Sign out button
+# Scroll to the Sign out button — the LAST element of a long screen.
+#
+# The bare `scrollUntilVisible` that used to be here took Maestro's defaults:
+# visibilityPercentage 100, speed 40, no settle wait, no timeout. On the last row
+# of a long ScrollView that means "scroll fast, and only accept the element when
+# it is 100% on screen" — it overshoots, bounces, and gives up. It passed most of
+# the time, which is the worst kind of failure: it read as flakiness.
+#
+# Same recipe as auth-account-delete.yaml (proven on THIS screen): target the
+# button's own testID, require it merely to be properly visible (50%), scroll
+# slowly, and let the list settle. `visibilityPercentage: 50` is not a weakening —
+# a 50%-visible button is tappable; a 100% requirement is what made it flake.
 - scrollUntilVisible:
     element:
-      text: "Sign out|Se déconnecter"
+      id: "settings-sign-out"
     direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 50
+    speed: 25
+    waitToSettleTimeoutMs: 800
 - tapOn:
-    text: "Sign out|Se déconnecter"
+    id: "settings-sign-out"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
@@ -176,7 +201,17 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard` — same pattern
+# the registration phase above already uses for the DOB editor. On iOS Maestro's
+# `hideKeyboard` gesture lands on `auth-submit` (it sits directly under the
+# password field, exactly where the keyboard was) and fires the login early: the
+# submit then races the step, so `hideKeyboard` itself flakes and `auth-submit`
+# is already unmounted by the next command. The app does NOT submit on return
+# (LoginForm.tsx wires `onPress` only, no `onSubmitEditing`) — this is a
+# Maestro-iOS artefact. Tapping the non-interactive title dismisses the keyboard
+# deterministically and leaves the explicit submit below as the real trigger.
+- tapOn:
+    text: "Welcome back|Bon retour"
 - tapOn:
     id: "auth-submit"
 - tapOn:

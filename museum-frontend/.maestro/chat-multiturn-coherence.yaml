@@ -40,6 +40,21 @@ appId: com.musaium.mobile.preview
 - waitForAnimationToEnd:
     timeout: 40000
 
+# THE COHERENCE ASSERTION. This flow is named "multiturn coherence" and, until
+# 2026-07-14, it asserted nothing whatsoever about what the assistant SAID — only
+# that bubbles appeared. It therefore could not tell a coherent conversation from
+# a dead LLM restating each question back at the user, which is precisely what the
+# backend was doing (INC-2026-07-14-otel-openai-structured).
+#
+# "Which art movement did HE help to found?" only has an answer if the model still
+# knows that "he" is Claude Monet. Impressionism is that answer — a hard fact, and
+# the only word here that is not the model's to choose. If the anaphora is lost, or
+# the model is not answering at all, this line goes red.
+- extendedWaitUntil:
+    visible:
+      text: ".*([Ii]mpressionis|[Ii]mpressionnis).*"
+    timeout: 40000
+
 # ── Turn 3 (anaphora: "his" → Monet) ──
 - tapOn:
     id: "chat-input"
@@ -53,7 +68,12 @@ appId: com.musaium.mobile.preview
 
 # After three turns the session is still healthy: a real assistant bubble is on
 # screen and the composer is ready for more.
-- assertVisible:
-    id: "chat-bubble-assistant"
+# INC-2026-07-14 — asserting the bubble EXISTS proves NOTHING: the canned fallback
+# template the backend serves when the LLM is unreachable IS a valid assistant
+# bubble. 17 of the 18 chat flows stayed GREEN for weeks against a 100%-dead LLM
+# because of exactly this assertion. The helper asserts the bubble exists AND that
+# what it says is not that template. DO NOT revert to a bare assertVisible.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml
 - assertVisible:
     id: "chat-input"

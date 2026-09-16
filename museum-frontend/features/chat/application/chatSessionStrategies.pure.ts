@@ -18,7 +18,7 @@ export interface StrategyContext {
   isFirstTurn: boolean;
 }
 
-export type StrategyKind = 'cache' | 'offline' | 'audio' | 'streaming';
+export type StrategyKind = 'cache' | 'offline' | 'audio' | 'sync';
 
 /** Returns true when the attempt contains any sendable content (trimmed text or media). */
 export const hasContent = (attempt: SendAttempt): boolean => {
@@ -33,10 +33,10 @@ export const hasContent = (attempt: SendAttempt): boolean => {
  * Picks the right strategy for an attempt + runtime context.
  *
  * Priority order:
- * 1. `cache`     — low-data + museum-initiated + first-turn text-only (cache-first, may fall through to streaming on miss)
+ * 1. `cache`     — low-data + museum-initiated + first-turn text-only (cache-first, may fall through to sync on miss)
  * 2. `offline`   — offline queue when connectivity is down
  * 3. `audio`     — direct non-streaming path when audio payload is attached
- * 4. `streaming` — default SSE text/image path
+ * 4. `sync`      — default buffered text/image path
  *
  * Returns `null` when the attempt has no sendable content.
  */
@@ -66,5 +66,5 @@ export const pickSendStrategy = (
     return 'audio';
   }
 
-  return 'streaming';
+  return 'sync';
 };

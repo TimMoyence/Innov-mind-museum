@@ -125,9 +125,7 @@ describe('ImageCompareCarousel (T8.4)', () => {
 
     const lists = tree.UNSAFE_getAllByType(FlatList);
     expect(lists.length).toBeGreaterThanOrEqual(1);
-    const horizontal = lists.find(
-      (l) => (l.props as { horizontal?: boolean }).horizontal === true,
-    );
+    const horizontal = lists.find((l) => (l.props as { horizontal?: boolean }).horizontal === true);
     expect(horizontal).toBeTruthy();
   });
 
@@ -167,11 +165,11 @@ describe('ImageCompareCarousel (T8.4)', () => {
     const matches = [
       makeCompareMatch({
         qid: 'Q1',
-        facts: makeArtworkFacts({ qid: 'Q1', title: 'A' }),
+        facts: makeArtworkFacts({ qid: 'Q1', title: 'A', artist: 'Artist A' }),
       }),
       makeCompareMatch({
         qid: 'Q2',
-        facts: makeArtworkFacts({ qid: 'Q2', title: 'B' }),
+        facts: makeArtworkFacts({ qid: 'Q2', title: 'B', artist: 'Artist B' }),
       }),
     ];
 

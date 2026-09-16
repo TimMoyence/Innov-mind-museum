@@ -268,6 +268,11 @@ jobs:
         working-directory: museum-backend
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+        with:
+          # Roadmap sentinels validate historical commit references. The
+          # default shallow checkout hides those commits from the coverage
+          # shards and makes an otherwise valid test fail in CI.
+          fetch-depth: 0
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
       - name: Setup Node
@@ -1372,15 +1377,50 @@ jobs:
             # 1. Validate the new compose BEFORE touching the live one —
             #    syntax error or missing env var → abort, leave prod
             #    running on the existing compose.
+            #
+            #    ⚠️ 2026-07-14 — this step used to be `config > /dev/null`. The
+            #    `:?` guards in the compose file DO make a genuinely missing var a
+            #    hard error, but compose's OTHER failure mode is a WARNING on
+            #    stderr, and `config` still exits 0:
+            #
+            #      WARN[0000] The "Y40q6" variable is not set. Defaulting to a blank string.
+            #
+            #    That warning means a value in /srv/museum/.env contains a LITERAL
+            #    `$`. Compose treats `$Y40q6` as a variable reference, fails to
+            #    resolve it, and SILENTLY SUBSTITUTES AN EMPTY STRING — so the
+            #    service receives a TRUNCATED secret while the .env (and the
+            #    operator's password manager) hold the full one. Found in prod on
+            #    GRAFANA_ADMIN_PASSWORD: nobody could log into Grafana with the
+            #    password they thought they had, and nobody knew.
+            #
+            #    The guard was running on every deploy, emitting the warning, and
+            #    throwing it into /dev/null. It now fails the deploy.
+            #
+            #    We report the COUNT and the AFFECTED SERVICE KEYS only — never the
+            #    fragment itself, which is a piece of a live secret.
             cd /srv/museum
             sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
               /tmp/musaium-deploy-staging/docker-compose.yml.candidate
-            (cd /srv/museum && \
+
+            COMPOSE_STDERR="$( (cd /srv/museum && \
               docker compose \
                 -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
                 --project-directory /srv/museum \
                 --env-file /srv/museum/.env \
-                config > /dev/null)
+                config 2>&1 >/dev/null) )"
+
+            UNRESOLVED="$(printf '%s\n' "$COMPOSE_STDERR" \
+              | grep -c 'variable is not set' || true)"
+
+            if [ "${UNRESOLVED:-0}" -gt 0 ]; then
+              echo "::error::compose resolved ${UNRESOLVED} \${...} reference(s) to an EMPTY string."
+              echo "::error::A value in /srv/museum/.env contains a literal '\$'. Compose is eating it,"
+              echo "::error::so the affected service receives a TRUNCATED secret. Deploy aborted."
+              echo "::error::Fix: regenerate that secret WITHOUT any '\$' (simplest), or escape it as '\$\$'."
+              echo "::error::To find it (names only, no values):"
+              echo "::error::  sudo grep -nE '^[A-Z_][A-Z0-9_]*=.*[\$]' /srv/museum/.env | cut -d= -f1"
+              exit 1
+            fi
 
             # 2. Backup current compose, install candidate as the live one.
             BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"

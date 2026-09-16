@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -168,80 +178,118 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
 
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.card} accessibilityRole="alert" testID="quota-upsell-modal">
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{t('paywall.modalTitle')}</Text>
+      {/*
+       * The card holds a TextInput, a consent checkbox and the submit button, in
+       * that order. Without a keyboard-aware container the on-screen keyboard
+       * covered the consent + submit rows the moment the email field was focused,
+       * and NOTHING in this tree could dismiss it (no ScrollView, no
+       * `Keyboard.dismiss`, no tap responder) — so on a phone the lead-capture
+       * form was literally unsubmittable. This is the paywall: an unsubmittable
+       * form here is lost revenue, not a cosmetic defect.
+       *
+       * Same proven pattern as `app/auth.tsx`: KeyboardAvoidingView lifts the card
+       * clear of the keyboard, and `keyboardShouldPersistTaps="handled"` makes a
+       * tap on any inert part of the card blur the input (a tap that an
+       * interactive child does not consume dismisses the keyboard) while still
+       * letting the consent/submit presses through on the first tap.
+       */}
+      <KeyboardAvoidingView
+        style={styles.backdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card} accessibilityRole="alert" testID="quota-upsell-modal">
+            <View style={styles.headerRow}>
+              <Text style={styles.title}>{t('paywall.modalTitle')}</Text>
+              <Pressable
+                onPress={onClose}
+                accessibilityLabel={t('paywall.dismiss')}
+                accessibilityRole="button"
+                style={styles.closeButton}
+                testID="quota-upsell-dismiss"
+              >
+                <Text style={styles.closeIcon}>×</Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.body}>{t('paywall.modalBody')}</Text>
+            {reason !== null && (
+              <Text style={styles.meta}>
+                {t('paywall.resetsOn')} {formattedReset}
+              </Text>
+            )}
+
+            <Text style={styles.label}>{t('paywall.fieldEmail')}</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              accessibilityLabel={t('paywall.fieldEmail')}
+              inputMode="email"
+              autoCorrect={false}
+              autoCapitalize="none"
+              style={styles.input}
+              testID="quota-upsell-email"
+            />
+
+            {/* Honeypot — `display:'none'` per StyleSheet ; never rendered to a11y. */}
+            <TextInput
+              value={website}
+              onChangeText={setWebsite}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              style={styles.honeypot}
+            />
+
             <Pressable
-              onPress={onClose}
-              accessibilityLabel={t('paywall.dismiss')}
-              accessibilityRole="button"
-              style={styles.closeButton}
-              testID="quota-upsell-dismiss"
+              onPress={() => {
+                setConsent((prev) => !prev);
+              }}
+              accessibilityLabel={t('paywall.consent')}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: consent }}
+              style={styles.consentRow}
+              testID="quota-upsell-consent"
             >
-              <Text style={styles.closeIcon}>×</Text>
+              <View style={[styles.checkbox, consent && styles.checkboxChecked]} />
+              <Text style={styles.consentText}>{t('paywall.consent')}</Text>
             </Pressable>
+
+            <Pressable
+              onPress={() => {
+                void onSubmit();
+              }}
+              accessibilityRole="button"
+              style={styles.submitButton}
+              testID="quota-upsell-submit"
+            >
+              <Text style={styles.submitText}>
+                {state === 'sending' ? t('paywall.sending') : t('paywall.submit')}
+              </Text>
+            </Pressable>
+
+            {/* testIDs so the e2e flow can assert the SUBMIT OUTCOME. Without them
+                the flow could only prove the modal opens and closes — it tapped
+                submit and asserted nothing, so a dead consent box, a submit wired
+                to nothing, or a 500 from /api/leads/paywall-interest all stayed
+                green. */}
+            {state === 'success' && (
+              <Text testID="quota-upsell-success" style={styles.success}>
+                {t('paywall.success')}
+              </Text>
+            )}
+            {state === 'error' && (
+              <Text testID="quota-upsell-error" style={styles.error}>
+                {t('paywall.error')}
+              </Text>
+            )}
           </View>
-
-          <Text style={styles.body}>{t('paywall.modalBody')}</Text>
-          {reason !== null && (
-            <Text style={styles.meta}>
-              {t('paywall.resetsOn')} {formattedReset}
-            </Text>
-          )}
-
-          <Text style={styles.label}>{t('paywall.fieldEmail')}</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            accessibilityLabel={t('paywall.fieldEmail')}
-            inputMode="email"
-            autoCorrect={false}
-            autoCapitalize="none"
-            style={styles.input}
-            testID="quota-upsell-email"
-          />
-
-          {/* Honeypot — `display:'none'` per StyleSheet ; never rendered to a11y. */}
-          <TextInput
-            value={website}
-            onChangeText={setWebsite}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            style={styles.honeypot}
-          />
-
-          <Pressable
-            onPress={() => {
-              setConsent((prev) => !prev);
-            }}
-            accessibilityLabel={t('paywall.consent')}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: consent }}
-            style={styles.consentRow}
-            testID="quota-upsell-consent"
-          >
-            <View style={[styles.checkbox, consent && styles.checkboxChecked]} />
-            <Text style={styles.consentText}>{t('paywall.consent')}</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              void onSubmit();
-            }}
-            accessibilityRole="button"
-            style={styles.submitButton}
-            testID="quota-upsell-submit"
-          >
-            <Text style={styles.submitText}>
-              {state === 'sending' ? t('paywall.sending') : t('paywall.submit')}
-            </Text>
-          </Pressable>
-
-          {state === 'success' && <Text style={styles.success}>{t('paywall.success')}</Text>}
-          {state === 'error' && <Text style={styles.error}>{t('paywall.error')}</Text>}
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -267,6 +315,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
+  },
+  scroll: {
+    width: '100%',
+  },
+  // `flexGrow` (not `flex`) so the card stays vertically centred while there is
+  // room, and the ScrollView still scrolls once the keyboard shrinks the viewport.
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     backgroundColor: palette.cardBg,

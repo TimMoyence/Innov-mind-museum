@@ -28,13 +28,23 @@ appId: com.musaium.mobile.preview
 # Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!,
 # backend reachable through the shaped proxy, working LLM provider.
 
+# ── Log in and reach the chat composer FIRST ──
+# ORDER IS LOAD-BEARING. The forcing deeplink used to run BEFORE this helper, and
+# the helper opens with `launchApp: clearState: true` — which wipes AsyncStorage,
+# i.e. exactly where `persist=1` had just written the forced preference. The flow
+# annulled its own setup one step after performing it, so `low-data-badge` could
+# never light and this assertion could never pass. Force AFTER the last clearState.
+- runFlow:
+    file: helpers/chat-entry.yaml
+
 # ── Force the low-data mode deterministically (W1 dev route, persisted) ──
+# The dev route always `<Redirect href="/" />`s, so this lands us back on Home.
 - openLink: "musaium:///(dev)/force-data-mode?value=low&persist=1"
 - waitForAnimationToEnd
 
-# ── Reach the chat composer via the proven deterministic entry helper ──
+# ── Walk back into the composer (LowDataBadge is chat-scoped) ──
 - runFlow:
-    file: helpers/chat-entry.yaml
+    file: helpers/chat-reentry.yaml
 
 # ── Low-data badge must light (forced preference 'low' + online) — NON-optional ──
 - extendedWaitUntil:

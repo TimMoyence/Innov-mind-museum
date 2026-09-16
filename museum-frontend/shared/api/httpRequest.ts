@@ -15,12 +15,39 @@ type HeadersRecord = Record<string, string>;
  */
 const GZIP_MIN_BODY_BYTES = 1024;
 
+/**
+ * Timeout for requests that WAIT ON A MODEL, overriding `httpClient`'s 15s
+ * default.
+ *
+ * 15s is a sane ceiling for CRUD and a trap for anything LLM-backed. The voice
+ * round-trip is STT → LLM → TTS in a single request: measured against a LOCAL
+ * backend on a warm connection, `POST /api/chat/sessions/:id/audio` took **14.1s**
+ * — 0.9s of headroom. On a real network, or with the model merely having a slow
+ * minute (the backend already logs `llm_section_timeout` at 8s, with retries),
+ * axios aborts with ECONNABORTED and the user's voice message is silently lost.
+ * A text turn has the same shape: it blocks on the full model response.
+ *
+ * Retrying does not save them either — re-sending a 14s multipart upload to re-run
+ * the same slow model just costs another 14s and another token bill. The right fix
+ * is to stop treating a model call like a database read.
+ *
+ * 60s is comfortably above the observed worst case while still bounded: a request
+ * that has not answered in a minute is not slow, it is broken, and the user should
+ * be told so rather than left watching a spinner.
+ */
+export const LLM_REQUEST_TIMEOUT_MS = 60_000;
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   requiresAuth?: boolean;
   headers?: HeadersRecord;
   body?: unknown;
   responseType?: 'json' | 'arraybuffer' | 'blob' | 'text';
+  /**
+   * Per-request timeout, in ms. Omit to inherit `httpClient`'s CRUD default (15s).
+   * Set it to {@link LLM_REQUEST_TIMEOUT_MS} on anything that waits on a model.
+   */
+  timeoutMs?: number;
   /**
    * TD-TQ-01 / design D1 — AbortSignal forwarded to `AxiosRequestConfig.signal`
    * (axios ≥ 0.22). Lets TanStack Query's `QueryFunctionContext.signal` reach
@@ -102,7 +129,15 @@ const maybeGzipBody = (body: unknown): GzipDecision | null => {
  */
 export const httpRequest = async <T>(
   url: string,
-  { requiresAuth = true, headers, body, method, responseType, signal }: RequestOptions = {},
+  {
+    requiresAuth = true,
+    headers,
+    body,
+    method,
+    responseType,
+    signal,
+    timeoutMs,
+  }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
     ...(headers ?? {}),
@@ -131,6 +166,8 @@ export const httpRequest = async <T>(
       requiresAuth,
       ...(responseType ? { responseType } : {}),
       ...(signal ? { signal } : {}),
+      // Omitted ⇒ axios keeps httpClient's 15s CRUD default.
+      ...(timeoutMs !== undefined ? { timeout: timeoutMs } : {}),
     };
 
     const response = await httpClient.request<T>(requestConfig);

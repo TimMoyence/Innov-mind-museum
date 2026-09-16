@@ -3,6 +3,25 @@
  * branches. The module holds a singleton `sdkInstance` at module scope, so
  * each test resets modules and re-mocks the OTel CJS packages before
  * `require()`-ing the module under test.
+ *
+ * RED phase (run `2026-07-14-otel-openai-instrumentation-kills-structured-llm`,
+ * task T1.3 / T2.3) — cases UC-10, UC-23, UC-24, UC-25 (spec C-10, AC-3, AC-6).
+ *
+ * The frozen `getNodeAutoInstrumentations` argument (UC-10) and the frozen init
+ * log payload (UC-23) are moved to the NEW TRUTH: a 4th disabled instrumentation
+ * (`@opentelemetry/instrumentation-openai`) and an enumerated roster in the log.
+ * They are NOT loosened to let the change through — no `objectContaining`, no
+ * `expect.any`. Loosening them is precisely the shortcut C-10 forbids, and it is
+ * how a "disabled" instrumentation could stay armed with a green suite.
+ *
+ * THE ONE MOCK THIS RUN ALLOWS. This file mocks the OTel packages, and that is
+ * legitimate HERE and ONLY here, because what is asserted is the SHAPE of the
+ * call and of the log — never the truth of the roster. The truth of the roster is
+ * proved against the really-installed bundle by
+ * `tests/integration/observability/otel-openai-structured-output.integration.test.ts`
+ * (UC-3) and by the roster sentinel (UC-13). A mocked
+ * `getNodeAutoInstrumentations` cannot see this bug: the instrumentation patches
+ * the module loader from its CONSTRUCTOR, not from the call.
  */
 
 export {}; // ensure this file is treated as a module (scopes helper names)
@@ -65,8 +84,12 @@ interface OtelMocks {
  * `start()` after init and stub `shutdown()` for the swallow-error branch.
  * @param shutdownImpl - optional impl for sdk.shutdown(); defaults to a
  *  resolved promise.
+ * @param roster
  */
-const wireOtelMocks = (shutdownImpl?: () => Promise<void>): OtelMocks => {
+const wireOtelMocks = (
+  shutdownImpl?: () => Promise<void>,
+  roster: { instrumentationName: string }[] = [{ instrumentationName: 'auto' }],
+): OtelMocks => {
   const sdkInstance: FakeSdk = {
     start: jest.fn<void, []>(),
     shutdown: jest
@@ -74,7 +97,7 @@ const wireOtelMocks = (shutdownImpl?: () => Promise<void>): OtelMocks => {
       .mockImplementation(shutdownImpl ?? (() => Promise.resolve())),
   };
   const NodeSDK = jest.fn().mockImplementation(() => sdkInstance);
-  const getNodeAutoInstrumentations = jest.fn().mockReturnValue([{ instrumentationName: 'auto' }]);
+  const getNodeAutoInstrumentations = jest.fn().mockReturnValue(roster);
   const OTLPTraceExporter = jest
     .fn()
     .mockImplementation((cfg: unknown) => ({ kind: 'exporter', cfg }));
@@ -118,6 +141,10 @@ describe('opentelemetry — initOpenTelemetry', () => {
     jest.restoreAllMocks();
   });
 
+  // UC-25 — `OTEL_ENABLED=false` (the repo default, env.ts:267): nothing is
+  // required, nothing is constructed, the module loader is never patched. This is
+  // both the cold-start guarantee AND the reason the default tree is healthy. It
+  // bites the day an OTel import is hoisted to a module top level (cf. UC-9).
   it('returns immediately when env.otel is undefined (no SDK constructed)', () => {
     jest.doMock('@src/config/env', () => makeEnvMock(undefined));
     const mocks = wireOtelMocks();
@@ -164,13 +191,28 @@ describe('opentelemetry — initOpenTelemetry', () => {
       url: 'http://otel:4318/v1/traces',
     });
 
-    // Auto-instrumentations disabled list
+    // UC-10 — auto-instrumentations disabled list, at the NEW truth (4 keys).
+    // `@opentelemetry/instrumentation-openai` double-reads the HTTP response body
+    // (it `.then()`s the APIPromise that `withStructuredOutput` also unwraps), so
+    // every structured section died with `TypeError: Body is unusable`.
+    // FULL package name — a short key is a silent no-op in this bundle.
     expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledTimes(1);
     expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledWith({
       '@opentelemetry/instrumentation-fs': { enabled: false },
       '@opentelemetry/instrumentation-dns': { enabled: false },
       '@opentelemetry/instrumentation-router': { enabled: false },
+      '@opentelemetry/instrumentation-openai': { enabled: false },
     });
+
+    // …and the argument must BE the shared policy, not a literal copied next to
+    // it: the roster sentinel reads that same module, and two sources of truth
+    // mean the gate is guarding a fiction.
+    const policyModule: {
+      OTEL_AUTO_INSTRUMENTATION_POLICY?: unknown;
+    } = require('@shared/observability/otel-instrumentation-policy');
+    expect(mocks.getNodeAutoInstrumentations.mock.calls[0][0]).toBe(
+      policyModule.OTEL_AUTO_INSTRUMENTATION_POLICY,
+    );
 
     // NodeSDK ctor receives the wired pieces
     expect(mocks.NodeSDK).toHaveBeenCalledTimes(1);
@@ -186,11 +228,57 @@ describe('opentelemetry — initOpenTelemetry', () => {
     // start() called exactly once
     expect(mocks.sdkInstance.start).toHaveBeenCalledTimes(1);
 
-    // logger.info called with init event
+    // UC-23 — the boot ENUMERATES the roster. "Which instrumentations are running
+    // on this instance?" had no answer short of reading node_modules; that is a
+    // large part of why a 100 %-failure outage lived ~2 months.
     expect(loggerMock.info).toHaveBeenCalledTimes(1);
     expect(loggerMock.info).toHaveBeenCalledWith('opentelemetry_initialized', {
       endpoint: 'http://otel:4318',
       serviceName: 'museum-backend',
+      instrumentations: ['auto'],
+      disabledInstrumentations: [
+        '@opentelemetry/instrumentation-fs',
+        '@opentelemetry/instrumentation-dns',
+        '@opentelemetry/instrumentation-router',
+        '@opentelemetry/instrumentation-openai',
+      ],
+    });
+  });
+
+  it('UC-24 — the logged roster DERIVES from the real return value (no hardcoded list)', () => {
+    jest.doMock('@src/config/env', () =>
+      makeEnvMock(
+        {
+          enabled: true,
+          serviceName: 'museum-backend',
+          exporterEndpoint: 'http://otel:4318',
+        },
+        '9.9.9',
+      ),
+    );
+    // A value nobody could guess. A list written by hand in the log would satisfy
+    // UC-23 and then LIE from the first bump onwards — i.e. on the exact day it is
+    // needed. A log that lies is worse than no log.
+    const mocks = wireOtelMocks(undefined, [
+      { instrumentationName: 'SENTINEL-VALUE-X' },
+      { instrumentationName: 'SENTINEL-VALUE-Y' },
+    ]);
+
+    const mod =
+      require('@shared/observability/opentelemetry') as typeof import('@shared/observability/opentelemetry');
+    mod.initOpenTelemetry();
+
+    expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledTimes(1);
+    expect(loggerMock.info).toHaveBeenCalledWith('opentelemetry_initialized', {
+      endpoint: 'http://otel:4318',
+      serviceName: 'museum-backend',
+      instrumentations: ['SENTINEL-VALUE-X', 'SENTINEL-VALUE-Y'],
+      disabledInstrumentations: [
+        '@opentelemetry/instrumentation-fs',
+        '@opentelemetry/instrumentation-dns',
+        '@opentelemetry/instrumentation-router',
+        '@opentelemetry/instrumentation-openai',
+      ],
     });
   });
 

@@ -1,4 +1,8 @@
-import { queryOverpassMuseums, queryOverpassOpeningHours } from '@shared/http/overpass.client';
+import {
+  queryOverpassMuseums,
+  queryOverpassMuseumsWithStatus,
+  queryOverpassOpeningHours,
+} from '@shared/http/overpass.client';
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
@@ -122,6 +126,24 @@ describe('queryOverpassMuseums', () => {
 
     expect(results).toEqual([]);
     expect(fetchSpy).toHaveBeenCalledTimes(3); // main + kumi + private.coffee
+  });
+
+  it('marks a full endpoint outage separately from a successful empty result', async () => {
+    fetchSpy.mockRejectedValue(new Error('Network failure'));
+
+    await expect(
+      queryOverpassMuseumsWithStatus({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }),
+    ).resolves.toEqual({ museums: [], allEndpointsFailed: true });
+
+    fetchSpy.mockReset();
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => makeOverpassResponse([]),
+    });
+
+    await expect(
+      queryOverpassMuseumsWithStatus({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }),
+    ).resolves.toEqual({ museums: [], allEndpointsFailed: false });
   });
 
   it('returns empty array when all endpoints time out', async () => {

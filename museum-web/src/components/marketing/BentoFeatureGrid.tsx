@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 
 interface BentoFeatureGridProps {
@@ -23,6 +23,8 @@ const cardVariants = {
 };
 
 export default function BentoFeatureGrid({ features, icons }: BentoFeatureGridProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className="mt-16 grid grid-cols-1 gap-5 md:grid-cols-3 md:grid-rows-[auto_auto_auto]">
       {features.map((feature, i) => {
@@ -36,8 +38,8 @@ export default function BentoFeatureGrid({ features, icons }: BentoFeatureGridPr
               isLarge ? 'md:row-span-2' : ''
             }${isWide ? ' md:col-span-2' : ''}`}
             variants={cardVariants}
-            initial="hidden"
-            whileInView="visible"
+            initial={shouldReduceMotion ? false : 'hidden'}
+            whileInView={shouldReduceMotion ? undefined : 'visible'}
             viewport={{ once: true, margin: '-40px' }}
             custom={i}
           >

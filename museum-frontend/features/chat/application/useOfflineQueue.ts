@@ -1,4 +1,12 @@
-import { useRef, useEffect, useSyncExternalStore, useCallback } from 'react';
+import * as React from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { Alert } from 'react-native';
 import i18n from '@/shared/i18n/i18n';
 import type { QueuedMessage } from './offlineQueue';
@@ -18,20 +26,41 @@ function handleEvictedMessages(messages: QueuedMessage[]): void {
   void cleanupOfflineImages(uris);
 }
 
+const OfflineQueueContext = createContext<OfflineQueue | null>(null);
+
+const createOfflineQueue = () => new OfflineQueue({ storage, onEvict: handleEvictedMessages });
+
+/** Shares one queue between the global banner and the active chat screen. */
+export const OfflineQueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [queue] = useState(createOfflineQueue);
+  useEffect(() => {
+    void queue.hydrate();
+  }, [queue]);
+
+  return React.createElement(OfflineQueueContext.Provider, { value: queue }, children);
+};
+
 export const useOfflineQueue = () => {
-  const queueRef = useRef(new OfflineQueue({ storage, onEvict: handleEvictedMessages }));
+  const providedQueue = useContext(OfflineQueueContext);
+  const [fallbackQueue] = useState<OfflineQueue | null>(() =>
+    providedQueue ? null : createOfflineQueue(),
+  );
   // Source "offline" from the canonical predicate (design §D7) so a captive
   // portal ({isConnected:true, isInternetReachable:false}) reads as offline,
   // not the old `!isConnected` off a coerced value. lib-docs:
   // @react-native-community/netinfo PATTERNS.md:173 (reachable != connected).
   const { isOnline } = useConnectivity();
 
-  // eslint-disable-next-line react-hooks/refs -- stable singleton ref
-  const queue = queueRef.current;
+  const queue = providedQueue ?? fallbackQueue;
+  if (!queue) {
+    throw new Error('Offline queue is not initialized');
+  }
 
+  // The provider hydrates its shared queue. The fallback keeps the hook
+  // independently usable in isolated screens and tests.
   useEffect(() => {
-    void queue.hydrate();
-  }, [queue]);
+    if (!providedQueue) void queue.hydrate();
+  }, [providedQueue, queue]);
 
   const snapshot = useSyncExternalStore(
     useCallback((cb: () => void) => queue.subscribe(cb), [queue]),

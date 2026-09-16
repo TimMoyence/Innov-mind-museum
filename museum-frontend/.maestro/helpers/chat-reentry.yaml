@@ -1,0 +1,68 @@
+appId: com.musaium.mobile.preview
+---
+# Helper: from HOME (already launched + logged in), reach the chat composer.
+#
+# This is `chat-entry.yaml` Phase 2→3 with Phase 0/1 (launch + clearState + login)
+# removed. It exists because of an ordering trap in the netshape flows:
+#
+#   openLink (dev)/force-data-mode?...&persist=1   →  persists preference 'low'
+#   runFlow  helpers/chat-entry.yaml               →  launchApp: clearState: true
+#                                                     ↳ WIPES AsyncStorage, and the
+#                                                       preference with it
+#   assertVisible low-data-badge                   →  can never pass
+#
+# `persist=1` writes the forced data-mode preference to the store (AsyncStorage),
+# and `clearState: true` is precisely the thing that wipes AsyncStorage — so the
+# flow annulled its own setup one step after doing it. The forcing MUST happen
+# AFTER the last `clearState` launch. That leaves the app on Home (the dev route
+# always `<Redirect href="/" />`s), and the LowDataBadge is chat-scoped
+# (features/chat/ui/LowDataBadge.tsx), so we have to walk back into the composer —
+# hence this helper.
+#
+# Same deterministic path as chat-entry Phase 2: Museums tab → museum-card →
+# "Démarrer un chat ici" → composer. NOT the home CTA (last child of the home
+# ScrollView, half-under the tab bar, and the layout shifts once the account has a
+# prior conversation).
+#
+# Precondition: logged in, on Home.
+# Postcondition: chat-input is visible.
+
+- extendedWaitUntil:
+    visible:
+      text: "Votre compagnon de musée|Your museum companion"
+    timeout: 75000
+
+- tapOn:
+    text: ".*(Musées|Museums).*"
+- extendedWaitUntil:
+    visible:
+      id: "museum-card"
+    timeout: 40000
+- tapOn:
+    id: "museum-card"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "museum-sheet-start-chat"
+    timeout: 40000
+- tapOn:
+    id: "museum-sheet-start-chat"
+
+# WAIT for the AI-disclosure sheet before accepting it, rather than tapping blind:
+# it mounts a beat after the composer (async server-side consent read) and on a slow
+# link it wins the race against an immediate optional tap, ending up ON TOP of the
+# composer. The scope is persisted SERVER-side per account, so on an account that
+# already granted it the sheet never mounts — hence `optional` on the wait too.
+- extendedWaitUntil:
+    visible:
+      text: "Accepter tout|Accept all"
+    timeout: 20000
+    optional: true
+- tapOn:
+    text: "Accepter tout|Accept all"
+    optional: true
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 40000

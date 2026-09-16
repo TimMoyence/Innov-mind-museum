@@ -160,6 +160,90 @@ describe('useProtectedRoute', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
+  // ── Public magic-link routes (reset-password / verify-email /
+  //    confirm-email-change) are reached from an email link precisely when the
+  //    user is NOT authenticated. The guard must NOT bounce them to /auth, or
+  //    the magic-link flows are unreachable (the reset-password form never
+  //    renders → the deep-link is dead for every forgot-password user).
+  it.each([['reset-password'], ['verify-email'], ['confirm-email-change']])(
+    'does not redirect an unauthenticated user away from the public magic-link route (stack)/%s',
+    (route) => {
+      mockedUseAuth.mockReturnValue({
+        isAuthenticated: false,
+        isLoading: false,
+        isFirstLaunch: false,
+      });
+      mockedUseSegments.mockReturnValue(['(stack)', route]);
+
+      renderHook(() => {
+        useProtectedRoute();
+      });
+
+      expect(mockReplace).not.toHaveBeenCalled();
+    },
+  );
+
+  // The register flow auto-logs the user in (useEmailPasswordAuth → loginWithSession),
+  // so a brand-new registrant is `isAuthenticated` with `isFirstLaunch: true` and
+  // `hasSeenOnboarding: false` when they leave for Mail and tap their verification
+  // link. If the onboarding branch does not honour the public allow-list, the guard
+  // bounces them to /(stack)/onboarding and the verify-email screen never mounts —
+  // i.e. the most common magic link of all stays broken for the exact population
+  // that receives it.
+  it.each([['verify-email'], ['confirm-email-change'], ['reset-password']])(
+    'does not bounce a freshly-registered (authenticated, pre-onboarding) user off the public magic-link route (stack)/%s',
+    (route) => {
+      mockedUseAuth.mockReturnValue({
+        isAuthenticated: true,
+        isLoading: false,
+        isFirstLaunch: true,
+      });
+      mockedUseSegments.mockReturnValue(['(stack)', route]);
+      mockedUseUserProfileStore.mockImplementation(
+        (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+          selector({ hasSeenOnboarding: false }),
+      );
+
+      renderHook(() => {
+        useProtectedRoute();
+      });
+
+      expect(mockReplace).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still forces onboarding for a freshly-registered user on a NON-public route', () => {
+    // Regression guard: the allow-list must not disable the onboarding gate at large.
+    mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, isFirstLaunch: true });
+    mockedUseSegments.mockReturnValue(['(tabs)']);
+    mockedUseUserProfileStore.mockImplementation(
+      (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
+        selector({ hasSeenOnboarding: false }),
+    );
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith('/(stack)/onboarding');
+  });
+
+  it('still redirects an unauthenticated user away from a genuinely protected (stack) route', () => {
+    // Regression guard: the public allow-list must NOT open every (stack) route.
+    mockedUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      isFirstLaunch: false,
+    });
+    mockedUseSegments.mockReturnValue(['(stack)', 'settings']);
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith('/auth');
+  });
+
   it('redirects to HOME_ROUTE from auth screen when isFirstLaunch but hasSeenOnboarding', () => {
     mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, isFirstLaunch: true });
     mockedUseSegments.mockReturnValue(['auth']);

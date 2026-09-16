@@ -20,13 +20,32 @@ appId: com.musaium.mobile.preview
 # Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!;
 # backend reachable through the shaped proxy.
 
-# ── Force low-data mode (shaped/compression path) ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
-- waitForAnimationToEnd
-
 # ── Launch fresh → land on the auth screen ──
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+    timeout: 45000
+
+# ── Force low-data mode (shaped/compression path) ──
+# ORDER IS LOAD-BEARING, and `persist=1` is not optional here.
+#
+# This used to run BEFORE `launchApp: clearState: true`, and without `persist`.
+# Both halves cancelled it: the dev route resets the preference to 'auto' on
+# unmount unless `persist=1` (it redirects immediately, so it unmounts at once),
+# and `clearState` then wipes AsyncStorage — where the preference lives — anyway.
+# The flow forced nothing, and since it never asserts `low-data-badge` (the badge
+# is chat-scoped and this flow never enters chat) nothing noticed. The shaping
+# itself still came from Toxiproxy, so the flow "passed" while the low-data app
+# path it claims to exercise was never switched on.
+#
+# Forcing AFTER the launch, from the auth screen: the dev route persists the
+# preference and `<Redirect href="/">`s, the auth guard bounces an unauthenticated
+# user straight back to /auth — so we resume exactly where we were, with low-data
+# now genuinely active FOR THE LOGIN, which is the point of this flow.
+- openLink: "musaium:///(dev)/force-data-mode?value=low&persist=1"
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       text: "Bon retour|Welcome back|Pas de compte|Sign up"
@@ -58,7 +77,16 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard`. On iOS,
+# Maestro's hideKeyboard gesture lands on `auth-submit` (it sits directly under
+# the password field, exactly where the keyboard was) and fires the login early —
+# the submit then races the step, so `hideKeyboard` itself flakes and/or
+# `auth-submit` is already unmounted by the next command. The app does NOT submit
+# on return (LoginForm.tsx wires `onPress` only, no `onSubmitEditing`): this is a
+# Maestro-iOS artefact. Tapping the non-interactive title dismisses the keyboard
+# deterministically and leaves the explicit submit below as the real trigger.
+- tapOn:
+    text: "Welcome back|Bon retour"
 - tapOn:
     id: "auth-submit"
 - tapOn:
@@ -72,10 +100,12 @@ appId: com.musaium.mobile.preview
     optional: true
 
 # ── Reach home under the shaped link (login round-trip completed) ──
+# Widened to 75s: post-login bootstrap under the EDGE profile can stack several
+# sequential API round-trips + 1% loss retransmits before home renders.
 - extendedWaitUntil:
     visible:
       text: "Votre compagnon de musée|Your museum companion"
-    timeout: 45000
+    timeout: 75000
 
 # ── Geo path: open the Museums directory → a nearby museum resolves under EDGE ──
 - tapOn:

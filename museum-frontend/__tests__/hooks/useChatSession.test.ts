@@ -770,90 +770,6 @@ describe('useChatSession', () => {
     expect(assistantMsg?.text).toBe('This is a beautiful painting');
   });
 
-  // ── Streaming onDone callback ──────────────────────────────────────────────
-
-  it('sendMessage() with streaming invokes onToken and onDone to build assistant message', async () => {
-    mockSendMessageSmart.mockImplementation(
-      (params: {
-        onToken?: (text: string) => void;
-        onDone?: (payload: {
-          messageId: string;
-          createdAt: string;
-          metadata: Record<string, unknown>;
-        }) => void;
-      }) => {
-        // Simulate streaming: call onToken then onDone
-        params.onToken?.('Hello ');
-        params.onToken?.('world!');
-        params.onDone?.({
-          messageId: 'streamed-msg-1',
-          createdAt: new Date().toISOString(),
-          metadata: { detectedArtwork: { title: 'Mona Lisa' } },
-        });
-        return Promise.resolve(null);
-      },
-    );
-
-    const { result } = renderHook(() => useChatSession(SESSION_ID));
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    await act(async () => {
-      await result.current.sendMessage({ text: 'Tell me about this' });
-    });
-
-    // The onDone callback should have replaced the streaming placeholder
-    const streamedMsg = result.current.messages.find(
-      (m: ChatUiMessage) => m.id === 'streamed-msg-1',
-    );
-    expect(streamedMsg).toBeDefined();
-    expect(streamedMsg?.role).toBe('assistant');
-    expect(streamedMsg?.text).toBe('Hello world!');
-  });
-
-  // ── Streaming onGuardrail callback ────────────────────────────────────────
-
-  it('sendMessage() with streaming invokes onGuardrail to set guardrail text', async () => {
-    mockSendMessageSmart.mockImplementation(
-      (params: {
-        onGuardrail?: (text: string, reason: string) => void;
-        onDone?: (payload: {
-          messageId: string;
-          createdAt: string;
-          metadata: Record<string, unknown>;
-        }) => void;
-      }) => {
-        // Simulate guardrail being triggered
-        params.onGuardrail?.('This topic is off-limits.', 'not_art');
-        params.onDone?.({
-          messageId: 'guardrail-msg',
-          createdAt: new Date().toISOString(),
-          metadata: {},
-        });
-        return Promise.resolve(null);
-      },
-    );
-
-    const { result } = renderHook(() => useChatSession(SESSION_ID));
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    await act(async () => {
-      await result.current.sendMessage({ text: 'Off topic question' });
-    });
-
-    // The guardrail text should have been flushed into the streaming message
-    const guardrailMsg = result.current.messages.find(
-      (m: ChatUiMessage) => m.id === 'guardrail-msg',
-    );
-    expect(guardrailMsg).toBeDefined();
-    expect(guardrailMsg?.text).toBe('This topic is off-limits.');
-  });
-
   // ── Audio 3rd send triggers review prompt ─────────────────────────────────
 
   it('calls incrementCompletedSessions on 3rd successful audio send', async () => {
@@ -936,7 +852,7 @@ describe('useChatSession', () => {
   // Cycle 5 realignment (UFR-022 D6/D8): this test previously fired `onDone`
   // directly and asserted the empty bubble SURVIVED (`text:''`). That encoded
   // the bug on a DEAD path — `sendMessageSmart` ignores `onDone` (send.ts:169-172),
-  // so the live finalize is the sync-fallback block (sendMessageStreaming.ts:117).
+  // so the live finalize is the buffered response block (sendMessageSync.ts:117).
   // It is now driven via `mockResolvedValue` (live transport) and asserts the
   // real contract: a blank response leaves NO bubble and NO `-streaming` orphan.
   it('empty final text on the live sync transport leaves no bubble and no -streaming placeholder', async () => {
@@ -1243,9 +1159,8 @@ describe('useChatSession', () => {
   // ── P0-FA1: text-only sync-path finalize (empty-bubble bug) ────────────────
   //
   // RED phase (UFR-022). These tests drive the LIVE sync transport: the mock
-  // RESOLVES a PostMessageResponseDTO and NEVER fires onToken/onDone/onGuardrail
-  // (sendMessageSmart ignores them — send.ts:169-172). The bug: for a text-only
-  // turn the sync-fallback finalize block (sendMessageStreaming.ts:117) is
+  // RESOLVES a PostMessageResponseDTO through the buffered transport. The bug:
+  // for a text-only turn the finalize block (sendMessageSync.ts:117) is
   // guarded out (`attempt.imageUri` falsy + `streamingIdRef.current` still set),
   // so the assistant placeholder keeps `text: ''` and its `${ts}-streaming` id.
   // A Red test that fires onDone would reproduce a FAKE world (the very reason
@@ -1363,7 +1278,7 @@ describe('useChatSession', () => {
 
     it('TR.4 — text-only guardrail/refusal text renders, never blank (R5)', async () => {
       // design D4 / OQ1: guardrail arrives via response.message.text on the live
-      // sync transport — NOT via onGuardrail (which sendMessageSmart ignores).
+      // buffered transport — guardrail metadata is part of the API response.
       const refusal = 'I can only discuss art and the works around you.';
       mockSendMessageSmart.mockResolvedValue(
         makePostMessageResponse({

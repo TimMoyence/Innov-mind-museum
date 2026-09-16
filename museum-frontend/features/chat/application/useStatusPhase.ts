@@ -2,8 +2,8 @@
  * A5 — Client-side status-phase state machine driving `<StatusIndicator>`.
  *
  * The phase displayed by `<StatusIndicator>` is a client-side simulation —
- * NOT a faithful reflection of BE pipeline state (the BE remains synchronous
- * and SSE is deprecated, so there is no live channel to push real phase
+ * NOT a faithful reflection of BE pipeline state (the client receives one
+ * buffered response, so there is no live channel to push real phase
  * transitions). The hook ticks every `PHASE_TICK_MS` along the canonical
  * sequence and stops on `'composing'` until the response arrives. This
  * honest cosmetic signal is documented in spec §2.2 + §2.3.

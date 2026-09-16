@@ -39,19 +39,26 @@ appId: com.musaium.mobile.preview
     timeout: 10000
 
 # ──────────────────────────────────────────────
-# Auto-submit resolves. With a VALID seeded token the screen reaches the success
-# state; with the fixture token (local Release) it renders the invalid-token
-# state instead. The success assert + CTA tap are OPTIONAL (KNOWN-BLOCKED — no
-# local token seeding). The screen-mount wiring is still exercised by the
-# deep-link + auto-submit above.
+# Auto-submit resolves → the screen MUST reach the success state.
+#
+# These assertions used to carry `optional: true`, on the grounds that "no local
+# mechanism seeds such tokens". That made the whole flow VACUOUS: nothing in it
+# could fail, yet it counted as UFR-021 coverage for /(stack)/verify-email. It
+# proved only that the app did not crash on launch.
+#
+# The excuse is gone. `maestro-run-shard.sh` now seeds the SHA-256 digest of the
+# exact literal this deep-link carries (`e2e-verify-token`), using the PRODUCTION
+# hashing primitive — the backend validates a real single-use token against a real
+# expiry, and does not know it is being tested.
+#
+# The token is single-use (NULLed on consumption), which is why the harness re-seeds
+# on every run. If the seed did not run, this flow fails — and it SHOULD.
 # ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
       id: "verify-email-success"
     timeout: 40000
-    optional: true
 - tapOn:
     id: "verify-email-cta"
-    optional: true
 - waitForAnimationToEnd:
     timeout: 10000

@@ -311,28 +311,28 @@ describe('SearchMuseumsUseCase', () => {
     expect(osm?.source).toBe('osm');
   });
 
-  it('uses default radius of 30km when not provided', async () => {
-    // Museum at ~8km (within default 30km radius)
+  it('uses default radius of 5km when not provided', async () => {
+    // Museum at ~1km (within default 5km radius)
     await repo.create({
       name: 'Within Default',
       slug: 'within-default',
-      latitude: PARIS.lat + 0.07,
+      latitude: PARIS.lat + 0.01,
       longitude: PARIS.lng,
     });
 
-    // Museum at ~25km (within default 30km radius)
+    // Museum at ~4km (within default 5km radius)
     await repo.create({
       name: 'Also Within Default',
       slug: 'also-within-default',
-      latitude: PARIS.lat + 0.22,
+      latitude: PARIS.lat + 0.035,
       longitude: PARIS.lng,
     });
 
-    // Museum at ~40km (outside default 30km radius)
+    // Museum at ~9km (outside default 5km radius)
     await repo.create({
       name: 'Outside Default',
       slug: 'outside-default',
-      latitude: PARIS.lat + 0.36,
+      latitude: PARIS.lat + 0.08,
       longitude: PARIS.lng,
     });
 

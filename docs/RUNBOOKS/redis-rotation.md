@@ -47,10 +47,10 @@ The VPS `.env` is the source of truth at runtime; GitHub secret is the source of
 > once a staging environment exists.
 
 ```bash
-ssh deploy@prod.musaium.com
+ssh -i /Users/Tim/ghactions debian@51.178.86.11
 cd /srv/museum
 sed -i.bak "s/^REDIS_PASSWORD=.*/REDIS_PASSWORD=${NEW_PW}/" .env
-docker compose -f docker-compose.prod.yml up -d --force-recreate redis backend
+docker compose -f docker-compose.yml up -d --force-recreate redis backend
 ```
 
 Watch the backend logs for `[redis] connected` for ~60 s. If you see `NOAUTH Authentication required` or `WRONGPASS`, the env was not picked up — fall back via `mv .env.bak .env` then re-recreate.
@@ -75,10 +75,10 @@ Watch the backend logs for `[redis] connected` for ~60 s. If you see `NOAUTH Aut
 If the new password is rejected (typo, encoding artifact):
 
 ```bash
-ssh deploy@<host>
+ssh -i /Users/Tim/ghactions debian@51.178.86.11
 cd /srv/museum
 mv .env.bak .env
-docker compose -f docker-compose.prod.yml up -d --force-recreate redis backend
+docker compose -f docker-compose.yml up -d --force-recreate redis backend
 ```
 
 Then regenerate and retry from step 3.

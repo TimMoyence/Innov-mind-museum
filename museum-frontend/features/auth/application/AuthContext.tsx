@@ -11,6 +11,7 @@ import {
   setAccessToken,
   getAccessToken,
   authStorage,
+  purgeStaleCredentialsOnFreshInstall,
 } from '@/features/auth/infrastructure/authTokenStore';
 import {
   clearBiometricPreference,
@@ -154,6 +155,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const startedAt = Date.now();
       bootstrapBreadcrumb('start');
       try {
+        // iOS keeps the Keychain when the app's data container is wiped
+        // (uninstall / `clearState`), so a previous install's refresh token can
+        // still be sitting there and would silently resurrect its session.
+        // Drop it before we trust anything we read.
+        await purgeStaleCredentialsOnFreshInstall();
+
         const refreshToken = await authStorage.getRefreshToken();
         if (!refreshToken) {
           await clearPersistedTokens();

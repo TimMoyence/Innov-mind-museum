@@ -34,11 +34,11 @@ Per the official Prometheus naming guidelines:
 
 ---
 
-## 2. Full registry inventory (46 metrics)
+## 2. Full registry inventory (48 metrics)
 
 Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · ❌ hard violation.
 
-### 2.1 Bare-prefix metrics (32) — subsystem prefix, no `musaium_`
+### 2.1 Bare-prefix metrics (33) — subsystem prefix, no `musaium_`
 
 | Metric name | Type | R1 snake | R2/R3 suffix | Verdict |
 |---|---|---|---|---|
@@ -74,6 +74,21 @@ Legend: ✅ compliant · ⚠️ minor deviation (documented, grandfathered) · �
 | `llm_cost_anon_bypass_total` *(I-FIX3)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
 | `llm_cost_user_daily_usd` *(W6)* | Histogram | ✅ | ⚠️ `_usd` amount, not `_seconds` (R3 N/A — monetary, not a duration) | ✅ (F2 Option A — bare prefix; see F6) |
 | `guardrail_friction_redis_fallback_total` *(hybrid-gravity, 2026-06-02)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix; sibling of the older `musaium_guardrail_budget_redis_fallback_total`, kept bare to hold the cap at 16) |
+| `chat_response_degraded_total` *(INC-2026-07-14, 2026-07-14)* | Counter | ✅ | ✅ `_total` | ✅ (F2 Option A — bare prefix) |
+
+> **`chat_response_degraded_total` — pourquoi il existe.** Labels `{section, reason}`
+> (`reason` ∈ `timeout` \| `error` \| `missing_result`) → **3 séries**, aucun label
+> dérivé de l'utilisateur (prom-client/LESSONS F1). Incrémenté **une fois** par
+> réponse assemblée avec `degraded === true` (`langchain-orchestrator-assembly.ts`,
+> `assembleResponse`) ; une réponse saine n'incrémente **rien** — un compteur qui
+> bouge sur le trafic nominal n'est pas seuillable, donc l'alerte ne s'écrit jamais.
+> Dénominateur = la métrique **existante** `chat_request_duration_seconds_count`,
+> d'où **une** métrique nouvelle et pas deux :
+> `rate(chat_response_degraded_total[15m]) / clamp_min(rate(chat_request_duration_seconds_count[15m]), 1) > 0.5`
+> = « le chat sert massivement du gabarit ». Née de `INC-2026-07-14-otel-openai-structured`
+> (100 % d'échec de section pendant ~2 mois, détecté par hasard : il n'y avait qu'un
+> `logger.warn` et un attribut de span Sentry, **aucun signal machine**). La règle
+> d'alerte elle-même est un suivi ops, hors périmètre du run qui a livré le signal.
 
 ### 2.2 `musaium_`-prefixed metrics (16)
 
@@ -178,12 +193,16 @@ and `GRANDFATHERED_HISTOGRAMS` in `scripts/sentinels/metric-naming.mjs`) as a
 in ms and expected to be renamed). A future audit must NOT "fix" `_usd` to
 `_seconds`. **No rename proposed.**
 
-> **Count note (pre-existing drift, hand-off):** the §2 header (`46 metrics`) and
-> the line-12 / line-159 counters (`44`) already disagreed before W6 and were not
-> recomputed here to avoid introducing a wrong number (UFR-013). The verified
-> source-of-truth count is the sentinel `FROZEN`/`EXPECTED` inventory, now **46**
-> pairs (the 2026-06-02 `guardrail_friction_redis_fallback_total` addition, bare
-> prefix). Reconciling the prose counters is a separate doc-hygiene item (M5).
+> **Count note — drift RESOLVED 2026-07-14 (UFR-013).** The prose counters had been
+> disagreeing for months (`46` in the §2 header, `44` in the sentinel's comments) while
+> the only authoritative source — the sentinel's `FROZEN` array, which the freeze
+> compares set-wise against `prometheus-metrics.ts` — held **47** pairs. Counted, not
+> guessed, on 2026-07-14: **48** pairs after `chat_response_degraded_total`
+> (INC-2026-07-14). §2 header and §2.1 (`33` bare-prefix) are now recomputed from the
+> registry. **Known remaining drift:** the §2.2 heading still reads `16` where the
+> sentinel measures **15** `musaium_`-prefixed metrics — the `musaium_` *cap* is 16
+> (F2 ratchet), the *count* is 15, and the heading conflates the two. Left as-is here
+> rather than silently changed: it is a heading of a section this run did not touch.
 
 ---
 

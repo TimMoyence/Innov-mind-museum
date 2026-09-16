@@ -1,0 +1,53 @@
+appId: com.musaium.mobile.preview
+---
+# Helper: assert the assistant actually ANSWERED — not that a bubble merely exists.
+#
+# ── WHY THIS FILE EXISTS ────────────────────────────────────────────────────────
+# On 2026-07-14 the backend was found serving a CANNED FALLBACK TEMPLATE for every
+# single chat message — 0 successes out of 42 LLM calls, for weeks, in production
+# (INC-2026-07-14-otel-openai-structured). The assistant never answered anything:
+# it restated the question and offered to pick a "reading".
+#
+# 17 of the 18 chat flows were GREEN throughout.
+#
+# They were green because they assert that `chat-bubble-assistant` EXISTS. The
+# fallback template is a perfectly valid assistant bubble. Every one of those
+# assertions was true, and every one of them was worthless. The only flow that
+# protested — modal-chat-source-citation — was the only one demanding a
+# SUBSTANTIVE answer (sources). It was not flaky. It was the only honest one.
+#
+# ── WHAT THIS ASSERTS, AND WHY IT IS BOTH HALVES ───────────────────────────────
+# 1. POSITIVE: an assistant bubble is on screen.
+#    A negative assertion alone would pass on a blank screen, on the wrong screen,
+#    or on an app that crashed back to Home. That is the failure mode of the two
+#    netshape flows whose only hard assertion is an `assertNotVisible`.
+#
+# 2. NEGATIVE: that bubble is NOT the fallback template.
+#    `buildLocalizedFallback` (museum-backend/src/shared/i18n/fallback-messages.ts)
+#    ALWAYS terminates with `closingQuestion` — a fixed, per-locale sentence that
+#    only the fallback ever emits. It is the signature of a dead LLM. We match its
+#    most distinctive fragment in every supported locale.
+#
+# Neither half is sufficient. Together they say: "the assistant is on screen AND
+# what it said is not the template it emits when the model is unreachable."
+#
+# This helper deliberately does NOT assert on the LLM's exact wording — that would
+# be brittle for no gain. Flows that ask a FACTUAL question should ALSO assert the
+# fact (see chat-flow.yaml: "Leonardo"). This is the floor, not the ceiling.
+#
+# Usage:
+#   - runFlow:
+#       file: helpers/assert-llm-answered.yaml
+
+# 1. The assistant is actually on screen.
+- assertVisible:
+    id: "chat-bubble-assistant"
+
+# 2. …and it is not the "the model is unreachable" template.
+#    Fragments of `closingQuestion` per locale (fallback-messages.ts):
+#      en "…technical, biographical, or symbolic reading next?"
+#      fr "…une lecture plus technique, biographique ou symbolique ?"
+#      es "…una lectura técnica, biográfica o simbólica?"
+#      it "…una lettura tecnica, biografica o simbolica?"
+- assertNotVisible:
+    text: ".*(symbolic reading next|biographique ou symbolique|biográfica o simbólica|biografica o simbolica).*"

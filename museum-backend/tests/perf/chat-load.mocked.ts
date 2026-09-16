@@ -69,10 +69,15 @@ const run = async (): Promise<void> => {
       if (index >= requests) break;
 
       const startedAt = performance.now();
-      await service.postMessage(session.id, {
-        text: `Perf message ${index + 1}`,
-        context: { museumMode: true },
-      });
+      await service.postMessage(
+        session.id,
+        {
+          text: `Perf message ${index + 1}`,
+          context: { museumMode: true },
+        },
+        undefined,
+        999,
+      );
       timings.push(performance.now() - startedAt);
     }
   });

@@ -37,7 +37,7 @@ exports[`ImageCompareCarousel (T8.4) matches the structural snapshot for 2 match
       [
         {
           "facts": {
-            "artist": "Bobbie Nienow",
+            "artist": "Artist A",
             "qid": "Q1",
             "title": "A",
           },
@@ -52,7 +52,7 @@ exports[`ImageCompareCarousel (T8.4) matches the structural snapshot for 2 match
         },
         {
           "facts": {
-            "artist": "Ben Crooks DDS",
+            "artist": "Artist B",
             "qid": "Q2",
             "title": "B",
           },

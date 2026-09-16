@@ -13,6 +13,7 @@ import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entit
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import type {
+  SectionErrorDetail,
   SectionRunResult,
   SectionRunnerHooks,
 } from '@modules/chat/useCase/llm/llm-section-runner';
@@ -298,7 +299,37 @@ interface SectionLogEvent {
   payloadBytes: number;
   latencyMs?: number;
   error?: string;
+  /**
+   * R7 — the causal detail built by the section runner's field ALLOWLIST
+   *  (`toErrorDetail`). Absent on the success/start events and on the
+   *  `Promise.allSettled` rejected branch, which never goes through the hooks.
+   */
+  detail?: SectionErrorDetail;
 }
+
+/**
+ * Flattens the failure detail into log fields. The adapter owns the logger; the
+ * use case owns the DATA (hexagonal — the runner imports neither logger nor
+ * tracing).
+ *
+ * The stack and the cause chain stay SERVER-SIDE: they are NOT added to
+ * `ChatAssistantDiagnostics`, which `env.llm.includeDiagnostics` exposes to the
+ * mobile client. "Preserve the cause" must not become a stack-trace
+ * exfiltration channel.
+ *
+ * @param detail - the allowlisted error detail, or undefined for non-failure events
+ * @returns the log fields to spread, or an empty object
+ */
+const toErrorLogFields = (detail: SectionErrorDetail | undefined): Record<string, unknown> => {
+  if (detail === undefined) {
+    return {};
+  }
+  return {
+    errorName: detail.name,
+    ...(detail.stack !== undefined ? { errorStack: detail.stack } : {}),
+    errorCauses: detail.causes ?? [],
+  };
+};
 
 const logSectionEvent = (level: 'info' | 'warn', label: string, event: SectionLogEvent): void => {
   logger[level](label, {
@@ -309,6 +340,7 @@ const logSectionEvent = (level: 'info' | 'warn', label: string, event: SectionLo
     timeoutMs: event.timeoutMs,
     payloadBytes: event.payloadBytes,
     ...(event.error !== undefined ? { error: event.error } : {}),
+    ...toErrorLogFields(event.detail),
     provider: env.llm.provider,
     model: env.llm.model,
   });

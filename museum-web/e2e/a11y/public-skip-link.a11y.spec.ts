@@ -24,7 +24,7 @@ for (const route of ['/en', '/fr'] as const) {
     page,
   }) => {
     await page.goto(route);
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('main#main')).toBeVisible();
 
     // WCAG 2.4.1: the skip-link must be the FIRST element in DOM tab order. We
     // assert DOM-order position + keyboard activation rather than
@@ -60,7 +60,7 @@ for (const route of ['/en', '/fr'] as const) {
 
   test(`skip-link route ${route} has no WCAG 2.1 AA violations`, async ({ page }) => {
     await page.goto(route);
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('main#main')).toBeVisible();
     await expectNoA11yViolations(page, route);
   });
 }

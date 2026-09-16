@@ -196,6 +196,14 @@ export default function MuseumDetailScreen() {
         ) : null}
 
         <Pressable
+          // Primary CTA of this screen but it had no testID, so the e2e flow had
+          // to select it by its visible title — coupling the test to the i18n
+          // catalogue. The testID decouples the selector (and gives the flow a
+          // stable `scrollUntilVisible` target: this CTA sits below the fold,
+          // under the hero + details + photo + "À propos" blocks). The title is
+          // still asserted separately in museum-branding-detail, so the i18n
+          // string stays covered. Same rationale as `settings-rate-musaium`.
+          testID="museum-detail-start-chat"
           style={[
             styles.primaryButton,
             { backgroundColor: theme.primary, shadowColor: theme.shadowColor },

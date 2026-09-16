@@ -45,7 +45,16 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: "password-input"
 - inputText: "TestPassword123!"
-- hideKeyboard
+# Dismiss the keyboard with a static-text tap, NOT `hideKeyboard`. On iOS,
+# Maestro's hideKeyboard gesture lands on `auth-submit` (it sits directly under
+# the password field, exactly where the keyboard was) and fires the login early —
+# the submit then races the step, so `hideKeyboard` itself flakes and/or
+# `auth-submit` is already unmounted by the next command. The app does NOT submit
+# on return (LoginForm.tsx wires `onPress` only, no `onSubmitEditing`): this is a
+# Maestro-iOS artefact. Tapping the non-interactive title dismisses the keyboard
+# deterministically and leaves the explicit submit below as the real trigger.
+- tapOn:
+    text: "Welcome back|Bon retour"
 - tapOn:
     id: "auth-submit"
 - tapOn:
@@ -158,11 +167,25 @@ appId: com.musaium.mobile.preview
 # backend that whole chain can take 15-25s. 20s raced the response and flaked;
 # 60s covers the real latency without weakening the assertion (STT must produce
 # this exact transcript, proving the pipeline is alive).
+# `.*…*` is LOAD-BEARING, not sloppiness. Maestro's `text:` selector is a regex
+# ANCHORED ON THE WHOLE STRING (the artefact calls the field `textRegex`), so the
+# bare form below only matched a bubble whose text was EXACTLY those five words.
+# Whisper transcribes a question WITH ITS QUESTION MARK — the app rendered
+# "Who painted the Mona Lisa?" and the assertion could never match. The flow was
+# red against a perfectly healthy app; the bug was in the test.
+#
+# The assertion keeps all of its substance: the transcript must CONTAIN the exact
+# sentence the fixture clip speaks, which still proves STT is alive end to end.
 - extendedWaitUntil:
-    visible: "Who painted the Mona Lisa"
+    visible: ".*Who painted the Mona Lisa.*"
     timeout: 60000
-- assertVisible:
-    id: "chat-bubble-assistant"
+# INC-2026-07-14 — asserting the bubble EXISTS proves NOTHING: the canned fallback
+# template the backend serves when the LLM is unreachable IS a valid assistant
+# bubble. 17 of the 18 chat flows stayed GREEN for weeks against a 100%-dead LLM
+# because of exactly this assertion. The helper asserts the bubble exists AND that
+# what it says is not that template. DO NOT revert to a bare assertVisible.
+- runFlow:
+    file: helpers/assert-llm-answered.yaml
 - assertVisible:
     text: "Écouter|Listen"
 

@@ -450,6 +450,23 @@ jobs:
           # nightly chat-compare carousel renders header-only and its strengthened
           # per-card assert fails RED — by design.
           CHAT_COMPARE_PROVISION: ${{ matrix.shard == 'chat' && '1' || '' }}
+          # Lift the free-tier session cap for the run.
+          #
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to **3**, and
+          # 17 of the 18 flows in the `chat` shard open a NEW conversation through
+          # `helpers/chat-entry.yaml` (museum-sheet-start-chat → POST /api/sessions).
+          # A shard runs every one of its flows in ONE job against ONE fresh
+          # Postgres service, so the counter accumulates across the shard: from the
+          # 4th conversation on the backend answers 402, the QuotaUpsellModal covers
+          # the composer, `chat-input` never appears, and the remaining ~14 chat
+          # flows fail. A hard cap, not flakiness — and it applies to Android exactly
+          # as it does to iOS.
+          #
+          # This does NOT weaken modal-paywall-quota-upsell: `seed-e2e-maestro-account`
+          # reads this same variable and seeds the paywall account's counter TO the
+          # limit, so the 402 that flow asserts still fires. Both processes must see
+          # the SAME value — hence it is repeated on the seed step.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
           # Seed the dedicated quota-exhausted paywall account ONLY on the
           # `museum` shard (the only shard that runs modal-paywall-quota-upsell.yaml).
           SEED_PAYWALL_ACCOUNT: ${{ matrix.shard == 'museum' && '1' || '' }}
@@ -504,6 +521,16 @@ jobs:
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
         env:
           MATRIX_SHARD: ${{ matrix.shard }}
+          # maestro-run-shard.sh re-seeds apple.test@apple.com (destroyed by
+          # auth-account-delete) at the start of the auth/all shard — it reaches
+          # the host Postgres and NEEDS this DB env. Without it the re-seed dies
+          # "Missing PGDATABASE", so on a step-retry (Boot-backend does not re-run)
+          # auth-login-happy + auth-account-delete fail at login. Mirrors Boot-backend.
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
         with:
           api-level: 33
           # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
@@ -523,6 +550,14 @@ jobs:
         uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed  # v2
         env:
           MATRIX_SHARD: ${{ matrix.shard }}
+          # Same DB env as attempt 1 — the step-retry is exactly when the apple.test
+          # re-seed matters (auth-account-delete already destroyed it, Boot-backend
+          # does not re-run). This is the load-bearing half of the auth-shard fix.
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
         with:
           api-level: 33
           arch: x86_64
@@ -688,6 +723,14 @@ jobs:
       # difference from the `prebuild` job and the fix for the false-green netshape
       # run: the emulator reaches 10.0.2.2:3100 (Toxiproxy) → host backend :3000.
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3100
+      # The other half of the weak-net fix, and the reason this suite could never
+      # have been green: all four netshape flows deeplink `(dev)/force-data-mode`
+      # to force the low-data mode, but this APK is an `assembleRelease`
+      # (`--dev false` → `__DEV__ === false`), so the whole `(dev)` group redirected
+      # Home. The forced mode was never applied and the (non-optional)
+      # `low-data-badge` assertion could not pass — shaping the link fixed the
+      # transport while the trigger itself stayed dead. See shared/lib/e2eBuildFlags.ts.
+      EXPO_PUBLIC_E2E_DEV_ROUTES: 'true'
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -844,6 +887,8 @@ jobs:
         ports:
           - 8474:8474
           - 3100:3100
+        options: >-
+          --add-host=host.docker.internal:host-gateway
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -888,6 +933,12 @@ jobs:
           REDIS_PORT: '6379'
           EXTRACTION_WORKER_ENABLED: 'false'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to 3, and each
+          # of the four netshape flows opens a NEW conversation via
+          # `helpers/chat-entry.yaml` (→ POST /api/sessions) against this job's one
+          # fresh Postgres. The 4th would be answered 402 and fail on a quota, not on
+          # anything weak-net. Same cap the chat shard and the iOS run hit.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: |
           ./scripts/maestro-runner-setup.sh
           cd ../museum-backend
@@ -981,7 +1032,17 @@ jobs:
 
   # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:
-    if: ${{ github.event_name == 'schedule' }}
+    # Runs nightly (cron) and on a manual dispatch that targets iOS — the latter
+    # lets us verify an iOS-specific CI fix on a branch without waiting for the
+    # cron (the job otherwise only runs on `main`'s schedule).
+    # MANUAL DISPATCH ONLY — the nightly `schedule` trigger is deliberately gone.
+    # See the cost note on `timeout-minutes` below: one run is ~1 500 billable
+    # macOS minutes against a 2 000 min/month allowance, so an unattended cron
+    # would burn three quarters of the quota every night — which is exactly what it
+    # was doing, red, without anyone reading the result. Re-enable the cron only
+    # once this runs on a self-hosted macOS runner (where it is free), or explicitly
+    # accept the bill.
+    if: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
     needs: quality
     # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
     # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
@@ -990,16 +1051,65 @@ jobs:
     # specifically for "Xcode 26+"), so this nightly was the only stale-toolchain
     # surface. macos-26 is GA and macos-latest migrates to it in June 2026 anyway.
     runs-on: macos-26
-    timeout-minutes: 60
+    # ⚠️ COST — READ BEFORE ENABLING THIS ON A CRON.
+    #
+    # GitHub bills macOS runners at a 10× multiplier. Measured locally (2026-07-14,
+    # same work this job does): cold Release build with RN compiled from source
+    # (`ios.buildReactNativeFromSource: true`) ~30 min, incremental shaped build
+    # ~8 min, backend/PG/Redis/brew provisioning ~10 min, and 52 flows at ~2 min
+    # each (the 18-flow auth shard took ~35 min) ~104 min → **~150 min of
+    # wall-clock ⇒ ~1 500 BILLABLE minutes per run**, against a 2 000 min/month
+    # free allowance. ONE run eats 75 % of the monthly quota; a weekly cadence is
+    # already 3× over it. The previous `timeout-minutes: 60` did not make it
+    # cheaper — it cancelled the job at 60 min, so the minutes were spent AND the
+    # result was red.
+    #
+    # This suite runs end-to-end on a developer Mac for free (proven: full build +
+    # 52 flows + native Toxiproxy + docker backend). A SELF-HOSTED macOS runner is
+    # the only cadence-independent fix. Until one exists, keep this job on manual
+    # dispatch and do not put it back on a nightly cron.
+    timeout-minutes: 150
     defaults:
       run:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
+      # Standalone sim-e2e build config — mirrors the Android build job (E40).
+      # The iOS Maestro suite MUST run a RELEASE build: only a Release build
+      # embeds the JS bundle (AppDelegate `#else` → `main.jsbundle`) so the app
+      # launches standalone WITHOUT Metro. A Debug build loads from Metro
+      # (AppDelegate `#if DEBUG` → RCTBundleURLProvider) — with no packager in
+      # CI it hangs on the dev launcher, which is why this nightly was red every
+      # run since it was first enabled (it never once went green as a Debug build).
+      #
+      # But a bare Release CONFIGURATION promotes the variant to `production`
+      # (api-url.config.js resolveVariant rule 2) → prod backend URL + prod
+      # bundle id (≠ the flows' `com.musaium.mobile.preview` appId) + ATS
+      # localhost block. `EXPO_PUBLIC_E2E_LOCAL_BACKEND=1` is the dedicated
+      # sim-e2e signal that keeps the standalone Release build on the
+      # `development` variant (localhost backend + preview bundle id +
+      # NSAllowsLocalNetworking) WITHOUT weakening the prod-safety guard — a real
+      # EAS/Xcode-Cloud prod build never sets it. The EXPO_PUBLIC_* URL/env are
+      # inlined into the JS bundle at the Release build step, so they MUST be set
+      # on this job (the macOS simulator shares the runner's host loopback, so
+      # `localhost:3000` reaches the backend directly — no 10.0.2.2 indirection).
+      APP_VARIANT: development
+      EXPO_PUBLIC_E2E_LOCAL_BACKEND: '1'
+      EXPO_PUBLIC_API_ENVIRONMENT: staging
+      EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
+      # Keeps the `(dev)` route group alive in this RELEASE bundle. The group is
+      # otherwise gated on `__DEV__`, which a Release build sets to false — so the
+      # deeplink-triggered dev routes redirect Home and the flows that drive them
+      # silently test nothing. app/(dev)/_layout.tsx documents the two modal-preview
+      # routes that already "passed green VACUOUSLY on the Release APK" for exactly
+      # this reason; `force-data-mode` (the netshape trigger) had inherited the same
+      # defect. Never set outside these Maestro jobs — `scripts/sentinels/
+      # e2e-flags-not-in-env.mjs` fails the build if it leaks into a committed file.
+      EXPO_PUBLIC_E2E_DEV_ROUTES: 'true'
       # Test-only audio-fixture injection seam (useAudioRecorder.ts) — bakes the
       # bundled clip so the iOS audio-recording-flow STT→TTS round-trip is
       # deterministic (Maestro cannot drive a real microphone). Inlined into the
-      # JS bundle at the Debug build step; the sim-only Debug app is never
+      # JS bundle at the Release build step; the sim-only e2e app is never
       # shipped, so the seam never reaches production. See .maestro/fixtures/audio.md.
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
     steps:
@@ -1016,21 +1126,124 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Expo prebuild iOS
         run: npx expo prebuild --platform ios --clean
-      - name: Build iOS Debug app for Simulator
+      - name: Build iOS Release app for Simulator (standalone, embedded JS bundle)
+        # Release — NOT Debug. A Release build runs `react-native-xcode.sh`
+        # bundling → embeds `main.jsbundle`, and AppDelegate's `#else` branch
+        # loads that embedded bundle, so the app launches standalone with no
+        # Metro packager. (Debug would load from Metro and hang in CI.) The
+        # variant stays `development` via EXPO_PUBLIC_E2E_LOCAL_BACKEND=1 (job
+        # env) so the standalone build targets the local backend + the preview
+        # bundle id the flows expect. Sim build needs no code signing.
+        # ENTRY_FILE — the expo-updates "Generate updates resources" build phase
+        # (`create-updates-resources-ios.sh`) runs FULL manifest bundling in
+        # Release (only-fingerprint in Debug, which is why the old Debug nightly
+        # never hit this). It shells out via `bash -l -c` to
+        # `createUpdatesResources.js`, passing `$ENTRY_FILE`. With expo-updates
+        # 55.0.18 + @expo/config, an empty ENTRY_FILE lets the entry path get its
+        # `.js` stripped → Metro 404 → the phase fails the whole build. The
+        # committed Podfile carries a `post_install` `export ENTRY_FILE=…` patch,
+        # but `expo prebuild --clean` (the step above) regenerates the Podfile and
+        # wipes it (CLAUDE.md gotcha § GitNexus/Podfile). Setting ENTRY_FILE in
+        # the build env is the reproducible fix — it propagates through the
+        # phase's login shell to the script (verified). Prod Xcode Cloud is
+        # unaffected: it builds from the committed, already-patched Pods.
+        # SENTRY_DISABLE_AUTO_UPLOAD — the RN "Bundle React Native code and
+        # images" phase wraps a Sentry source-map upload that re-bundles via
+        # Metro and needs SENTRY_AUTH_TOKEN. This sim-only e2e app is never
+        # shipped, so its source maps are worthless; disabling the upload keeps
+        # the phase from failing on a missing token (and avoids a redundant
+        # second Metro pass). Prod builds (Xcode Cloud) keep the upload.
+        #
+        # NO `CODE_SIGNING_ALLOWED=NO` — the app MUST be signed. That flag
+        # produces a fully unsigned binary with zero entitlements, so
+        # expo-secure-store's `setValueWithKeyAsync` fails at runtime
+        # ("required entitlement not present" → the Keychain access group is
+        # missing) → the auth token never persists → every auth flow dies on the
+        # login screen. A simulator build with NO signing flag defaults to the
+        # "Sign to Run Locally" ad-hoc identity — which needs NO certificate,
+        # team, or secret (works on a bare CI runner) yet grants the app Keychain
+        # access. Verified locally: login + Hide Keyboard + Keychain all green
+        # once the flag is dropped. (Do NOT add DEVELOPMENT_TEAM/provisioning —
+        # a simulator build ignores it and uses Sign-to-Run-Locally anyway.)
         run: |
           cd ios
+          ENTRY_FILE="node_modules/expo-router/entry.js" \
+          SENTRY_DISABLE_AUTO_UPLOAD="true" \
           xcodebuild -workspace Musaium.xcworkspace \
             -scheme Musaium \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
             build
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Boot backend (docker-compose + migrations + API)
+      - name: Provision native Postgres (pgvector) + Redis — macOS runner has no Docker
+        # macOS hosted runners ship without Docker and GHA `services:` are Linux-only,
+        # so the iOS job must run PG/Redis natively via Homebrew. Regression: commit
+        # ccc63df24 dropped this native-PG provisioning when it moved the Android
+        # shards to ubuntu+KVM, but left maestro-runner-setup.sh defaulting to
+        # `docker compose` — so Boot backend died `docker: command not found` (exit 127)
+        # on every nightly since 2026-07-07, before any flow ran.
+        # Runs postgresql@17 + pgvector — the AddArtworkEmbeddings migration does
+        # CREATE EXTENSION vector + halfvec(768) at boot (see the run block for why @17).
+        run: |
+          set -euo pipefail
+          # Use postgresql@17, NOT @16: Homebrew's pgvector bottle ships its
+          # extension only for the CURRENT postgres majors (17/18). On @16 the
+          # vector.control never lands in pg_config's sharedir. Verified locally on
+          # macOS 26 / arm64: `brew install postgresql@17 pgvector` puts
+          # vector.control in @17's sharedir and `CREATE EXTENSION vector` +
+          # `halfvec(768)` both succeed (the AddArtworkEmbeddings migration).
+          brew install --quiet postgresql@17 pgvector redis
+          export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+          brew services start postgresql@17
+          brew services start redis
+          for _ in $(seq 1 30); do
+            pg_isready -h localhost -p 5432 >/dev/null 2>&1 && break
+            sleep 1
+          done
+          createuser -s museum_dev || true
+          psql -d postgres -c "ALTER USER museum_dev WITH PASSWORD 'museum_dev_password';"
+          createdb -O museum_dev museum_dev || true
+          # Fail loud if pgvector's control file is not where pg_config looks.
+          test -f "$(pg_config --sharedir)/extension/vector.control" \
+            || { echo "::error::pgvector vector.control not found for postgresql@17"; exit 1; }
+
+      - name: Boot backend (native PG/Redis + migrations + API)
+        env:
+          SKIP_DOCKER_COMPOSE: '1'
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_USER: museum_dev
+          DB_PASSWORD: museum_dev_password
+          PGDATABASE: museum_dev
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          # Keep the host backend light (no eager BullMQ/redis churn); e2e never
+          # exercises knowledge-extraction. Mirrors the Android Boot-backend step.
+          EXTRACTION_WORKER_ENABLED: 'false'
+          # The iOS run drives the chat flows, so it needs a live LLM key.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Lift the free-tier session cap for the whole run.
+          #
+          # `config/env.ts` defaults FREE_TIER_MONTHLY_SESSION_LIMIT to **3**, and
+          # nearly every chat/netshape flow opens a NEW conversation through
+          # `helpers/chat-entry.yaml` (museum-sheet-start-chat → POST /api/sessions).
+          # Unlike Android — whose matrix fans out into separate jobs, each with its
+          # own fresh Postgres service — the iOS nightly runs every flow in ONE job
+          # against ONE database, so the counter accumulates: from the 4th
+          # conversation on, the backend answers 402, the QuotaUpsellModal covers the
+          # composer, `chat-input` never appears and every remaining chat flow fails.
+          # A hard cap, not flakiness.
+          #
+          # This does NOT weaken modal-paywall-quota-upsell: `seed-e2e-maestro-account`
+          # reads this same variable and seeds the paywall account's counter TO the
+          # limit (scripts/seed-e2e-maestro-account.ts `resolveFreeTierLimit`), so the
+          # 402 it asserts still fires. Both processes must therefore see the SAME
+          # value — hence it is repeated on the seed step below.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: ./scripts/maestro-runner-setup.sh
       - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
         # The iOS nightly suite runs every flow (maestro-run-shard.sh all),
@@ -1038,29 +1251,82 @@ jobs:
         # fixed accounts the Android shards seed so those flows can log in. The
         # paywall account is seeded with its quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1)
         # so modal-paywall-quota-upsell drives the real 402 → QuotaUpsellModal path
-        # (the iOS nightly is a Debug build, but the flow no longer relies on the
-        # removed (dev) preview route — it uses the production 402 trigger).
+        # (the flow no longer relies on the removed (dev) preview route — it
+        # uses the production 402 trigger).
+        env:
+          # MUST match the value the API process was booted with (see the Boot
+          # backend step). `seed-e2e-maestro-account` seeds the paywall account's
+          # counter TO this limit, so if the two disagree the seeded count lands
+          # BELOW the cap the backend enforces and the 402 that
+          # modal-paywall-quota-upsell asserts never fires.
+          FREE_TIER_MONTHLY_SESSION_LIMIT: '100000'
         run: |
           cd museum-backend
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
             pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
+          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
             DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
             E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
             pnpm seed:e2e-maestro-account
       - name: Boot iOS Simulator
+        # Resolve the runtime at run time — do NOT hard-code one. The old
+        # `simctl create maestro-sim "iPhone 15" "iOS17.5"` asked for a runtime the
+        # runner does not have: macos-26 ships only iOS 26.x simulator runtimes
+        # (and macos-15 only 18.x). Both `create` and `boot` were suffixed with
+        # `|| true`, so the "runtime not found" was swallowed and the job died two
+        # steps later on `simctl install booted` → "No devices are booted", which
+        # points at nothing. Every command here is now fail-loud.
         run: |
-          xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true
-          xcrun simctl boot "maestro-sim" || true
-      - name: Install app on simulator
+          set -euo pipefail
+          PICK=$(node scripts/pick-ios-simulator.mjs)
+          RUNTIME=$(echo "$PICK" | sed -n 1p)
+          DEVICE=$(echo "$PICK" | sed -n 2p)
+          xcrun simctl create maestro-sim "$DEVICE" "$RUNTIME"
+          xcrun simctl boot maestro-sim
+          xcrun simctl bootstatus maestro-sim -b
+          xcrun simctl list devices booted
+      - name: Stash the unshaped app
+        # Both binaries share the same bundle id, so they cannot coexist on the
+        # simulator — keep this one aside before the shaped build overwrites the
+        # product directory.
+        run: cp -R ios/build/Build/Products/Release-iphonesimulator/Musaium.app /tmp/musaium-main.app
+
+      - name: Build the SHAPED app (netshape flows only)
+        # The weak-net flows are meaningless unless the DEVICE traverses Toxiproxy.
+        # `EXPO_PUBLIC_API_BASE_URL` is inlined into the JS bundle at build time, so
+        # a binary baked at :3000 talks to the backend directly and the toxics shape
+        # a link nobody uses — a silent no-op that passes green. This is the same
+        # trap the Android weak-net job was split out to avoid (`prebuild-netshape`
+        # bakes 10.0.2.2:3100); this is its iOS twin, baked at the local shaped
+        # listener.
+        #
+        # It is CHEAP: only the JS differs, the native code is byte-identical, and
+        # reusing `-derivedDataPath build` makes this an INCREMENTAL build — Xcode
+        # re-runs the bundling phase and relinks, it does not recompile RN from
+        # source again. Two full cold builds would not fit the job budget; this does.
+        env:
+          EXPO_PUBLIC_API_BASE_URL: http://localhost:3100
         run: |
-          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
-          xcrun simctl install booted "$APP_PATH"
+          cd ios
+          ENTRY_FILE="node_modules/expo-router/entry.js" \
+          SENTRY_DISABLE_AUTO_UPLOAD="true" \
+          xcodebuild -workspace Musaium.xcworkspace \
+            -scheme Musaium \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            build
+          cd ..
+          cp -R ios/build/Build/Products/Release-iphonesimulator/Musaium.app /tmp/musaium-shaped.app
+
+      - name: Install the unshaped app on the simulator
+        run: xcrun simctl install booted /tmp/musaium-main.app
+
       - name: Seed Maestro fixtures into simulator photo library
         # T9.x — Inject the chat-compare fixture into the booted simulator
         # so the PHPicker surfaces it as the most-recent asset. Skipped if
@@ -1069,8 +1335,29 @@ jobs:
           if [ -f .maestro/fixtures/test-artwork.jpg ]; then
             xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg
           fi
-      - name: Run all Maestro flows (sequential)
-        run: ./scripts/maestro-run-shard.sh all
+
+      - name: Run the main iOS suite (unshaped)
+        # `ios-main`, not `all`: the netshape shard runs below against the shaped
+        # binary, and `chat-compare` is excluded (its SigLIP encoder is provisioned
+        # by `docker pull`, and macOS runners have no Docker — Android covers it).
+        run: ./scripts/maestro-run-shard.sh ios-main
+
+      - name: Bring up the Toxiproxy shaped link (EDGE)
+        # Native Toxiproxy — macOS runners have no Docker, same constraint that put
+        # Postgres/Redis on Homebrew above. Seeded from the SAME ratified profile the
+        # Android weak-net job uses (scripts/net-shaping/profile-to-toxics.mjs), so
+        # both platforms shape identically. The script fails LOUD if the proxy or its
+        # toxics do not come up: a weak-net suite that silently shaped nothing is
+        # worse than no suite at all.
+        run: |
+          brew install --quiet toxiproxy
+          ../scripts/net-shaping/toxiproxy-up.sh edge
+
+      - name: Run the netshape flows against the shaped app
+        run: |
+          xcrun simctl uninstall booted com.musaium.mobile.preview
+          xcrun simctl install booted /tmp/musaium-shaped.app
+          ./scripts/maestro-run-shard.sh netshape
       - name: Upload iOS Maestro logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4

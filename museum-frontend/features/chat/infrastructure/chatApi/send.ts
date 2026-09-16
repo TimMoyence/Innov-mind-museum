@@ -1,4 +1,4 @@
-import { httpRequest } from '@/shared/api/httpRequest';
+import { httpRequest, LLM_REQUEST_TIMEOUT_MS } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { ContentPreference } from '@/shared/types/content-preference';
@@ -43,16 +43,7 @@ export interface PostMessageParams {
   idempotencyKey?: string;
 }
 
-export interface SendMessageSmartParams extends PostMessageParams {
-  onToken?: (text: string) => void;
-  onDone?: (payload: {
-    messageId: string;
-    createdAt: string;
-    metadata: Record<string, unknown>;
-  }) => void;
-  onGuardrail?: (text: string, reason: string) => void;
-  signal?: AbortSignal;
-}
+export type SendMessageSmartParams = PostMessageParams;
 
 /** Creates a new chat session and validates the response against the contract. */
 export const createSession = async (
@@ -162,6 +153,9 @@ export const postMessage = async (params: PostMessageParams): Promise<PostMessag
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
     method: 'POST',
     body: payload,
+    // Blocks on the full model response — httpClient's 15s CRUD default cuts real
+    // turns off mid-answer. See LLM_REQUEST_TIMEOUT_MS.
+    timeoutMs: LLM_REQUEST_TIMEOUT_MS,
     ...(Object.keys(headers).length > 0 ? { headers } : {}),
   });
 
@@ -173,12 +167,9 @@ interface SmartSendDeps {
 }
 
 /**
- * Smart message sender — always synchronous. The dormant SSE streaming path
- * was buried (D1): the only transport is the non-streaming `postMessage`.
- * The `onToken`/`onDone`/`onGuardrail`/`signal` callbacks accepted by
- * {@link SendMessageSmartParams} are intentionally ignored here so the LIVE
- * `sendMessageStreaming.ts` strategy keeps type-checking and runs unchanged
- * via the sync fallback block it already documents as the live path.
+ * Smart message sender — always synchronous. The retired SSE transport is not
+ * part of the client contract; this façade delegates to the buffered
+ * `postMessage` request used by the live chat strategy.
  *
  * Dependencies are injected so the index façade can wire them while keeping
  * each capability module decoupled.

@@ -47,7 +47,6 @@ Express 5 + TypeORM backend for Musaium (mobile-first API). PostgreSQL via the `
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/chat/sessions/:id/messages` | Send a message (text + optional image upload) |
-| POST | `/api/chat/sessions/:id/messages/stream` | Send a message with SSE streaming response |
 | GET | `/api/chat/art-keywords` | List art keywords by locale (offline sync) |
 | POST | `/api/chat/art-keywords` | Bulk upsert art keywords |
 

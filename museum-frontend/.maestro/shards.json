@@ -87,6 +87,14 @@
     "onboarding-flow.yaml",
     "magic-link-verify-email.yaml"
   ],
-  "netshapeSmoke": ["net-chat-edge.yaml", "net-offline-queue-resync.yaml"],
-  "excluded": ["config.yaml"]
+  "netshapeSmoke": [
+    "net-chat-edge.yaml",
+    "net-offline-queue-resync.yaml"
+  ],
+  "excluded": [
+    "config.yaml"
+  ],
+  "iosIncompatible": [
+    "chat-compare.yaml"
+  ]
 }

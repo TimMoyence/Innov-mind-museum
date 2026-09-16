@@ -161,11 +161,32 @@ describe('overpass-cache', () => {
       );
     });
 
+    it('does not cache when the refresh reports an endpoint outage', async () => {
+      const set = jest.fn();
+      const cache = { set, get: jest.fn(), delete: jest.fn() } as unknown as CacheService;
+      const refresh = jest.fn().mockResolvedValue({
+        museums: [],
+        allEndpointsFailed: true,
+      });
+
+      fireOverpassBackgroundRefresh({
+        cache,
+        params: { lat: 48.86, lng: 2.34, radiusMeters: 1000 },
+        cacheKey: 'overpass:test:outage',
+        positiveTtlSeconds: 86_400,
+        negativeTtlSeconds: 3_600,
+        refresh,
+      });
+
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(set).not.toHaveBeenCalled();
+    });
+
     it('swallows refresh failures', async () => {
       const set = jest.fn();
       const cache = { set, get: jest.fn(), delete: jest.fn() } as unknown as CacheService;
       const refresh = jest.fn().mockRejectedValue(new Error('boom'));
-      expect(() =>
+      expect(() => {
         fireOverpassBackgroundRefresh({
           cache,
           params: { lat: 0, lng: 0, radiusMeters: 1000 },
@@ -173,8 +194,8 @@ describe('overpass-cache', () => {
           positiveTtlSeconds: 86_400,
           negativeTtlSeconds: 3_600,
           refresh,
-        }),
-      ).not.toThrow();
+        });
+      }).not.toThrow();
       await new Promise((resolve) => setImmediate(resolve));
       expect(set).not.toHaveBeenCalled();
     });

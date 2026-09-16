@@ -123,6 +123,12 @@
       "reason": "weak-network W1-GZIP-04 — gzipped-request round-trip through the REAL createApp() middleware pipeline via createRouteTestApp() + supertest; asserts the decompression cap returns 413 over the limit. Bare Express smoke, no Postgres/Redis/outbound fetch — same precedent as rate-limit-zod-400-no-bump.integration.test.ts and chat-api.smoke.integration.test.ts (createRouteTestApp harness, no DB path required).",
       "approved_by": "2026-06-05 PR #310 (weak-network W1 landing)",
       "date": "2026-06-05"
+    },
+    {
+      "path": "museum-backend/tests/integration/observability/otel-openai-structured-output.integration.test.ts",
+      "reason": "INC-2026-07-14-otel-openai-structured — the driver DOES cross a real boundary (the Node module loader / require-in-the-middle, the real openai SDK, a real HTTP round-trip over undici to a loopback node:http provider), but it crosses it IN A CHILD PROCESS, by design: InstrumentationBase patches the module loader from its CONSTRUCTOR, so building the OTel bundle inside a Jest worker contaminates every test that worker runs afterwards. The tier-signature sentinel reads the driver's TEXT, where no DataSource/testcontainer import appears — hence this exemption, with the honest reason, rather than a downgraded tier (which would have thrown away the only non-vacuous proof of the fix). No Postgres, no Redis, no API key, no outbound network.",
+      "approved_by": "2026-07-14 run 2026-07-14-otel-openai-instrumentation-kills-structured-llm (design §6.2)",
+      "date": "2026-07-14"
     }
   ]
 }

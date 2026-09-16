@@ -44,7 +44,8 @@
     "scripts/seed-smoke-account.ts",
     "scripts/seed-kb-canon.ts",
     "scripts/seed-pilot-artwork-knowledge.ts",
-    "scripts/audit-chain-verify.ts"
+    "scripts/audit-chain-verify.ts",
+    "scripts/sentinels/otel-instrumentation-roster.ts"
   ],
   "exclude": ["node_modules", ".stryker-tmp", ".stryker-run", "dist", "coverage"]
 }

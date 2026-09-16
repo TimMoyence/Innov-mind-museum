@@ -274,3 +274,13 @@ museum-backend/cartels-*.pdf
 # Tesseract OCR training data (e.g. museum-backend/eng.traineddata). Multi-MB
 # binary models, downloaded/runtime artifacts — never source-tracked.
 *.traineddata
+.claude/**
+artifacts/**
+learning/**
+# ─── Maestro run artefacts (2026-07-14) ────────────────────────────────────
+# `.maestro/logs/` is where the Maestro CLI dumps every run: screenshots, view
+# hierarchies, per-flow logs. It reached 547 MB / 1185 files on this machine and
+# was NOT ignored — one `git add .` away from entering history permanently. It is
+# pure run output: regenerated on every run, useful for exactly one debugging
+# session, and never a source artefact.
+museum-frontend/.maestro/logs/
