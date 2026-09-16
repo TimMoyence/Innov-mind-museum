@@ -39,6 +39,7 @@ import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
+import { OfflineQueueProvider } from '@/features/chat/application/useOfflineQueue';
 import {
   getApiConfigurationSnapshot,
   getStartupConfigurationError,
@@ -180,57 +181,59 @@ function RootLayout() {
               <ThemeProvider>
                 <AuthProvider>
                   <ConnectivityProvider>
-                    <DataModeProvider>
-                      <BiometricGate>
-                        <AuthenticationGuard>
-                          <Stack screenOptions={{ headerShown: false }}>
-                            <Stack.Screen name="auth" />
-                            <Stack.Screen name="(tabs)" />
-                            <Stack.Screen
-                              name="(stack)/chat/[sessionId]"
-                              options={{
-                                headerShown: false,
-                                gestureEnabled: true,
-                              }}
-                            />
-                            <Stack.Screen name="(stack)/settings" />
-                            <Stack.Screen name="(stack)/change-password" />
-                            <Stack.Screen name="(stack)/verify-email" />
-                            <Stack.Screen name="(stack)/confirm-email-change" />
-                            <Stack.Screen name="(stack)/reset-password" />
-                            <Stack.Screen name="(stack)/preferences" />
-                            <Stack.Screen name="(stack)/guided-museum-mode" />
-                            <Stack.Screen name="(stack)/offline-maps" />
-                            <Stack.Screen name="(stack)/discover" />
-                            <Stack.Screen name="(stack)/museum-detail" />
-                            <Stack.Screen
-                              name="(stack)/museums-picker"
-                              options={{ presentation: 'modal' }}
-                            />
-                            <Stack.Screen name="(stack)/support" />
-                            <Stack.Screen name="(stack)/tickets" />
-                            <Stack.Screen name="(stack)/ticket-detail" />
-                            <Stack.Screen name="(stack)/create-ticket" />
-                            <Stack.Screen name="(stack)/privacy" />
-                            <Stack.Screen name="(stack)/terms" />
-                            <Stack.Screen name="(stack)/onboarding" />
-                            <Stack.Screen name="+not-found" />
-                          </Stack>
-                          <ThemedStatusBar />
-                          <GlobalOfflineBannerHost />
-                          <PaywallModalHost />
-                          {/*
-                           * TD-C5-MOBILE-CONSENT-01 — Analytics consent banner
-                           * mounted at the root so it floats above every screen
-                           * while `useAnalyticsConsent().status === 'unset'`.
-                           * Returns null once the user accepts or declines —
-                           * the decision persists in AsyncStorage so the banner
-                           * does not re-appear on subsequent launches.
-                           */}
-                          <ConsentBanner />
-                        </AuthenticationGuard>
-                      </BiometricGate>
-                    </DataModeProvider>
+                    <OfflineQueueProvider>
+                      <DataModeProvider>
+                        <BiometricGate>
+                          <AuthenticationGuard>
+                            <Stack screenOptions={{ headerShown: false }}>
+                              <Stack.Screen name="auth" />
+                              <Stack.Screen name="(tabs)" />
+                              <Stack.Screen
+                                name="(stack)/chat/[sessionId]"
+                                options={{
+                                  headerShown: false,
+                                  gestureEnabled: true,
+                                }}
+                              />
+                              <Stack.Screen name="(stack)/settings" />
+                              <Stack.Screen name="(stack)/change-password" />
+                              <Stack.Screen name="(stack)/verify-email" />
+                              <Stack.Screen name="(stack)/confirm-email-change" />
+                              <Stack.Screen name="(stack)/reset-password" />
+                              <Stack.Screen name="(stack)/preferences" />
+                              <Stack.Screen name="(stack)/guided-museum-mode" />
+                              <Stack.Screen name="(stack)/offline-maps" />
+                              <Stack.Screen name="(stack)/discover" />
+                              <Stack.Screen name="(stack)/museum-detail" />
+                              <Stack.Screen
+                                name="(stack)/museums-picker"
+                                options={{ presentation: 'modal' }}
+                              />
+                              <Stack.Screen name="(stack)/support" />
+                              <Stack.Screen name="(stack)/tickets" />
+                              <Stack.Screen name="(stack)/ticket-detail" />
+                              <Stack.Screen name="(stack)/create-ticket" />
+                              <Stack.Screen name="(stack)/privacy" />
+                              <Stack.Screen name="(stack)/terms" />
+                              <Stack.Screen name="(stack)/onboarding" />
+                              <Stack.Screen name="+not-found" />
+                            </Stack>
+                            <ThemedStatusBar />
+                            <GlobalOfflineBannerHost />
+                            <PaywallModalHost />
+                            {/*
+                             * TD-C5-MOBILE-CONSENT-01 — Analytics consent banner
+                             * mounted at the root so it floats above every screen
+                             * while `useAnalyticsConsent().status === 'unset'`.
+                             * Returns null once the user accepts or declines —
+                             * the decision persists in AsyncStorage so the banner
+                             * does not re-appear on subsequent launches.
+                             */}
+                            <ConsentBanner />
+                          </AuthenticationGuard>
+                        </BiometricGate>
+                      </DataModeProvider>
+                    </OfflineQueueProvider>
                   </ConnectivityProvider>
                 </AuthProvider>
               </ThemeProvider>

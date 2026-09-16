@@ -21,6 +21,10 @@ import { act, render } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
 
+jest.mock('@/shared/i18n/i18n', () => ({
+  t: (key: string) => key,
+}));
+
 // Tri-state connectivity context driven per-test (host consumes useConnectivity).
 let mockIsOnline = true;
 jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({

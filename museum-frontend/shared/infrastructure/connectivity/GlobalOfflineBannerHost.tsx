@@ -1,5 +1,6 @@
 import type React from 'react';
 
+import { useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
 import { OfflineBanner } from '@/features/chat/ui/OfflineBanner';
 import { useConnectivity } from './useConnectivity';
 
@@ -16,13 +17,14 @@ import { useConnectivity } from './useConnectivity';
  * indicator is the chat-scoped `LowDataBadge` (`features/chat/ui/LowDataBadge.tsx`),
  * mounted only by `app/(stack)/chat/[sessionId].tsx` (never on auth screens).
  *
- * The pending-message count is a chat-queue refinement (`useOfflineQueue`) that
- * only has meaning on the chat screen, so the global banner shows the offline
- * state without a count (`pendingCount={0}`). `OfflineBanner` itself returns
- * `null` when online, so this host is render-cheap when online. It must sit
- * under `<ConnectivityProvider>`.
+ * The pending-message count comes from the shared queue provider so a message
+ * queued by the chat screen is visible immediately in this global banner.
+ * `OfflineBanner` itself returns `null` when online, so this host is
+ * render-cheap when online. It must sit under `<ConnectivityProvider>` and
+ * `<OfflineQueueProvider>`.
  */
 export const GlobalOfflineBannerHost: React.FC = () => {
   const { isOnline } = useConnectivity();
-  return <OfflineBanner isOffline={!isOnline} pendingCount={0} />;
+  const { pendingCount } = useOfflineQueue();
+  return <OfflineBanner isOffline={!isOnline} pendingCount={pendingCount} />;
 };
