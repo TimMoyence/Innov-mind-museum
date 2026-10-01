@@ -43,12 +43,12 @@ jobs:
       bundle: ${{ steps.sign.outputs.bundle }}
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4.1.2
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: 'v2.4.1'
+          cosign-release: 'v2.6.5'
 
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -65,7 +65,7 @@ jobs:
           echo "bundle=/tmp/cosign-sig.bundle" >> "$GITHUB_OUTPUT"
 
       - name: Generate SLSA provenance attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-name: ${{ inputs.image }}
           subject-digest: ${{ inputs.digest }}
