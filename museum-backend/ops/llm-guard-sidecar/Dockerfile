@@ -7,7 +7,7 @@
 # Image size note: ~2.5 GB with preloaded HF models. The preload at build
 # time is deliberate — it trades image size for a predictable ~30s container
 # start (no download retry loops during prod rollout).
-FROM python:3.11-slim@sha256:e031123e3d85762b141ad1cbc56452ba69c6e722ebf2f042cc0dc86c47c0d8b3
+FROM python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
