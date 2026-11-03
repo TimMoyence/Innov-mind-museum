@@ -5,8 +5,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('api e2e (express + postgres container)', () => {
-  jest.setTimeout(180000);
-
   let harness: E2EHarness;
   let request: E2EHarness['request'];
 

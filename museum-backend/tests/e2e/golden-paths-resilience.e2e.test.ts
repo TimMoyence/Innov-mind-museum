@@ -7,8 +7,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

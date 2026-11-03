@@ -40,8 +40,6 @@ function parseSseEvents(raw: string): { event: string; data: string }[] {
 }
 
 describeE2E('SSE streaming e2e', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

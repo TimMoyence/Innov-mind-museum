@@ -307,12 +307,6 @@ export async function* fetchArtworksOfMuseum(
 /**
  * In-process per-hostname rate-limit gate. Stores the timestamp (ms since
  * epoch) at which the next request to a given hostname is allowed to fire.
- *
- * Timestamp-driven (rather than a promise chain) so test reruns under real
- * timers after a fake-timer test do not block on never-resolving setTimeouts
- * scheduled inside the previous test's fake-timer scope. `Date.now()` always
- * progresses monotonically across tests, so a stale future-in-fake-time
- * `nextAt` value naturally collapses to zero delay under real timers.
  */
 const hostnameNextAt = new Map<string, number>();
 

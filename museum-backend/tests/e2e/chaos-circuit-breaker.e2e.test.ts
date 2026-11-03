@@ -66,8 +66,6 @@ async function buildFailingOrchestrator(errorMessage = 'LLM provider 500'): Prom
 }
 
 describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
-  jest.setTimeout(180_000);
-
   async function chatOnce(harness: E2EHarness, token: string, sessionId: string, text: string) {
     return harness.request(
       `/api/chat/sessions/${sessionId}/messages`,

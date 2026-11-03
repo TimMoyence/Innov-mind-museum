@@ -38,8 +38,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATI
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('UserMemoryService personalization full lifecycle (Spec C T1.9)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
   let userMemoryService: UserMemoryService;
 

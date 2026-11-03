@@ -22,8 +22,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATI
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

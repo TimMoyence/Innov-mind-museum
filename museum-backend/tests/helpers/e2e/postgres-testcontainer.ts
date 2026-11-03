@@ -5,6 +5,8 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+jest.setTimeout(180_000);
+
 interface ExecError extends Error {
   stderr?: string;
 }
@@ -24,51 +26,54 @@ const runDocker = async (...args: string[]): Promise<string> => {
   }
 };
 
-export const waitForPostgresInit = async (containerId: string, attempts = 120): Promise<void> => {
+const poll = async (attempts: number, ready: () => Promise<boolean>, failure: string) => {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const { stdout, stderr } = await execFileAsync('docker', ['logs', containerId], {
-      encoding: 'utf8',
-      env: process.env,
-    }).catch(() => ({ stdout: '', stderr: '' }));
-    const readyCount = `${stdout}${stderr}`.split('database system is ready to accept connections')
-      .length - 1;
-    if (readyCount >= 2) {
+    if (await ready()) {
       return;
     }
     await sleep(500);
   }
-  throw new Error('Postgres test container did not finish initialising in time');
+  throw new Error(failure);
 };
 
-const waitForPostgres = async (params: {
+export const waitForPostgresInit = (containerId: string, attempts = 120): Promise<void> =>
+  poll(
+    attempts,
+    async () => {
+      const { stdout, stderr } = await execFileAsync('docker', ['logs', containerId], {
+        encoding: 'utf8',
+        env: process.env,
+      }).catch(() => ({ stdout: '', stderr: '' }));
+      return (
+        `${stdout}${stderr}`.split('database system is ready to accept connections').length > 2
+      );
+    },
+    'Postgres test container did not finish initialising in time',
+  );
+
+const waitForPostgres = (params: {
   host: string;
   port: number;
   user: string;
   password: string;
   database: string;
-}): Promise<void> => {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    const client = new Client({
-      host: params.host,
-      port: params.port,
-      user: params.user,
-      password: params.password,
-      database: params.database,
-    });
-
-    try {
-      await client.connect();
-      await client.query('SELECT 1');
-      await client.end();
-      return;
-    } catch {
-      await client.end().catch(() => undefined);
-      await sleep(500);
-    }
-  }
-
-  throw new Error('Postgres test container was not ready in time');
-};
+}): Promise<void> =>
+  poll(
+    60,
+    async () => {
+      const client = new Client(params);
+      try {
+        await client.connect();
+        await client.query('SELECT 1');
+        await client.end();
+        return true;
+      } catch {
+        await client.end().catch(() => undefined);
+        return false;
+      }
+    },
+    'Postgres test container was not ready in time',
+  );
 
 /** Test utility: handle for a running ephemeral Postgres Docker container with connection details and cleanup methods. */
 export interface StartedPostgresTestContainer {

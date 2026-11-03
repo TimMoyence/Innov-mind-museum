@@ -30,8 +30,6 @@ interface MePayload {
 }
 
 describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

@@ -443,8 +443,6 @@ async function postUserMessage(
 }
 
 describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)', () => {
-  jest.setTimeout(180_000);
-
   describe('all 4 sources wired', () => {
     let booted: BootedHarness;
 

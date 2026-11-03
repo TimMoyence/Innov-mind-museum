@@ -36,8 +36,6 @@ interface SessionMessagesBody {
 }
 
 describeE2E('idempotency message-create e2e (real app + Postgres)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
   let token: string;
 
