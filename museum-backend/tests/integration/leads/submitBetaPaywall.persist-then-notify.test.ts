@@ -54,7 +54,6 @@ type PaywallCtor = new (
 describeIntegration(
   'SubmitBetaSignup / SubmitPaywallInterest — persist-then-notify [integration, real PG]',
   () => {
-    jest.setTimeout(180_000);
 
     let harness: IntegrationHarness;
     let repo: ILeadRepository;

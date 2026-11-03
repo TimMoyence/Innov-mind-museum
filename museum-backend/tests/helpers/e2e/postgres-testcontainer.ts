@@ -24,6 +24,22 @@ const runDocker = async (...args: string[]): Promise<string> => {
   }
 };
 
+export const waitForPostgresInit = async (containerId: string, attempts = 120): Promise<void> => {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const { stdout, stderr } = await execFileAsync('docker', ['logs', containerId], {
+      encoding: 'utf8',
+      env: process.env,
+    }).catch(() => ({ stdout: '', stderr: '' }));
+    const readyCount = `${stdout}${stderr}`.split('database system is ready to accept connections')
+      .length - 1;
+    if (readyCount >= 2) {
+      return;
+    }
+    await sleep(500);
+  }
+  throw new Error('Postgres test container did not finish initialising in time');
+};
+
 const waitForPostgres = async (params: {
   host: string;
   port: number;
@@ -121,6 +137,7 @@ export const startPostgresTestContainer = async (): Promise<StartedPostgresTestC
       throw new Error(`Invalid mapped postgres port: "${hostPortRaw}"`);
     }
 
+    await waitForPostgresInit(containerId);
     await waitForPostgres({
       host: '127.0.0.1',
       port: hostPort,

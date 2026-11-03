@@ -90,7 +90,6 @@ const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 describeIntegration(
   'POST /api/support/tickets — museumId plumb (TD-COR-WAVEB-02) [integration, real PG + HTTP]',
   () => {
-    jest.setTimeout(180_000);
 
     let harness: IntegrationHarness;
     let app: Express;

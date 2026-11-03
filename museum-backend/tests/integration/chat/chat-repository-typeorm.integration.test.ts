@@ -31,7 +31,6 @@ const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
   let repo: TypeOrmChatRepository;

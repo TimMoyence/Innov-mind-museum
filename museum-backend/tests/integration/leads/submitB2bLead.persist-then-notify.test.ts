@@ -67,7 +67,6 @@ type B2bUseCaseCtor = new (
 ) => SubmitB2bLeadUseCase;
 
 describeIntegration('SubmitB2bLeadUseCase — persist-then-notify [integration, real PG]', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
   let repo: ILeadRepository;

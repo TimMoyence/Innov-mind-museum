@@ -44,7 +44,6 @@ const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 describeIntegration(
   'ChatSessionLookupAdapter.findSessionMuseum — real SQL [integration, real PG]',
   () => {
-    jest.setTimeout(180_000);
 
     let harness: IntegrationHarness;
     let adapter: ChatSessionLookupAdapter;

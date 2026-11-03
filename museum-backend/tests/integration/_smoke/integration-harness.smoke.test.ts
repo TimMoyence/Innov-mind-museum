@@ -4,7 +4,6 @@ import {
 } from 'tests/helpers/integration/integration-harness';
 
 describe('integration-harness smoke [integration]', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
 

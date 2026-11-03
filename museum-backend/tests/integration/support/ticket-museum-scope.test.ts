@@ -64,7 +64,6 @@ const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 describeIntegration('SupportRepositoryPg — museum_id scope [integration, real PG]', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
   let repo: SupportRepositoryPg;

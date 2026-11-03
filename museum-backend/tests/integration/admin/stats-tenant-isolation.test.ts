@@ -100,7 +100,6 @@ const GLOBAL_MESSAGES = A_MESSAGES + B_MESSAGES; // 10
 describeIntegration(
   'GET /api/admin/stats — museum_manager tenant isolation (C1A / OWASP API3 BOLA) [integration, real PG + HTTP]',
   () => {
-    jest.setTimeout(180_000);
 
     let harness: IntegrationHarness;
     let app: Express;
