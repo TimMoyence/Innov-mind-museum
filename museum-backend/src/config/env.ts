@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 
 import {
   required,
-  resolveChaosRate,
   toBoolean,
   toIsoTimestamp,
   toList,
@@ -131,24 +130,6 @@ const env: AppEnv = {
     })(),
     appleJwksUrl: process.env.APPLE_OIDC_JWKS_URL || 'https://appleid.apple.com/auth/keys',
     googleJwksUrl: process.env.GOOGLE_OIDC_JWKS_URL || 'https://www.googleapis.com/oauth2/v3/certs',
-    // R16 MFA — AES-256-GCM key for TOTP secrets at rest. Dev/test fall back to
-    // deterministic 32-byte dev key. Prod fatal (env.production-validation.ts);
-    // MUST be distinct from JWT_* and MEDIA_SIGNING_SECRET (L3 / H12 pattern).
-    mfaEncryptionKey: isDev
-      ? toOptionalString(process.env.MFA_ENCRYPTION_KEY) ||
-        // 32 base64-decoded bytes — dev only. Prod fail-fast blocks this surfacing.
-        'ZGV2LW1mYS1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLWxvY2Fs'
-      : required('MFA_ENCRYPTION_KEY', toOptionalString(process.env.MFA_ENCRYPTION_KEY)),
-    mfaSessionTokenSecret: isDev
-      ? toOptionalString(process.env.MFA_SESSION_TOKEN_SECRET) ||
-        toOptionalString(process.env.JWT_ACCESS_SECRET) ||
-        'local-dev-mfa-session-secret'
-      : required(
-          'MFA_SESSION_TOKEN_SECRET',
-          toOptionalString(process.env.MFA_SESSION_TOKEN_SECRET),
-        ),
-    mfaSessionTokenTtlSeconds: toNumber(process.env.MFA_SESSION_TOKEN_TTL_SECONDS, 300),
-    mfaEnrollmentWarningDays: toNumber(process.env.MFA_ENROLLMENT_WARNING_DAYS, 30),
     // F3 — default false during mobile rollout. Flip to true once every
     // supported mobile build ships the OIDC nonce flow.
     oidcNonceEnforce: toBoolean(process.env.OIDC_NONCE_ENFORCE, false),
@@ -269,25 +250,6 @@ const env: AppEnv = {
         enabled: true,
         exporterEndpoint: process.env.OTEL_EXPORTER_ENDPOINT || 'http://localhost:4318',
         serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
-      }
-    : undefined,
-  // JUSTIFIED: Langfuse SaaS — keys not available in local dev. Explicit opt-in.
-  // Host resolution supports both Musaium internal naming (LANGFUSE_HOST) and
-  // upstream SDK convention (LANGFUSE_BASEURL / LANGFUSE_BASE_URL) so a copy-paste
-  // from Langfuse official docs does not silently fall back to localhost. Default
-  // points to cloud (fail-loud auth error in logs) rather than localhost:3002
-  // (fail-silent drop into the void). 2026-05-17 hotfix — see Langfuse activation
-  // post-mortem in this commit message.
-  langfuse: toBoolean(process.env.LANGFUSE_ENABLED, false)
-    ? {
-        enabled: true,
-        publicKey: toOptionalString(process.env.LANGFUSE_PUBLIC_KEY),
-        secretKey: toOptionalString(process.env.LANGFUSE_SECRET_KEY),
-        host:
-          process.env.LANGFUSE_HOST ||
-          process.env.LANGFUSE_BASEURL ||
-          process.env.LANGFUSE_BASE_URL ||
-          'https://cloud.langfuse.com',
       }
     : undefined,
   // 2026-04-22: all feature flags retired — every feature is always-on.
@@ -420,83 +382,17 @@ const env: AppEnv = {
     ...parseRedisUrlFallback(),
   },
   guardrails: {
-    llmGuardUrl: toOptionalString(process.env.GUARDRAILS_V2_LLM_GUARD_URL),
-    // 2026-05-12 — raised from 300/500ms after prod incident: sidecar P95
-    // inference on CPU-only VPS exceeded 500ms → 100% fail-CLOSED canned
-    // refusals. 1500ms gives ~3-4× headroom over local MPS bench (375ms P95).
-    // Circuit breaker below absorbs rare residual timeout (ADR-047).
-    timeoutMs: toNumber(process.env.GUARDRAILS_V2_TIMEOUT_MS, 1500),
-    observeOnly: toBoolean(process.env.GUARDRAILS_V2_OBSERVE_ONLY, false),
-    // F4 (2026-04-30) — LLM judge daily cost cap (cents). Default 500 ($5/day)
-    // activates judge in parallel with sidecar (defense-in-depth, ADR-015
-    // amendment 2026-05-14). Set to `0` to disable judge layer.
     budgetCentsPerDay: toNumber(process.env.LLM_GUARDRAIL_BUDGET_CENTS_PER_DAY, 500),
-    // 2026-06-01 — raised 500 → 1500 after the live V2 suite
-    // (tests/ai/guardrail-v2-live.ai.test.ts) measured real gpt-4o-mini
-    // structured-output judge latency at 670–1050ms. At 500ms EVERY judge call
-    // timed out → null → fail-OPEN → the judge never blocked in prod. 1500ms
-    // gives ~1.4× headroom over the observed max and mirrors the sidecar
-    // timeoutMs. Judge is fail-OPEN, so the cost of a too-tight value is silent
-    // degradation to V1, not a refusal — hence it went unnoticed until measured.
     judgeTimeoutMs: toNumber(process.env.LLM_GUARDRAIL_JUDGE_TIMEOUT_MS, 1500),
     judgeMinMessageLength: toNumber(process.env.LLM_GUARDRAIL_JUDGE_MIN_LENGTH, 50),
-    // ADR-030 (2026-05-05) — judge budget backend.
-    // 'memory' = per-process (dev/test/single-instance). 'redis' = shared via
-    // SET INCRBY + TTL. Default 'redis' in prod (multi-instance no 2× spend);
-    // tests pin 'memory' to avoid coupling to Redis container.
     budgetBackend: process.env.GUARDRAIL_BUDGET_BACKEND === 'memory' ? 'memory' : 'redis',
-    // Hybrid-gravity guardrail (2026-06-01) — judge runs parallel + 2-level
-    // friction. Kill-switch GUARDRAIL_FRICTION_ENABLED=false → legacy inline
-    // judge hard-block. Defaults: session escalates at 3 off-topic strikes,
-    // user/IP cool-down at 10 (security blocks weigh 2, off-topic 1).
-    frictionEnabled: toBoolean(process.env.GUARDRAIL_FRICTION_ENABLED, true),
     frictionSessionThreshold: toNumber(process.env.FRICTION_SESSION_THRESHOLD, 3),
     frictionUserThreshold: toNumber(process.env.FRICTION_USER_THRESHOLD, 10),
-    frictionSessionTtlMs: toNumber(process.env.FRICTION_SESSION_TTL_MS, 21_600_000), // 6h
-    frictionUserTtlMs: toNumber(process.env.FRICTION_USER_TTL_MS, 86_400_000), // 24h
-    frictionCooldownMs: toNumber(process.env.FRICTION_COOLDOWN_MS, 120_000), // 2min
+    frictionSessionTtlMs: toNumber(process.env.FRICTION_SESSION_TTL_MS, 21_600_000),
+    frictionUserTtlMs: toNumber(process.env.FRICTION_USER_TTL_MS, 86_400_000),
+    frictionCooldownMs: toNumber(process.env.FRICTION_COOLDOWN_MS, 120_000),
     frictionWeightSecurity: toNumber(process.env.FRICTION_WEIGHT_SECURITY, 2),
     frictionWeightOfftopic: toNumber(process.env.FRICTION_WEIGHT_OFFTOPIC, 1),
-    // 2026-05-12 — LLM Guard sidecar circuit breaker. NOT a feature flag —
-    // always-on (pre-launch V1). Emergency disable =
-    // `LLM_GUARD_CB_FAILURE_THRESHOLD=1000000`. Real rollback = `git revert`.
-    circuitBreaker: {
-      failureThreshold: toNumber(process.env.LLM_GUARD_CB_FAILURE_THRESHOLD, 5),
-      windowMs: toNumber(process.env.LLM_GUARD_CB_WINDOW_MS, 60_000),
-      openDurationMs: toNumber(process.env.LLM_GUARD_CB_OPEN_DURATION_MS, 30_000),
-      halfOpenMaxProbes: toNumber(process.env.LLM_GUARD_CB_HALF_OPEN_MAX_PROBES, 1),
-    },
-    // 2026-05-12 (ADR-047) — in-flight concurrency cap on /scan. Prevents
-    // surge amplifying sidecar latency into death spiral. Overflow = fail-CLOSED.
-    maxInflight: toNumber(process.env.LLM_GUARD_MAX_INFLIGHT, 8),
-    queueMax: toNumber(process.env.LLM_GUARD_QUEUE_MAX, 32),
-    // ADR-051 (2026-05-13) — OSS provider adapters READY but NOT activated.
-    // Adapters ship behind ADR-048 port so Phase 1 shadow swap is
-    // constructor-injection, not refactor. Composition root does NOT wire
-    // either until ADR-051 promotion criteria pass (≥7d shadow, decision-match
-    // thresholds, p95 latency).
-    presidio: {
-      /**
-       * C9.8 (2026-05-17) — when true AND `baseUrl` set, the chat pipeline
-       * uses MicrosoftPresidioAdapter as the V2 guardrail provider. Combine
-       * with `GUARDRAILS_V2_OBSERVE_ONLY=true` for the 4-7d bake before
-       * flipping to enforce. ADR-051.
-       */
-      enabled: toBoolean(process.env.PRESIDIO_ENABLED, false),
-      baseUrl: toOptionalString(process.env.PRESIDIO_BASE_URL),
-      timeoutMs: toNumber(process.env.PRESIDIO_TIMEOUT_MS, 500),
-    },
-    // Chaos drill rate (0..1). Non-zero values intentionally abort /scan
-    // calls to exercise fail-CLOSED path. Prod MUST be 0 — `resolveChaosRate`
-    // refuses non-zero in prod unless `MUSAIUM_ALLOW_PROD_CHAOS` set verbatim.
-    // Spec §6 RO3.
-    chaosRate: resolveChaosRate(
-      process.env.GUARDRAIL_CHAOS_RATE,
-      process.env.NODE_ENV,
-      process.env.MUSAIUM_ALLOW_PROD_CHAOS,
-    ),
-    // 2026-05-13 — 100k-clients scalability primitives (perennial design §11).
-    // Operational tunables, NOT feature flags. Defaults from CAPACITY_PLAN_100K.md.
     costCircuitBreaker: {
       hourlyThresholdCents: toNumber(process.env.COST_CB_HOURLY_THRESHOLD_CENTS, 5_000),
       dailyBudgetCents: toNumber(process.env.COST_CB_DAILY_BUDGET_CENTS, 50_000),

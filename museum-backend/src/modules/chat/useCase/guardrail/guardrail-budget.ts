@@ -15,7 +15,6 @@
  * boundary, so no background timer is needed in either backend.
  */
 import { logger } from '@shared/logger/logger';
-import { guardrailBudgetRedisFallbackTotal } from '@shared/observability/prometheus-metrics';
 import { env } from '@src/config/env';
 
 import type { CacheService } from '@shared/cache/cache.port';
@@ -125,7 +124,6 @@ class RedisGuardrailBudgetStore implements IGuardrailBudgetStore {
       // Scalability surface (perennial §11 / 100k prep, 2026-05-13) — count
       // every fail-CLOSED so operators can alert on a Redis-availability
       // regression without scraping logs. Stays fail-CLOSED for safety.
-      guardrailBudgetRedisFallbackTotal.inc();
       logger.warn('guardrail_judge_budget_redis_unreachable_fail_closed', {});
       return Number.POSITIVE_INFINITY;
     }
@@ -134,7 +132,6 @@ class RedisGuardrailBudgetStore implements IGuardrailBudgetStore {
     if (value === null) return 0;
     if (!Number.isFinite(value) || value < 0) {
       // Treat malformed counter as fail-CLOSED — see class comment §2.
-      guardrailBudgetRedisFallbackTotal.inc();
       logger.warn('guardrail_judge_budget_counter_invalid', { value });
       return Number.POSITIVE_INFINITY;
     }

@@ -61,12 +61,6 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
-// Silence prom metrics (LlmCacheServiceImpl pings counters on lookup paths).
-jest.mock('@shared/observability/prometheus-metrics', () => ({
-  llmCacheHitsTotal: { inc: jest.fn() },
-  llmCacheMissesTotal: { inc: jest.fn() },
-}));
-
 // ---------------------------------------------------------------------------
 // MemoryCacheService — Map-backed test double. The Map is exposed via the
 // readonly `store` accessor so the test can read the byte-string key the

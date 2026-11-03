@@ -28,7 +28,6 @@
 import { createHash } from 'node:crypto';
 
 import { logger } from '@shared/logger/logger';
-import { guardrailFrictionRedisFallbackTotal } from '@shared/observability/prometheus-metrics';
 import { env } from '@src/config/env';
 
 import type { CacheService } from '@shared/cache/cache.port';
@@ -140,7 +139,6 @@ class RedisGuardrailFrictionStore implements IGuardrailFrictionStore {
   constructor(private readonly cache: CacheService) {}
 
   private onFallback(op: string, scope: FrictionScope, error: unknown): void {
-    guardrailFrictionRedisFallbackTotal.inc();
     logger.warn('guardrail_friction_redis_fail_soft', {
       op,
       scope: scope.kind,

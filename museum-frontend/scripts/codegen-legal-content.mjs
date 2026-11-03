@@ -143,14 +143,6 @@ function renderSource(canonical) {
  *
  * Source of truth:
  *   museum-backend/src/shared/legal/privacy-content.canonical.json
- *
- * Drift sentinel (post-comment-strip, R15):
- *   museum-backend/scripts/sentinels/privacy-content-drift.mjs
- *
- * The sentinel strips JSDoc / line / HTML comments before grepping, so the
- * canonical tokens (version, lastUpdated, section ids, subprocessor names)
- * must appear as INLINE TS literals in the body below — not just in this
- * header.
  */
 
 /** A single numbered section within the privacy policy document. */
@@ -236,12 +228,30 @@ export const isPrivacyPlaceholderValue = (value: string): boolean => {
 `;
 }
 
+const LEGAL_SOURCE_DIR = resolve(REPO_ROOT, 'museum-backend/src/shared/legal');
+const WEB_LEGAL_DIR = resolve(REPO_ROOT, 'museum-web/src/lib/legal');
+const WEB_COPIES = ['privacy-content.canonical.json', 'terms-content.canonical.json'];
+
 function main() {
+  const check = process.argv.includes('--check');
   /** @type {CanonicalPrivacy} */
   const canonical = JSON.parse(readFileSync(CANONICAL_PATH, 'utf8'));
-  const source = renderSource(canonical);
-  writeFileSync(OUTPUT_PATH, source, 'utf8');
-  process.stdout.write(`[codegen-legal-content] wrote ${OUTPUT_PATH}\n`);
+  const outputs = [
+    [OUTPUT_PATH, renderSource(canonical)],
+    ...WEB_COPIES.map((name) => [
+      resolve(WEB_LEGAL_DIR, name),
+      readFileSync(resolve(LEGAL_SOURCE_DIR, name), 'utf8'),
+    ]),
+  ];
+  const drifted = outputs.filter(([path, content]) => readFileSync(path, 'utf8') !== content);
+  if (check) {
+    for (const [path] of drifted) process.stderr.write(`[codegen-legal-content] drift: ${path}\n`);
+    process.exit(drifted.length === 0 ? 0 : 1);
+  }
+  for (const [path, content] of drifted) {
+    writeFileSync(path, content, 'utf8');
+    process.stdout.write(`[codegen-legal-content] wrote ${path}\n`);
+  }
 }
 
 main();

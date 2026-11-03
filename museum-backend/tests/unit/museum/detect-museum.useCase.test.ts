@@ -2,20 +2,8 @@ import {
   computeConfidence,
   DetectMuseumUseCase,
 } from '@modules/museum/useCase/detect/detect-museum.useCase';
-import { geoDetectMuseumTotal } from '@shared/observability/prometheus-metrics';
 
 import { makeMuseum, makeMuseumRepo } from 'tests/helpers/museum/museum.fixtures';
-
-async function readCounter(
-  outcome: 'hit-geofence' | 'hit-haversine' | 'miss' | 'error',
-): Promise<number> {
-  const counter = geoDetectMuseumTotal as unknown as {
-    get: () => Promise<{ values: { value: number; labels: Record<string, string> }[] }>;
-  };
-  const data = await counter.get();
-  const match = data.values.find((row) => row.labels.outcome === outcome);
-  return match ? match.value : 0;
-}
 
 describe('DetectMuseumUseCase', () => {
   describe('computeConfidence (helper)', () => {
@@ -126,53 +114,6 @@ describe('DetectMuseumUseCase', () => {
 
       expect(result.confidence).toBe(1.0);
       expect(findAllSpy).not.toHaveBeenCalled();
-    });
-
-    it('increments geo_detect_museum_total{outcome="hit-geofence"} on geofence hit', async () => {
-      const museum = makeMuseum({ id: 5, name: 'Counter Museum' });
-      const repo = makeMuseumRepo({
-        findByCoords: jest.fn().mockResolvedValue(museum),
-      });
-
-      const before = await readCounter('hit-geofence');
-      const sut = new DetectMuseumUseCase(repo);
-      await sut.execute(48.86, 2.34);
-      const after = await readCounter('hit-geofence');
-
-      expect(after - before).toBeGreaterThanOrEqual(1);
-    });
-
-    it('increments geo_detect_museum_total{outcome="miss"} when no museum is found', async () => {
-      const repo = makeMuseumRepo({
-        findByCoords: jest.fn().mockResolvedValue(null),
-        findAll: jest.fn().mockResolvedValue([]),
-      });
-
-      const before = await readCounter('miss');
-      const sut = new DetectMuseumUseCase(repo);
-      await sut.execute(0, 0);
-      const after = await readCounter('miss');
-
-      expect(after - before).toBeGreaterThanOrEqual(1);
-    });
-
-    // TD-43 — a thrown error must NOT inflate the {outcome="miss"} series (which
-    // means "no museum nearby"). It gets its own {outcome="error"} label. FAILS
-    // pre-fix (the catch path incremented 'miss').
-    it('increments geo_detect_museum_total{outcome="error"} when detection throws', async () => {
-      const repo = makeMuseumRepo({
-        findByCoords: jest.fn().mockRejectedValue(new Error('db down')),
-      });
-
-      const beforeError = await readCounter('error');
-      const beforeMiss = await readCounter('miss');
-      const sut = new DetectMuseumUseCase(repo);
-      await expect(sut.execute(0, 0)).rejects.toThrow('db down');
-      const afterError = await readCounter('error');
-      const afterMiss = await readCounter('miss');
-
-      expect(afterError - beforeError).toBeGreaterThanOrEqual(1);
-      expect(afterMiss - beforeMiss).toBe(0);
     });
   });
 });

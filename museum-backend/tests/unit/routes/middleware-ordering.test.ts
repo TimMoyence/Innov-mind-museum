@@ -46,7 +46,6 @@ const AUTH_SESSION_ROUTE = path.join(
   ROUTES_ROOT,
   'auth/adapters/primary/http/routes/auth-session.route.ts',
 );
-const MFA_ROUTE = path.join(ROUTES_ROOT, 'auth/adapters/primary/http/routes/mfa.route.ts');
 const CHAT_MESSAGE_ROUTE = path.join(
   ROUTES_ROOT,
   'chat/adapters/primary/http/routes/chat-message.route.ts',
@@ -209,56 +208,6 @@ describe('R7 — auth-session.route.ts: validateBody BEFORE body-keyed limiters'
 
     // FAILS today: socialLimiterIdx < validateIdx
     expect(validateIdx).toBeLessThan(socialLimiterIdx);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// mfa.route.ts assertions
-// ---------------------------------------------------------------------------
-
-describe('R7 — mfa.route.ts: validateBody BEFORE body-keyed limiters', () => {
-  let source: string;
-
-  beforeAll(() => {
-    source = readFileSync(MFA_ROUTE, 'utf-8');
-  });
-
-  /**
-   * R7.4 — POST /challenge:
-   *   Correct order: validateBody → challengeLimiter
-   *   TODAY FAILS: challengeLimiter appears BEFORE validateBody
-   */
-  it("R7.4 — POST '/challenge': validateBody appears BEFORE challengeLimiter", () => {
-    const block = extractRouteBlock(source, '/challenge');
-    expect(block).not.toBe('');
-
-    const validateIdx = indexInBlock(block, 'validateBody(challengeSchema)');
-    const challengeLimiterIdx = indexInBlock(block, 'challengeLimiter');
-
-    expect(validateIdx).toBeGreaterThanOrEqual(0);
-    expect(challengeLimiterIdx).toBeGreaterThanOrEqual(0);
-
-    // FAILS today: challengeLimiterIdx < validateIdx
-    expect(validateIdx).toBeLessThan(challengeLimiterIdx);
-  });
-
-  /**
-   * R7.5 — POST /recovery:
-   *   Correct order: validateBody → recoveryLimiter
-   *   TODAY FAILS: recoveryLimiter appears BEFORE validateBody
-   */
-  it("R7.5 — POST '/recovery': validateBody appears BEFORE recoveryLimiter", () => {
-    const block = extractRouteBlock(source, '/recovery');
-    expect(block).not.toBe('');
-
-    const validateIdx = indexInBlock(block, 'validateBody(recoverySchema)');
-    const recoveryLimiterIdx = indexInBlock(block, 'recoveryLimiter');
-
-    expect(validateIdx).toBeGreaterThanOrEqual(0);
-    expect(recoveryLimiterIdx).toBeGreaterThanOrEqual(0);
-
-    // FAILS today: recoveryLimiterIdx < validateIdx
-    expect(validateIdx).toBeLessThan(recoveryLimiterIdx);
   });
 });
 

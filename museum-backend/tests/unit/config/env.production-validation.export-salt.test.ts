@@ -54,8 +54,6 @@ const makeEnv = (overrides: SaltOverrides = {}): AppEnv =>
     auth: {
       accessTokenSecret: LONG,
       refreshTokenSecret: ALT_LONG,
-      mfaEncryptionKey: 'm'.repeat(48),
-      mfaSessionTokenSecret: 'n'.repeat(48),
       csrfSecret: 'p'.repeat(48),
       passwordBreachCheckEnabled: true,
     },
@@ -73,8 +71,6 @@ describe('validateProductionEnv — EXPORT_PSEUDONYM_SALT (R1, I-SEC5)', () => {
       MEDIA_SIGNING_SECRET: 'media-signing-secret-long-enough-for-tests',
       JWT_ACCESS_SECRET: LONG,
       JWT_REFRESH_SECRET: ALT_LONG,
-      MFA_ENCRYPTION_KEY: 'm'.repeat(48),
-      MFA_SESSION_TOKEN_SECRET: 'n'.repeat(48),
       CSRF_SECRET: 'p'.repeat(48),
       EXPORT_PSEUDONYM_SALT: SALT_OK,
     };

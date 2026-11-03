@@ -107,7 +107,6 @@ describe('SessionIssuerService — issueSession (fresh issue / insert path)', ()
     expect(result.user).toBe(user);
     expect(result.expiresIn).toBe(tokenJwt.accessTtlSeconds);
     expect(result.refreshExpiresIn).toBe(tokenJwt.refreshTtlSeconds);
-    expect(result.mfaWarningDaysRemaining).toBeUndefined();
 
     // Access claims
     const access = jwt.verify(result.accessToken, env.auth.accessTokenSecret) as JwtPayload;
@@ -198,21 +197,6 @@ describe('SessionIssuerService — issueSession (fresh issue / insert path)', ()
     const access = jwt.decode(result.accessToken) as JwtPayload;
     const refresh = jwt.decode(result.refreshToken) as JwtPayload;
     expect(access.jti).not.toBe(refresh.jti);
-  });
-
-  it('passes mfaWarningDaysRemaining into the response when supplied', async () => {
-    const { service } = makeIssuer();
-    const result = await service.issueSession({
-      user: toSafeUser({ role: 'admin' }),
-      mfaWarningDaysRemaining: 3,
-    });
-    expect(result.mfaWarningDaysRemaining).toBe(3);
-  });
-
-  it('does NOT include mfaWarningDaysRemaining key when undefined (no leak of optional)', async () => {
-    const { service } = makeIssuer();
-    const result = await service.issueSession({ user: toSafeUser() });
-    expect(Object.prototype.hasOwnProperty.call(result, 'mfaWarningDaysRemaining')).toBe(false);
   });
 
   it('embeds museumId into access claims for museum_manager role', async () => {

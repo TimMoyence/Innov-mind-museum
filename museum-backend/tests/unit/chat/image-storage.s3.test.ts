@@ -139,7 +139,7 @@ describe('image-storage.s3', () => {
       });
 
       server.on('error', reject);
-      server.listen(0, '127.0.0.1', async () => {
+      server.listen(0, async () => {
         try {
           const address = server.address();
           if (!address || typeof address === 'string') {
@@ -336,7 +336,7 @@ describe('image-storage.s3', () => {
           });
         });
 
-        server.listen(0, '127.0.0.1', async () => {
+        server.listen(0, async () => {
           try {
             const address = server.address();
             if (!address || typeof address === 'string') throw new Error('bind failed');
@@ -392,7 +392,7 @@ describe('image-storage.s3', () => {
           });
         });
 
-        server.listen(0, '127.0.0.1', async () => {
+        server.listen(0, async () => {
           try {
             const address = server.address();
             if (!address || typeof address === 'string') throw new Error('bind failed');
@@ -460,7 +460,7 @@ async function withTestServer<T>(
       });
     });
 
-    server.listen(0, '127.0.0.1', async () => {
+    server.listen(0, async () => {
       try {
         const address = server.address();
         if (!address || typeof address === 'string') throw new Error('bind failed');

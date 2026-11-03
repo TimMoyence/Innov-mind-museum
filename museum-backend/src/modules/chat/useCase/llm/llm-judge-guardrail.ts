@@ -22,9 +22,6 @@ import {
   recordJudgeCost,
 } from '@modules/chat/useCase/guardrail/guardrail-budget';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import { guardrailJudgeDegradedTotal } from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
 import type { ChatModel } from '@modules/chat/domain/llm/chat-model.port';
@@ -102,74 +99,11 @@ export interface JudgeWithLlmOptions {
   requestId?: string;
 }
 
-/** Model name on the judge generation (cost-catalog match). gpt-4o-mini-class. */
-const JUDGE_GENERATION_NAME = 'guardrail.judge.generation';
-
 const isTimeoutError = (error: unknown): boolean =>
   typeof DOMException !== 'undefined' &&
   error instanceof DOMException &&
   error.name === 'TimeoutError';
 
-/**
- * I-FIX3 (d) — judge-degrade reasons (design §D4/D5). Bounded enum → 4 series,
- * no user-derived label (prom-client/LESSONS.md F1). Emitted on every fail-mode
- * `null`-return so ops can alert that the semantic V2 layer is degraded. The
- * VERDICT is UNCHANGED (null → V1/sidecar fallback — decision (d) = degrade-to-
- * backstop, NOT hard block; CLAUDE.md §AI Safety, spec §8 Q1).
- */
-type JudgeDegradeReason = 'budget_exhausted' | 'timeout' | 'error' | 'misconfigured';
-
-/**
- * Increments the degrade counter. Observability MUST never break the guardrail
- * path (prom-client throws on registry-cleared / duplicate-name), so a metric
- * failure is swallowed + logged — the judge still returns its (unchanged) verdict.
- */
-const recordJudgeDegrade = (reason: JudgeDegradeReason): void => {
-  try {
-    guardrailJudgeDegradedTotal.inc({ reason });
-  } catch (err) {
-    logger.warn('guardrail_judge_degrade_metric_failed', {
-      reason,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-};
-
-/**
- * Builds the per-tenant scope + opens the one-shot Langfuse `generation` for the
- * detached judge (TD-20 R1/R8/D-Q3; PATTERNS.md:329 DON'T#13 judge-outside-trace
- * gap). Fail-open via `safeTrace` + `getLangfuse()` (PATTERNS.md:310,313 DO#12,#15);
- * enqueue-only, never adds synchronous latency (judge detached for latency in C9.7).
- * D-Q3 / UFR-013: `withStructuredOutput().invoke()` does NOT expose `usage_metadata`,
- * so we emit `model` (cost-catalog inferred) + a NON-fabricated
- * `inputLength`/`estimatedCostCents` — never invented token counts. PII: only the
- * message LENGTH, never the text (NFR Privacy / PATTERNS.md §8.1). Returns
- * `undefined` when Langfuse is unwired/down (decision path unaffected — R8).
- */
-const openJudgeGeneration = (message: string, opts: JudgeWithLlmOptions) => {
-  const lf = getLangfuse();
-  const scope: LlmJudgeScope = {
-    ...(opts.museumId !== undefined ? { museumId: opts.museumId } : {}),
-    ...(opts.tier !== undefined ? { tier: opts.tier } : {}),
-    ...(opts.requestId !== undefined ? { requestId: opts.requestId } : {}),
-  };
-  return safeTrace('langfuse.judge.generation.create', () =>
-    lf
-      ?.trace({
-        name: 'guardrail.judge',
-        metadata: { ...scope },
-      })
-      .generation({
-        name: JUDGE_GENERATION_NAME,
-        model: env.llm.model,
-        metadata: {
-          inputLength: message.length,
-          estimatedCostCents: ESTIMATED_COST_CENTS_PER_CALL,
-          ...scope,
-        },
-      }),
-  );
-};
 
 /** Fail-open: returns `null` on any failure (caller uses keyword decision). */
 export const judgeWithLlm = async (
@@ -180,7 +114,6 @@ export const judgeWithLlm = async (
     logger.warn('guardrail_judge_budget_exceeded', {
       cap_cents: env.guardrails.budgetCentsPerDay,
     });
-    recordJudgeDegrade('budget_exhausted');
     return null;
   }
 
@@ -191,7 +124,6 @@ export const judgeWithLlm = async (
         ? 'no structured-output support — judge requires withStructuredOutput-capable model'
         : 'no model injected — judge requires ChatModel',
     });
-    recordJudgeDegrade('misconfigured');
     return null;
   }
 
@@ -202,8 +134,6 @@ export const judgeWithLlm = async (
   // SEC — charge budget BEFORE invocation so timed-out calls still count
   // (else attacker could spam the judge).
   await recordJudgeCost(ESTIMATED_COST_CENTS_PER_CALL);
-
-  const generation = openJudgeGeneration(message, opts);
 
   const startedAt = Date.now();
   try {
@@ -217,11 +147,6 @@ export const judgeWithLlm = async (
     // `T | { raw, parsed }` because the orchestrator opts into `includeRaw`.
     // Judge does NOT opt in, so the runtime shape is always `T`; cast here.
     const decision = (await structured.invoke(messages, { signal })) as JudgeDecision;
-    safeTrace('langfuse.judge.generation.end', () => {
-      // D-Q3 — NO fabricated `usage` token counts; close with the verdict enum
-      // only (non-PII). `.end()` sets `endTime` implicitly.
-      generation?.end({ metadata: { decision: decision.decision } });
-    });
     return decision;
   } catch (error) {
     if (isTimeoutError(error)) {
@@ -229,21 +154,13 @@ export const judgeWithLlm = async (
         timeoutMs,
         elapsedMs: Date.now() - startedAt,
       });
-      recordJudgeDegrade('timeout');
     } else {
       // Covers model throw AND schema violations (the provider surfaces a schema
       // mismatch as a thrown validation error) → `error` reason (T1.3 contract).
       logger.warn('guardrail_judge_error', {
         error: error instanceof Error ? error.message : String(error),
       });
-      recordJudgeDegrade('error');
     }
-    safeTrace('langfuse.judge.generation.end.error', () => {
-      generation?.end({
-        level: 'ERROR',
-        statusMessage: isTimeoutError(error) ? 'judge_timeout' : 'judge_error',
-      });
-    });
     return null;
   }
 };

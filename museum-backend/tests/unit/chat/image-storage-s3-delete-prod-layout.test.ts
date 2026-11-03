@@ -65,7 +65,7 @@ async function runDeleteByPrefix(userId: number): Promise<CapturedRequest[]> {
       });
     });
 
-    server.listen(0, '127.0.0.1', async () => {
+    server.listen(0, async () => {
       try {
         const address = server.address();
         if (!address || typeof address === 'string') throw new Error('bind failed');

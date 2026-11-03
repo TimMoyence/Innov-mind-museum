@@ -6,10 +6,6 @@ import {
   DisabledTextToSpeechService,
 } from '@modules/chat/adapters/secondary/audio/text-to-speech.openai';
 import { createEmbeddingsAdapter } from '@modules/chat/adapters/secondary/embeddings/embeddings.factory';
-import { GuardrailCircuitBreaker } from '@modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker';
-import { LLMGuardAdapter } from '@modules/chat/adapters/secondary/guardrails/llm-guard.adapter';
-import { MicrosoftPresidioAdapter } from '@modules/chat/adapters/secondary/guardrails/presidio.adapter';
-import { ScanInflightSemaphore } from '@modules/chat/adapters/secondary/guardrails/scan-inflight-semaphore';
 import { SharpImageProcessor } from '@modules/chat/adapters/secondary/image/image-processing.service';
 import {
   TesseractOcrService,
@@ -23,7 +19,6 @@ import { ArtworkEmbeddingRepositoryPg } from '@modules/chat/adapters/secondary/p
 import { TypeOrmChatRepository } from '@modules/chat/adapters/secondary/persistence/chat.repository.typeorm';
 import { TypeOrmUserMemoryRepository } from '@modules/chat/adapters/secondary/persistence/userMemory.repository.typeorm';
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
-import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
 import { createRerankerAdapter } from '@modules/chat/adapters/secondary/rerank/reranker.factory';
 import { BraveSearchClient } from '@modules/chat/adapters/secondary/search/brave-search.client';
 import { DuckDuckGoClient } from '@modules/chat/adapters/secondary/search/duckduckgo.client';
@@ -41,7 +36,6 @@ import { S3CompatibleAudioStorage } from '@modules/chat/adapters/secondary/stora
 import { LocalAudioStorage } from '@modules/chat/adapters/secondary/storage/audio-storage.stub';
 import { S3CompatibleImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { LocalImageStorage } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
-import { DescribeService } from '@modules/chat/useCase/describe.service';
 import {
   GetMessageExplanationUseCase,
   TypeOrmAuditCorrelator,
@@ -74,15 +68,8 @@ import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikida
 import { WebSearchService } from '@modules/chat/useCase/web-search/web-search.service';
 import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
-import { AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN } from '@shared/audit/audit.types';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { logger } from '@shared/logger/logger';
-import {
-  llmCostCircuitBreakerState,
-  llmCostCircuitBreakerTripsTotal,
-  llmGuardCircuitBreakerState,
-  llmGuardCircuitBreakerTripsTotal,
-} from '@shared/observability/prometheus-metrics';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -90,7 +77,6 @@ import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-o
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
@@ -113,7 +99,6 @@ import type { DataSource } from 'typeorm';
 
 export interface BuiltChatModule {
   chatService: ChatService;
-  describeService: DescribeService;
   imageStorage: ImageStorage;
   /**
    * GDPR erasure (B1) — the active audio storage, exposed so the auth deletion
@@ -330,17 +315,11 @@ function buildCompareSessionAccessVerifier(
 export class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
-  private _guardrailCircuitBreaker: GuardrailCircuitBreaker | undefined;
   /**
    * Scalability primitives (perennial design §11). Cost breaker is
    * process-scoped (in-memory rolling window).
    */
   private _llmCostCircuitBreaker: LlmCostCircuitBreaker | undefined;
-  /**
-   * Single-instance reference so health probe + use-case target the SAME
-   * adapter — local metrics counters would dilute if we instantiated twice.
-   */
-  private _guardrailProvider: GuardrailProvider | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
   /**
@@ -367,38 +346,9 @@ export class ChatModule {
     return this._orchestrator?.getCircuitBreakerState();
   }
 
-  /** Mirrors `getLlmCircuitBreakerState()` shape so /api/health stays uniform (R8). */
-  getLlmGuardCircuitBreakerState():
-    | {
-        state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
-        failureCount: number;
-        lastFailureAt: Date | null;
-        openedAt: Date | null;
-      }
-    | undefined {
-    return this._guardrailCircuitBreaker?.getState();
-  }
-
   /** Perennial §11 D9. */
   getLlmCostCircuitBreaker(): LlmCostCircuitBreaker | undefined {
     return this._llmCostCircuitBreaker;
-  }
-
-  /**
-   * Returns `undefined` when `GUARDRAILS_V2_LLM_GUARD_URL` unset or module not
-   * built. Consumed by `/api/health/deep` for semantic probe (Phase 1).
-   */
-  getGuardrailProvider(): GuardrailProvider | undefined {
-    return this._guardrailProvider;
-  }
-
-  /**
-   * Lazy + cached so `/api/health/deep` accessor and chat hot path share ONE
-   * adapter — local counters + breaker reference would diverge otherwise.
-   */
-  private getOrBuildGuardrailProvider(): GuardrailProvider | undefined {
-    this._guardrailProvider ??= this.buildGuardrailProvider();
-    return this._guardrailProvider;
   }
 
   stopArtKeywordsRefresh(): void {
@@ -467,84 +417,6 @@ export class ChatModule {
       });
     }
     return new LocalAudioStorage();
-  }
-
-  /** ADR-048; ADR-015 amendment 2026-05-14. Active when GUARDRAILS_V2_LLM_GUARD_URL set. */
-  private buildGuardrailProvider(): GuardrailProvider | undefined {
-    // C9.8 (2026-05-17) — when PRESIDIO_ENABLED=true + baseUrl set, Presidio
-    // takes over as the V2 provider. The existing observe-only bake
-    // (`env.guardrails.observeOnly`) carries through unchanged so we get the
-    // full LLM02 coverage (EMAIL/PHONE/PERSON/IBAN/CARD/IP/SSN/etc.) without
-    // blocking responses during the 4-7d bake. ADR-051 promotion path.
-    if (env.guardrails.presidio.enabled && env.guardrails.presidio.baseUrl) {
-      return new MicrosoftPresidioAdapter({
-        baseUrl: env.guardrails.presidio.baseUrl,
-        timeoutMs: env.guardrails.presidio.timeoutMs,
-      });
-    }
-
-    const baseUrl = env.guardrails.llmGuardUrl;
-    if (!baseUrl) return undefined;
-
-    // Single breaker per process — shared between input + output scan paths so
-    // a sidecar degradation trips ONE breaker, not two unsynchronised ones.
-    // Metrics wired here via onStateChange so the breaker primitive stays
-    // Prometheus-free.
-    const breaker = new GuardrailCircuitBreaker({
-      failureThreshold: env.guardrails.circuitBreaker.failureThreshold,
-      windowMs: env.guardrails.circuitBreaker.windowMs,
-      openDurationMs: env.guardrails.circuitBreaker.openDurationMs,
-      halfOpenMaxProbes: env.guardrails.circuitBreaker.halfOpenMaxProbes,
-      onStateChange: (next) => {
-        const nextLabel = next.toLowerCase();
-        for (const label of ['closed', 'half_open', 'open']) {
-          llmGuardCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
-        }
-        if (next === 'OPEN') {
-          llmGuardCircuitBreakerTripsTotal.inc();
-          const snapshot = breaker.getState();
-          // Audit trail (ADR-047 R6) — no PII, metadata only.
-          fireAndForget(
-            auditService.log({
-              action: AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
-              actorType: 'system',
-              metadata: {
-                failureCount: snapshot.failureCount,
-                windowMs: env.guardrails.circuitBreaker.windowMs,
-                openedAt: snapshot.openedAt?.toISOString() ?? null,
-                // ADR-048 Phase 0 anchor — stable literal until per-tenant
-                // policy resolver (Phase 2). Anchors forensic replay across
-                // schema evolution.
-                policyVersion: 'default-v0',
-              },
-            }),
-            'llm_guard_breaker_open_audit',
-          );
-        }
-      },
-    });
-    this._guardrailCircuitBreaker = breaker;
-
-    // Seed gauges so dashboards see CLOSED before the first transition
-    // (onStateChange only fires on transitions, not construction).
-    llmGuardCircuitBreakerState.set({ state: 'closed' }, 1);
-    llmGuardCircuitBreakerState.set({ state: 'half_open' }, 0);
-    llmGuardCircuitBreakerState.set({ state: 'open' }, 0);
-
-    // Single semaphore per process — shared across input + output legs so the
-    // concurrency cap matches actual sidecar fan-out.
-    const semaphore = new ScanInflightSemaphore(
-      env.guardrails.maxInflight,
-      env.guardrails.queueMax,
-    );
-
-    return new LLMGuardAdapter({
-      baseUrl,
-      timeoutMs: env.guardrails.timeoutMs,
-      circuitBreaker: breaker,
-      semaphore,
-      chaosRate: env.guardrails.chaosRate,
-    });
   }
 
   /** Always active in V1. */
@@ -688,20 +560,7 @@ export class ChatModule {
       hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
       dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
       openDurationMs: env.guardrails.costCircuitBreaker.openDurationMs,
-      onStateChange: (next) => {
-        const nextLabel = next.toLowerCase();
-        for (const label of ['closed', 'half_open', 'open']) {
-          llmCostCircuitBreakerState.set({ state: label }, label === nextLabel ? 1 : 0);
-        }
-        if (next === 'OPEN') {
-          llmCostCircuitBreakerTripsTotal.inc();
-        }
-      },
     });
-    // Seed gauges so dashboards see CLOSED before the first transition.
-    llmCostCircuitBreakerState.set({ state: 'closed' }, 1);
-    llmCostCircuitBreakerState.set({ state: 'half_open' }, 0);
-    llmCostCircuitBreakerState.set({ state: 'open' }, 0);
 
     // M1 W5-C3 — feed the SAME singleton into the TTS adapter so voice spend is
     // observed by the global spike/daily breaker (AC8).
@@ -789,7 +648,6 @@ export class ChatModule {
       frictionStore,
     });
 
-    const describeService = new DescribeService({ orchestrator: effectiveOrchestrator, tts });
 
     const compareImageUseCase = buildCompareImageUseCase(
       repository,
@@ -812,7 +670,6 @@ export class ChatModule {
 
     const built: BuiltChatModule = {
       chatService,
-      describeService,
       imageStorage,
       audioStorage,
       repository,
@@ -880,12 +737,7 @@ export class ChatModule {
       // C9.9 (2026-05-18) — OUTPUT O3 art-topic classifier retired.
       // Share ONE adapter — local `metrics()` counters + breaker reference
       // would diverge across instances.
-      guardrailProvider: this.getOrBuildGuardrailProvider(),
-      guardrailProviderObserveOnly: env.guardrails.observeOnly,
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
-      // Hybrid-gravity (2026-06-01) — inject the friction store + config so the
-      // 2-level escalation / cool-down is ACTIVE in prod (not just via the test
-      // seam). `frictionEnabled` / thresholds default from env inside ChatService.
       frictionStore: deps.frictionStore,
       // TD-20 (R13c) — forward the optional `{tier, requestId}` scope (museumId
       // honestly absent on this path, D5) into the judge generation.
@@ -896,7 +748,6 @@ export class ChatModule {
           ...(scope?.tier !== undefined ? { tier: scope.tier } : {}),
           ...(scope?.requestId !== undefined ? { requestId: scope.requestId } : {}),
         }),
-      piiSanitizer: new RegexPiiSanitizer(),
       museumRepository: deps.museumRepository,
       dbLookup: deps.knowledgeExtraction.dbLookup,
       extractionQueue: deps.knowledgeExtraction.extractionQueue,
@@ -962,24 +813,14 @@ export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
     ? getActiveChatModule().getBuilt().artKeywordRepository
     : undefined;
 
-export const getDescribeService = (): DescribeService | undefined =>
-  getActiveChatModule().isBuilt() ? getActiveChatModule().getBuilt().describeService : undefined;
-
 export const getLlmCircuitBreakerState = (): ReturnType<ChatModule['getLlmCircuitBreakerState']> =>
   getActiveChatModule().getLlmCircuitBreakerState();
-
-export const getLlmGuardCircuitBreakerState = (): ReturnType<
-  ChatModule['getLlmGuardCircuitBreakerState']
-> => getActiveChatModule().getLlmGuardCircuitBreakerState();
 
 /**
  * Consumed by `/api/health/deep` (Phase 1 semantic probe). Undefined when
  * module not built OR `GUARDRAILS_V2_LLM_GUARD_URL` unset — both collapse to
  * "no semantic probe available" → empty `checks.guardrails` array.
  */
-export const getGuardrailProvider = (): GuardrailProvider | undefined =>
-  getActiveChatModule().getGuardrailProvider();
-
 export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().artworkKnowledgeRepo

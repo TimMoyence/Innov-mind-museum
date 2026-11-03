@@ -3,7 +3,6 @@ import { AppDataSource } from '@data/db/data-source';
 import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/pg/apiKey.repository.pg';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
-import { TotpSecretRepositoryPg } from '@modules/auth/adapters/secondary/pg/totp-secret.repository.pg';
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
 import { UserConsentRepositoryPg } from '@modules/auth/adapters/secondary/pg/userConsent.repository.pg';
 import { socialNonceStore } from '@modules/auth/adapters/secondary/social/nonce-store';
@@ -34,12 +33,6 @@ import { VerifyEmailUseCase } from '@modules/auth/useCase/registration/verifyEma
 import { AuthSessionService } from '@modules/auth/useCase/session/authSession.service';
 import { RedeemSocialOtcUseCase } from '@modules/auth/useCase/social/redeemSocialOtc.useCase';
 import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
-import { ChallengeMfaUseCase } from '@modules/auth/useCase/totp/challengeMfa.useCase';
-import { DisableMfaUseCase } from '@modules/auth/useCase/totp/disableMfa.useCase';
-import { EnrollMfaUseCase } from '@modules/auth/useCase/totp/enrollMfa.useCase';
-import { GetMfaStatusUseCase } from '@modules/auth/useCase/totp/getMfaStatus.useCase';
-import { RecoveryMfaUseCase } from '@modules/auth/useCase/totp/recoveryMfa.useCase';
-import { VerifyMfaUseCase } from '@modules/auth/useCase/totp/verifyMfa.useCase';
 import { auditService } from '@shared/audit';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
@@ -79,7 +72,6 @@ const userRepository = new UserRepositoryPg(AppDataSource);
 const socialAccountRepository = new SocialAccountRepositoryPg(AppDataSource);
 const socialTokenVerifier = new SocialTokenVerifierAdapter();
 const refreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
-const totpSecretRepository = new TotpSecretRepositoryPg(AppDataSource);
 
 const testEmailService = env.auth.emailServiceKind === 'test' ? new TestEmailService() : null;
 
@@ -94,27 +86,7 @@ const frontendUrl = env.frontendUrl;
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
 /** Revokes refresh tokens on reset (OWASP). */
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository, refreshTokenRepository);
-const authSessionService = new AuthSessionService(
-  userRepository,
-  refreshTokenRepository,
-  totpSecretRepository,
-);
-
-/** R16 MFA singletons. */
-const enrollMfaUseCase = new EnrollMfaUseCase(userRepository, totpSecretRepository);
-const verifyMfaUseCase = new VerifyMfaUseCase(userRepository, totpSecretRepository);
-const disableMfaUseCase = new DisableMfaUseCase(userRepository, totpSecretRepository);
-const getMfaStatusUseCase = new GetMfaStatusUseCase(totpSecretRepository);
-const challengeMfaUseCase = new ChallengeMfaUseCase(
-  userRepository,
-  totpSecretRepository,
-  authSessionService,
-);
-const recoveryMfaUseCase = new RecoveryMfaUseCase(
-  userRepository,
-  totpSecretRepository,
-  authSessionService,
-);
+const authSessionService = new AuthSessionService(userRepository, refreshTokenRepository);
 /**
  * F3 — OIDC nonce store. Delegating singleton: `src/index.ts` boot can upgrade
  * to {@link RedisNonceStore} via `setSocialNonceStore` once shared Redis is
@@ -446,11 +418,5 @@ export {
   revokeConsentUseCase,
   userConsentRepository,
   userRepository,
-  enrollMfaUseCase,
-  verifyMfaUseCase,
-  disableMfaUseCase,
-  challengeMfaUseCase,
-  recoveryMfaUseCase,
-  getMfaStatusUseCase,
   wireAuthMiddleware,
 };

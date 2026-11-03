@@ -5,7 +5,6 @@ import helmet from 'helmet';
 
 import { AppDataSource } from '@data/db/data-source';
 import { wireAuthMiddleware } from '@modules/auth';
-import { UserRole } from '@modules/auth/domain/user/user-role';
 import { buildChatService } from '@modules/chat';
 import { setActiveChatModule } from '@modules/chat/chat-module';
 import { museumRepository } from '@modules/museum';
@@ -16,7 +15,6 @@ import { resolveCorsOrigin } from '@shared/http/cors.config';
 import { setupSwagger } from '@shared/http/swagger';
 import { logger } from '@shared/logger/logger';
 import { acceptLanguageMiddleware } from '@shared/middleware/accept-language.middleware';
-import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { cookieParserMiddleware } from '@shared/middleware/cookie-parser.middleware';
 import { csrfMiddleware } from '@shared/middleware/csrf.middleware';
 import { dataModeMiddleware } from '@shared/middleware/dataMode.middleware';
@@ -28,11 +26,8 @@ import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.m
 import * as requestDecompression from '@shared/middleware/request-decompression.middleware';
 import { requestIdMiddleware } from '@shared/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
-import { requireRole } from '@shared/middleware/require-role.middleware';
 import { resetFailureCounters } from '@shared/net-shaping/failure-counter.store';
 import { createNetProfileFaultMiddleware } from '@shared/net-shaping/net-profile-fault.middleware';
-import { httpMetricsMiddleware, metricsHandler } from '@shared/observability/metrics-middleware';
-import { enableDefaultMetrics } from '@shared/observability/prometheus-metrics';
 import { setupSentryExpressErrorHandler } from '@shared/observability/sentry';
 import { tracePropagationMiddleware } from '@shared/observability/trace-propagation.middleware';
 import { createApiRouter } from '@shared/routers/api.router';
@@ -312,31 +307,6 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
 
   applyGlobalMiddleware(app);
 
-  // H (2026-05-01) — Prometheus scrape endpoint + per-request RED metrics.
-  // Mounted after global middleware (auth, rate-limit, etc.) so the /metrics
-  // route inherits CORS and security headers, but BEFORE API routes so every
-  // subsequent handler is observed by httpMetricsMiddleware.
-  // enableDefaultMetrics() spins up prom-client's process-level collectors
-  // (CPU, memory, event-loop lag, FDs) — wired here, not at module load,
-  // because those collectors register setIntervals that don't `.unref()` and
-  // would keep Node alive past Stryker mutant runs (kills hot-reload throughput).
-  enableDefaultMetrics();
-  app.use(httpMetricsMiddleware);
-  // TD-PC-02 — /metrics is super-admin gated (HANDOFF §7.5 Option (b)).
-  // Public scrape would leak internal label cardinality + breaker state +
-  // tenant_id + custom labels. Bearer JWT or `access_token` cookie required,
-  // role must be SUPER_ADMIN. Cache-Control `no-store` so any CDN that ever
-  // fronts the app never serves a stale Prom snapshot.
-  app.get(
-    '/metrics',
-    (_req, res, next) => {
-      res.setHeader('Cache-Control', 'private, no-store');
-      next();
-    },
-    isAuthenticated,
-    requireRole(UserRole.SUPER_ADMIN),
-    metricsHandler,
-  );
 
   if (!isProd) {
     setupSwagger(app);

@@ -12,18 +12,11 @@ import {
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAdminDict } from '@/lib/admin-dictionary';
-import { ApiError, apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
+import { apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
-import type {
-  AuthSessionResponse,
-  LoginOutcome,
-  MfaRequiredResponse,
-  UserRole,
-} from '@/lib/admin-types';
+import type { AuthSessionResponse, UserRole } from '@/lib/admin-types';
 
-// Re-export the canonical UserRole so existing `import { UserRole } from '@/lib/auth'`
-// call sites keep working. Single source of truth lives in `admin-types.ts`.
-export type { UserRole, LoginOutcome } from '@/lib/admin-types';
+export type { UserRole } from '@/lib/admin-types';
 
 // ---------------------------------------------------------------------------
 // Admin authz cookie — middleware redirect hint
@@ -76,14 +69,7 @@ interface AuthContextValue {
   isLoading: boolean;
   /** True while the mount-time `/api/auth/me` probe is in flight. */
   isHydrating: boolean;
-  login: (email: string, password: string) => Promise<LoginOutcome>;
-  /**
-   * Establish an authenticated session from a success envelope (sets the
-   * `admin-authz` hint cookie + the local user). Exposed so the MFA
-   * challenge/recovery success path in LoginForm reuses the exact same
-   * session-establish logic as a direct login (DRY, design D1).
-   */
-  establishSession: (data: AuthSessionResponse) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -166,67 +152,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerLogoutHandler(logout);
   }, [logout]);
 
-  /**
-   * Establish an authenticated session from a success envelope: record the
-   * `admin-authz` middleware hint cookie (F7 — the real JWTs live in HttpOnly
-   * cookies JS cannot touch) and populate the local `AuthUser`. Reused by the
-   * direct-login success branch AND the MFA challenge/recovery success path
-   * (which surfaces the same `AuthSessionResponse` shape).
-   */
-  const establishSession = useCallback((data: AuthSessionResponse) => {
-    setAdminAuthzCookie();
-    const u = data.user;
-    const nameParts = [u.firstname, u.lastname].filter(Boolean);
-    const name = nameParts.length > 0 ? nameParts.join(' ') : u.email;
-    setUser({ id: u.id, email: u.email, name, role: u.role as UserRole });
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const data = await apiPost<AuthSessionResponse>(
+        '/api/auth/login',
+        { email, password },
+        { skipAuthRefresh: true },
+      );
+      setAdminAuthzCookie();
+      const u = data.user;
+      const nameParts = [u.firstname, u.lastname].filter(Boolean);
+      const name = nameParts.length > 0 ? nameParts.join(' ') : u.email;
+      setUser({ id: u.id, email: u.email, name, role: u.role as UserRole });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
-
-  const login = useCallback(
-    async (email: string, password: string): Promise<LoginOutcome> => {
-      setIsLoading(true);
-      try {
-        // `skipAuthRefresh` — a 401/403 here is a domain/credential error, not
-        // session expiry, so it must NOT trigger the auto-refresh/logout path.
-        const data = await apiPost<AuthSessionResponse | MfaRequiredResponse>(
-          '/api/auth/login',
-          { email, password },
-          { skipAuthRefresh: true },
-        );
-        // Branch 2 — MfaRequiredResponse: no JWT issued, no `user`; carry the
-        // short-lived session token up to LoginForm's challenge step. The
-        // `mfaRequired` key is exclusive to this envelope (AuthSessionResponse
-        // has no such field) so `in` is a sound, exhaustive discriminant.
-        if ('mfaRequired' in data) {
-          return {
-            kind: 'mfa-required',
-            mfaSessionToken: data.mfaSessionToken,
-            mfaSessionExpiresIn: data.mfaSessionExpiresIn,
-          };
-        }
-        // Branch 1 — AuthSessionResponse: establish the session.
-        establishSession(data);
-        return { kind: 'success' };
-      } catch (error) {
-        // Branch 3 — a 403 whose body carries `mfaEnrollmentRequired` means the
-        // admin must enroll first. Discriminate on the BODY, not the status:
-        // non-MFA 403s (ACCOUNT_SUSPENDED, …) arrive as `{ error: { code } }`
-        // with no such field and must re-throw as a genuine failure.
-        if (
-          error instanceof ApiError &&
-          error.status === 403 &&
-          typeof error.body === 'object' &&
-          error.body !== null &&
-          (error.body as { mfaEnrollmentRequired?: unknown }).mfaEnrollmentRequired === true
-        ) {
-          return { kind: 'enrollment-required' };
-        }
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [establishSession],
-  );
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -235,10 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isHydrating,
       login,
-      establishSession,
       logout,
     }),
-    [user, isLoading, isHydrating, login, establishSession, logout],
+    [user, isLoading, isHydrating, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

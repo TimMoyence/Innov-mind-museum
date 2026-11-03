@@ -114,17 +114,6 @@ jest.mock('@modules/auth/adapters/primary/http/routes/me.route', () => ({
     return r;
   })(),
 }));
-jest.mock('@modules/auth/adapters/primary/http/routes/mfa.route', () => ({
-  __esModule: true,
-  default: (() => {
-    const { Router } = jest.requireActual<typeof import('express')>('express');
-    const r = Router();
-    r.get('/__probe', (_req, res) => {
-      res.status(200).json({ label: 'mfa' });
-    });
-    return r;
-  })(),
-}));
 // R2 W3.4 — `admin-export.route` imports `authenticated.middleware` which
 // transitively pulls `auth/useCase` → `AppDataSource`. Same env.db.host trap
 // as me.route / mfa.route — stub the router out (mirrors corrective in
@@ -161,10 +150,6 @@ jest.mock('@modules/chat/adapters/primary/http/routes/chat.route', () => ({
 }));
 
 const getLlmCircuitBreakerStateMock = jest.fn<
-  { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
-  []
->();
-const getLlmGuardCircuitBreakerStateMock = jest.fn<
   { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
   []
 >();
@@ -206,7 +191,6 @@ jest.mock('@modules/chat/chat-module', () => {
       isBuilt: () => isBuiltMock(),
       getBuilt: () => built,
       getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
-      getLlmGuardCircuitBreakerState: () => getLlmGuardCircuitBreakerStateMock(),
     }),
     setActiveChatModule: () => {},
     resetActiveChatModule: () => {},
@@ -219,7 +203,6 @@ jest.mock('@modules/chat/chat-module', () => {
     getArtKeywordRepository: () => undefined,
     getDescribeService: () => undefined,
     getLlmCircuitBreakerState: () => getLlmCircuitBreakerStateMock(),
-    getLlmGuardCircuitBreakerState: () => getLlmGuardCircuitBreakerStateMock(),
     getArtworkKnowledgeRepo: () => (isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined),
     getCompareImageUseCase: () => undefined,
     getCompareSessionAccessVerifier: () => undefined,
@@ -551,25 +534,6 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.checks.llmCircuitBreaker).toBeUndefined();
   });
 
-  // ── R8 — llmGuard CB state surfaced in /health (additive 2026-05-12) ───
-  // Mirrors the `llmCircuitBreaker` assertions above, applied to the new
-  // sidecar breaker accessor (`getLlmGuardCircuitBreakerState`). Same
-  // redaction posture as the existing breaker.
-  it('passes llmGuard state into buildHealthPayload when getLlmGuardCircuitBreakerState() returns a state', async () => {
-    getLlmGuardCircuitBreakerStateMock.mockReturnValue({ state: 'OPEN' });
-    const res = await request(buildApp({})).get('/api/health');
-    expect(res.status).toBe(200);
-    expect(res.body.checks.llmGuard).toBe('OPEN');
-  });
-
-  it('omits llmGuard when getLlmGuardCircuitBreakerState() returns undefined', async () => {
-    getLlmGuardCircuitBreakerStateMock.mockReturnValue(undefined);
-    const res = await request(buildApp({})).get('/api/health');
-    // Mutant `guardCbState.state` would throw on undefined → 500.
-    expect(res.status).toBe(200);
-    expect(res.body.checks.llmGuard).toBeUndefined();
-  });
-
   // ── responseTimeMs presence in non-prod vs prod (L177) ─────────────────
   it('includes responseTimeMs in non-production (env.nodeEnv=test)', async () => {
     envMock.nodeEnv = 'test';
@@ -629,12 +593,6 @@ describe('createApiRouter — sub-router mount path literals', () => {
     const res = await probe(buildApp({}), '/api/auth/consent/__probe');
     expect(res.status).toBe(200);
     expect(res.body.label).toBe('consent');
-  });
-
-  it('mounts the mfa sub-router at /auth/mfa BEFORE the catch-all auth router', async () => {
-    const res = await probe(buildApp({}), '/api/auth/mfa/__probe');
-    expect(res.status).toBe(200);
-    expect(res.body.label).toBe('mfa');
   });
 
   it('mounts the auth sub-router at /auth', async () => {

@@ -30,10 +30,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     googleClientIds: ['test-audience'],
     appleJwksUrl: 'https://appleid.apple.com/auth/keys',
     googleJwksUrl: 'https://www.googleapis.com/oauth2/v3/certs',
-    mfaEncryptionKey: 'd'.repeat(32),
-    mfaSessionTokenSecret: 'e'.repeat(32),
-    mfaSessionTokenTtlSeconds: 300,
-    mfaEnrollmentWarningDays: 30,
     oidcNonceEnforce: false,
     csrfSecret: 'f'.repeat(32),
     emailServiceKind: 'brevo',
@@ -175,13 +171,10 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     museumEnrichmentSchedulerEnabled: false,
     redis: { host: 'localhost', port: 6379 },
     guardrails: {
-      timeoutMs: 300,
-      observeOnly: false,
       budgetCentsPerDay: 0,
       judgeTimeoutMs: 500,
       judgeMinMessageLength: 50,
       budgetBackend: 'memory',
-      frictionEnabled: true,
       frictionSessionThreshold: 3,
       frictionUserThreshold: 10,
       frictionSessionTtlMs: 21_600_000,
@@ -189,16 +182,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
       frictionCooldownMs: 120_000,
       frictionWeightSecurity: 2,
       frictionWeightOfftopic: 1,
-      circuitBreaker: {
-        failureThreshold: 5,
-        windowMs: 60_000,
-        openDurationMs: 30_000,
-        halfOpenMaxProbes: 1,
-      },
-      maxInflight: 8,
-      queueMax: 32,
-      chaosRate: 0,
-      presidio: { enabled: false, timeoutMs: 500 },
       costCircuitBreaker: {
         hourlyThresholdCents: 5_000,
         dailyBudgetCents: 50_000,
@@ -235,15 +218,11 @@ describe('auth: AUTH_EMAIL_SERVICE_KIND=test rejected in production', () => {
     const saved = {
       JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
       JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
-      MFA_ENCRYPTION_KEY: process.env.MFA_ENCRYPTION_KEY,
-      MFA_SESSION_TOKEN_SECRET: process.env.MFA_SESSION_TOKEN_SECRET,
       CSRF_SECRET: process.env.CSRF_SECRET,
       MEDIA_SIGNING_SECRET: process.env.MEDIA_SIGNING_SECRET,
     };
     process.env.JWT_ACCESS_SECRET = 'b'.repeat(32);
     process.env.JWT_REFRESH_SECRET = 'c'.repeat(32);
-    process.env.MFA_ENCRYPTION_KEY = 'd'.repeat(32);
-    process.env.MFA_SESSION_TOKEN_SECRET = 'e'.repeat(32);
     process.env.CSRF_SECRET = 'f'.repeat(32);
     process.env.MEDIA_SIGNING_SECRET = 'g'.repeat(32);
 

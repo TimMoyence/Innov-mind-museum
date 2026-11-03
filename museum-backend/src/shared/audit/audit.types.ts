@@ -47,17 +47,10 @@ export const AUDIT_API_KEY_REVOKED = 'API_KEY_REVOKED';
 export const AUDIT_SECURITY_RATE_LIMIT = 'SECURITY_RATE_LIMIT';
 export const AUDIT_SECURITY_GUARDRAIL_BLOCK = 'SECURITY_GUARDRAIL_BLOCK';
 export const AUDIT_SECURITY_GUARDRAIL_PASS = 'SECURITY_GUARDRAIL_PASS';
-// ADR-047 (2026-05-12) — emitted on every LLM Guard sidecar circuit-breaker
-// transition into OPEN. Metadata-only (no raw prompts); correlate with /metrics.
-export const AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN = 'SECURITY_LLM_GUARD_BREAKER_OPEN';
 // V13 / STRIDE R3 — phase-scoped (input vs output). Redacted snippet (≤64
 // chars) + sha256 fingerprint for forensic dedup without echoing raw payloads.
 export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
 export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
-// LLM02 (2026-05-14) — guardrail returned sanitized input (PII scrubbed via
-// Anonymize / Presidio). Payload = post-scrub text + placeholder counts ONLY
-// (raw PII NEVER reaches the audit chain).
-export const AUDIT_GUARDRAIL_INPUT_REDACTED = 'GUARDRAIL_INPUT_REDACTED';
 
 // ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';
@@ -90,15 +83,6 @@ export const AUDIT_ADMIN_TICKET_UPDATED = 'ADMIN_TICKET_UPDATED';
 
 // ─── Review moderation events ───
 export const AUDIT_ADMIN_REVIEW_MODERATED = 'ADMIN_REVIEW_MODERATED';
-
-// ─── MFA events (R16, SOC2 CC6.1) ───
-export const AUDIT_MFA_ENROLL_STARTED = 'MFA_ENROLL_STARTED';
-export const AUDIT_MFA_ENROLL_VERIFIED = 'MFA_ENROLL_VERIFIED';
-export const AUDIT_MFA_DISABLED = 'MFA_DISABLED';
-export const AUDIT_MFA_CHALLENGE_SUCCESS = 'MFA_CHALLENGE_SUCCESS';
-export const AUDIT_MFA_CHALLENGE_FAILED = 'MFA_CHALLENGE_FAILED';
-export const AUDIT_MFA_RECOVERY_USED = 'MFA_RECOVERY_USED';
-export const AUDIT_MFA_WARNING_STARTED = 'MFA_WARNING_STARTED';
 
 // ─── GDPR consent events (S4-P0-02 — Apple Guideline 5.1.2(i) + GDPR Art. 7) ───
 // Hash-chained row from GrantConsentUseCase/RevokeConsentUseCase after

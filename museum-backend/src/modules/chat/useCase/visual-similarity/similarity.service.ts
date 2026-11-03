@@ -14,14 +14,6 @@ import { createHash } from 'node:crypto';
 
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import {
-  compareCacheHitsTotal,
-  compareDurationSeconds,
-  compareFallbackTotal,
-  compareRequestsTotal,
-} from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import { templateRationale, type SharedAttribute } from './rationale-templater';
 import { maybeRerankCompareMatches } from './rerank-phase';
@@ -111,47 +103,6 @@ export interface CompareInput {
   queryText?: string;
 }
 
-/** Mockable shape decoupled from full Langfuse SDK type. */
-interface VisualCompareTrace {
-  span(args: {
-    name: string;
-    startTime?: Date;
-    endTime?: Date;
-    metadata?: Record<string, unknown>;
-  }): unknown;
-  update(args: { output?: unknown; metadata?: Record<string, unknown> }): void;
-}
-
-/** Span + Prom histogram, both fail-open (Langfuse/Prom outage cannot break chat). */
-function recordStageSpan(
-  parent: VisualCompareTrace | undefined,
-  name: string,
-  startMs: number,
-  metadata: Record<string, unknown>,
-): void {
-  const durationSec = (Date.now() - startMs) / 1000;
-  safeTrace(`visualSimilarity.span.${name}`, () => {
-    parent?.span({
-      name: `chat.compare.${name}`,
-      startTime: new Date(startMs),
-      endTime: new Date(),
-      metadata: { ...metadata, durationMs: Date.now() - startMs },
-    });
-  });
-  safeTrace(`visualSimilarity.metric.${name}`, () => {
-    compareDurationSeconds.observe({ stage: name }, durationSec);
-  });
-}
-
-function updateParentTrace(
-  parent: VisualCompareTrace | undefined,
-  output: Record<string, unknown>,
-  metadata: Record<string, unknown>,
-): void {
-  safeTrace('visualSimilarity.span.update', () => {
-    parent?.update({ output, metadata });
-  });
-}
 
 /** R3 — `max(20, 4*topK)`. */
 function resolveTopN(topK: number, override: number | undefined): number {
@@ -250,21 +201,12 @@ export class VisualSimilarityService {
     const topK = input.topK > 0 ? input.topK : this.defaultTopK;
     const cacheKey = resultCacheKey({ ...input, topK });
 
-    // Increment once per compare call (post-rate-limit/auth entry point).
-    safeTrace('visualSimilarity.metric.requests', () => {
-      compareRequestsTotal.inc();
-    });
-
-    const parentSpan = this.openParentSpan(input, topK);
-
-    const cacheHit = await this.tryCache(cacheKey, parentSpan, startedAt);
+    const cacheHit = await this.tryCache(cacheKey);
     if (cacheHit !== undefined) return cacheHit;
 
-    const encoded = await this.encodeOrFallback(input, parentSpan, startedAt);
+    const encoded = await this.encodeOrFallback(input, startedAt);
     if ('fallback' in encoded) return encoded.fallback;
     const { vector, modelVersion } = encoded;
-
-    const searchStart = Date.now();
     const topN = resolveTopN(topK, this.topNOverride);
     // exactOptionalPropertyTypes: only set fields when defined so repo can
     // distinguish "not provided" (legacy global read + warn, OWASP LLM08)
@@ -277,35 +219,18 @@ export class VisualSimilarityService {
       findOpts.museumId = input.museumId;
     }
     const neighbours = await this.repo.findNearest(vector, topN, findOpts);
-    recordStageSpan(parentSpan, 'search', searchStart, {
-      topN,
-      neighboursCount: neighbours.length,
-    });
 
     if (neighbours.length === 0) {
-      const result = this.buildNoNeighborResult(
-        modelVersion,
-        startedAt,
-        parentSpan,
-        'search',
-        true,
-      );
+      const result = this.buildNoNeighborResult(modelVersion, startedAt);
       await this.writeCache(cacheKey, result);
       return result;
     }
-
-    const enrichStart = Date.now();
     const qids = neighbours.map((n) => n.qid);
     // Enrichment is a supplementary overlay over the visual kNN. Its per-qid
     // failures are isolated INSIDE wikidata-enricher (a lookup throw → gap in
     // the Map, never a batch rejection) — that is the root-cause guard for the
     // 2026-06-14 prod 500 (encoder fix exposed an unprotected lookup throw).
     const factsByQid = await this.enricher.enrichBatch(qids, input.locale);
-    recordStageSpan(parentSpan, 'enrich', enrichStart, {
-      requestedQids: qids.length,
-      resolvedQids: factsByQid.size,
-      droppedCount: qids.length - factsByQid.size,
-    });
 
     const result = this.scoreAndPackage({
       neighbours,
@@ -314,22 +239,10 @@ export class VisualSimilarityService {
       topK,
       modelVersion,
       startedAt,
-      parentSpan,
     });
 
     result.matches = await this.applyOptionalRerank(input.queryText, result.matches);
 
-    updateParentTrace(
-      parentSpan,
-      {
-        matchesCount: result.matches.length,
-        fallbackReason: result.fallbackReason ?? null,
-      },
-      { stage: 'complete', durationMs: result.durationMs },
-    );
-    safeTrace('visualSimilarity.metric.total', () => {
-      compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
-    });
 
     await this.writeCache(cacheKey, result);
     return result;
@@ -353,40 +266,10 @@ export class VisualSimilarityService {
     );
   }
 
-  private openParentSpan(input: CompareInput, topK: number): VisualCompareTrace | undefined {
-    const lf = getLangfuse();
-    return safeTrace(
-      'visualSimilarity.span.create',
-      () =>
-        lf?.trace({
-          name: 'chat.compare.total',
-          metadata: {
-            topK,
-            locale: input.locale,
-            mimeType: input.mimeType,
-            museumQidsCount: input.museumQids?.length ?? 0,
-          },
-        }) as VisualCompareTrace | undefined,
-    );
-  }
-
-  private async tryCache(
-    cacheKey: string,
-    parentSpan: VisualCompareTrace | undefined,
-    startedAt: number,
-  ): Promise<CompareResult | undefined> {
+  private async tryCache(cacheKey: string): Promise<CompareResult | undefined> {
     try {
       const cached = await this.cache.get<CompareResult>(cacheKey);
       if (cached !== null) {
-        updateParentTrace(
-          parentSpan,
-          { cacheHit: true, matchesCount: cached.matches.length },
-          { stage: 'cache', durationMs: Date.now() - startedAt },
-        );
-        safeTrace('visualSimilarity.metric.cache_hit', () => {
-          compareCacheHitsTotal.inc();
-          compareDurationSeconds.observe({ stage: 'total' }, (Date.now() - startedAt) / 1000);
-        });
         return cached;
       }
     } catch (err) {
@@ -400,35 +283,17 @@ export class VisualSimilarityService {
   /** On `EncoderUnavailableError`: returns `{ fallback }` discriminator. */
   private async encodeOrFallback(
     input: CompareInput,
-    parentSpan: VisualCompareTrace | undefined,
     startedAt: number,
   ): Promise<{ vector: Float32Array; modelVersion: string } | { fallback: CompareResult }> {
-    const encodeStart = Date.now();
     try {
       const encoded = await this.encoder.encode({
         buffer: input.buffer,
         mimeType: input.mimeType,
       });
-      recordStageSpan(parentSpan, 'encode', encodeStart, {
-        modelVersion: encoded.modelVersion,
-      });
       return { vector: encoded.vector, modelVersion: encoded.modelVersion };
     } catch (err) {
       if (!(err instanceof EncoderUnavailableError)) throw err;
       logger.warn('visual_similarity_encoder_unavailable', { error: err.message });
-      updateParentTrace(
-        parentSpan,
-        { fallbackReason: 'encoder_unavailable' },
-        {
-          stage: 'encode',
-          durationMs: Date.now() - startedAt,
-          error: 'EncoderUnavailableError',
-        },
-      );
-      safeTrace('visualSimilarity.metric.fallback_encoder', () => {
-        compareFallbackTotal.inc({ reason: 'encoder_unavailable' });
-        compareDurationSeconds.observe({ stage: 'total' }, (Date.now() - startedAt) / 1000);
-      });
       return {
         fallback: {
           matches: [],
@@ -445,35 +310,13 @@ export class VisualSimilarityService {
    * all-below-floor paths (trace + `compareFallbackTotal` stay in sync). Side
    * effects fail-open via `safeTrace`.
    */
-  private buildNoNeighborResult(
-    modelVersion: string,
-    startedAt: number,
-    parentSpan: VisualCompareTrace | undefined,
-    stage: string,
-    // Early-return callers (empty kNN) own the `total` duration observation
-    // because they never reach the shared post-scoring observe; the scoreAndPackage
-    // caller passes `false` since it observes `total` once on the returned result
-    // (avoids a double-count, P3-METRIC).
-    observeTotal: boolean,
-  ): CompareResult {
-    const result: CompareResult = {
+  private buildNoNeighborResult(modelVersion: string, startedAt: number): CompareResult {
+    return {
       matches: [],
       durationMs: Date.now() - startedAt,
       modelVersion,
       fallbackReason: 'no_visual_neighbor',
     };
-    updateParentTrace(
-      parentSpan,
-      { fallbackReason: 'no_visual_neighbor' },
-      { stage, durationMs: result.durationMs },
-    );
-    safeTrace('visualSimilarity.metric.fallback_no_neighbor', () => {
-      compareFallbackTotal.inc({ reason: 'no_visual_neighbor' });
-      if (observeTotal) {
-        compareDurationSeconds.observe({ stage: 'total' }, result.durationMs / 1000);
-      }
-    });
-    return result;
   }
 
   private scoreAndPackage(args: {
@@ -483,10 +326,8 @@ export class VisualSimilarityService {
     topK: number;
     modelVersion: string;
     startedAt: number;
-    parentSpan: VisualCompareTrace | undefined;
   }): CompareResult {
-    const { neighbours, factsByQid, locale, topK, modelVersion, startedAt, parentSpan } = args;
-    const fusionStart = Date.now();
+    const { neighbours, factsByQid, locale, topK, modelVersion, startedAt } = args;
     const matches: CompareMatch[] = [];
     for (const neighbour of neighbours) {
       const facts = factsByQid.get(neighbour.qid);
@@ -499,15 +340,9 @@ export class VisualSimilarityService {
     const aboveFloor = matches.filter((m) => m.finalScore >= this.fallbackVisualThreshold);
     // D-03.2 — neighbours existed but none clears the floor → shared fallback.
     if (aboveFloor.length === 0) {
-      // observeTotal:false — the scoreAndPackage caller observes `total` once on
-      // the returned result, so the fallback must not double-count it (P3-METRIC).
-      return this.buildNoNeighborResult(modelVersion, startedAt, parentSpan, 'fusion', false);
+      return this.buildNoNeighborResult(modelVersion, startedAt);
     }
     const topMatches = aboveFloor.slice(0, topK);
-    recordStageSpan(parentSpan, 'fusion', fusionStart, {
-      scoredCount: matches.length,
-      returnedCount: topMatches.length,
-    });
     return {
       matches: topMatches,
       durationMs: Date.now() - startedAt,

@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -12,6 +13,7 @@ import type { UserTier } from './user-tier';
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
 @Entity({ name: 'users' })
+@Check('CHK_users_tier', `"tier" IN ('free','premium')`)
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -113,15 +115,6 @@ export class User {
   email_change_token_expiry?: Date | null;
 
   /**
-   * MFA warning policy (R16, SOC2 CC6.1). Set to `now + MFA_ENROLLMENT_WARNING_DAYS`
-   * on first admin login post-deploy. Inside window: banner via `mfaWarningDaysRemaining`.
-   * Past deadline: login stops issuing JWTs, surfaces `mfaEnrollmentRequired=true`.
-   * Cleared (`null`) on successful enrol. Always nullable: visitors never get a deadline.
-   */
-  @Column({ type: 'timestamptz', nullable: true, name: 'mfa_enrollment_deadline' })
-  mfaEnrollmentDeadline?: Date | null;
-
-  /**
    * "Majorité numérique" 15y (CNIL Délibération 2021-018). Nullable for legacy
    * accounts created before the age-gate; new registrations always set it.
    */
@@ -132,15 +125,7 @@ export class User {
   @Column({ type: 'boolean', default: false })
   suspended!: boolean;
 
-  /**
-   * Soft-delete login-gate: when set, auth refuses login + refresh (filtered
-   * post-fetch — hand-rolled `@Column`, not `@DeleteDateColumn`, so callers must
-   * filter manually, cf. `authSession.service.ts:103,185` + TD-TO-01). It is NOT
-   * the RGPD Art.17 mechanism: the hard erase IS implemented — `DeleteAccountUseCase`
-   * + `IUserRepository.deleteUser` hard-DELETE the row (FK CASCADE wipes children;
-   * `audit_logs` retained by legal obligation). `deletedAt` is only the
-   * suspension/soft-delete marker, kept distinct from the irreversible erasure.
-   */
+  @Index('IDX_users_deleted_at', { where: '"deleted_at" IS NOT NULL' })
   @Column({ type: 'timestamp', nullable: true, name: 'deleted_at' })
   deletedAt!: Date | null;
 

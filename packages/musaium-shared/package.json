@@ -13,6 +13,10 @@
     "./observability": {
       "types": "./dist/observability/index.d.ts",
       "default": "./dist/observability/index.js"
+    },
+    "./map": {
+      "types": "./dist/map/index.d.ts",
+      "default": "./dist/map/index.js"
     }
   },
   "scripts": {

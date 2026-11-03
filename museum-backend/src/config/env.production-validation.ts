@@ -206,11 +206,6 @@ export function validateProductionEnv(env: AppEnv): void {
     throw new Error('MEDIA_SIGNING_SECRET must be distinct from JWT_REFRESH_SECRET in production.');
   }
 
-  // R16 MFA (W2.T4): MFA_ENCRYPTION_KEY present, distinct from every other
-  // signing secret, >= 32 chars. Sharing across MFA/JWT/media defeats
-  // rotation — leaking one compromises three trust domains.
-  validateMfaSecrets(env);
-
   // F7 (2026-04-30): CSRF_SECRET present, distinct, >= 32 chars. If collides
   // with JWT_ACCESS_SECRET, attacker with access-token (or its signing key)
   // can forge the CSRF token.
@@ -311,16 +306,6 @@ function validateExportPseudonymSalt(env: AppEnv): void {
   if (salt === process.env.CSRF_SECRET) {
     throw new Error('EXPORT_PSEUDONYM_SALT must be distinct from CSRF_SECRET in production.');
   }
-  if (salt === process.env.MFA_ENCRYPTION_KEY) {
-    throw new Error(
-      'EXPORT_PSEUDONYM_SALT must be distinct from MFA_ENCRYPTION_KEY in production.',
-    );
-  }
-  if (salt === process.env.MFA_SESSION_TOKEN_SECRET) {
-    throw new Error(
-      'EXPORT_PSEUDONYM_SALT must be distinct from MFA_SESSION_TOKEN_SECRET in production.',
-    );
-  }
 
   // Drift detection (mirror validateCsrfSecret) — parsed env MUST agree with
   // raw env var. A future refactor dropping the wiring in env.ts would silently
@@ -348,63 +333,9 @@ function validateCsrfSecret(env: AppEnv): void {
   if (csrf === process.env.MEDIA_SIGNING_SECRET) {
     throw new Error('CSRF_SECRET must be distinct from MEDIA_SIGNING_SECRET in production.');
   }
-  if (csrf === process.env.MFA_ENCRYPTION_KEY) {
-    throw new Error('CSRF_SECRET must be distinct from MFA_ENCRYPTION_KEY in production.');
-  }
-  if (csrf === process.env.MFA_SESSION_TOKEN_SECRET) {
-    throw new Error('CSRF_SECRET must be distinct from MFA_SESSION_TOKEN_SECRET in production.');
-  }
 
   // Drift detection: parsed env agrees with raw env var.
   if (env.auth.csrfSecret !== csrf) {
     throw new Error('env.auth.csrfSecret is out of sync with CSRF_SECRET — env.ts wiring drift.');
-  }
-}
-
-function validateMfaSecrets(env: AppEnv): void {
-  const mfaKey = required('MFA_ENCRYPTION_KEY', process.env.MFA_ENCRYPTION_KEY);
-  const mfaSession = required('MFA_SESSION_TOKEN_SECRET', process.env.MFA_SESSION_TOKEN_SECRET);
-
-  assertSecretLength('MFA_ENCRYPTION_KEY', mfaKey);
-  assertSecretLength('MFA_SESSION_TOKEN_SECRET', mfaSession);
-
-  if (mfaKey === process.env.JWT_ACCESS_SECRET) {
-    throw new Error(
-      'MFA_ENCRYPTION_KEY must be distinct from JWT_ACCESS_SECRET in production. ' +
-        SECRET_REUSE_RATIONALE,
-    );
-  }
-  if (mfaKey === process.env.JWT_REFRESH_SECRET) {
-    throw new Error('MFA_ENCRYPTION_KEY must be distinct from JWT_REFRESH_SECRET in production.');
-  }
-  if (mfaKey === process.env.MEDIA_SIGNING_SECRET) {
-    throw new Error('MFA_ENCRYPTION_KEY must be distinct from MEDIA_SIGNING_SECRET in production.');
-  }
-
-  if (mfaSession === process.env.JWT_ACCESS_SECRET) {
-    throw new Error(
-      'MFA_SESSION_TOKEN_SECRET must be distinct from JWT_ACCESS_SECRET in production.',
-    );
-  }
-  if (mfaSession === process.env.JWT_REFRESH_SECRET) {
-    throw new Error(
-      'MFA_SESSION_TOKEN_SECRET must be distinct from JWT_REFRESH_SECRET in production.',
-    );
-  }
-  if (mfaSession === mfaKey) {
-    throw new Error(
-      'MFA_SESSION_TOKEN_SECRET must be distinct from MFA_ENCRYPTION_KEY — ' +
-        'one signs short-lived JWTs, the other encrypts data at rest. Reusing ' +
-        'either as the other defeats both threat models.',
-    );
-  }
-
-  // Drift detection: parsed env MUST agree with raw env var so a future
-  // refactor dropping env.ts wiring fails fast instead of silently bypassing
-  // the secret-distinctness contract.
-  if (env.auth.mfaEncryptionKey !== mfaKey) {
-    throw new Error(
-      'env.auth.mfaEncryptionKey is out of sync with MFA_ENCRYPTION_KEY — env.ts wiring drift.',
-    );
   }
 }

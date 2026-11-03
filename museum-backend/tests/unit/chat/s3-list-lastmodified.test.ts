@@ -45,7 +45,7 @@ async function withTestServer<T>(xmlBody: string, run: (port: number) => Promise
     res.writeHead(200, { 'Content-Type': 'application/xml' });
     res.end(xmlBody);
   });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>((resolve) => server.listen(0, resolve));
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('no server address');
   try {

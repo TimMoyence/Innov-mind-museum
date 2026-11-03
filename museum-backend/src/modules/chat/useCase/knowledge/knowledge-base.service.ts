@@ -1,14 +1,4 @@
-import { createHash } from 'node:crypto';
-
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import {
-  wikidataCacheHitsTotal,
-  wikidataCacheMissesTotal,
-  wikidataLocalDumpHitsTotal,
-  wikidataLocalDumpMissesTotal,
-} from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import { buildKnowledgeBasePromptBlock } from './knowledge-base.prompt';
 
@@ -63,11 +53,9 @@ export class KnowledgeBaseService {
     if (!key) return null;
 
     const cacheKey = `kb:wikidata:${key}`;
-    const finalize = this.startTrace(key, language);
 
     const cacheHit = await this.tryCacheHit(cacheKey, key);
     if (cacheHit !== undefined) {
-      finalize('cache', cacheHit.facts !== null);
       return cacheHit.facts;
     }
 
@@ -75,11 +63,9 @@ export class KnowledgeBaseService {
       const { facts, source } = await this.fetchAndCascade(key, language);
       await this.writeCache(cacheKey, facts);
       logger.info('kb_lookup_success', { searchTerm: key, found: facts !== null, source });
-      finalize(facts === null ? 'none' : source, facts !== null);
       return facts;
     } catch (err) {
       this.logFetchError(key, err);
-      finalize('none', false);
       return null;
     }
   }
@@ -97,10 +83,8 @@ export class KnowledgeBaseService {
       const cached = await this.cacheService.get<CacheEntry>(cacheKey);
       if (cached) {
         logger.info('kb_cache_hit', { searchTerm: key });
-        KnowledgeBaseService.incMetric(wikidataCacheHitsTotal);
         return cached;
       }
-      KnowledgeBaseService.incMetric(wikidataCacheMissesTotal);
       return undefined;
     } catch {
       // fail-open: cache read error, proceed to provider
@@ -156,10 +140,8 @@ export class KnowledgeBaseService {
     }
     const dumpFacts = await cascadeDeps.dumpRepo.findFactsBySearchTerm(key, language);
     if (dumpFacts) {
-      KnowledgeBaseService.incMetric(wikidataLocalDumpHitsTotal);
       return { facts: dumpFacts, source: 'dump' };
     }
-    KnowledgeBaseService.incMetric(wikidataLocalDumpMissesTotal);
     return { facts: null, source: 'live' };
   }
 
@@ -180,52 +162,6 @@ export class KnowledgeBaseService {
       logger.warn('kb_lookup_timeout', { searchTerm: key, timeoutMs: this.config.timeoutMs });
     } else {
       logger.warn('kb_lookup_error', { searchTerm: key, error: message });
-    }
-  }
-
-  /**
-   * Sets up the C5 Step 6.1 Langfuse span for one `lookupFacts` call and
-   * returns a `finalize(source, found)` callback the caller invokes on each
-   * exit branch. Hashing the search term keeps spans PII-free.
-   */
-  private startTrace(
-    key: string,
-    language?: string,
-  ): (source: 'cache' | 'live' | 'dump' | 'none', found: boolean) => void {
-    const searchTermHash = createHash('sha256').update(key).digest('hex').slice(0, 16);
-    const startedAtMs = Date.now();
-    const lf = getLangfuse();
-    const trace = safeTrace('chat.knowledge.lookup.create', () =>
-      lf?.trace({
-        name: 'chat.knowledge.lookup',
-        metadata: {
-          searchTermHash,
-          language: language ?? 'default',
-          breakerState: this.cascade?.breakerState().name,
-        },
-      }),
-    );
-    return (source, found): void => {
-      safeTrace('chat.knowledge.lookup.update', () => {
-        trace?.update({
-          output: { source, found, latencyMs: Date.now() - startedAtMs },
-        });
-      });
-    };
-  }
-
-  /**
-   * Fail-open Prometheus counter increment. C5 Phase 6.2 surface — a
-   * prom-client throw must never propagate into the chat path (UFR-013
-   * fail-open ; same pattern as `chat-phase-timer.ts:159-165`).
-   */
-  private static incMetric(counter: { inc(): void }): void {
-    try {
-      counter.inc();
-    } catch (err) {
-      logger.warn('kb_metric_drop', {
-        error: err instanceof Error ? err.message : String(err),
-      });
     }
   }
 

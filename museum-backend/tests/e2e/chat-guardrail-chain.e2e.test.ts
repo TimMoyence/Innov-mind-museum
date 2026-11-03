@@ -9,7 +9,6 @@ import {
   createGuardrailE2EHarness,
   type GuardrailE2EHarness,
 } from 'tests/helpers/e2e/guardrail-e2e.helpers';
-import { makeFakeGuardrailProvider } from 'tests/helpers/chat/guardrail-provider.fixtures';
 
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
@@ -216,39 +215,6 @@ describeE2E('chat guardrail chain e2e (real orchestrator + fake model)', () => {
       const userIdx = serialized.findIndex((t) => t.includes(BENIGN_ART_QUESTION));
       expect(markerIdx).toBe(0);
       expect(userIdx).toBeGreaterThan(markerIdx);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Case D — V2 provider block (R5, deterministic via fake provider)
-  // -------------------------------------------------------------------------
-  describe('D — V2 guardrail provider denies input', () => {
-    let harness: GuardrailE2EHarness;
-
-    beforeAll(async () => {
-      harness = await createGuardrailE2EHarness({
-        modelConfig: { text: CLEAN_MODEL_TEXT },
-        guardrailProvider: makeFakeGuardrailProvider({ block: true }),
-      });
-    });
-
-    afterAll(async () => {
-      await harness?.stop();
-    });
-
-    it('refuses when the V2 provider denies, WITHOUT invoking the chat model', async () => {
-      const { token } = await registerAndLogin(harness);
-      const sessionId = await createSession(harness, token);
-
-      const res = await postMessage(harness, token, sessionId, BENIGN_ART_QUESTION);
-
-      // Provider checkInput → { allow:false } returns from evaluateInput before
-      // the orchestrator (guardrail-evaluation.service.ts:147-163).
-      expect(res.status).toBe(201);
-      const body = res.body as MessageBody;
-      expect(body.message).toBeDefined();
-      expect(harness.fakeModel.invokeCount).toBe(0);
-      expect(JSON.stringify(res.body)).not.toContain(CLEAN_MODEL_TEXT);
     });
   });
 

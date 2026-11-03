@@ -187,92 +187,8 @@
           },
           "user": {
             "$ref": "#/components/schemas/AuthUser"
-          },
-          "mfaWarningDaysRemaining": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "R16 — present when an admin is inside the MFA warning window. Drives the enroll-now banner."
           }
         }
-      },
-      "MfaRequiredResponse": {
-        "type": "object",
-        "required": ["mfaRequired", "mfaSessionToken", "mfaSessionExpiresIn"],
-        "properties": {
-          "mfaRequired": {
-            "type": "boolean",
-            "enum": [true]
-          },
-          "mfaSessionToken": {
-            "type": "string",
-            "description": "Short-lived bearer used to call /auth/mfa/challenge or /auth/mfa/recovery."
-          },
-          "mfaSessionExpiresIn": {
-            "type": "integer",
-            "description": "TTL of mfaSessionToken in seconds."
-          }
-        }
-      },
-      "MfaEnrollmentRequiredResponse": {
-        "type": "object",
-        "required": ["mfaEnrollmentRequired", "redirectTo"],
-        "properties": {
-          "mfaEnrollmentRequired": {
-            "type": "boolean",
-            "enum": [true]
-          },
-          "redirectTo": {
-            "type": "string",
-            "description": "Hint URL where the frontend should drive the user to start enrollment."
-          }
-        }
-      },
-      "MfaEnrollResponse": {
-        "type": "object",
-        "required": ["otpauthUrl", "manualSecret", "recoveryCodes"],
-        "properties": {
-          "otpauthUrl": {
-            "type": "string",
-            "description": "otpauth:// URI suitable for QR rendering."
-          },
-          "manualSecret": {
-            "type": "string",
-            "description": "Base32 secret for manual entry into authenticator apps."
-          },
-          "recoveryCodes": {
-            "type": "array",
-            "items": { "type": "string" },
-            "minItems": 10,
-            "maxItems": 10,
-            "description": "10 plain-text recovery codes — shown ONCE."
-          }
-        }
-      },
-      "MfaVerifyResponse": {
-        "type": "object",
-        "required": ["enrolledAt"],
-        "properties": {
-          "enrolledAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "MfaRecoverySessionResponse": {
-        "allOf": [
-          { "$ref": "#/components/schemas/AuthSessionResponse" },
-          {
-            "type": "object",
-            "required": ["remainingRecoveryCodes"],
-            "properties": {
-              "remainingRecoveryCodes": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Number of unused recovery codes left after this redemption."
-              }
-            }
-          }
-        ]
       },
       "SessionDTO": {
         "type": "object",
@@ -440,7 +356,11 @@
               "suggestions": {
                 "type": "array",
                 "description": "Optional suggestion chips returned only for chat sessions with intent='walk'.",
-                "items": { "type": "string", "minLength": 1, "maxLength": 60 },
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
                 "maxItems": 3
               }
             }
@@ -1046,16 +966,39 @@
               "updatedAt"
             ],
             "properties": {
-              "id": { "type": "integer" },
-              "email": { "type": "string", "format": "email" },
-              "role": { "type": "string" },
-              "firstname": { "type": ["string", "null"] },
-              "lastname": { "type": ["string", "null"] },
-              "locale": { "type": ["string", "null"] },
-              "emailVerified": { "type": "boolean" },
-              "onboardingCompleted": { "type": "boolean" },
-              "createdAt": { "type": "string", "format": "date-time" },
-              "updatedAt": { "type": "string", "format": "date-time" }
+              "id": {
+                "type": "integer"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "role": {
+                "type": "string"
+              },
+              "firstname": {
+                "type": ["string", "null"]
+              },
+              "lastname": {
+                "type": ["string", "null"]
+              },
+              "locale": {
+                "type": ["string", "null"]
+              },
+              "emailVerified": {
+                "type": "boolean"
+              },
+              "onboardingCompleted": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
             }
           },
           "consent": {
@@ -1064,10 +1007,19 @@
               "type": "object",
               "required": ["scope", "version", "source", "grantedAt", "revokedAt"],
               "properties": {
-                "scope": { "type": "string" },
-                "version": { "type": "string" },
-                "source": { "type": "string" },
-                "grantedAt": { "type": "string", "format": "date-time" },
+                "scope": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "grantedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
                 "revokedAt": {
                   "type": ["string", "null"],
                   "format": "date-time"
@@ -1081,25 +1033,56 @@
               "type": "object",
               "required": ["id", "museumMode", "createdAt", "updatedAt", "messages"],
               "properties": {
-                "id": { "type": "string", "format": "uuid" },
-                "locale": { "type": ["string", "null"] },
-                "museumMode": { "type": "boolean" },
-                "title": { "type": ["string", "null"] },
-                "museumName": { "type": ["string", "null"] },
-                "createdAt": { "type": "string", "format": "date-time" },
-                "updatedAt": { "type": "string", "format": "date-time" },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "locale": {
+                  "type": ["string", "null"]
+                },
+                "museumMode": {
+                  "type": "boolean"
+                },
+                "title": {
+                  "type": ["string", "null"]
+                },
+                "museumName": {
+                  "type": ["string", "null"]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
                 "messages": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "role", "createdAt"],
                     "properties": {
-                      "id": { "type": "string", "format": "uuid" },
-                      "role": { "type": "string" },
-                      "text": { "type": ["string", "null"] },
-                      "imageRef": { "type": ["string", "null"] },
-                      "audioUrl": { "type": ["string", "null"] },
-                      "createdAt": { "type": "string", "format": "date-time" },
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": ["string", "null"]
+                      },
+                      "imageRef": {
+                        "type": ["string", "null"]
+                      },
+                      "audioUrl": {
+                        "type": ["string", "null"]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
                       "metadata": {
                         "type": ["object", "null"],
                         "additionalProperties": true
@@ -1121,12 +1104,28 @@
               "type": "object",
               "required": ["id", "rating", "comment", "status", "userName", "createdAt"],
               "properties": {
-                "id": { "type": "string", "format": "uuid" },
-                "rating": { "type": "integer", "minimum": 0, "maximum": 10 },
-                "comment": { "type": "string" },
-                "status": { "type": "string" },
-                "userName": { "type": "string" },
-                "createdAt": { "type": "string", "format": "date-time" }
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "comment": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "userName": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
               }
             }
           },
@@ -1146,24 +1145,53 @@
                 "messages"
               ],
               "properties": {
-                "id": { "type": "string", "format": "uuid" },
-                "subject": { "type": "string" },
-                "description": { "type": "string" },
-                "status": { "type": "string" },
-                "priority": { "type": "string" },
-                "category": { "type": ["string", "null"] },
-                "createdAt": { "type": "string", "format": "date-time" },
-                "updatedAt": { "type": "string", "format": "date-time" },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": ["string", "null"]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
                 "messages": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "required": ["id", "senderRole", "text", "createdAt"],
                     "properties": {
-                      "id": { "type": "string", "format": "uuid" },
-                      "senderRole": { "type": "string" },
-                      "text": { "type": "string" },
-                      "createdAt": { "type": "string", "format": "date-time" }
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "senderRole": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
                     }
                   }
                 }
@@ -2575,14 +2603,11 @@
         },
         "responses": {
           "200": {
-            "description": "JWT session OR MFA challenge envelope. Inspect the discriminator fields (`accessToken` vs `mfaRequired`) before reading the body.",
+            "description": "JWT session.",
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
-                    { "$ref": "#/components/schemas/AuthSessionResponse" },
-                    { "$ref": "#/components/schemas/MfaRequiredResponse" }
-                  ]
+                  "$ref": "#/components/schemas/AuthSessionResponse"
                 }
               }
             }
@@ -2594,223 +2619,8 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "description": "MFA enrollment deadline elapsed — no JWTs issued. Body shape: MfaEnrollmentRequiredResponse.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MfaEnrollmentRequiredResponse"
-                }
-              }
-            }
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
-      }
-    },
-    "/api/auth/mfa/status": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "Read the calling user's MFA enrollment state (F9 envelope).",
-        "description": "Self-scoped read of the calling user's MFA status. Drives the Enable/Disable MFA UI without exposing the encrypted secret. RBAC: authenticated user only — req.user.id IS the user being read.",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "MFA status envelope.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["mfaEnrolled", "methods", "lastVerifiedAt"],
-                  "properties": {
-                    "mfaEnrolled": {
-                      "type": "boolean",
-                      "description": "True iff TOTP has been enrolled AND verified at least once."
-                    },
-                    "methods": {
-                      "type": "array",
-                      "items": { "type": "string", "enum": ["totp"] },
-                      "description": "Active second-factor methods. Today only TOTP. Forward-compatible with WebAuthn / push."
-                    },
-                    "lastVerifiedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true,
-                      "description": "ISO 8601 of the last successful TOTP / recovery verification. Null when MFA never verified."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
-        }
-      }
-    },
-    "/api/auth/mfa/enroll": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Start (or rotate) a TOTP enrollment for the authenticated user.",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "Fresh secret + recovery codes (one-time view).",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MfaEnrollResponse" }
-              }
-            }
-          },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "409": {
-            "description": "MFA is already enrolled — disable it first to re-enroll."
-          },
-          "429": {
-            "description": "Too many enrollment attempts."
-          }
-        }
-      }
-    },
-    "/api/auth/mfa/enroll/verify": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Confirm a freshly enrolled TOTP secret with a 6-digit code.",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["code"],
-                "properties": {
-                  "code": { "type": "string", "minLength": 6, "maxLength": 6 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Enrollment confirmed.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MfaVerifyResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "404": { "description": "No pending MFA enrollment." },
-          "429": { "description": "Too many verification attempts." }
-        }
-      }
-    },
-    "/api/auth/mfa/challenge": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Exchange mfaSessionToken + 6-digit TOTP code for a real JWT pair.",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["mfaSessionToken", "code"],
-                "properties": {
-                  "mfaSessionToken": { "type": "string" },
-                  "code": { "type": "string", "minLength": 6, "maxLength": 6 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "JWT session.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/AuthSessionResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "429": { "description": "Too many MFA challenge attempts." }
-        }
-      }
-    },
-    "/api/auth/mfa/recovery": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Exchange mfaSessionToken + recovery code for a JWT pair (consumes the code).",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["mfaSessionToken", "recoveryCode"],
-                "properties": {
-                  "mfaSessionToken": { "type": "string" },
-                  "recoveryCode": { "type": "string", "minLength": 6, "maxLength": 32 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "JWT session + remaining recovery code count.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/MfaRecoverySessionResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "429": { "description": "Too many recovery attempts." }
-        }
-      }
-    },
-    "/api/auth/mfa/disable": {
-      "post": {
-        "tags": ["Auth"],
-        "summary": "Disable MFA after re-confirming the user's password.",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["currentPassword"],
-                "properties": {
-                  "currentPassword": { "type": "string", "minLength": 1 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "MFA disabled.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["disabled"],
-                  "properties": {
-                    "disabled": { "type": "boolean" }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "429": { "description": "Too many disable attempts." }
         }
       }
     },
@@ -3398,7 +3208,9 @@
                         "type": "string",
                         "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
                       },
-                      { "type": "null" }
+                      {
+                        "type": "null"
+                      }
                     ],
                     "description": "OpenAI TTS voice id, or `null` to reset to the env-level default."
                   }
@@ -3422,7 +3234,9 @@
                           "type": "string",
                           "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
                         },
-                        { "type": "null" }
+                        {
+                          "type": "null"
+                        }
                       ]
                     }
                   }
@@ -4852,13 +4666,19 @@
       "get": {
         "tags": ["Admin"],
         "summary": "Get a single user (admin & moderator)",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "description": "User ID"
           }
         ],
@@ -4871,28 +4691,42 @@
                   "type": "object",
                   "required": ["user"],
                   "properties": {
-                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUserDTO"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       },
       "delete": {
         "tags": ["Admin"],
         "summary": "Soft-delete a user (super_admin only)",
         "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "description": "User ID"
           }
         ],
@@ -4905,16 +4739,26 @@
                   "type": "object",
                   "required": ["user"],
                   "properties": {
-                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUserDTO"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
@@ -4923,13 +4767,19 @@
         "tags": ["Admin"],
         "summary": "Suspend a user (super_admin only)",
         "description": "Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "description": "User ID"
           }
         ],
@@ -4942,16 +4792,26 @@
                   "type": "object",
                   "required": ["user"],
                   "properties": {
-                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUserDTO"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "$ref": "#/components/responses/Conflict" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
         }
       }
     },
@@ -4959,13 +4819,19 @@
       "post": {
         "tags": ["Admin"],
         "summary": "Lift a user suspension (super_admin only)",
-        "security": [{ "bearerAuth": [] }],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "id",
             "required": true,
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "description": "User ID"
           }
         ],
@@ -4978,15 +4844,23 @@
                   "type": "object",
                   "required": ["user"],
                   "properties": {
-                    "user": { "$ref": "#/components/schemas/AdminUserDTO" }
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUserDTO"
+                    }
                   }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
@@ -6420,15 +6294,34 @@
                 "type": "object",
                 "required": ["email", "name", "museum", "role", "message", "consent"],
                 "properties": {
-                  "email": { "type": "string", "format": "email", "maxLength": 254 },
-                  "name": { "type": "string", "minLength": 1, "maxLength": 120 },
-                  "museum": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "museum": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
                   "role": {
                     "type": "string",
                     "enum": ["director", "curator", "digital", "other"]
                   },
-                  "message": { "type": "string", "minLength": 10, "maxLength": 5000 },
-                  "consent": { "type": "boolean", "enum": [true] },
+                  "message": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 5000
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "enum": [true]
+                  },
                   "website": {
                     "type": "string",
                     "maxLength": 500,
@@ -6447,14 +6340,25 @@
                 "schema": {
                   "type": "object",
                   "required": ["accepted"],
-                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "429": { "$ref": "#/components/responses/TooManyRequests" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -6472,8 +6376,15 @@
                 "type": "object",
                 "required": ["email", "consent"],
                 "properties": {
-                  "email": { "type": "string", "format": "email", "maxLength": 254 },
-                  "consent": { "type": "boolean", "enum": [true] },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "enum": [true]
+                  },
                   "website": {
                     "type": "string",
                     "maxLength": 500,
@@ -6492,14 +6403,25 @@
                 "schema": {
                   "type": "object",
                   "required": ["accepted"],
-                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "429": { "$ref": "#/components/responses/TooManyRequests" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },
@@ -6517,8 +6439,15 @@
                 "type": "object",
                 "required": ["email", "consent"],
                 "properties": {
-                  "email": { "type": "string", "format": "email", "maxLength": 254 },
-                  "consent": { "type": "boolean", "enum": [true] },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "enum": [true]
+                  },
                   "website": {
                     "type": "string",
                     "maxLength": 500,
@@ -6537,14 +6466,25 @@
                 "schema": {
                   "type": "object",
                   "required": ["accepted"],
-                  "properties": { "accepted": { "type": "boolean", "enum": [true] } }
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "429": { "$ref": "#/components/responses/TooManyRequests" },
-          "500": { "$ref": "#/components/responses/InternalError" }
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
         }
       }
     },

@@ -44,11 +44,7 @@ jest.mock('@modules/chat/useCase/location-resolver', () => ({
   }),
 }));
 
-jest.mock('@shared/observability/chat-phase-span', () => ({
-  emitChatPhaseSpan: jest.fn(),
-}));
 
-import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
 import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
@@ -72,7 +68,6 @@ function makeDelayedKnowledgeRouter(): KnowledgeRouterPort {
 describe('PrepareMessagePipeline — C9.6 parallel enrichment fan-out', () => {
   beforeEach(() => {
     recordedStarts.length = 0;
-    (emitChatPhaseSpan as jest.Mock).mockReset();
   });
 
   it('R1 + R2 — fans out fetchEnrichmentData / resolveLocationForMessage / router.classify in parallel', async () => {
@@ -112,31 +107,5 @@ describe('PrepareMessagePipeline — C9.6 parallel enrichment fan-out', () => {
 
     // R2: total wall-clock is dominated by the SLOWEST of the three, NOT their sum.
     expect(elapsedMs).toBeLessThan(SERIAL_SUM_MS - PARALLEL_HEADROOM_MS);
-  });
-
-  it('R6 — emitChatPhaseSpan("searching-collection", ...) is called exactly once', async () => {
-    const session = makeSession({ id: SESSION_UUID, user: makeSessionUser(1) });
-    const repository = makeChatRepo({
-      getSessionById: jest.fn().mockResolvedValue(session),
-      persistMessage: jest.fn().mockResolvedValue(undefined),
-      listSessionHistory: jest.fn().mockResolvedValue([]),
-    });
-    const guardrail = new GuardrailEvaluationService({ repository });
-    const imageProcessor = {} as unknown as ImageProcessingService;
-    const knowledgeRouter = makeDelayedKnowledgeRouter();
-
-    const pipeline = new PrepareMessagePipeline({
-      repository,
-      imageProcessor,
-      guardrail,
-      knowledgeRouter,
-    });
-
-    await pipeline.prepare(SESSION_UUID, { text: 'a question' }, 'req-c96-span', 1, '127.0.0.1');
-
-    const searchingCalls = (emitChatPhaseSpan as jest.Mock).mock.calls.filter(
-      (call) => call[0] === 'searching-collection',
-    );
-    expect(searchingCalls).toHaveLength(1);
   });
 });

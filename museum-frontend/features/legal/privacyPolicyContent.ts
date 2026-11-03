@@ -6,14 +6,6 @@
  *
  * Source of truth:
  *   museum-backend/src/shared/legal/privacy-content.canonical.json
- *
- * Drift sentinel (post-comment-strip, R15):
- *   museum-backend/scripts/sentinels/privacy-content-drift.mjs
- *
- * The sentinel strips JSDoc / line / HTML comments before grepping, so the
- * canonical tokens (version, lastUpdated, section ids, subprocessor names)
- * must appear as INLINE TS literals in the body below — not just in this
- * header.
  */
 
 /** A single numbered section within the privacy policy document. */
@@ -137,13 +129,6 @@ export const PRIVACY_SUBPROCESSORS: readonly PrivacySubprocessor[] = [
     jurisdiction: 'United States',
     transferMechanism: 'SCC',
     category: 'search',
-  },
-  {
-    name: 'Langfuse',
-    role: 'LLM observability and prompt telemetry',
-    jurisdiction: 'Germany',
-    transferMechanism: 'internal',
-    category: 'telemetry',
   },
   {
     name: 'CARTO',
@@ -275,7 +260,6 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
         'Tavily (United States) — web search backend for retrieval-augmented generation; transfer mechanism: SCC.',
         'Brave (United States) — alternative web search backend; transfer mechanism: SCC.',
         'Unsplash (United States) — public image library for cultural references; transfer mechanism: SCC.',
-        'Langfuse (Germany) — LLM observability and prompt telemetry; transfer mechanism: internal (EU).',
         'CARTO (CartoDB tiles, United States) — map tiles for the museum map view; transfer mechanism: SCC.',
         'Wikidata (Germany) — structured knowledge base for cultural references; transfer mechanism: internal (EU).',
         'Wikimedia (Wikipedia REST, United States) — encyclopedic content for cultural references; transfer mechanism: SCC.',

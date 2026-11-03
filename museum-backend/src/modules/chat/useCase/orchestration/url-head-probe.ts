@@ -25,9 +25,6 @@
 import { createHash } from 'node:crypto';
 
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import { chatUrlHeadProbeTotal } from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import type { CacheService } from '@shared/cache/cache.port';
 
@@ -101,22 +98,6 @@ export class UrlHeadProbe {
       }),
     );
 
-    // Fail-open via safeTrace — Langfuse SDK throw never bubbles into chat path.
-    const results = Array.from(out.values());
-    const cacheHits = results.filter((r) => r.cached).length;
-    const unreachable = results.filter((r) => !r.reachable).length;
-    const lf = getLangfuse();
-    safeTrace('chat.citations.head_probe.span', () => {
-      lf?.trace({
-        name: 'chat.citations.head_probe',
-        metadata: {
-          'head_probe.url_count': urls.length,
-          'head_probe.cache_hit_rate': urls.length > 0 ? cacheHits / urls.length : 0,
-          'head_probe.unreachable_count': unreachable,
-        },
-      });
-    });
-
     return out;
   }
 
@@ -131,10 +112,6 @@ export class UrlHeadProbe {
     // `null` covers both miss and Redis outage (fail-soft).
     const cached = await this.cache.get<CachedProbeRecord>(key);
     if (cached !== null) {
-      chatUrlHeadProbeTotal.inc({
-        cache_hit: 'true',
-        outcome: cached.reachable ? 'reachable' : 'unreachable',
-      });
       return { reachable: cached.reachable, statusCode: cached.statusCode, cached: true };
     }
 
@@ -152,11 +129,6 @@ export class UrlHeadProbe {
     const toStore: CachedProbeRecord = { reachable: final.reachable };
     if (final.statusCode !== undefined) toStore.statusCode = final.statusCode;
     await this.cache.set(key, toStore, CACHE_TTL_SECONDS);
-
-    chatUrlHeadProbeTotal.inc({
-      cache_hit: 'false',
-      outcome: final.reachable ? 'reachable' : 'unreachable',
-    });
 
     const result: UrlProbeResult = { reachable: final.reachable, cached: false };
     if (final.statusCode !== undefined) result.statusCode = final.statusCode;

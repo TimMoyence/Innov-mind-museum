@@ -19,23 +19,13 @@ import * as Sentry from '@sentry/nextjs';
 // ── Error class ────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
-  /**
-   * The parsed JSON response body, when the failing response carried one.
-   * Callers (e.g. the admin login flow) discriminate on it — `mfaRequired`,
-   * `mfaEnrollmentRequired`, or `{ error: { code } }` — without re-parsing.
-   * `undefined` when the body was absent or not valid JSON.
-   */
-  public body?: unknown;
-
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     message: string,
-    body?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
-    this.body = body;
   }
 }
 
@@ -153,14 +143,6 @@ async function refreshAccessToken(): Promise<string> {
 export interface ApiRequestOptions {
   /** Optional AbortSignal forwarded to the underlying fetch() call. */
   signal?: AbortSignal;
-  /**
-   * Opt out of the 401 → auto-refresh → retry → onLogout path. A 401 then
-   * falls straight through to the error block and throws an `ApiError`. Used by
-   * the MFA challenge/recovery calls (and the credentials login): a 401 there is
-   * a DOMAIN error (wrong/expired code, no session yet), not session expiry, so
-   * firing the session-refresh/logout would bounce the admin off the step.
-   * Does NOT affect CSRF or `credentials: 'include'`.
-   */
   skipAuthRefresh?: boolean;
 }
 
@@ -232,17 +214,15 @@ async function request<T>(
 
   if (!res.ok) {
     let message = res.statusText;
-    let parsedBody: unknown;
     try {
-      parsedBody = await res.json();
-      const errorBody = parsedBody as { message?: string };
+      const errorBody = (await res.json()) as { message?: string };
       if (errorBody.message) {
         message = errorBody.message;
       }
     } catch {
-      // ignore parse errors — keep statusText, leave body undefined
+      message = res.statusText;
     }
-    throw new ApiError(res.status, res.statusText, message, parsedBody);
+    throw new ApiError(res.status, res.statusText, message);
   }
 
   // Handle 204 No Content

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { RegexPiiSanitizer } from '@modules/chat/adapters/secondary/pii/pii-sanitizer.regex';
+import { maskPersonalData } from '@shared/pii/mask-personal-data';
 
 /**
  * Redacted shape of a guardrail-blocked payload for audit logging (V13 / STRIDE R3).
@@ -28,14 +28,6 @@ export interface GuardrailSnippet {
 const SNIPPET_PREVIEW_MAX_CHARS = 64;
 
 /**
- * Stateless email/phone scrubber. Shared module-level singleton — the sanitizer
- * holds no per-call state, so a single instance is safe and avoids re-allocating
- * the regexes on every audit row. Self-contained here (TD-66) so the audit-safe
- * snippet shape can never be built without first scrubbing PII.
- */
-const piiSanitizer = new RegexPiiSanitizer();
-
-/**
  * Builds the audit-safe snippet shape for a guardrail-blocked payload.
  *
  * TD-66 — the block path threads the RAW user text. A short email/phone
@@ -53,8 +45,7 @@ const piiSanitizer = new RegexPiiSanitizer();
  * mid-byte-cut multibyte sequences and produce U+FFFD).
  */
 export function redactSnippetForAudit(fullText: string): GuardrailSnippet {
-  const { sanitizedText } = piiSanitizer.sanitize(fullText);
-  const snippetPreview = sanitizedText.slice(0, SNIPPET_PREVIEW_MAX_CHARS);
+  const snippetPreview = maskPersonalData(fullText).text.slice(0, SNIPPET_PREVIEW_MAX_CHARS);
   const snippetFingerprint = createHash('sha256').update(fullText, 'utf8').digest('hex');
   return { snippetPreview, snippetFingerprint };
 }

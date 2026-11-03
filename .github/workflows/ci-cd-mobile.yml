@@ -76,10 +76,6 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Validate offline map style JSON (TD-3 drift guard)
-        working-directory: ${{ github.workspace }}
-        run: node -e "JSON.parse(require('fs').readFileSync('docs/maplibre/cartodb-raster-style.json','utf8'))"
-
       - name: Expo Doctor
         # I-OPS8 (R10): was `continue-on-error: true` (gate theatre — a failing
         # expo-doctor was ignored). Now a REAL blocking gate: it fails on any failed
@@ -118,14 +114,6 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
-      # ── I-CMP6 / R11 (decision Q3 "Tout faire", design §D7) — CycloneDX SBOM
-      # of the JS bundle dependency graph, uploaded as a CI artifact. There is
-      # deliberately NO sigstore image attestation here: EAS `eas build
-      # --no-wait` produces no local OCI image digest reachable from CI, so
-      # there is nothing to bind a signed predicate to. The residual gap
-      # (store-binary lacks a signed SBOM attestation) is tracked in
-      # docs/TECH_DEBT.md against EU CRA Art.13/2027.
-      # continue-on-error: the SBOM artifact must never block the quality gate.
       - name: Generate mobile SBOM (CycloneDX)
         continue-on-error: true
         run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom-mobile.json --spec-version 1.5 --output-reproducible

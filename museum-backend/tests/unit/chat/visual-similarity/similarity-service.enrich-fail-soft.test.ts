@@ -24,7 +24,6 @@ import {
 } from '../../../helpers/chat/visual-similarity/compare.fixtures';
 
 import { WikidataEnricher } from '@modules/chat/useCase/visual-similarity/wikidata-enricher';
-import { getLangfuse } from '@shared/observability/langfuse.client';
 
 import type { EmbeddingsPort, EncodeOutput } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
@@ -39,9 +38,6 @@ import type {
 } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-jest.mock('@shared/observability/langfuse.client', () => ({
-  getLangfuse: jest.fn(() => null),
-}));
 
 interface VsCtorArgs {
   encoder: EmbeddingsPort;
@@ -114,7 +110,6 @@ describe('VisualSimilarityService — enrichment failure isolated (prod 2026-06-
   });
 
   beforeEach(() => {
-    (getLangfuse as jest.MockedFunction<typeof getLangfuse>).mockReturnValue(null);
   });
 
   it("does NOT 500 when the REAL enricher's client.lookup throws on every qid", async () => {

@@ -99,13 +99,6 @@ jest.mock('@modules/auth/adapters/primary/http/routes/me.route', () => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   return { __esModule: true, default: Router() };
 });
-// Same rationale as `me.route`: `mfa.route` pulls in the auth use-case
-// composition root (which constructs PG repositories), so it would crash on
-// the env-mocked test setup unless stubbed.
-jest.mock('@modules/auth/adapters/primary/http/routes/mfa.route', () => {
-  const { Router } = jest.requireActual<typeof import('express')>('express');
-  return { __esModule: true, default: Router() };
-});
 // `admin-export.route` imports `authenticated.middleware` which transitively
 // pulls `auth/useCase` → `AppDataSource`. Same env.db.host trap as me.route /
 // mfa.route — stub the router out (R2 corrective loop 1, 2026-05-15).

@@ -194,11 +194,6 @@ describe('error factory functions', () => {
       expect(err.message).toBe('Invalid access token');
     });
 
-    it('propagates the INVALID_MFA_SESSION code used by mfaSessionToken paths', () => {
-      const err = unauthorized('Invalid MFA session token', 'INVALID_MFA_SESSION');
-      expect(err.code).toBe('INVALID_MFA_SESSION');
-    });
-
     it('propagates the REFRESH_TOKEN_REUSE_DETECTED code used by sessionIssuer paths', () => {
       const err = unauthorized('Refresh token reuse detected', 'REFRESH_TOKEN_REUSE_DETECTED');
       expect(err.code).toBe('REFRESH_TOKEN_REUSE_DETECTED');

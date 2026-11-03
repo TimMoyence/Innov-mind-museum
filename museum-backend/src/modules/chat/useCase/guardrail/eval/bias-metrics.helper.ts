@@ -1,9 +1,4 @@
-import {
-  guardrailCategoryBlocksTotal,
-  guardrailDecisionsTotal,
-} from '@shared/observability/prometheus-metrics';
 
-import type { GuardrailBlockReason } from '../art-topic-guardrail';
 import type { GuardrailAuditContext } from '../guardrail-audit-payload';
 
 /** Closed set of layers exposed as a Prometheus label (bounded cardinality). */
@@ -32,29 +27,3 @@ export function resolveLocaleLabel(context: GuardrailAuditContext | undefined): 
   return 'unknown';
 }
 
-/**
- * Increments the bias-monitoring counters at decision time. Foundation for
- * `docs/compliance/FAIRNESS_METRICS_PLAN.md` Phase 1 — per-locale block-rate
- * derivation in Prometheus uses these as the base series. Methodology note:
- * baseline for alerts is `avg(block_rate per locale)`, NOT global
- * `total_blocks / total_requests` (a single locale dominating blocks would
- * contaminate the global mean, hiding per-locale anomalies).
- */
-export function recordBiasMetrics(params: {
-  locale: string;
-  layer: GuardrailLayer;
-  decision: { allow: boolean; reason?: GuardrailBlockReason };
-}): void {
-  const decisionLabel = params.decision.allow ? 'allowed' : 'blocked';
-  guardrailDecisionsTotal.inc({
-    locale: params.locale,
-    layer: params.layer,
-    decision: decisionLabel,
-  });
-  if (!params.decision.allow && params.decision.reason) {
-    guardrailCategoryBlocksTotal.inc({
-      locale: params.locale,
-      category: params.decision.reason,
-    });
-  }
-}

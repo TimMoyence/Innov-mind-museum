@@ -1,5 +1,4 @@
 import type { GuardrailBlockReason } from './art-topic-guardrail';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { JudgeDecision } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { AuditService } from '@shared/audit/audit.service';
@@ -15,7 +14,6 @@ export interface InputGuardrailResult {
    * (LLM02 — Anonymize / Presidio). Callers MUST pass this to the LLM
    * instead of the original text. Never persisted in clear, never logged.
    */
-  redactedText?: string;
 }
 
 /**
@@ -41,8 +39,6 @@ export interface GuardrailEvaluationServiceDeps {
    * `observeOnly` is true the service logs decisions but never blocks —
    * useful for Phase A rollout of a new candidate.
    */
-  guardrailProvider?: GuardrailProvider;
-  guardrailProviderObserveOnly?: boolean;
   /**
    * F4 — LLM judge callable. Runs ONLY when `llmJudgeEnabled` is true AND the
    * keyword pre-filter returned allow AND the message length is above the
@@ -56,12 +52,4 @@ export interface GuardrailEvaluationServiceDeps {
    * as an explicit dep so tests can flip it without env mutation.
    */
   llmJudgeEnabled?: boolean;
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — when true, the judge is REMOVED
-   * from the inline `evaluateInput` security gate and instead run in PARALLEL
-   * of generation via `evaluateInputSemantic` (soft-redirect + friction
-   * escalation). When false (kill-switch), the legacy inline judge hard-block
-   * is preserved. Defaults to `env.guardrails.frictionEnabled`.
-   */
-  frictionEnabled?: boolean;
 }

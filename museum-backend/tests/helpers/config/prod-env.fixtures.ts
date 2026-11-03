@@ -19,12 +19,6 @@ export const VALID_JWT_REFRESH_SECRET = 'b'.repeat(48);
  */
 export const VALID_MEDIA_SIGNING_SECRET = 'c'.repeat(48);
 
-/** Distinct 48-char secret for the AES-256-GCM TOTP secret-at-rest key (R16). */
-export const VALID_MFA_ENCRYPTION_KEY = 'd'.repeat(48);
-
-/** Distinct 48-char secret for signing short-lived MFA session tokens (R16). */
-export const VALID_MFA_SESSION_TOKEN_SECRET = 'e'.repeat(48);
-
 /** Distinct 48-char secret for the CSRF double-submit HMAC key (F7 2026-04-30). */
 export const VALID_CSRF_SECRET = 'f'.repeat(48);
 
@@ -50,8 +44,6 @@ export function validProductionEnv(
     JWT_ACCESS_SECRET: VALID_JWT_ACCESS_SECRET,
     JWT_REFRESH_SECRET: VALID_JWT_REFRESH_SECRET,
     MEDIA_SIGNING_SECRET: VALID_MEDIA_SIGNING_SECRET,
-    MFA_ENCRYPTION_KEY: VALID_MFA_ENCRYPTION_KEY,
-    MFA_SESSION_TOKEN_SECRET: VALID_MFA_SESSION_TOKEN_SECRET,
     CSRF_SECRET: VALID_CSRF_SECRET,
     EXPORT_PSEUDONYM_SALT: VALID_EXPORT_PSEUDONYM_SALT,
     PGDATABASE: 'museum_prod',

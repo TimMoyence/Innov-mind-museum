@@ -85,9 +85,6 @@ jest.mock('@modules/chat/useCase/location-resolver', () => {
   };
 });
 
-jest.mock('@shared/observability/chat-phase-span', () => ({
-  emitChatPhaseSpan: jest.fn(),
-}));
 
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';

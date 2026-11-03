@@ -115,7 +115,7 @@ export class MuseumEnrichment {
   @Column({ type: 'varchar', length: 500, nullable: true })
   imageUrl!: string | null;
 
-  /** UTC; TTL anchor for `EnrichMuseumUseCase` (30-day freshness window). */
+  @Index('IDX_museum_enrichment_fetchedAt')
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   fetchedAt!: Date;
 

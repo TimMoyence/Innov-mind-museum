@@ -12,7 +12,7 @@ import {
   RedisNonceStore,
   setSocialNonceStore,
 } from '@modules/auth/adapters/secondary/social/nonce-store';
-import { authSessionService, challengeMfaUseCase, recoveryMfaUseCase } from '@modules/auth/useCase';
+import { authSessionService } from '@modules/auth/useCase';
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import {
   getOcrService,
@@ -55,8 +55,6 @@ import {
   setRedisRateLimitStore,
 } from '@shared/middleware/rate-limit.middleware';
 import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
-import { shutdownLangfuse } from '@shared/observability/langfuse.client';
-import { setMetricsDataSource } from '@shared/observability/metrics-context';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
@@ -147,13 +145,6 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     const accessTokenDenylist = new RedisAccessTokenDenylist(redisClient);
     setAccessTokenDenylist(accessTokenDenylist);
     authSessionService.setAccessTokenDenylist(accessTokenDenylist);
-    // R7/R8 — single-use mfaSessionToken: the challenge/recovery use-cases denylist
-    // the token's jti after one successful MFA step (and reject a replayed token).
-    // Same fail-OPEN shared `accessTokenDenylist` (ADR-064); same post-construction
-    // setter pattern as `authSessionService` above (the auth singletons instantiate
-    // before this boot path runs).
-    challengeMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
-    recoveryMfaUseCase.setAccessTokenDenylist(accessTokenDenylist);
     logger.info('redis_rate_limit_store_enabled');
 
     return { cacheService: redisCacheService, redisClient };
@@ -370,7 +361,6 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
  * the callback's lexical scope (sonarjs/no-nested-functions).
  */
 async function flushTelemetryAndFinalize(redisClient: Redis | undefined): Promise<void> {
-  await safeTeardown('langfuse_shutdown_failed', () => shutdownLangfuse());
   await finalizeShutdown(redisClient);
 }
 
@@ -378,9 +368,6 @@ async function flushTelemetryAndFinalize(redisClient: Redis | undefined): Promis
 async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
   try {
     if (AppDataSource.isInitialized) {
-      // Clear before destroy() so a late /metrics scrape during the drain
-      // window can't trigger a query against a half-closed pool (T9.2).
-      setMetricsDataSource(null);
       await AppDataSource.destroy();
       logger.info('database_closed');
     }
@@ -613,10 +600,6 @@ const start = async (): Promise<void> => {
     // is the canonical activation point.
     setMonthlyQuotaRepo(new PgMonthlyQuotaRepo(AppDataSource));
 
-    // Expose the live DataSource to Prometheus collectors that depend on a
-    // DB query at scrape time (T9.2 — `artwork_embeddings_count` gauge).
-    // Wiring AFTER initialize() guarantees collectors only see a ready pool.
-    setMetricsDataSource(AppDataSource);
 
     const { cacheService, redisClient } = initCacheAndRateLimit();
 

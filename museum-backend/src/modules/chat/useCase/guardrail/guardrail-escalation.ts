@@ -53,7 +53,6 @@ interface FrictionAudit {
 export interface FrictionEscalationDeps {
   guardrail: GuardrailEvaluationService;
   frictionStore?: IGuardrailFrictionStore;
-  frictionEnabled: boolean;
   frictionSessionThreshold: number;
   frictionUserThreshold: number;
 }
@@ -65,20 +64,14 @@ export interface FrictionEscalationDeps {
 export class FrictionEscalationService {
   private readonly guardrail: GuardrailEvaluationService;
   private readonly store?: IGuardrailFrictionStore;
-  private readonly enabled: boolean;
   private readonly sessionThreshold: number;
   private readonly userThreshold: number;
 
   constructor(deps: FrictionEscalationDeps) {
     this.guardrail = deps.guardrail;
     this.store = deps.frictionStore;
-    this.enabled = deps.frictionEnabled;
     this.sessionThreshold = deps.frictionSessionThreshold;
     this.userThreshold = deps.frictionUserThreshold;
-  }
-
-  get isEnabled(): boolean {
-    return this.enabled;
   }
 
   /**
@@ -185,7 +178,7 @@ export class FrictionEscalationService {
    * store outage here NEVER weakens the security block.
    */
   async recordSecurityStrike(scopes: FrictionScopes, audit: FrictionAudit): Promise<void> {
-    if (!this.enabled || !this.store) return;
+    if (!this.store) return;
     await this.recordStrikeSafely(scopes, env.guardrails.frictionWeightSecurity);
     const { userCount } = await this.frictionCounts(scopes);
     if (userCount >= this.userThreshold) {

@@ -64,7 +64,6 @@
             "Tavily (United States) — web search backend for retrieval-augmented generation; transfer mechanism: SCC.",
             "Brave (United States) — alternative web search backend; transfer mechanism: SCC.",
             "Unsplash (United States) — public image library for cultural references; transfer mechanism: SCC.",
-            "Langfuse (Germany) — LLM observability and prompt telemetry; transfer mechanism: internal (EU).",
             "CARTO (CartoDB tiles, United States) — map tiles for the museum map view; transfer mechanism: SCC.",
             "Wikidata (Germany) — structured knowledge base for cultural references; transfer mechanism: internal (EU).",
             "Wikimedia (Wikipedia REST, United States) — encyclopedic content for cultural references; transfer mechanism: SCC.",
@@ -239,13 +238,6 @@
           "category": "search"
         },
         {
-          "name": "Langfuse",
-          "role": "LLM observability and prompt telemetry",
-          "jurisdiction": "Germany",
-          "transferMechanism": "internal",
-          "category": "telemetry"
-        },
-        {
           "name": "CARTO",
           "role": "Map tiles for the museum map view (CartoDB)",
           "jurisdiction": "United States",
@@ -351,7 +343,6 @@
             "Tavily (États-Unis) — moteur de recherche web pour génération augmentée ; mécanisme : CCT.",
             "Brave (États-Unis) — moteur de recherche web alternatif ; mécanisme : CCT.",
             "Unsplash (États-Unis) — bibliothèque publique d'images pour références culturelles ; mécanisme : CCT.",
-            "Langfuse (Allemagne) — observabilité LLM et télémétrie de prompts ; mécanisme : interne (UE).",
             "CARTO (tuiles CartoDB, États-Unis) — fonds de carte pour la vue musées ; mécanisme : CCT.",
             "Wikidata (Allemagne) — base de connaissances structurée pour références culturelles ; mécanisme : interne (UE).",
             "Wikimedia (Wikipedia REST, États-Unis) — contenu encyclopédique pour références culturelles ; mécanisme : CCT.",
@@ -524,13 +515,6 @@
           "jurisdiction": "États-Unis",
           "transferMechanism": "SCC",
           "category": "search"
-        },
-        {
-          "name": "Langfuse",
-          "role": "Observabilité LLM et télémétrie de prompts",
-          "jurisdiction": "Allemagne",
-          "transferMechanism": "internal",
-          "category": "telemetry"
         },
         {
           "name": "CARTO",

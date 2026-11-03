@@ -3,10 +3,8 @@
  *
  * Targets the 33 Stryker NoCoverage mutants on this file by exercising:
  *   - finalizeLoginSuccess
- *       - MFA-warning branch toggled by L31-33 ConditionalExpression / EqualityOperator
- *         (mfaWarningDaysRemaining === env.auth.mfaEnrollmentWarningDays).
- *       - String literal payload keys: action ('MFA_WARNING_STARTED' /
- *         'AUTH_LOGIN_SUCCESS'), actorType ('user'), targetType ('user').
+ *       - String literal payload keys: action ('AUTH_LOGIN_SUCCESS'),
+ *         actorType ('user'), targetType ('user').
  *       - Object-literal payload metadata + the body of the if-block at L34.
  *       - The unconditional call to setAuthCookies(res, session) at L57.
  *   - auditLoginError
@@ -31,11 +29,9 @@ import { auditService } from '@shared/audit';
 import {
   AUDIT_AUTH_LOGIN_FAILED,
   AUDIT_AUTH_LOGIN_SUCCESS,
-  AUDIT_MFA_WARNING_STARTED,
   AUDIT_SECURITY_RATE_LIMIT,
 } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
-import { env } from '@src/config/env';
 
 import type { Request, Response } from 'express';
 
@@ -51,13 +47,12 @@ jest.mock('@modules/auth/adapters/primary/http/helpers/auth-cookies', () => ({
 
 // ─── Shared fixtures ─────────────────────────────────────────────────────────
 
-interface MfaSession {
+interface LoginSession {
   user: { id: number };
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
   refreshExpiresIn: number;
-  mfaWarningDaysRemaining?: number;
 }
 
 const makeReq = (overrides: Partial<Request> = {}): Request => {
@@ -76,7 +71,7 @@ const makeRes = (): Response =>
     setHeader: jest.fn(),
   }) as unknown as Response;
 
-const makeSession = (overrides: Partial<MfaSession> = {}): MfaSession => ({
+const makeSession = (overrides: Partial<LoginSession> = {}): LoginSession => ({
   user: { id: 42 },
   accessToken: 'acc-token',
   refreshToken: 'ref-token',
@@ -97,88 +92,7 @@ beforeEach(() => {
 
 // ─── finalizeLoginSuccess ────────────────────────────────────────────────────
 
-describe('finalizeLoginSuccess — MFA warning branch', () => {
-  it('emits MFA_WARNING_STARTED + AUTH_LOGIN_SUCCESS when mfaWarningDaysRemaining equals env.auth.mfaEnrollmentWarningDays', async () => {
-    const req = makeReq({ ip: '198.51.100.5', requestId: 'req-mfa-eq' });
-    const res = makeRes();
-    const session = makeSession({
-      user: { id: 7 },
-      mfaWarningDaysRemaining: env.auth.mfaEnrollmentWarningDays,
-    });
-
-    await finalizeLoginSuccess(req, res, session);
-
-    expect(auditLogMock).toHaveBeenCalledTimes(2);
-    // 1st call — MFA warning. Strict shape kills L35, L37, L39, L41 object/string mutants.
-    expect(auditLogMock).toHaveBeenNthCalledWith(1, {
-      action: AUDIT_MFA_WARNING_STARTED,
-      actorType: 'user',
-      actorId: 7,
-      targetType: 'user',
-      targetId: '7',
-      metadata: { daysRemaining: env.auth.mfaEnrollmentWarningDays },
-      ip: '198.51.100.5',
-      requestId: 'req-mfa-eq',
-    });
-    // Sanity — exact string literals (kills "" replacement mutants).
-    expect(AUDIT_MFA_WARNING_STARTED).toBe('MFA_WARNING_STARTED');
-
-    // 2nd call — login success.
-    expect(auditLogMock).toHaveBeenNthCalledWith(2, {
-      action: AUDIT_AUTH_LOGIN_SUCCESS,
-      actorType: 'user',
-      actorId: 7,
-      targetType: 'user',
-      targetId: '7',
-      ip: '198.51.100.5',
-      requestId: 'req-mfa-eq',
-    });
-    expect(setAuthCookiesMock).toHaveBeenCalledTimes(1);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(res, session);
-  });
-
-  it('skips MFA_WARNING_STARTED when mfaWarningDaysRemaining is undefined (kills L31 ConditionalExpression → true)', async () => {
-    const req = makeReq();
-    const res = makeRes();
-    const session = makeSession({ user: { id: 11 } });
-    // No mfaWarningDaysRemaining set.
-
-    await finalizeLoginSuccess(req, res, session);
-
-    // Only LOGIN_SUCCESS, never MFA_WARNING_STARTED.
-    expect(auditLogMock).toHaveBeenCalledTimes(1);
-    expect(auditLogMock).toHaveBeenCalledWith(
-      expect.objectContaining({ action: AUDIT_AUTH_LOGIN_SUCCESS, actorId: 11 }),
-    );
-    expect(auditLogMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ action: AUDIT_MFA_WARNING_STARTED }),
-    );
-    expect(setAuthCookiesMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips MFA_WARNING_STARTED when mfaWarningDaysRemaining ≠ env.auth.mfaEnrollmentWarningDays (kills L33 EqualityOperator → !==)', async () => {
-    // Pick a value that cannot be the configured warning threshold. If the
-    // EqualityOperator mutant flips `===` to `!==`, this case would emit
-    // MFA_WARNING_STARTED — which we assert against.
-    const otherValue = env.auth.mfaEnrollmentWarningDays + 1;
-    const req = makeReq();
-    const res = makeRes();
-    const session = makeSession({
-      user: { id: 99 },
-      mfaWarningDaysRemaining: otherValue,
-    });
-
-    await finalizeLoginSuccess(req, res, session);
-
-    expect(auditLogMock).toHaveBeenCalledTimes(1);
-    expect(auditLogMock).toHaveBeenCalledWith(
-      expect.objectContaining({ action: AUDIT_AUTH_LOGIN_SUCCESS }),
-    );
-    expect(auditLogMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ action: AUDIT_MFA_WARNING_STARTED }),
-    );
-  });
-
+describe('finalizeLoginSuccess', () => {
   it('always invokes setAuthCookies with the response + session (kills L57 BlockStatement / dual-mode contract)', async () => {
     const req = makeReq();
     const res = makeRes();

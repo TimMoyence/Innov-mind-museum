@@ -106,14 +106,13 @@ interface FetchImagesArgs {
   searchTerm: string | null;
   suggestedEntries: SuggestedImage[] | null;
   museumMode: boolean;
-  requestId: string | undefined;
 }
 
 function fetchImages(
   deps: EnrichmentDeps,
   args: FetchImagesArgs,
 ): Promise<EnrichedImage[] | undefined> {
-  const { searchTerm, suggestedEntries, museumMode, requestId } = args;
+  const { searchTerm, suggestedEntries, museumMode } = args;
   if (!deps.imageEnrichment) return NONE;
   if (suggestedEntries && suggestedEntries.length > 0) {
     const queries = suggestedEntries.map((s) => s.query.trim()).filter(Boolean);
@@ -124,12 +123,12 @@ function fetchImages(
       rationale: s.rationale,
     }));
     return failOpen(
-      deps.imageEnrichment.enrich(queries, undefined, annotations, museumMode, requestId),
+      deps.imageEnrichment.enrich(queries, undefined, annotations, museumMode),
     );
   }
   if (!searchTerm) return NONE;
   return failOpen(
-    deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode, requestId),
+    deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode),
   );
 }
 
@@ -157,7 +156,6 @@ export interface FetchEnrichmentArgs {
   ownerId: number | undefined;
   locale?: string;
   museumMode?: boolean;
-  requestId?: string;
 }
 
 /** Parallel fan-out: memory, KB, local knowledge, web search, images. All fail-open. */
@@ -169,7 +167,7 @@ export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
   webSearchResults: SearchResult[];
   enrichedImages: EnrichedImage[];
 }> {
-  const { deps, history, inputText, ownerId, locale, museumMode, requestId } = args;
+  const { deps, history, inputText, ownerId, locale, museumMode } = args;
   const searchTerm = extractSearchTerm(history, inputText);
   const suggestedEntries = extractSuggestedImageEntries(history);
   const resolvedLocale = locale ?? 'en';
@@ -182,7 +180,6 @@ export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
       searchTerm,
       suggestedEntries,
       museumMode: museumMode === true,
-      requestId,
     }),
     fetchWebSearchRaw(deps, searchTerm),
     fetchLocalKnowledge(deps, searchTerm, resolvedLocale),

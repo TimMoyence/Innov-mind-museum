@@ -1,11 +1,9 @@
-import { CircuitOpenError } from '@modules/chat/domain/errors/circuit-open.error';
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
 import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
 import { ChatSessionService } from '@modules/chat/useCase/session/chat-session.service';
 import { logger } from '@shared/logger/logger';
-import { chatRequestDurationSeconds } from '@shared/observability/prometheus-metrics';
 
 import type {
   CreateSessionResult,
@@ -28,11 +26,9 @@ import type { FeedbackValue } from '@modules/chat/domain/message/messageFeedback
 import type { AudioStorage } from '@modules/chat/domain/ports/audio-storage.port';
 import type { AudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
 import type { ChatOrchestrator } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
-import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
@@ -82,8 +78,6 @@ export interface ChatServiceDeps {
   knowledgeRouter?: KnowledgeRouterPort;
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
-  guardrailProvider?: GuardrailProvider;
-  guardrailProviderObserveOnly?: boolean;
   llmJudge?: LlmJudgeFn;
   /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
@@ -93,10 +87,8 @@ export interface ChatServiceDeps {
    * (no escalation). See {@link ChatSafetyDeps}.
    */
   frictionStore?: IGuardrailFrictionStore;
-  frictionEnabled?: boolean;
   frictionSessionThreshold?: number;
   frictionUserThreshold?: number;
-  piiSanitizer?: PiiSanitizer;
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
@@ -160,16 +152,12 @@ export class ChatService {
         artworkKnowledgeRepo: deps.artworkKnowledgeRepo,
       },
       safety: {
-        guardrailProvider: deps.guardrailProvider,
-        guardrailProviderObserveOnly: deps.guardrailProviderObserveOnly,
         llmJudge: deps.llmJudge,
         llmJudgeEnabled: deps.llmJudgeEnabled,
         frictionStore: deps.frictionStore,
-        frictionEnabled: deps.frictionEnabled,
         frictionSessionThreshold: deps.frictionSessionThreshold,
         frictionUserThreshold: deps.frictionUserThreshold,
         audit: deps.audit,
-        piiSanitizer: deps.piiSanitizer,
       },
     });
 
@@ -240,9 +228,7 @@ export class ChatService {
       userId: currentUserId,
       requestId,
     });
-    return await measureChatRequest(() =>
-      this.messages.postMessage(sessionId, input, requestId, currentUserId, ip),
-    );
+    return await this.messages.postMessage(sessionId, input, requestId, currentUserId, ip);
   }
 
   /** Transcribes audio → delegates to {@link postMessage}. */
@@ -253,9 +239,7 @@ export class ChatService {
     currentUserId?: number,
     ip?: string,
   ): Promise<PostAudioMessageResult> {
-    return await measureChatRequest(() =>
-      this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip),
-    );
+    return await this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip);
   }
 
   // ── Media & reporting ──
@@ -320,35 +304,3 @@ export class ChatService {
   }
 }
 
-type ChatRequestOutcome = 'success' | 'error' | 'guardrail_blocked' | 'circuit_open' | 'cache_hit';
-
-/**
- * Records `chat_request_duration_seconds` with outcome label. Fail-open: Prom
- * client throws cannot propagate. `cache_hit` / `guardrail_blocked` outcomes
- * are only reachable today via thrown errors — success-path detection still
- * needs a structured signal from {@link ChatMessageService}.
- */
-async function measureChatRequest<T>(fn: () => Promise<T>): Promise<T> {
-  const startedAtMs = Date.now();
-  let outcome: ChatRequestOutcome = 'success';
-  try {
-    return await fn();
-  } catch (err) {
-    outcome = classifyChatRequestError(err);
-    throw err;
-  } finally {
-    try {
-      chatRequestDurationSeconds.observe({ outcome }, (Date.now() - startedAtMs) / 1000);
-    } catch (metricErr) {
-      logger.warn('chat_request_metric_drop', {
-        outcome,
-        err: metricErr instanceof Error ? metricErr.message : String(metricErr),
-      });
-    }
-  }
-}
-
-function classifyChatRequestError(err: unknown): ChatRequestOutcome {
-  if (err instanceof CircuitOpenError) return 'circuit_open';
-  return 'error';
-}

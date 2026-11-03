@@ -1,12 +1,4 @@
-import { createHash } from 'node:crypto';
-
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import {
-  chatEnrichmentSourceCallsTotal,
-  chatEnrichmentSourceLatencySeconds,
-} from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import { scoreImage } from './image-scoring';
 
@@ -27,10 +19,6 @@ export interface ImageEnrichmentConfig {
 interface CacheEntry {
   images: EnrichedImage[];
   expiresAt: number;
-}
-
-interface LangfuseTraceLike {
-  update?(args: { output?: unknown; metadata?: Record<string, unknown> }): void;
 }
 
 /**
@@ -89,7 +77,6 @@ export class ImageEnrichmentService {
     wikidataImageUrl?: string,
     annotations?: readonly SuggestedImageAnnotation[],
     museumMode?: boolean,
-    requestId?: string,
   ): Promise<EnrichedImage[]> {
     const terms = Array.isArray(searchTermOrTerms) ? searchTermOrTerms : [searchTermOrTerms];
     const cleaned = terms.map((t) => t.trim()).filter(Boolean);
@@ -118,13 +105,13 @@ export class ImageEnrichmentService {
       for (const term of cleaned) {
         const ann = annotationByTerm.get(term.toLowerCase());
         if (this.musaiumClient) {
-          tasks.push(this.fetchSourcePhotos(this.musaiumClient, 'musaium', term, ann, requestId));
+          tasks.push(this.fetchSourcePhotos(this.musaiumClient, 'musaium', term, ann));
         }
         if (this.commonsClient) {
-          tasks.push(this.fetchSourcePhotos(this.commonsClient, 'commons', term, ann, requestId));
+          tasks.push(this.fetchSourcePhotos(this.commonsClient, 'commons', term, ann));
         }
         if (this.unsplashClient) {
-          tasks.push(this.fetchSourcePhotos(this.unsplashClient, 'unsplash', term, ann, requestId));
+          tasks.push(this.fetchSourcePhotos(this.unsplashClient, 'unsplash', term, ann));
         }
       }
       const fetched = await Promise.all(tasks);
@@ -208,25 +195,7 @@ export class ImageEnrichmentService {
     source: EnrichedImageSource,
     searchTerm: string,
     annotation: SuggestedImageAnnotation | undefined,
-    requestId: string | undefined,
   ): Promise<EnrichedImage[]> {
-    const startMs = Date.now();
-    const lf = getLangfuse();
-    const span = safeTrace('imageEnrichment.span.create', () =>
-      lf?.trace({
-        name: 'chat.enrichment.image_source',
-        metadata: {
-          source,
-          requestId,
-          // Hash the term for privacy (LLM-produced but may include topic
-          // information that we keep out of free-text observability).
-          queryHash: hashQuery(searchTerm),
-        },
-      }),
-    ) as LangfuseTraceLike | undefined;
-
-    let outcome: 'success' | 'error' | 'timeout' = 'success';
-    let resultCount = 0;
     try {
       const photos = await Promise.race([
         client.searchPhotos(searchTerm),
@@ -236,31 +205,13 @@ export class ImageEnrichmentService {
           }, this.config.fetchTimeoutMs);
         }),
       ]);
-      const enriched = photos.map((photo, index) =>
+      return photos.map((photo, index) =>
         mapPhotoToEnriched(photo, index, source, searchTerm, annotation),
       );
-      resultCount = enriched.length;
-      return enriched;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      outcome = msg === 'IMAGE_ENRICHMENT_TIMEOUT' ? 'timeout' : 'error';
       logger.warn(`image_enrichment_${source}_failed`, { searchTerm, error: msg });
       return [];
-    } finally {
-      const latencyMs = Date.now() - startMs;
-      // Metrics — never throw from observability paths.
-      try {
-        chatEnrichmentSourceCallsTotal.inc({ source, outcome });
-        chatEnrichmentSourceLatencySeconds.observe({ source }, latencyMs / 1000);
-      } catch {
-        // swallow — metric drop is fail-open per UFR-013.
-      }
-      safeTrace('imageEnrichment.span.update', () => {
-        span?.update?.({
-          output: { latencyMs, outcome, resultCount },
-          metadata: { source, latencyMs, outcome, resultCount, requestId },
-        });
-      });
     }
   }
 
@@ -372,9 +323,4 @@ function pickNonUnsplashCaption(
   if (llmCaption !== undefined && llmCaption.length > 0) return llmCaption;
   if (photo.caption.length > 0) return photo.caption;
   return searchTerm;
-}
-
-/** Truncated sha256 for privacy-safe query telemetry. */
-function hashQuery(query: string): string {
-  return createHash('sha256').update(query).digest('hex').slice(0, 16);
 }

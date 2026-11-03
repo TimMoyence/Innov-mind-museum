@@ -21,15 +21,6 @@ jest.mock('@modules/museum/useCase', () => ({
 
 jest.mock('@shared/audit', () => ({ auditService: { log: jest.fn() } }));
 
-// Avoid pulling the prom-client registry into a side-effecting state — the
-// real metric module is loaded once at app boot ; for these tests we only
-// care that the route wires up correctly.
-jest.mock('@shared/observability/prometheus-metrics', () => ({
-  geoDetectMuseumTotal: { labels: () => ({ inc: jest.fn() }) },
-  nominatimRequestsTotal: { labels: () => ({ inc: jest.fn() }) },
-  nominatimRequestDurationSeconds: { observe: jest.fn() },
-}));
-
 function makeApp(detectMuseumUseCase: DetectMuseumUseCase) {
   const app = express();
   app.use(express.json());

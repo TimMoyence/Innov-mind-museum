@@ -57,7 +57,7 @@ export class UserConsent {
   id!: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'FK_user_consents_user' })
   user!: Relation<User>;
 
   @Column({ name: 'user_id' })

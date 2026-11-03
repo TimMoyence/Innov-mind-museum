@@ -1,5 +1,4 @@
 import { DisabledAudioTranscriber } from '@modules/chat/domain/ports/audio-transcriber.port';
-import { DisabledPiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import { validateAudioInput } from '@modules/chat/useCase/audio/audio-validation';
 import { buildSttPromptBiasFromVisitContext } from '@modules/chat/useCase/audio/stt-prompt-bias';
 import { FrictionEscalationService } from '@modules/chat/useCase/guardrail/guardrail-escalation';
@@ -11,7 +10,6 @@ import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prep
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
-import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
 
@@ -24,11 +22,9 @@ import type {
   ChatOrchestrator,
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ImageProcessorPort } from '@modules/chat/domain/ports/image-processor.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
 import type { OcrService } from '@modules/chat/domain/ports/ocr.port';
-import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { FrictionTurnOutcome } from '@modules/chat/useCase/guardrail/guardrail-escalation';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
@@ -58,7 +54,6 @@ import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/p
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 
 /**
  * SEC — AppError + {statusCode,code} shape preserved verbatim; everything else
@@ -124,23 +119,11 @@ export interface ChatEnrichmentDeps {
 }
 
 export interface ChatSafetyDeps {
-  guardrailProvider?: GuardrailProvider;
-  guardrailProviderObserveOnly?: boolean;
   audit?: AuditService;
-  piiSanitizer?: PiiSanitizer;
   llmJudge?: LlmJudgeFn;
   /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — 2-level friction counter. When
-   * `frictionEnabled` (default `env.guardrails.frictionEnabled`), the judge runs
-   * in PARALLEL of generation and an isolated off-topic is soft-redirected,
-   * escalating to a hard-block cool-down only past the thresholds. When the
-   * store is omitted, the friction model degrades to plain soft-redirect (no
-   * escalation) — never a hard block (FAIL-SOFT).
-   */
   frictionStore?: IGuardrailFrictionStore;
-  frictionEnabled?: boolean;
   frictionSessionThreshold?: number;
   frictionUserThreshold?: number;
 }
@@ -170,7 +153,6 @@ export class ChatMessageService {
   private readonly audioTranscriber: AudioTranscriber;
   private readonly cache?: CacheService;
   private readonly userMemory?: UserMemoryService;
-  private readonly piiSanitizer: PiiSanitizer;
   private readonly llmCache?: LlmCacheService;
   private readonly urlHeadProbe?: UrlHeadProbe;
   /** Hybrid-gravity (2026-06-01) — friction policy collaborator (design §5). */
@@ -187,9 +169,6 @@ export class ChatMessageService {
     this.llmCache = deps.llmCache;
     this.urlHeadProbe = deps.urlHeadProbe;
     this.userMemory = enrichment.userMemory;
-    this.piiSanitizer = safety.piiSanitizer ?? new DisabledPiiSanitizer();
-
-    const frictionEnabled = safety.frictionEnabled ?? env.guardrails.frictionEnabled;
 
     const imageProcessor = new ImageProcessingService({
       imageStorage: deps.imageStorage,
@@ -200,17 +179,13 @@ export class ChatMessageService {
     this.guardrail = new GuardrailEvaluationService({
       repository: deps.repository,
       audit: safety.audit,
-      guardrailProvider: safety.guardrailProvider,
-      guardrailProviderObserveOnly: safety.guardrailProviderObserveOnly,
       llmJudge: safety.llmJudge,
       llmJudgeEnabled: safety.llmJudgeEnabled,
-      frictionEnabled,
     });
 
     this.friction = new FrictionEscalationService({
       guardrail: this.guardrail,
       frictionStore: safety.frictionStore,
-      frictionEnabled,
       frictionSessionThreshold:
         safety.frictionSessionThreshold ?? env.guardrails.frictionSessionThreshold,
       frictionUserThreshold: safety.frictionUserThreshold ?? env.guardrails.frictionUserThreshold,
@@ -278,16 +253,13 @@ export class ChatMessageService {
       return prep.result;
     }
 
-    // LLM02 — substitute provider-scrubbed PII BEFORE local sanitizer so LLM
-    // payload + cache key carry only placeholders, never raw PII.
-    const effectiveUserText = prep.redactedText ?? input.text?.trim() ?? '';
-    const sanitizedText = this.piiSanitizer.sanitize(effectiveUserText).sanitizedText;
     const orchestratorInput = this.pipeline.buildOrchestratorInput(
       prep,
       input,
-      sanitizedText,
+      input.text?.trim() ?? '',
       requestId,
     );
+    const sanitizedText = orchestratorInput.text ?? '';
 
     const cacheCtx: LlmCacheCtx = {
       prep,
@@ -310,48 +282,22 @@ export class ChatMessageService {
       });
     }
 
-    // Hybrid-gravity (2026-06-01) — friction scopes for this turn. `session` is
-    // always present; `user` when authenticated, else `ip` (hashed — RGPD).
     const scopes = this.friction.scopesFor(sessionId, prep.ownerId ?? currentUserId, ip);
 
-    // R11 pre-check — if this user/IP (any session) OR this session is in an
-    // armed cool-down window, short-circuit to the cool-down WITHOUT generating
-    // (no LLM spend). FAIL-SOFT: a store outage reports `false` → never blocks.
-    if (this.friction.isEnabled && (await this.friction.isAnyScopeCoolingDown(scopes))) {
+    if (await this.friction.isAnyScopeCoolingDown(scopes)) {
       return await this.buildCoolDownResult(sessionId, prep);
     }
 
-    // A5 R4 — composing span. merged_bug_004 — try/finally emits on success
-    // AND failure (time-to-failure is the window engineers need).
-    const composingStartedAtMs = Date.now();
     let friction: FrictionTurnOutcome;
-    let outcome: ChatPhaseOutcome = 'success';
     try {
-      // Hybrid-gravity (2026-06-01) — when friction is enabled, run the off-topic
-      // SEMANTIC judge IN PARALLEL of generation (Promise.allSettled), so an
-      // on-topic message adds ~0 latency (NFR-Latence-1) and the judge never
-      // sits in series ahead of the answer. When disabled (kill-switch), the
-      // legacy inline judge already ran in `prepare` → just generate.
-      friction = this.friction.isEnabled
-        ? await this.friction.runParallel(
-            async () => await this.orchestrator.generate(orchestratorInput),
-            sanitizedText,
-            scopes,
-            { sessionId, userId: prep.ownerId ?? currentUserId, requestId, ip },
-          )
-        : { kind: 'answer', aiResult: await this.orchestrator.generate(orchestratorInput) };
+      friction = await this.friction.runParallel(
+        async () => await this.orchestrator.generate(orchestratorInput),
+        sanitizedText,
+        scopes,
+        { sessionId, userId: prep.ownerId ?? currentUserId, requestId, ip },
+      );
     } catch (err) {
-      outcome = 'error';
-      // 503 SERVICE_UNAVAILABLE not 500 — provider failure is degraded
-      // dependency, not internal bug. AppError subclasses preserved.
       throw mapOrchestratorError(err, requestId);
-    } finally {
-      emitChatPhaseSpan('composing', composingStartedAtMs, {
-        sessionId,
-        requestId,
-        hasImage: Boolean(orchestratorInput.image),
-        outcome,
-      });
     }
 
     // Off-topic crossed a threshold → SUPPRESS the generated answer and return

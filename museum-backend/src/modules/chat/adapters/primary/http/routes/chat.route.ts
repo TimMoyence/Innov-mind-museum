@@ -5,7 +5,6 @@ import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { createUploadAdmissionMiddleware } from '@shared/middleware/upload-admission.middleware';
 
 import { createCompareRouter } from './chat-compare.route';
-import { createDescribeRouter } from './chat-describe.route';
 import { createMediaRouter } from './chat-media.route';
 import { createMemoryRouter } from './chat-memory.route';
 import { createMessageRouter } from './chat-message.route';
@@ -13,7 +12,6 @@ import { createSessionRouter } from './chat-session.route';
 
 import type { CompareRouterDeps } from './chat-compare.route';
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
-import type { DescribeService } from '@modules/chat/useCase/describe.service';
 import type { GetMessageExplanationUseCase } from '@modules/chat/useCase/explanation/get-message-explanation.use-case';
 import type { UserMemoryService } from '@modules/chat/useCase/memory/user-memory.service';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
@@ -30,7 +28,6 @@ export const createChatRouter = (
   chatService: ChatService,
   artKeywordRepo?: ArtKeywordRepository,
   userMemoryService?: UserMemoryService,
-  describeService?: DescribeService,
   compareImageUseCase?: CompareImageUseCase,
   compareSessionAccessVerifier?: CompareSessionAccessVerifier,
   getMessageExplanationUseCase?: GetMessageExplanationUseCase,
@@ -46,9 +43,6 @@ export const createChatRouter = (
   router.use('/', createMediaRouter(chatService, uploadAdmission));
   if (userMemoryService) {
     router.use('/', createMemoryRouter(userMemoryService));
-  }
-  if (describeService) {
-    router.use('/', createDescribeRouter(describeService));
   }
   if (getMessageExplanationUseCase) {
     // GDPR Art. 22 + AI Act Art. 14/50 — see docs/GDPR_ART22_SCOPE.md.

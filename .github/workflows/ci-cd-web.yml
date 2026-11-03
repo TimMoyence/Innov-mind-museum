@@ -391,9 +391,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # I-CMP6 / R11 (design §D6) — keyless OIDC cosign + SBOM attestation.
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup pnpm
@@ -416,10 +413,6 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # COMP-01 — PGP/.well-known placeholder deploy gate. Blocks shipping a
-      # placeholder pgp-key.txt (the RFC 9116 Encryption channel would publish
-      # empty). Runs on prod deploy only; the placeholder is legitimate in
-      # dev/PR until the real key is generated (docs/operations/PGP_KEY_GENERATION.md).
       - name: PGP placeholder deploy gate
         run: node scripts/sentinels/wellknown-placeholder-free.mjs
 
@@ -447,7 +440,6 @@ jobs:
           trivyignores: .trivyignore
 
       - name: Push image to GHCR
-        id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
           context: .
@@ -460,28 +452,6 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-web:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-web:${{ github.sha }}
-
-      # ── I-CMP6 / R11 (decision Q3 "Tout faire", design §D6) — CycloneDX SBOM
-      # attestation on the pushed web image digest, mirroring the BE pattern.
-      # ADDITIVE + advisory (continue-on-error) so it never gates the deploy.
-      - name: Generate SBOM (web)
-        working-directory: museum-web
-        continue-on-error: true
-        run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom.json --spec-version 1.5 --output-reproducible
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v4.1.2
-        with:
-          cosign-release: 'v2.4.1'
-
-      - name: Cosign attest SBOM (CycloneDX)
-        continue-on-error: true
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign attest --yes --type cyclonedx \
-            --predicate museum-web/sbom.json \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-web@${{ steps.push.outputs.digest }}"
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5

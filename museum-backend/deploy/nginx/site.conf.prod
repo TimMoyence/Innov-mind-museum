@@ -15,7 +15,7 @@
 server {
   listen 80;
   listen [::]:80;
-  server_name asilidesign.fr www.asilidesign.fr museum.asilidesign.fr
+  server_name asilidesign.fr www.asilidesign.fr
               musaium.com www.musaium.com musaium.fr www.musaium.fr;
 
   location ^~ /.well-known/acme-challenge/ {
@@ -66,6 +66,8 @@ server {
 
   resolver 127.0.0.11 valid=30s ipv6=off;
   client_max_body_size 20m;
+
+  error_log /dev/null;
 
   # --- Compression gzip ---
   gzip on;
@@ -295,56 +297,6 @@ server {
     proxy_read_timeout 60s;
   }
 
-  # Grafana iframe gate — super_admin only via auth_request → backend.
-  location = /grafana-auth-check {
-    internal;
-    rewrite ^.*$ /api/auth/super-admin-check break;
-    set $auth_upstream http://museum-backend:3000;
-    proxy_pass $auth_upstream;
-    proxy_http_version 1.1;
-    proxy_pass_request_body off;
-    proxy_set_header Content-Length    "";
-    proxy_set_header Host              $http_host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Cookie            $http_cookie;
-    proxy_read_timeout    5s;
-    proxy_send_timeout    5s;
-    proxy_connect_timeout 2s;
-  }
-
-  location /grafana/ {
-    auth_request /grafana-auth-check;
-    set $grafana_upstream http://grafana:3000;
-    proxy_pass $grafana_upstream;
-    proxy_http_version 1.1;
-    proxy_set_header Host              $http_host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Upgrade           $http_upgrade;
-    proxy_set_header Connection        "upgrade";
-    proxy_hide_header X-Frame-Options;
-    proxy_read_timeout 60s;
-    proxy_send_timeout 60s;
-  }
-
-  location /grafana/api/live/ {
-    auth_request /grafana-auth-check;
-
-    set $grafana_upstream http://grafana:3000;
-    proxy_pass         $grafana_upstream;
-
-    proxy_http_version 1.1;
-    proxy_set_header   Upgrade    $http_upgrade;
-    proxy_set_header   Connection $http_connection;
-    proxy_set_header   Host       $http_host;
-
-    proxy_read_timeout 24h;
-    proxy_send_timeout 24h;
-  }
-
   # --- Next.js static assets (immutable cache) ---
   location /_next/static/ {
     set $web_upstream http://museum-web:3001;
@@ -387,20 +339,6 @@ server {
     default_type "text/plain";
     try_files $uri =404;
   }
-
-  return 301 https://musaium.com$request_uri;
-}
-
-# --- Legacy domain redirect ---
-server {
-  listen 443 ssl;
-  listen [::]:443 ssl;
-  http2 on;
-
-  server_name museum.asilidesign.fr;
-
-  ssl_certificate     /etc/letsencrypt/live/asilidesign.fr/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/asilidesign.fr/privkey.pem;
 
   return 301 https://musaium.com$request_uri;
 }

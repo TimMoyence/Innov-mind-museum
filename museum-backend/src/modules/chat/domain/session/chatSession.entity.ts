@@ -81,7 +81,7 @@ export class ChatSession {
   })
   messages!: Relation<ChatMessage>[];
 
-  @VersionColumn()
+  @VersionColumn({ default: 1 })
   version!: number;
 
   @CreateDateColumn({ type: 'timestamptz' })

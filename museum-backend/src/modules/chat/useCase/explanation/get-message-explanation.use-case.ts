@@ -1,7 +1,6 @@
 import {
   AUDIT_GUARDRAIL_BLOCKED_INPUT,
   AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
-  AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
 } from '@shared/audit/audit.types';
 import { AuditLog } from '@shared/audit/auditLog.entity';
 import {
@@ -265,7 +264,6 @@ export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
           actions: [
             AUDIT_GUARDRAIL_BLOCKED_INPUT,
             AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
-            AUDIT_SECURITY_LLM_GUARD_BREAKER_OPEN,
           ],
         })
         .andWhere('audit.createdAt BETWEEN :lower AND :upper', {

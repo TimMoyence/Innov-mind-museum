@@ -21,8 +21,6 @@
  * Failure mode at HEAD `00325d81` :
  *  - `authSession.service.ts:201-213` `logout(refreshToken: string | undefined)`
  *    has 1 arg only ; no `accessTokenDenylist` field exists on the service.
- *  - Constructor accepts (userRepo, refreshRepo, totpRepo?) — no 4th param for
- *    the denylist. The 4-arg construction below fails TS today ; cast pins R7.
  *
  * Run scope :
  *   pnpm jest tests/unit/auth/authSession.logout.test.ts
@@ -37,8 +35,6 @@ import {
 import { env } from '@src/config/env';
 
 import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
-
-import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
 process.env.JWT_ACCESS_TTL = '15m';
 process.env.JWT_REFRESH_TTL = '30d';
@@ -75,19 +71,6 @@ const makeRefreshToken = (jti = 'refresh-jti-r7'): string =>
     audience: 'musaium-refresh',
   });
 
-/**
- * Forward-compatible cast — R7 GREEN extends the constructor with a 4th DI
- * param `accessTokenDenylist`. TS on HEAD `00325d81` rejects this signature ;
- * `as any` cast inside the helper is the ONE allowed boundary (we keep `as any`
- * scoped to the constructor wiring, never on entity assertions).
- */
-type ServiceCtor4Args = new (
-  userRepo: ReturnType<typeof makeUserRepo>,
-  refreshRepo: IRefreshTokenRepository,
-  totpRepo: undefined,
-  accessTokenDenylist: IAccessTokenDenylist,
-) => AuthSessionServiceType;
-
 type LogoutWithCtx = (
   refreshToken: string | undefined,
   ctx?: { accessJti: string; accessExpSec: number },
@@ -114,12 +97,7 @@ describe('AuthSessionService.logout — access-token denylist DI (R7)', () => {
   });
 
   const buildService = (): AuthSessionServiceType =>
-    new (AuthSessionService as unknown as ServiceCtor4Args)(
-      userRepo,
-      refreshRepo,
-      undefined,
-      denylist,
-    );
+    new AuthSessionService(userRepo, refreshRepo, denylist);
 
   it('with refreshToken only → calls refreshRepo.revokeByJti, NEVER denylist.add (R7 preserved path)', async () => {
     const svc = buildService();

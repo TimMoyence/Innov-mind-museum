@@ -78,28 +78,6 @@ export interface AppEnv {
     appleClientId: string;
     googleClientIds: string[];
     /**
-     * AES-256-GCM key (32 raw bytes, base64-encoded) used to encrypt the
-     * per-user TOTP shared secret at rest. SEC-HARDENING H12 / L3
-     * secret-separation: distinct from `JWT_*` and `MEDIA_SIGNING_SECRET`
-     * (`env.production-validation.ts` enforces in prod).
-     * Optional in dev/test (dev key injected); REQUIRED in production.
-     */
-    mfaEncryptionKey: string;
-    /**
-     * Short-lived JWT secret used to sign the `mfaSessionToken` issued between
-     * the password step and the TOTP challenge. Distinct from access/refresh
-     * secrets so a leak of one cannot replay the other. Required in production.
-     */
-    mfaSessionTokenSecret: string;
-    /** TTL of `mfaSessionToken` in seconds. Default 5 minutes. */
-    mfaSessionTokenTtlSeconds: number;
-    /**
-     * Warning-window length (days) granted to existing admins on a build that
-     * requires MFA but haven't enrolled. Default 30. Past deadline, login is
-     * soft-blocked.
-     */
-    mfaEnrollmentWarningDays: number;
-    /**
      * Phase 5 — Apple Sign-In JWKS endpoint. Defaults to Apple canonical URL.
      * Overridable in tests for `startSocialJwtSpoof()`.
      */
@@ -119,7 +97,7 @@ export interface AppEnv {
     /**
      * F7 (2026-04-30) — HMAC key binding a CSRF double-submit token to the
      * active access-token cookie. H12 / L3 secret-separation (distinct from
-     * `JWT_*`, `MEDIA_SIGNING_SECRET`, `MFA_*`). REQUIRED in production.
+     * `JWT_*`, `MEDIA_SIGNING_SECRET`). REQUIRED in production.
      * CSRF cookie value = HMAC-SHA256(access_token cookie, csrfSecret).
      * Validation is constant-time (`crypto.timingSafeEqual`).
      */
@@ -274,13 +252,6 @@ export interface AppEnv {
     enabled: boolean;
     exporterEndpoint: string;
     serviceName: string;
-  };
-  /** Langfuse LLM observability (V12 W1 — disabled by default). */
-  langfuse?: {
-    enabled: boolean;
-    publicKey: string | undefined;
-    secretKey: string | undefined;
-    host: string;
   };
   /** Max chat messages a free-tier user can send per calendar day. */
   freeTierDailyChatLimit: number;
@@ -585,109 +556,20 @@ export interface AppEnv {
    * "candidate" flag (ADR-015 amendment 2026-05-14, T1.7#2).
    */
   guardrails: {
-    /** Base URL of LLM Guard sidecar. When set, LLMGuardAdapter is wired. */
-    llmGuardUrl?: string;
-    /** Hard request timeout (ms). Fail-CLOSED on elapsed. */
-    timeoutMs: number;
-    /** When true, never block — only log decisions (Phase A "observe" mode). */
-    observeOnly: boolean;
-    /**
-     * F4 (2026-04-30) — daily cost cap (cents) for structured-output judge.
-     * Default `500` ($5/day) activates judge in parallel with sidecar
-     * (defense-in-depth, ADR-015 amendment). Budget gate disables layer when
-     * `cap <= 0`. Tracked via configured backend (memory per-process or Redis
-     * shared-across-replicas).
-     */
     budgetCentsPerDay: number;
-    /**
-     * F4 — hard timeout (ms) per LLM judge call. On elapsed, judge returns null
-     * and caller falls back to keyword decision. p99 ≤ 500ms target.
-     */
     judgeTimeoutMs: number;
-    /**
-     * F4 — min message length (chars) below which judge is NOT invoked. Short
-     * messages decided by keyword-only signal — keeps cost <15% of chat traffic.
-     */
     judgeMinMessageLength: number;
-    /**
-     * ADR-030 (2026-05-05) — backend store for cumulative judge budget counter.
-     * 'memory' = per-process (legacy F4); 'redis' = shared via SET INCRBY + TTL.
-     */
     budgetBackend: 'memory' | 'redis';
-    /**
-     * Hybrid-gravity guardrail (2026-06-01) — kill-switch for the friction
-     * model. `true` (default): judge runs in PARALLEL of generation and an
-     * isolated off-topic is soft-redirected, escalating only past the
-     * thresholds below. `false`: legacy inline judge that hard-blocks every
-     * off-topic. Ops kill-switch (no redeploy), NOT a feature flag (cf. UFR-015).
-     */
-    frictionEnabled: boolean;
-    /** Session-scoped off-topic strikes at which a message hard-blocks for the rest of the session. */
     frictionSessionThreshold: number;
-    /** User/IP-scoped strikes at which a global cool-down is armed. */
     frictionUserThreshold: number;
-    /** TTL (ms) of the session strike counter (default 6h). */
     frictionSessionTtlMs: number;
-    /** TTL (ms) of the user/IP strike counter (default 24h sliding). */
     frictionUserTtlMs: number;
-    /** Duration (ms) of the global user/IP cool-down window (default 2min). */
     frictionCooldownMs: number;
-    /** Strike weight of a security block (V1/sidecar) — heavier so abusers escalate faster. */
     frictionWeightSecurity: number;
-    /** Strike weight of an off-topic (judge) block. */
     frictionWeightOfftopic: number;
-    /**
-     * 2026-05-12 — LLM Guard sidecar circuit breaker
-     * (`adapters/secondary/guardrails/guardrail-circuit-breaker.ts`).
-     * NOT a feature flag — always-on (pre-launch V1 doctrine).
-     */
-    circuitBreaker: {
-      /** Failures within `windowMs` that trip breaker OPEN. */
-      failureThreshold: number;
-      /** Sliding-window length (ms) for failure count. */
-      windowMs: number;
-      /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
-      openDurationMs: number;
-      /** Max concurrent probes admitted while HALF_OPEN. */
-      halfOpenMaxProbes: number;
-    };
-    /**
-     * 2026-05-12 (ADR-047) — concurrent /scan call cap per backend process.
-     * Prevents surge amplifying sidecar latency into death spiral.
-     * Overflow → fail-CLOSED (safety preserved).
-     */
-    maxInflight: number;
-    /** Surge queue depth before overflow → fail-CLOSED. */
-    queueMax: number;
-    /**
-     * ADR-051 (2026-05-13) — Microsoft Presidio analyzer+anonymizer sidecar.
-     * C9.8 (2026-05-17) — wired via `PRESIDIO_ENABLED` flag, defaults to
-     * observe-only via `GUARDRAILS_V2_OBSERVE_ONLY=true` for 4-7d bake.
-     */
-    presidio: {
-      /** C9.8 — when true AND `baseUrl` set, used as the V2 guardrail provider. */
-      enabled: boolean;
-      baseUrl?: string;
-      /** Hard request timeout (ms) for /analyze + /anonymize. Fail-CLOSED on elapsed. */
-      timeoutMs: number;
-    };
-    /**
-     * Chaos drill probability in [0, 1] consumed by `LLMGuardAdapter`. Each
-     * scan samples uniform random; if < `chaosRate`, call aborted BEFORE fetch
-     * (exercise of fail-CLOSED path). Production MUST be 0.
-     */
-    chaosRate: number;
-    /**
-     * 2026-05-13 — LLM cost circuit breaker (perennial design §11 D9 RE2).
-     * Distinct from latency `LLMCircuitBreaker`: trips on cost SPIKES (DDoS /
-     * scraping abuse) and daily-cap breach. ALWAYS-ON (pre-launch V1 doctrine).
-     */
     costCircuitBreaker: {
-      /** Cents-per-hour threshold above which breaker trips OPEN. */
       hourlyThresholdCents: number;
-      /** Cents-per-UTC-day cumulative cap above which breaker trips OPEN. */
       dailyBudgetCents: number;
-      /** Cooldown (ms) after which OPEN becomes HALF_OPEN. */
       openDurationMs: number;
     };
   };

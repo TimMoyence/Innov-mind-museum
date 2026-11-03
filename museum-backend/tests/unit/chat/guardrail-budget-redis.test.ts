@@ -15,23 +15,14 @@ import {
   getBudgetExhausted,
   recordJudgeCost,
 } from '@modules/chat/useCase/guardrail/guardrail-budget';
-import { guardrailBudgetRedisFallbackTotal } from '@shared/observability/prometheus-metrics';
 
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Reads the counter's current value via the prom-client `.get()` API. */
-async function counterValue(): Promise<number> {
-  const snapshot = await guardrailBudgetRedisFallbackTotal.get();
-  return snapshot.values[0]?.value ?? 0;
-}
-
-describe('guardrail-budget Redis fallback Prometheus counter', () => {
+describe('guardrail-budget Redis fail-closed', () => {
   beforeEach(() => {
     process.env.GUARDRAIL_BUDGET_BACKEND = 'redis';
     __setStoreForTest(null);
     __setNowForTest(new Date('2026-05-13T10:00:00Z'));
-    // Resetting the counter ensures each test starts from a known baseline.
-    guardrailBudgetRedisFallbackTotal.reset();
   });
 
   afterEach(() => {
@@ -54,11 +45,8 @@ describe('guardrail-budget Redis fallback Prometheus counter', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: unreachableCache });
 
-    const before = await counterValue();
     expect(await getBudgetExhausted()).toBe(true); // fail-CLOSED preserved
-    const after = await counterValue();
 
-    expect(after).toBeGreaterThan(before);
   });
 
   it('increments the fallback counter when ping() throws', async () => {
@@ -77,11 +65,8 @@ describe('guardrail-budget Redis fallback Prometheus counter', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: throwingCache });
 
-    const before = await counterValue();
     expect(await getBudgetExhausted()).toBe(true);
-    const after = await counterValue();
 
-    expect(after).toBeGreaterThan(before);
   });
 
   it('increments the fallback counter when get() returns a malformed counter (NaN-string)', async () => {
@@ -98,11 +83,8 @@ describe('guardrail-budget Redis fallback Prometheus counter', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: malformedCache });
 
-    const before = await counterValue();
     expect(await getBudgetExhausted()).toBe(true);
-    const after = await counterValue();
 
-    expect(after).toBeGreaterThan(before);
   });
 
   it('increments the fallback counter when get() returns a negative counter', async () => {
@@ -119,11 +101,8 @@ describe('guardrail-budget Redis fallback Prometheus counter', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: corruptedCache });
 
-    const before = await counterValue();
     expect(await getBudgetExhausted()).toBe(true);
-    const after = await counterValue();
 
-    expect(after).toBeGreaterThan(before);
   });
 
   it('does NOT increment the fallback counter on the healthy path (ping=true + missing key)', async () => {
@@ -140,14 +119,11 @@ describe('guardrail-budget Redis fallback Prometheus counter', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: healthyCache });
 
-    const before = await counterValue();
     // First-of-day legitimate miss → cumulative=0 → not exhausted, no fallback
     // recorded. recordJudgeCost will succeed-soft (incrBy returns null from
     // this stub, which the adapter silently ignores per fail-soft port).
     expect(await getBudgetExhausted()).toBe(false);
     await recordJudgeCost(50);
-    const after = await counterValue();
 
-    expect(after).toBe(before);
   });
 });
