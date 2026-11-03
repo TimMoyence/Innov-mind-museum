@@ -1,3 +1,5 @@
+import { maskPersonalData } from '@shared/pii/mask-personal-data';
+
 import type { VisitContext } from '@modules/chat/domain/chat.types';
 
 /**
@@ -21,19 +23,7 @@ import type { VisitContext } from '@modules/chat/domain/chat.types';
 const MAX_PROMPT_CHARS = 896;
 const SAFE_TOTAL_BUDGET = 880;
 
-// Conservative defensive filter — drops obviously-personal tokens. The
-// upstream data sources (museum vocab, VisitedArtwork) should never contain
-// PII; this exists in case a future code path passes user-derived strings.
-// Defensive PII filters. Patterns kept *intentionally cheap and bounded* —
-// linear scans, no nested quantifiers, sonarjs/slow-regex safe.
-const DIGIT_RUN = /\d{7}/;
-
-const hasPii = (s: string): boolean => {
-  if (s.includes('@')) return true;
-  // Strip non-digits, then check for any 7+ digit run (covers phone/card
-  // numbers expressed with various separators without backtracking).
-  return DIGIT_RUN.test(s.replace(/\D+/g, ''));
-};
+const hasPii = (s: string): boolean => maskPersonalData(s).count > 0;
 
 const dedupePreserveOrder = (items: readonly string[]): string[] => {
   const seen = new Set<string>();

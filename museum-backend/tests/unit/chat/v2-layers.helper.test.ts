@@ -24,17 +24,12 @@
  */
 import {
   runLlmJudge,
-  evaluateGuardrailProvider,
 } from '@modules/chat/useCase/guardrail/eval/v2-layers.helper';
 
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.types';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 
 const LONG_SAFE_TEXT =
   "Could you give me a much deeper, longer analysis of Monet's brushwork in his 1872 painting Impression, Sunrise, including the palette?";
-
-const buildProvider = (name = 'llm-guard'): GuardrailProvider =>
-  ({ name }) as unknown as GuardrailProvider;
 
 describe('v2-layers.helper — judge / sidecar independence (I-FIX3 T1.4 regression-pin)', () => {
   describe('runLlmJudge degrade is a DEFER, not a short-circuit', () => {
@@ -66,51 +61,4 @@ describe('v2-layers.helper — judge / sidecar independence (I-FIX3 T1.4 regress
     });
   });
 
-  describe('evaluateGuardrailProvider (sidecar, fail-CLOSED) decides independently of the judge', () => {
-    it("keeps the sidecar's fail-CLOSED block binding regardless of any judge degrade", async () => {
-      // The sidecar throws → ADR-048 fail-CLOSED → block. This verdict is the
-      // sidecar's alone; the judge does not run here and could not relax it.
-      const verdict = await evaluateGuardrailProvider(
-        'input',
-        async () => {
-          throw new Error('sidecar-down');
-        },
-        { guardrailProvider: buildProvider(), guardrailProviderObserveOnly: false },
-      );
-
-      expect(verdict.allow).toBe(false);
-      // ADR-047: a raw adapter `error` is mapped to `service_unavailable`
-      // (guardrail-reason-mapping.ts:36-38). Pin the actual fail-CLOSED reason.
-      expect(verdict.reason).toBe('service_unavailable');
-    });
-
-    it('a degraded judge (allow:true) does NOT override an enforce-mode sidecar block', async () => {
-      // Simulate the evaluateInput sequencing: sidecar runs first and blocks,
-      // judge degrades to allow afterwards. The binding decision is the
-      // sidecar's block — the judge's allow is only a defer for the leg it owns.
-      const sidecarVerdict = await evaluateGuardrailProvider(
-        'input',
-        async () => ({ allow: false, reason: 'prompt-injection' }),
-        { guardrailProvider: buildProvider(), guardrailProviderObserveOnly: false },
-      );
-      const judgeVerdict = await runLlmJudge(LONG_SAFE_TEXT, {
-        llmJudge: jest.fn().mockResolvedValue(null),
-        llmJudgeEnabled: true,
-      });
-
-      // Independence: the two layers produced their own verdicts. The sidecar
-      // blocks; the judge defers. A caller honoring fail-CLOSED keeps the block.
-      expect(sidecarVerdict.allow).toBe(false);
-      expect(judgeVerdict).toEqual({ allow: true });
-    });
-
-    it('returns allow when no sidecar is wired (judge cannot make it fail-closed)', async () => {
-      const verdict = await evaluateGuardrailProvider('input', async () => ({ allow: true }), {
-        guardrailProvider: undefined,
-        guardrailProviderObserveOnly: false,
-      });
-
-      expect(verdict.allow).toBe(true);
-    });
-  });
 });

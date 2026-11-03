@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ForeignKey,
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
 @Entity({ name: 'artwork_knowledge' })
 @Index('IDX_artwork_knowledge_title_artist_locale', ['title', 'artist', 'locale'], {
@@ -61,15 +64,7 @@ export class ArtworkKnowledge {
   @Column({ type: 'uuid', nullable: true, name: 'room_id' })
   roomId?: string | null;
 
-  /**
-   * I-SEC8 (OWASP LLM08) — internal tenant axis (`museums.id`), mirror of the
-   * C7 precedent on `artwork_embeddings`. `NULL` = global public catalog row
-   * (visible to every tenant); `= X` = tenant-X-private row (visible only to a
-   * session whose `museumId = X`). 100% of V1 rows are NULL (no B2B tenant
-   * writes yet); the column ships before the first B2B onboarding so the
-   * read-path scope in `findById` does not require an emergency hot-path
-   * refactor the day a tenant goes live. FK `museums(id) ON DELETE SET NULL`.
-   */
+  @ForeignKey(() => Museum, { name: 'FK_artwork_knowledge_museum_id', onDelete: 'SET NULL' })
   @Column({ type: 'integer', nullable: true, name: 'museum_id' })
   museumId?: number | null;
 

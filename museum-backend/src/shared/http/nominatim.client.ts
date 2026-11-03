@@ -4,12 +4,6 @@ import {
   type RefreshableEntry,
 } from '@shared/cache/probabilistic-refresh';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import {
-  nominatimRequestDurationSeconds,
-  nominatimRequestsTotal,
-} from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 import { env } from '@src/config/env';
 
 import type { CacheService } from '@shared/cache/cache.port';
@@ -257,26 +251,7 @@ export async function reverseGeocodeWithNominatim(
   lng: number,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<NominatimReverseResult | null> {
-  const startedAtMs = Date.now();
-  const span = safeTrace('geo.nominatim.reverse.start', () =>
-    getLangfuse()?.span({
-      name: 'geo.nominatim.reverse',
-      input: { lat_3dec: round3(lat), lng_3dec: round3(lng), cached: false },
-    }),
-  );
-
-  const { outcome, value } = await fetchReverseLive(lat, lng, timeoutMs);
-  const latencyMs = Date.now() - startedAtMs;
-
-  nominatimRequestsTotal.labels(outcome).inc();
-  nominatimRequestDurationSeconds.observe(latencyMs / 1000);
-  safeTrace('geo.nominatim.reverse.end', () => {
-    span?.update({
-      output: { outcome, cached: false, latency_ms: latencyMs },
-    });
-    span?.end();
-  });
-
+  const { value } = await fetchReverseLive(lat, lng, timeoutMs);
   return value;
 }
 
@@ -345,16 +320,6 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
     if (cached) {
       // Cache hit — emit a lightweight span + counter so dashboards can show
       // hit-rate. Live-call counters are emitted inside reverseGeocodeWithNominatim.
-      nominatimRequestsTotal.labels('cached').inc();
-      safeTrace('geo.nominatim.reverse.cached', () => {
-        getLangfuse()
-          ?.span({
-            name: 'geo.nominatim.reverse',
-            input: { lat_3dec: round3(lat), lng_3dec: round3(lng), cached: true },
-          })
-          .update({ output: { outcome: 'cached', cached: true, latency_ms: 0 } })
-          .end();
-      });
       if (shouldEarlyRefresh(cached, Date.now())) {
         triggerBackgroundRefresh({
           cacheKey,

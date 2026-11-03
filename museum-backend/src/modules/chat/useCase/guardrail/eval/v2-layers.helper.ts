@@ -1,11 +1,10 @@
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
-import { judgeVerdictToReason, mapProviderReason } from '../guardrail-reason-mapping';
+import { judgeVerdictToReason } from '../guardrail-reason-mapping';
 
 import type { GuardrailBlockReason } from '../art-topic-guardrail';
 import type { LlmJudgeFn } from '../guardrail-evaluation.types';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 /**
@@ -18,11 +17,6 @@ import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 export interface RunLlmJudgeDeps {
   llmJudge?: LlmJudgeFn;
   llmJudgeEnabled: boolean;
-}
-
-export interface EvaluateGuardrailProviderDeps {
-  guardrailProvider?: GuardrailProvider;
-  guardrailProviderObserveOnly: boolean;
 }
 
 /**
@@ -57,63 +51,3 @@ export async function runLlmJudge(
   return { allow: false, reason };
 }
 
-/**
- * ADR-048 — any throw → FAIL-CLOSED block. Observe-only mode downgrades blocks
- * to allow after logging (validates candidate on prod traffic without user
- * refusals).
- */
-export async function evaluateGuardrailProvider(
-  phase: 'input' | 'output',
-  run: () => Promise<{ allow: boolean; reason?: string; redactedText?: string }>,
-  deps: EvaluateGuardrailProviderDeps,
-): Promise<{ allow: boolean; reason?: GuardrailBlockReason; redactedText?: string }> {
-  if (!deps.guardrailProvider) return { allow: true };
-
-  let raw: { allow: boolean; reason?: string; redactedText?: string };
-  try {
-    raw = await run();
-  } catch (error) {
-    logger.warn('guardrail_provider_throw_fail_closed', {
-      adapter: deps.guardrailProvider.name,
-      phase,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    raw = { allow: false, reason: 'error' };
-  }
-
-  if (raw.allow) {
-    return {
-      allow: true,
-      ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
-    };
-  }
-
-  const mappedReason = mapProviderReason(raw.reason);
-
-  if (deps.guardrailProviderObserveOnly) {
-    logger.info('guardrail_provider_observe_would_block', {
-      adapter: deps.guardrailProvider.name,
-      phase,
-      rawReason: raw.reason,
-      mappedReason,
-    });
-    // LLM02/ADR-048 Phase A — preserve sanitized payload so operators can
-    // validate redaction E2E without flipping to enforce mode.
-    return {
-      allow: true,
-      ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
-    };
-  }
-
-  logger.info('guardrail_provider_block', {
-    adapter: deps.guardrailProvider.name,
-    phase,
-    rawReason: raw.reason,
-    mappedReason,
-  });
-  return {
-    allow: false,
-    reason: mappedReason,
-    ...(raw.redactedText !== undefined ? { redactedText: raw.redactedText } : {}),
-  };
-}

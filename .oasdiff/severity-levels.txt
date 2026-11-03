@@ -1,4 +1,0 @@
-request-property-became-required warn
-response-property-max-increased warn
-response-property-min-decreased warn
-response-property-became-optional warn

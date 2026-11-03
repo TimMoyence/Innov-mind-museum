@@ -45,7 +45,6 @@ const BACKEND_ROOT = resolve(__dirname, '../../..');
 const TARGETS: readonly string[] = [
   'src/modules/auth/useCase/password/changePassword.useCase.ts',
   'src/modules/auth/useCase/email/changeEmail.useCase.ts',
-  'src/modules/auth/useCase/totp/disableMfa.useCase.ts',
 ];
 
 /**

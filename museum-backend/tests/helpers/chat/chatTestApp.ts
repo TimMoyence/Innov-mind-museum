@@ -32,7 +32,6 @@ import type {
 } from '@modules/chat/useCase/location-resolver';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.types';
 import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 
@@ -476,14 +475,12 @@ interface BuildChatTestServiceOptions {
    * adapter (live sidecar) to exercise enforce-mode blocking end-to-end; the
    * helper performs NO defaulting (NFR-NOMOCK-1).
    */
-  guardrailProvider?: GuardrailProvider;
   /**
    * Provider observe-vs-enforce mode. Forwarded verbatim — including `false`.
    * Downstream default is `?? true` (observe-only) in
    * `GuardrailEvaluationService` (guardrail-evaluation.service.ts:54), so a test
    * MUST set `false` here to reach enforce-mode blocking. Helper does NOT coerce.
    */
-  guardrailProviderObserveOnly?: boolean;
   /**
    * V2 LLM-judge callable (F4). Pass-through to `ChatService` (`llmJudge` dep).
    * Gated downstream by `llmJudgeEnabled` + the `judgeMinMessageLength` (default
@@ -502,7 +499,6 @@ interface BuildChatTestServiceOptions {
    * model degrades to plain soft-redirect (no escalation).
    */
   frictionStore?: IGuardrailFrictionStore;
-  frictionEnabled?: boolean;
   frictionSessionThreshold?: number;
   frictionUserThreshold?: number;
 }
@@ -538,12 +534,9 @@ export function buildChatTestService(
       locationResolver: opts.locationResolver,
       locationConsentChecker: opts.locationConsentChecker,
       museumRepository: opts.museumRepository,
-      guardrailProvider: opts.guardrailProvider,
-      guardrailProviderObserveOnly: opts.guardrailProviderObserveOnly,
       llmJudge: opts.llmJudge,
       llmJudgeEnabled: opts.llmJudgeEnabled,
       frictionStore: opts.frictionStore,
-      frictionEnabled: opts.frictionEnabled,
       frictionSessionThreshold: opts.frictionSessionThreshold,
       frictionUserThreshold: opts.frictionUserThreshold,
     });

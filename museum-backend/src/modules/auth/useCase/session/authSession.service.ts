@@ -4,28 +4,17 @@ import { AppError, badRequest, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
-import { MfaGateService } from './mfa-gate.service';
 import { SessionIssuerService } from './session-issuer.service';
 import { TokenJwtService } from './token-jwt.service';
 
-import type { MfaEnrollmentRequiredResponse, MfaRequiredResponse } from './mfa-gate.service';
 import type { AuthSessionResponse, SafeUser } from './session-issuer.service';
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { IAccessTokenDenylist } from '@modules/auth/domain/session/access-token-denylist.port';
-import type { ITotpSecretRepository } from '@modules/auth/domain/totp/totp-secret.repository.interface';
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { User } from '@modules/auth/domain/user/user.entity';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-// Re-export envelope types so existing import paths keep compiling.
 export type { AuthSessionResponse, SafeUser } from './session-issuer.service';
-export type { MfaEnrollmentRequiredResponse, MfaRequiredResponse } from './mfa-gate.service';
-
-/** Discriminated union covering the three login success shapes. */
-export type LoginResponse =
-  | AuthSessionResponse
-  | MfaRequiredResponse
-  | MfaEnrollmentRequiredResponse;
 
 const sanitizeUser = (user: User): SafeUser => {
   return {
@@ -39,35 +28,14 @@ const sanitizeUser = (user: User): SafeUser => {
   };
 };
 
-/**
- * Façade: login, refresh, logout, access-token verify. Delegates to:
- *   - `TokenJwtService`       — JWT sign/verify, TTL parsing, sha256 hashing.
- *   - `SessionIssuerService`  — refresh-token rotation contract + pair issuance.
- *   - `MfaGateService`        — admin warning-window + TOTP enrollment policy.
- */
 export class AuthSessionService {
   private readonly tokenJwt: TokenJwtService;
   private readonly sessionIssuer: SessionIssuerService;
-  private readonly mfaGate: MfaGateService;
-
-  /**
-   * `totpRepository` optional for legacy unit tests — absent means MFA not-enrolled.
-   * `accessTokenDenylist` optional too — composition root wires the Redis or Noop
-   * adapter (R7 design §3.1). Tests that don't exercise revocation can omit it.
-   */
-  /**
-   * Composition root may wire the denylist post-construction via
-   * {@link setAccessTokenDenylist} (the auth useCase singletons instantiate
-   * BEFORE `index.ts::initCacheAndRateLimit` runs ; rather than ordering the
-   * boot graph, we accept the late wiring). Tests inject directly via the
-   * constructor's 4th arg.
-   */
   private accessTokenDenylist?: IAccessTokenDenylist;
 
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly refreshTokenRepository: IRefreshTokenRepository,
-    totpRepository?: ITotpSecretRepository,
     accessTokenDenylist?: IAccessTokenDenylist,
   ) {
     this.tokenJwt = new TokenJwtService();
@@ -76,17 +44,14 @@ export class AuthSessionService {
       this.tokenJwt,
       env.auth.refreshIdleWindowSeconds,
     );
-    this.mfaGate = new MfaGateService(userRepository, totpRepository);
     if (accessTokenDenylist) this.accessTokenDenylist = accessTokenDenylist;
   }
 
-  /** Composition-root setter — mirrors `setRedisRateLimitStore` / `setLlmCostCounter`. */
   setAccessTokenDenylist(denylist: IAccessTokenDenylist): void {
     this.accessTokenDenylist = denylist;
   }
 
-  /** @throws {AppError} 400 missing fields, 401 invalid credentials, 403 email unverified/suspended/deleted. */
-  async login(email: string, password: string): Promise<LoginResponse> {
+  async login(email: string, password: string): Promise<AuthSessionResponse> {
     if (!email.trim() || !password) {
       throw badRequest('email and password are required');
     }
@@ -143,29 +108,11 @@ export class AuthSessionService {
 
     clearLoginAttempts(normalizedEmail);
 
-    const mfaOutcome = await this.mfaGate.evaluateMfaGate(user);
-    if (mfaOutcome) {
-      this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
-        /* noop */
-      });
-      return mfaOutcome;
-    }
-
-    const session = await this.sessionIssuer.issueSession({
-      user: sanitizeUser(user),
-      mfaWarningDaysRemaining: this.mfaGate.computeWarningDays(user),
-    });
+    const session = await this.sessionIssuer.issueSession({ user: sanitizeUser(user) });
     this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
       /* noop */
     });
     return session;
-  }
-
-  /** Used by `challengeMfa` and `recoveryMfa` after second-factor success. */
-  async issueSessionForUser(user: User): Promise<AuthSessionResponse> {
-    return await this.sessionIssuer.issueSession({
-      user: sanitizeUser(user),
-    });
   }
 
   /**

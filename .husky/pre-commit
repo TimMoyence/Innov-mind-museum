@@ -1,158 +1,20 @@
-#!/usr/bin/env bash
-# =============================================================================
-# Musaium pre-commit — NO BYPASS
-# =============================================================================
-# This hook is mandatory. There is no SKIP_PRE_COMMIT escape hatch.
-# `git commit --no-verify` is forbidden by team policy. Server-side CI mirrors
-# every gate below (.github/workflows/sentinel-mirror.yml) so any bypass is
-# caught at PR time. See docs/CONTRIBUTING.md § Pre-commit hooks (NO BYPASS).
-#
-# Budget: < 5 seconds typical.
-# Gates (in order, each `|| exit 1`):
-#   1. Gitleaks  — staged-diff secret scan
-#   2. env-policy sentinel — forbidden .env* + secret-shape regex
-#   3. lint-staged — typecheck + ESLint on staged files only
-#   4. as-any ratchet — count cannot exceed baseline
-#   5. root-hygiene — block stray .md / .sql / .log at repo root
-#   6. workspace-links — only fires when commit touches packages/ or any
-#      <app>/package.json — verifies file: deps still resolve so consumers
-#      can build. Skipped on unrelated commits to keep latency low.
-#   7. compose-parity — only fires when commit touches a museum-backend/
-#      docker-compose*.yml — verifies critical flags (--requirepass, etc.)
-#      present in prod compose are mirrored in dev compose. TD-44 guard.
-#   8. fe-version-sync — only fires when commit touches
-#      museum-frontend/package.json or museum-frontend/app.config.ts.
-#      Verifies the single-source-of-truth for the published Expo binary
-#      `version` field. C4 A5 (2026-05-21).
-# =============================================================================
+#!/usr/bin/env sh
 set -e
-
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-GITLEAKS_REPORT=".gitleaks-report.json"
-
-run_gitleaks() {
-  if command -v gitleaks >/dev/null 2>&1; then
-    gitleaks protect --staged --redact --no-banner \
-      --config .gitleaks.toml \
-      --report-format json --report-path "${GITLEAKS_REPORT}"
-    return $?
-  fi
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    docker run --rm -v "$(pwd):/repo" -w /repo \
-      ghcr.io/gitleaks/gitleaks:latest \
-      protect --staged --redact --no-banner \
-      --config .gitleaks.toml \
-      --report-format json --report-path "${GITLEAKS_REPORT}"
-    return $?
-  fi
-  echo "[pre-commit] error: gitleaks is not installed and Docker is not running."
-  echo "             Install: brew install gitleaks (macOS)"
-  echo "             Or:      https://github.com/gitleaks/gitleaks/releases"
-  return 1
-}
-
-# ─── Gate 1 — gitleaks staged-diff scan ────────────────────────────────────
-echo "[pre-commit] ► Gate 1/8 gitleaks (staged diff)"
-if ! run_gitleaks; then
-  echo ""
-  echo "[pre-commit] ✗ gitleaks found one or more secrets in the staged diff."
-  echo "             Report: ${GITLEAKS_REPORT}"
-  echo "             Remove the secret AND rotate the exposed credential."
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner --config .gitleaks.toml
+elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  docker run --rm -v "$(pwd):/repo" -w /repo ghcr.io/gitleaks/gitleaks:latest \
+    protect --staged --redact --no-banner --config .gitleaks.toml
+else
+  echo "[pre-commit] gitleaks absent et Docker arrêté : brew install gitleaks"
   exit 1
 fi
-rm -f "${GITLEAKS_REPORT}"
-echo "[pre-commit] ✓ Gate 1"
 
-# ─── Gate 2 — env-policy sentinel ──────────────────────────────────────────
-echo "[pre-commit] ► Gate 2/8 env-policy (forbidden .env + secret regex)"
-node scripts/sentinels/env-policy.mjs || exit 1
-echo "[pre-commit] ✓ Gate 2"
-
-# ─── Gate 3 — lint-staged per workspace ────────────────────────────────────
-echo "[pre-commit] ► Gate 3/8 lint-staged (tsc + ESLint on staged)"
-if git diff --cached --name-only | grep -q '^museum-backend/'; then
-  ( cd museum-backend && npx lint-staged ) || exit 1
-fi
-if git diff --cached --name-only | grep -q '^museum-frontend/'; then
-  ( cd museum-frontend && npx lint-staged ) || exit 1
-fi
-if git diff --cached --name-only | grep -q '^museum-web/'; then
-  ( cd museum-web && npx lint-staged ) || exit 1
-fi
-echo "[pre-commit] ✓ Gate 3"
-
-# ─── Gate 4 — as-any ratchet ───────────────────────────────────────────────
-echo "[pre-commit] ► Gate 4/8 as-any ratchet (count must not exceed baseline)"
-node scripts/sentinels/as-any-ratchet.mjs || exit 1
-echo "[pre-commit] ✓ Gate 4"
-
-# ─── Gate 5 — root-hygiene (stray .md / .sql / .log at repo root) ──────────
-echo "[pre-commit] ► Gate 5/8 root-hygiene"
-ROOT_NEW=$(git diff --cached --name-only --diff-filter=A | grep -E '^[^/]+$' || true)
-ROOT_MD_ALLOW='^(AGENTS|CLAUDE|README|LICENSE|SECURITY|CHANGELOG|CONTRIBUTING|CODE_OF_CONDUCT|GOVERNANCE|NOTICE)\.md$'
-for f in $ROOT_NEW; do
-  case "$f" in
-    *.md)
-      if ! echo "$f" | grep -qE "$ROOT_MD_ALLOW"; then
-        echo "[pre-commit] ✗ root-hygiene: .md interdit a la racine: $f"
-        echo "             whitelist: AGENTS / CLAUDE / README / LICENSE / SECURITY / CHANGELOG /"
-        echo "                        CONTRIBUTING / CODE_OF_CONDUCT / GOVERNANCE / NOTICE"
-        exit 1
-      fi
-      ;;
-    *.sql)
-      echo "[pre-commit] ✗ root-hygiene: .sql interdit a la racine: $f — utiliser scripts/ops/sql/"
-      exit 1
-      ;;
-    *.log)
-      echo "[pre-commit] ✗ root-hygiene: .log interdit a la racine: $f (gitignored normalement)"
-      exit 1
-      ;;
-  esac
+for app in museum-backend museum-frontend museum-web; do
+  if git diff --cached --name-only | grep -q "^${app}/"; then
+    ( cd "$app" && npx lint-staged )
+  fi
 done
-echo "[pre-commit] ✓ Gate 5"
-
-# ─── Gate 6 — workspace-links (conditional) ────────────────────────────────
-# Fires only when the staged diff touches `packages/**` or any
-# `museum-*/package.json` / `museum-*/pnpm-lock.yaml` — i.e. exactly the
-# changes that can desync `file:` symlinks across the three apps. Other
-# commits skip this gate so the < 5s budget is preserved.
-STAGED=$(git diff --cached --name-only)
-if echo "$STAGED" | grep -qE '^(packages/|museum-[a-z]+/(package\.json|pnpm-lock\.yaml|package-lock\.json)$)'; then
-  echo "[pre-commit] ► Gate 6/8 workspace-links (file: protocol symlinks)"
-  node scripts/sentinels/workspace-links.mjs || exit 1
-  echo "[pre-commit] ✓ Gate 6"
-else
-  echo "[pre-commit] ⤿ Gate 6 skipped (no packages/ or app manifest changes)"
-fi
-
-# ─── Gate 7 — compose-parity (conditional) ─────────────────────────────────
-# Fires only when the staged diff touches a docker-compose file in
-# museum-backend/ (dev or prod). Guards TD-44 contract: critical flags
-# (`--requirepass`, etc.) present in prod compose MUST be in dev compose.
-if echo "$STAGED" | grep -qE '^museum-backend/(docker-compose|deploy/docker-compose).*\.ya?ml$'; then
-  echo "[pre-commit] ► Gate 7/8 compose-parity (dev compose mirrors prod)"
-  node scripts/sentinels/compose-parity.mjs || exit 1
-  echo "[pre-commit] ✓ Gate 7"
-else
-  echo "[pre-commit] ⤿ Gate 7 skipped (no docker-compose changes)"
-fi
-
-# ─── Gate 8 — fe-version-sync (conditional) ────────────────────────────────
-# Fires only when the staged diff touches museum-frontend/package.json or
-# museum-frontend/app.config.ts — the two files whose drift the sentinel
-# detects. Other commits skip this gate to preserve the <5s budget.
-# C4 A5 (2026-05-21).
-if echo "$STAGED" | grep -qE '^museum-frontend/(package\.json|app\.config\.ts)$'; then
-  echo "[pre-commit] ► Gate 8/8 fe-version-sync (package.json ↔ app.config.ts version parity)"
-  node scripts/sentinels/fe-version-sync.mjs || exit 1
-  echo "[pre-commit] ✓ Gate 8"
-else
-  echo "[pre-commit] ⤿ Gate 8 skipped (no museum-frontend version files changed)"
-fi
-
-echo "[pre-commit] ═══════════════════════════════════════════════════"
-echo "[pre-commit] ✅ All gates passed — commit authorized"
-echo "[pre-commit] ═══════════════════════════════════════════════════"

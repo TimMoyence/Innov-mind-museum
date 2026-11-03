@@ -6,7 +6,6 @@ import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
 import { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 import { AuthRefreshToken } from '@modules/auth/domain/refresh-token/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/domain/social-account/socialAccount.entity';
-import { TotpSecret } from '@modules/auth/domain/totp/totp-secret.entity';
 import { User } from '@modules/auth/domain/user/user.entity';
 import { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.entity';
 import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
@@ -49,7 +48,6 @@ export const AppDataSource = new DataSource({
     UserConsent,
     AuthRefreshToken,
     SocialAccount,
-    TotpSecret,
     ApiKey,
     ChatSession,
     ChatMessage,

@@ -67,10 +67,6 @@ const classifyFanout = (req: Request): FanoutClass => {
   if (route.endsWith('/audio')) return 'audio';
   if (route.endsWith('/tts')) return 'tts';
   if (route.endsWith('/messages')) return 'text';
-  // `/describe` fans out to LLM + TTS when format ∈ {audio, both} (chat-describe.route).
-  // `format` lives in req.body (unparsed at this seam), so we cannot branch on it —
-  // classify at the worst case (audio = LLM+TTS), correct for a safety-net cap.
-  if (route.endsWith('/describe')) return 'audio';
   // Unknown / future paid route → conservative text-class default (safe, non-zero).
   return 'text';
 };

@@ -1,90 +1,29 @@
-# Musaium production docker-compose — single source of truth for what runs on the VPS.
-#
-# FILE LAYOUT (on the VPS, after you copy this file over):
-#   /srv/museum/docker-compose.yml        ← this file (renamed from docker-compose.prod.yml)
-#   /srv/museum/deploy/pgbouncer/...      ← pgbouncer.ini + entrypoint.sh (copied from repo)
-#   /srv/museum/.env                      ← secrets (see .env.production.example)
-#
-# The relative paths below (./deploy/pgbouncer/...) resolve to /srv/museum/deploy/pgbouncer/
-# on the VPS. They DO NOT resolve from the repo's museum-backend/deploy/ folder —
-# this compose is designed to be copied to the VPS, not run from the repo.
-#
-# Architecture:
-#   internet → nginx (web network) → backend (museum-backend alias on web net)
-#                                  → museum-web (museum-web alias on web net)
-#   backend → pgbouncer:6432 → db:5432  (private net, no internet exposure)
-#   backend → redis:6379              (private net)
-#   backend → llm-guard:8081          (private net — AI Guardrails V2 sidecar, P11)
-#
-# Required env vars in /srv/museum/.env:
-#   DB_USER, DB_PASSWORD, PGDATABASE, REDIS_PASSWORD,
-#   JWT_*, LLM_PROVIDER + matching API key,
-#   GUARDRAILS_V2_LLM_GUARD_URL (presence = adapter wired, retired CANDIDATE
-#   flag 2026-05-14), GUARDRAILS_V2_TIMEOUT_MS, GUARDRAILS_V2_OBSERVE_ONLY
-#   (full list in museum-backend/.env.production.example)
-#
-# Deploy sequence on VPS:
-#   cd /srv/museum
-#   docker login ghcr.io -u <user> -p <PAT>
-#   docker compose pull <service>              # pulls from GHCR
-#   docker compose up -d <service>             # zero-downtime restart (30s grace)
-
 networks:
   web:
     external: true
   private:
     driver: bridge
     internal: true
-  # ── Observability network (C1.1, ADR-036) ────────────────────────────
-  # Bridge network shared by Prometheus / Grafana / AlertManager / the
-  # Telegram bridge. NOT internal: alertmanager-telegram needs egress to
-  # api.telegram.org. Prometheus + Grafana also sit on `private` so they
-  # can scrape backend on the internal bus, and Grafana sits on `web` so
-  # nginx can reverse-proxy `/grafana/*` to it.
-  obs:
-    driver: bridge
-    internal: false
 
 volumes:
   pgdata:
   redis_data:
   uploads:
-  prom_data:
-  grafana_data:
-  alertmanager_data:
 
 services:
   backend:
-    # IMAGE_TAG is set by CI to the commit SHA AND persisted to /srv/museum/.env
-    # by the deploy step (see ci-cd-backend.yml deploy-prod). Strict `:?` enforces
-    # that ops set it explicitly — silent fallback to `:latest` caused a 4-day
-    # stale-image crash on 2026-05-13 because the local `:latest` never refreshed
-    # while CI always pulled `:<sha>` only. To run manually:
-    #   IMAGE_TAG=<full-sha> docker compose up -d backend
     image: ghcr.io/timmoyence/museum-backend:${IMAGE_TAG:?IMAGE_TAG required — set in /srv/museum/.env or export before docker compose. CI persists it on every deploy; for manual ops grab the latest from GHCR.}
     hostname: backend
     env_file:
       - .env
     environment:
-      # Point backend at pgbouncer (not raw postgres) regardless of what .env says.
-      # Avoids accidentally connecting to db:5432 which bypasses pooling.
-      DB_HOST: pgbouncer
-      DB_PORT: 6432
+      DB_HOST: db
+      DB_PORT: 5432
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
-      pgbouncer:
         condition: service_healthy
-      # llm-guard intentionally NOT in depends_on.
-      # Rationale: the V2 guardrail is optional (observe-only Phase A) and the
-      # LLMGuardAdapter is fail-CLOSED → if the sidecar is down, the backend
-      # logs a warning and degrades to V1-only (keyword guardrail). Blocking
-      # the backend on llm-guard health would create a cold-start deadlock on
-      # first rollout (backend deploy races the sidecar image build in CI).
-      # Operators must bring up llm-guard BEFORE the first request if they
-      # want Phase A telemetry — but backend itself will still boot alone.
     volumes:
       - uploads:/app/tmp/uploads
     networks:
@@ -96,74 +35,7 @@ services:
       - '127.0.0.1:3000:3000'
     restart: unless-stopped
 
-  # ── AI Guardrails V2 sidecar (P11 — docs/plans/reports/P11-decision.md) ──
-  # Runs the LLM Guard scanners (PromptInjection, Anonymize, Toxicity) behind
-  # an HTTP API the backend consumes via LLMGuardAdapter. Private network only —
-  # never receives traffic from the internet, only from the backend container.
-  # To disable: unset GUARDRAILS_V2_LLM_GUARD_URL in .env and restart backend
-  # (backend installs no V2 adapter; this service still runs but is idle).
-  llm-guard:
-    # LLM_GUARD_IMAGE_TAG: NOT yet wired into the deploy persistence pattern that
-    # backend + museum-web use (no SSH deploy step in ci-cd-llm-guard.yml).
-    # Kept soft-default `:-latest` for now — TODO(infra): once ci-cd-llm-guard.yml
-    # ships an SSH deploy step that pulls the sidecar onto the VPS, switch to
-    # strict `:?` and persist LLM_GUARD_IMAGE_TAG to /srv/museum/.env there too.
-    image: ghcr.io/timmoyence/museum-llm-guard:${LLM_GUARD_IMAGE_TAG:-latest}
-    hostname: llm-guard
-    environment:
-      - LOG_LEVEL=INFO
-      # v3 validated config (benchmark 2026-04-18): injection 96.7%, FP 5%, P95 375 ms.
-      - INPUT_SCANNERS=PromptInjection,Anonymize,Toxicity
-      - OUTPUT_SCANNERS=NoRefusal,Bias,Sensitive,Relevance
-      # Anonymize excludes PERSON/LOCATION/ORG/NRP/DATE_TIME — those flag every
-      # artist/museum/painting name as PII in the art-museum context.
-      - ANONYMIZE_ENTITIES=EMAIL_ADDRESS,PHONE_NUMBER,CREDIT_CARD,IBAN_CODE,IP_ADDRESS,US_SSN,US_PASSPORT,US_DRIVER_LICENSE,CRYPTO,URL,MEDICAL_LICENSE
-    networks:
-      - private
-    healthcheck:
-      test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/health']
-      interval: 30s
-      timeout: 5s
-      start_period: 30s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-    restart: unless-stopped
-
-  pgbouncer:
-    # TODO(infra): pin by digest `edoburu/pgbouncer@sha256:...` for supply-chain hardening.
-    # Follow-up to the 2026-04-24 IMAGE_TAG hardening — same rationale, but requires
-    # a live docker pull to resolve the digest; deferred to avoid blocking this change.
-    image: edoburu/pgbouncer:v1.24.1-p1@sha256:3db3d7223e93af52b4116f642951a1a5fa44702a88c2a59cf7562cac19320c9e
-    hostname: pgbouncer
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - ./deploy/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-      - ./deploy/pgbouncer/entrypoint.sh:/entrypoint.sh:ro
-    entrypoint: ['sh', '/entrypoint.sh']
-    networks:
-      - private
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 6432 || exit 1']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   museum-web:
-    # WEB_IMAGE_TAG is set by CI to the commit SHA AND persisted to /srv/museum/.env
-    # by the deploy step (see ci-cd-web.yml deploy). Kept soft `:-latest` for now —
-    # web is not crash-looping today, and tightening before the next web deploy
-    # has had a chance to persist WEB_IMAGE_TAG to .env would risk breaking any
-    # out-of-band museum-web restart in the meantime. TODO(infra): switch to
-    # strict `:?` once at least one CI web deploy has populated /srv/museum/.env.
     image: ghcr.io/timmoyence/museum-web:${WEB_IMAGE_TAG:-latest}
     hostname: museum-web
     environment:
@@ -192,17 +64,6 @@ services:
       retries: 3
 
   db:
-    # pgvector/pgvector:pg16 — Postgres 16 with the pgvector extension
-    # baked in. Required by the chat module's vector embeddings (Spec G
-    # cache popularity ranking, KB enrichment) and by the user-memory
-    # personalisation features. Switching back to vanilla
-    # `postgres:16-alpine` would silently break vector inserts on next
-    # boot (CREATE EXTENSION vector fails) — DO NOT downgrade.
-    # Pinned by the multi-arch INDEX digest (immutable, content-addressed) so a
-    # `docker compose pull` cannot silently swap the image; the `:pg16` tag is
-    # kept purely for human readability (Docker honours the @sha256 over the tag).
-    # The CI migration-drift job (.github/workflows/ci-cd-backend.yml) pins the
-    # SAME digest so the clean-DB drift check tests the exact image prod runs.
     image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -220,146 +81,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Observability stack (C1.1, ADR-036) ────────────────────────────────
-  # Bind-mounts under `./obs/` resolve to `/srv/museum/obs/` on the VPS.
-  # The bootstrap `rsync` step (see docs/OPS_DEPLOYMENT.md §Grafana) keeps
-  # /srv/museum/obs/ in sync with the repo's `infra/grafana/` source of
-  # truth. Operators MUST re-run the rsync after editing dashboards/rules
-  # before `docker compose up -d`.
-
-  prometheus:
-    image: prom/prometheus:v2.55.1@sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3
-    hostname: prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=14d'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle'
-      - '--enable-feature=expand-external-labels'
-    environment:
-      ENV: '${ENV:-production}'
-    volumes:
-      - ./obs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./obs/alerting:/etc/prometheus/alerting:ro
-      - prom_data:/prometheus
-    # Required on Linux for Prometheus to resolve `host.docker.internal:9100`
-    # → the node-exporter port published by `network_mode: host` below.
-    # Docker Desktop auto-injects this name; Linux Docker engines do not.
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    networks:
-      - private
-      - obs
-    healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9090/-/ready']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
-  # ── Host-level metrics (node-exporter) ─────────────────────────────────
-  # Why `network_mode: host`: node-exporter scrapes the host's /proc and
-  # /sys filesystems; on the network side it needs raw access to
-  # /proc/net/* (interface stats, TCP states). Running it bridged loses
-  # those details. The cost is one extra published port on the host
-  # (9100) — bound implicitly by host networking. Prometheus reaches it
-  # via `host.docker.internal:9100` (resolved by the `extra_hosts` entry
-  # above). VPS firewall already drops :9100 from the public NIC.
-  #
-  # Wired 2026-05-20 after two VPS disk-full incidents in one month
-  # (auto-rollback engaged, prod was offline 5+ min each time). Alerts
-  # live in obs/alerting/vps-host.yml; dashboard uid = `musaium-vps-host`.
-  node-exporter:
-    image: quay.io/prometheus/node-exporter:v1.8.2@sha256:4032c6d5bfd752342c3e631c2f1de93ba6b86c41db6b167b9a35372c139e7706
-    container_name: node-exporter
-    pid: 'host'
-    network_mode: 'host'
-    volumes:
-      - /:/host:ro,rslave
-    command:
-      - '--path.rootfs=/host'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|var/lib/docker)($$|/)'
-      - '--collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$$'
-    restart: unless-stopped
-
-  alertmanager:
-    image: prom/alertmanager:v0.32.1@sha256:51a825c2a40acc3e338fdd00d622e01ec090f72be2b3ea46be0839cd47a4d286
-    hostname: alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-    volumes:
-      - ./obs/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanager_data:/alertmanager
-    networks:
-      - obs
-    healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:9093/-/healthy']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    restart: unless-stopped
-
-  alertmanager-telegram:
-    build: ./obs/alertmanager-telegram
-    hostname: alertmanager-telegram
-    environment:
-      TELEGRAM_BOT_TOKEN: '${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN required for prod alerting (BotFather)}'
-      TELEGRAM_CHAT_ID: '${TELEGRAM_CHAT_ID:?TELEGRAM_CHAT_ID required for prod alerting}'
-      DASHBOARD_BASE_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana}'
-      PORT: '9094'
-    networks:
-      - obs
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:11.6.16@sha256:d67af92050b8d93b393dc741864752a69c9da1ffa39c1bb9af49ad5d9e47d2c3
-    hostname: grafana
-    depends_on:
-      prometheus:
-        condition: service_healthy
-    environment:
-      # Single-auth UX (D9 — see ADR-036): Grafana is configured for
-      # anonymous Viewer ; the actual gate is at the nginx layer via
-      # `auth_request → /api/auth/super-admin-check`. The admin password
-      # remains for direct /grafana/login operator actions (managing
-      # dashboards), but is NOT used by the iframe path.
-      GF_AUTH_ANONYMOUS_ENABLED: 'true'
-      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
-      GF_AUTH_ANONYMOUS_HIDE_VERSION: 'true'
-      GF_AUTH_BASIC_ENABLED: 'true'
-      GF_USERS_ALLOW_SIGN_UP: 'false'
-      GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:-admin}'
-      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required for prod}'
-      # Iframe embedding via nginx same-origin reverse proxy.
-      GF_SECURITY_ALLOW_EMBEDDING: 'true'
-      GF_SECURITY_COOKIE_SAMESITE: 'lax'
-      GF_SECURITY_X_FRAME_OPTIONS: ''
-      # Server URL — must match the nginx-exposed path.
-      GF_SERVER_ROOT_URL: '${GRAFANA_ROOT_URL:-https://musaium.fr/grafana/}'
-      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
-    volumes:
-      - ./obs/provisioning:/etc/grafana/provisioning:ro
-      - ./obs/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana_data:/var/lib/grafana
-    networks:
-      private: {}
-      obs: {}
-      web:
-        aliases:
-          - grafana
-    healthcheck:
-      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost:3000/api/health']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
   redis:
-    # TODO(infra): pin by digest `redis@sha256:...` — see pgbouncer TODO above.
     image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     command:
       - 'redis-server'
@@ -367,11 +89,6 @@ services:
       - '${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env for production}'
       - '--appendonly'
       - 'yes'
-      # C4 I-SEC1 (2026-05-21) — hard memory cap + deterministic eviction
-      # policy. `volatile-ttl` evicts shortest-TTL keys first so cache
-      # (1h TTL) is evicted before llm_cost counters (25h TTL), preserving
-      # the financial-DoS quota guarantee under memory pressure. See
-      # `museum-backend/.env.example` (REDIS_MAXMEMORY*) and design D5.
       - '--maxmemory'
       - '${REDIS_MAXMEMORY:-512mb}'
       - '--maxmemory-policy'

@@ -32,8 +32,6 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
     auth: {
       accessTokenSecret: LONG,
       refreshTokenSecret: ALT_LONG,
-      mfaEncryptionKey: 'm'.repeat(48),
-      mfaSessionTokenSecret: 'n'.repeat(48),
       // F7 — CSRF secret must agree with raw env var (drift check) and be
       // distinct from every other production secret.
       csrfSecret: 'p'.repeat(48),
@@ -54,9 +52,6 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       MEDIA_SIGNING_SECRET: 'media-signing-secret-long-enough-for-tests',
       JWT_ACCESS_SECRET: LONG,
       JWT_REFRESH_SECRET: ALT_LONG,
-      // R16 — MFA secrets must be set + distinct in prod, validator throws otherwise.
-      MFA_ENCRYPTION_KEY: 'm'.repeat(48),
-      MFA_SESSION_TOKEN_SECRET: 'n'.repeat(48),
       // F7 — CSRF secret must be present + distinct in prod.
       CSRF_SECRET: 'p'.repeat(48),
       // I-SEC5 (2026-05-21) — required by `validateExportPseudonymSalt`.

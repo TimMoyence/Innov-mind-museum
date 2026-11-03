@@ -79,9 +79,9 @@ describe('T2.3 / R14 — privacy-content.canonical.json shape', () => {
     expect(data.locales[locale].sections).toHaveLength(14);
   });
 
-  it.each(['en', 'fr'] as const)('locale %s has exactly 19 recipients (R11)', (locale) => {
+  it.each(['en', 'fr'] as const)('locale %s has exactly 18 recipients (R11, RAZ M12)', (locale) => {
     const data = loadCanonical<PrivacyCanonical>(PRIVACY_CANONICAL);
-    expect(data.locales[locale].recipients).toHaveLength(19);
+    expect(data.locales[locale].recipients).toHaveLength(18);
   });
 
   it.each(['en', 'fr'] as const)(

@@ -2,7 +2,7 @@
 
 We take the security of Musaium and the data of our visitors, museum partners, and contributors seriously. This policy describes how to report vulnerabilities and what you can expect from us in return.
 
-> **Quick links** — RFC 9116 advertisement: <https://musaium.com/.well-known/security.txt> · Human-readable VDP: <https://musaium.com/fr/security> · <https://musaium.com/en/security> · Triage runbook: [`docs/operations/VDP_RUNBOOK.md`](docs/operations/VDP_RUNBOOK.md).
+> **Quick links** — RFC 9116 advertisement: <https://musaium.com/.well-known/security.txt> · Human-readable VDP: <https://musaium.com/fr/security> · <https://musaium.com/en/security>.
 
 ## Supported versions
 
@@ -33,7 +33,7 @@ Please include:
 - **Fingerprint:** `1DE4 45C0 923E DC3C B040  BE38 3431 E6D3 A0E8 1C9F`
 - **Created:** 2026-05-27 · **Expires:** 2028-05-26 (renew by 2028-04-26, −30 d).
 
-Verify the fingerprint out-of-band before trusting the key. Generation procedure: [`docs/operations/PGP_KEY_GENERATION.md`](docs/operations/PGP_KEY_GENERATION.md).
+Verify the fingerprint out-of-band before trusting the key.
 
 **Please do not** open public GitHub issues, post on social media, or contact unrelated team members for vulnerability reports. Use the security email only.
 
@@ -43,7 +43,6 @@ Verify the fingerprint out-of-band before trusting the key. Generation procedure
 - **ENISA Single Reporting Platform** (EU CRA Art. 14 reporting) — <https://srp.enisa.europa.eu>.
 - **CNIL** (French DPA, GDPR Art. 33) — <https://notifications.cnil.fr>.
 
-Full contact register (with quarterly verification cadence) lives in [`docs/operations/INCIDENT_CONTACTS.md`](docs/operations/INCIDENT_CONTACTS.md).
 
 ## Our commitments
 
@@ -106,7 +105,7 @@ We will not pursue legal action for good-faith research within this policy. If a
 
 We follow coordinated disclosure: we will work with you toward a public advisory, credit you (if you wish), and publish the advisory at `https://musaium.com/security/advisories` after a fix is available. Default coordination window is **90 days** from acknowledgement; we may agree shorter or longer windows with you as needed (Project Zero "90 + 30" pattern — public disclosure 30 days after patch ships).
 
-CRA-classified actively-exploited vulnerabilities trigger the ENISA Single Reporting Platform timeline (24 h early warning → 72 h notification → 14 days final report). Details in [`docs/operations/VDP_RUNBOOK.md`](docs/operations/VDP_RUNBOOK.md) §CRA reporting protocol.
+CRA-classified actively-exploited vulnerabilities trigger the ENISA Single Reporting Platform timeline (24 h early warning → 72 h notification → 14 days final report).
 
 ## Hall of fame
 

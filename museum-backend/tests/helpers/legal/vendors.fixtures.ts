@@ -1,5 +1,5 @@
 /**
- * Canonical subprocessor list (R11 in spec.md) — 19 vendors.
+ * Canonical subprocessor list (R11 in spec.md) — 18 vendors (Langfuse retiré, RAZ M12).
  *
  * Source of truth for B15 vendor-disclosure tests. Mirrors the exhaustive list
  * declared in `team-state/2026-05-21-p0-gdpr/spec.md` §3 R11.
@@ -16,16 +16,7 @@ export interface VendorChecklistEntry {
   /** Primary canonical name used in tests as the search needle. */
   name: string;
   /** Functional category (mirrors design §4 `Subprocessor.category`). */
-  category:
-    | 'LLM'
-    | 'infra'
-    | 'email'
-    | 'monitoring'
-    | 'search'
-    | 'mapping'
-    | 'auth'
-    | 'telemetry'
-    | 'uptime';
+  category: 'LLM' | 'infra' | 'email' | 'monitoring' | 'search' | 'mapping' | 'auth' | 'uptime';
   /**
    * Alternative names accepted on surfaces that already use a slightly
    * different rendering (e.g. trailing "LLC", abbreviations, French
@@ -36,7 +27,7 @@ export interface VendorChecklistEntry {
 }
 
 /**
- * The 19 subprocessors per R11. Order matches spec.md §3 R11 verbatim.
+ * The 18 subprocessors per R11 after the RAZ M12 removal of Langfuse.
  */
 export const CANONICAL_VENDORS: readonly VendorChecklistEntry[] = [
   { name: 'OpenAI', category: 'LLM', searchAliases: ['OpenAI'] },
@@ -63,7 +54,6 @@ export const CANONICAL_VENDORS: readonly VendorChecklistEntry[] = [
   { name: 'Tavily', category: 'search', searchAliases: ['Tavily'] },
   { name: 'Brave', category: 'search', searchAliases: ['Brave'] },
   { name: 'Unsplash', category: 'search', searchAliases: ['Unsplash'] },
-  { name: 'Langfuse', category: 'telemetry', searchAliases: ['Langfuse'] },
   {
     name: 'CARTO',
     category: 'mapping',
@@ -84,10 +74,7 @@ export const CANONICAL_VENDORS: readonly VendorChecklistEntry[] = [
   { name: 'Better-Stack', category: 'uptime', searchAliases: ['Better-Stack', 'Better Stack'] },
 ] as const;
 
-/**
- * Surface identifiers (used in test diagnostics + drift sentinel messages).
- */
-export type PublicSurface = 'HTML' | 'museum-web' | 'museum-frontend';
+export type PublicSurface = 'museum-web' | 'museum-frontend';
 
 /**
  * Build a per-surface, case-insensitive predicate: does the rendered/source

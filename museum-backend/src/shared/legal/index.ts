@@ -7,8 +7,7 @@
  * `museum-frontend/features/legal/{privacyPolicyContent,termsOfServiceContent}.ts`)
  * are regenerated at build time.
  *
- * The drift sentinel (`museum-backend/scripts/sentinels/privacy-content-drift.mjs`)
- * verifies that every surface stays byte-aligned with the canonical.
+ * `museum-frontend/scripts/codegen-legal-content.mjs` derives every surface from it.
  *
  * Rationale: see design.md §9 D1 (run 2026-05-21-p0-gdpr).
  */

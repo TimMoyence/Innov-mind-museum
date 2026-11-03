@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ForeignKey,
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
 @Entity({ name: 'support_tickets' })
 export class SupportTicket {
@@ -34,14 +37,8 @@ export class SupportTicket {
   @Column({ type: 'integer', nullable: true, name: 'assigned_to' })
   assignedTo!: number | null;
 
-  /**
-   * B2B multi-tenant scope (Wave B C7 / R-C7a / R-C7c). FK → `museums.id`
-   * (integer PK). Nullable so existing tickets (pre-multi-tenant) survive
-   * the migration without backfill. Partial index excludes NULLs.
-   *
-   * Spec: design.md §4 M3, T-B8.
-   */
   @Index('IDX_support_tickets_museum_id', { where: '"museum_id" IS NOT NULL' })
+  @ForeignKey(() => Museum, { name: 'FK_support_tickets_museum_id', onDelete: 'SET NULL' })
   @Column({ type: 'integer', nullable: true, name: 'museum_id' })
   museumId?: number | null;
 

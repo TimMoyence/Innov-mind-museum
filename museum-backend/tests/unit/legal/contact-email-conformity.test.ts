@@ -49,11 +49,6 @@ const BE_TERMS = 'museum-backend/src/shared/legal/terms-content.canonical.json';
 const WEB_TERMS = 'museum-web/src/lib/legal/terms-content.canonical.json';
 const CODEGEN = 'museum-frontend/scripts/codegen-legal-content.mjs';
 const FE_GENERATED = 'museum-frontend/features/legal/privacyPolicyContent.ts';
-const PRIVACY_HTML = 'docs/privacy-policy.html';
-const DPIA = 'docs/legal/DPIA.md';
-const ROPA = 'docs/legal/ROPA.md';
-const READINESS = 'docs/legal/DPIA_ROPA_READINESS.md';
-const CNIL = 'docs/operations/CNIL_BREACH_NOTIFICATION_DRYRUN.md';
 
 interface CanonicalPrivacy {
   locales: {
@@ -217,61 +212,6 @@ describe('UC-A16 / UC-A17 — FE generated privacyPolicyContent.ts (static bytes
   });
 });
 
-// ─────────────────────── G. Published HTML (mailto/href) ─────────────────────
-describe('UC-A26 / UC-A27 — docs/privacy-policy.html mailto + text', () => {
-  const html = read(PRIVACY_HTML);
-
-  it('UC-A26 (regression): 0 OLD in text OR mailto href', () => {
-    expect(html).not.toContain(OLD);
-    expect(html).not.toContain(`mailto:${OLD}`);
-  });
-
-  it('UC-A27 (edge): every mailto href points to NEW; 0 mailto to OLD', () => {
-    const mailtos = html.match(/mailto:[^"'>\s]+/g) ?? [];
-    expect(mailtos.length).toBeGreaterThan(0);
-    for (const m of mailtos) {
-      expect(m).toBe(`mailto:${NEW}`);
-    }
-    // The DISPLAYED text must also be NEW (a patched href with stale text = trap).
-    expect(html).toContain(NEW);
-  });
-});
-
-// ─────────────── H. Internal legal docs + DPO alias (EARS-A5) ─────────────────
-describe('UC-A28..A30 — DPIA / ROPA / READINESS: 0 OLD + DPO alias -> NEW', () => {
-  it('UC-A28 (regression): DPIA.md has 0 OLD; DPO alias forwards to NEW', () => {
-    const md = read(DPIA);
-    expect(md).not.toContain(OLD);
-    expect(md).toContain('dpo@musaium.com');
-    expect(md).toContain(NEW);
-  });
-
-  it('UC-A29 (regression): ROPA.md has 0 OLD; DPO alias forwards to NEW', () => {
-    const md = read(ROPA);
-    expect(md).not.toContain(OLD);
-    expect(md).toContain('dpo@musaium.com');
-    expect(md).toContain(NEW);
-  });
-
-  it('UC-A30 (regression): DPIA_ROPA_READINESS.md has 0 OLD; mailbox -> NEW', () => {
-    const md = read(READINESS);
-    expect(md).not.toContain(OLD);
-    expect(md).toContain('dpo@musaium.com');
-    expect(md).toContain(NEW);
-  });
-});
-
-// ───────── UC-A39 (scope extension): CNIL breach dry-run DPO alias ────────────
-describe('UC-A39 — CNIL_BREACH_NOTIFICATION_DRYRUN.md DPO alias -> NEW', () => {
-  it('UC-A39 (regression): 0 OLD; dpo@ alias references NEW (not a personal mailbox)', () => {
-    const md = read(CNIL);
-    expect(md).not.toContain(OLD);
-    expect(md).toContain('dpo@musaium.com');
-    // The parenthetical must forward to the brand mailbox NEW, not "founder personal".
-    expect(md).toContain(NEW);
-  });
-});
-
 // ─────────────── I. Scope guard rails — exclusions stay intact ────────────────
 describe('UC-A31 / UC-A33 — exclusions still contain OLD (account identity)', () => {
   it('UC-A31 (regression): played migration still has OLD (immutable identity key)', () => {
@@ -280,12 +220,6 @@ describe('UC-A31 / UC-A33 — exclusions still contain OLD (account identity)', 
     );
     expect(mig).toContain(OLD);
     expect(mig).toContain(`WHERE "email" = '${OLD}'`);
-  });
-
-  it('UC-A33 (regression): ops super_admin refs still contain OLD', () => {
-    expect(read('museum-backend/scripts/smoke-grafana-prod.sh')).toContain(OLD);
-    expect(read('docs/CI_CD_SECRETS.md')).toContain(OLD);
-    expect(read('docs/OPS_DEPLOYMENT.md')).toContain(OLD);
   });
 });
 
@@ -302,18 +236,12 @@ describe('UC-A32 / UC-A35 / UC-A36 / UC-A37 — global invariant + adversarial f
     FE_GENERATED,
     'museum-frontend/features/legal/termsOfServiceContent.ts',
     'museum-web/src/app/[locale]/cookies/page.tsx',
-    PRIVACY_HTML,
-    DPIA,
-    ROPA,
-    READINESS,
-    CNIL,
   ];
 
   it('UC-A32 (edge): invariant scope excludes the account-identity surfaces', () => {
     const EXCLUDED = [
       '.next/',
       '1778240010000-BackfillSuperAdminOwner.ts',
-      'smoke-grafana-prod.sh',
       'CI_CD_SECRETS.md',
       'OPS_DEPLOYMENT.md',
     ];
@@ -403,19 +331,5 @@ describe('UC-A19 / UC-A38 — codegen <-> FS (integration)', () => {
     } finally {
       writeFileSync(FE_GENERATED_ABS, before, 'utf8');
     }
-  });
-});
-
-// ─────────────── J'. Sentinel drift stays green (integration) ─────────────────
-describe('UC-A34 — privacy-content-drift.mjs stays green after email change', () => {
-  it('UC-A34 (regression): sentinel exits 0 against the real repo root', () => {
-    const SENTINEL = path.join(
-      REPO_ROOT,
-      'museum-backend/scripts/sentinels/privacy-content-drift.mjs',
-    );
-    const res = spawnSync('node', [SENTINEL, '--root', REPO_ROOT], {
-      encoding: 'utf8',
-    });
-    expect(res.status).toBe(0);
   });
 });

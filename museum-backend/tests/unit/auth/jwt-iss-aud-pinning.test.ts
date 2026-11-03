@@ -23,10 +23,8 @@ jest.mock('@src/config/env', () => ({
     auth: {
       accessTokenSecret: 'unit-test-access-secret-that-is-at-least-32c',
       refreshTokenSecret: 'unit-test-refresh-secret-that-is-at-least-32c',
-      mfaSessionTokenSecret: 'unit-test-mfa-session-secret-at-least-32-chars',
       accessTokenTtl: '15m',
       refreshTokenTtl: '14d',
-      mfaSessionTokenTtlSeconds: 300,
     },
   },
 }));
@@ -37,7 +35,6 @@ import { AppError } from '@shared/errors/app.error';
 
 const ACCESS_SECRET = 'unit-test-access-secret-that-is-at-least-32c';
 const REFRESH_SECRET = 'unit-test-refresh-secret-that-is-at-least-32c';
-const MFA_SESSION_SECRET = 'unit-test-mfa-session-secret-at-least-32-chars';
 
 // Helper: assert a synchronous function throws AppError and return it.
 const expectAppError = (fn: () => unknown): AppError => {
@@ -189,71 +186,6 @@ describe('TD-JWT-02 — refresh token iss/aud pinning', () => {
     const err = expectAppError(() => service.verifyRefreshToken(token));
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('INVALID_REFRESH_TOKEN');
-  });
-});
-
-// ──────────────────────────────────────────────────────────────────────────────
-// MFA-session token — iss/aud pinning
-// ──────────────────────────────────────────────────────────────────────────────
-describe('TD-JWT-02 — mfa-session token iss/aud pinning', () => {
-  let issueMfaSessionToken: typeof import('@modules/auth/useCase/totp/mfaSessionToken').issueMfaSessionToken;
-  let verifyMfaSessionToken: typeof import('@modules/auth/useCase/totp/mfaSessionToken').verifyMfaSessionToken;
-  let MFA_SESSION_TOKEN_ISSUER: string;
-
-  beforeAll(async () => {
-    const mod = await import('@modules/auth/useCase/totp/mfaSessionToken');
-    issueMfaSessionToken = mod.issueMfaSessionToken;
-    verifyMfaSessionToken = mod.verifyMfaSessionToken;
-    MFA_SESSION_TOKEN_ISSUER = mod.MFA_SESSION_TOKEN_ISSUER;
-  });
-
-  it('exports MFA_SESSION_TOKEN_ISSUER constant equal to "musaium-mfa-session"', () => {
-    expect(MFA_SESSION_TOKEN_ISSUER).toBe('musaium-mfa-session');
-  });
-
-  it('issueMfaSessionToken produces a JWT with iss === "musaium-mfa-session"', () => {
-    const token = issueMfaSessionToken(7);
-    const decoded = jwt.decode(token) as JwtPayload;
-    expect(decoded.iss).toBe('musaium-mfa-session');
-  });
-
-  it('issueMfaSessionToken produces a JWT with aud === "musaium-mfa-session"', () => {
-    const token = issueMfaSessionToken(7);
-    const decoded = jwt.decode(token) as JwtPayload;
-    const aud = Array.isArray(decoded.aud) ? decoded.aud[0] : decoded.aud;
-    expect(aud).toBe('musaium-mfa-session');
-  });
-
-  it('verifyMfaSessionToken accepts a correctly-issued mfa-session token (round-trip)', () => {
-    const token = issueMfaSessionToken(99);
-    expect(() => verifyMfaSessionToken(token)).not.toThrow();
-  });
-
-  it('verifyMfaSessionToken rejects a token with wrong iss (INVALID_MFA_SESSION)', () => {
-    const token = jwt.sign(
-      { sub: '1', type: 'mfa_session', mfaPending: true },
-      MFA_SESSION_SECRET,
-      {
-        algorithm: 'HS256',
-        expiresIn: 300,
-        issuer: 'wrong-issuer',
-        audience: 'musaium-mfa-session',
-      },
-    );
-    const err = expectAppError(() => verifyMfaSessionToken(token));
-    expect(err.statusCode).toBe(401);
-    expect(err.code).toBe('INVALID_MFA_SESSION');
-  });
-
-  it('verifyMfaSessionToken rejects a token with missing iss (INVALID_MFA_SESSION)', () => {
-    const token = jwt.sign(
-      { sub: '1', type: 'mfa_session', mfaPending: true },
-      MFA_SESSION_SECRET,
-      { algorithm: 'HS256', expiresIn: 300 },
-    );
-    const err = expectAppError(() => verifyMfaSessionToken(token));
-    expect(err.statusCode).toBe(401);
-    expect(err.code).toBe('INVALID_MFA_SESSION');
   });
 });
 

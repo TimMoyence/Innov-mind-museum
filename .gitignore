@@ -1,114 +1,7 @@
 .env
 
-# docs
-**/docs/**
-!docs/
-!docs/chat-ux-refonte/
-!docs/chat-ux-refonte/**
-!docs/CI_CD_SECRETS.md
-!docs/SECURITY.md
-!docs/MOBILE_INTERNAL_TESTING_FLOW.md
-!docs/privacy-policy.html
-!docs/STORE_SUBMISSION_GUIDE.md
-!docs/store-listing/
-!docs/store-listing/**
-!docs/GOOGLE_PLAY_DATA_SAFETY.md
-!docs/DB_BACKUP_RESTORE.md
-!docs/OPS_DEPLOYMENT.md
-!docs/OPS_INCIDENT_LLM_GUARD.md
-!docs/ROADMAP_PRODUCT.md
-!docs/ROADMAP_AUDIT_TRAIL.md
-!docs/ROADMAP_TEAM.md
-!docs/ROADMAP_FE_RN_BEST_PRACTICES.md
-!docs/DOCS_INDEX.md
-!docs/UPTIME_MONITORING.md
-!docs/SOCIAL_AUTH_SETUP.md
-!docs/RELEASE_CHECKLIST.md
-!docs/AI_VOICE.md
-!docs/AI_VISUAL_SIMILARITY.md
-!docs/AI_SAFETY.md
-!docs/GDPR_ART22_SCOPE.md
-!docs/TECH_DEBT.md
-!docs/TECH_DEBT_ARCHIVE.md
-!docs/INCIDENT_LEDGER.md
-!docs/PASSWORD_HASH_MIGRATION.md
-!docs/HANDOFF-*.md
-!docs/GITHUB_ACTIONS_SHA_PINS.md
-!docs/PHASE_HISTORY.md
-!docs/ARCHITECTURE.md
-!docs/TEST_COVERAGE_INVENTORY.md
-!docs/TESTING_DISCIPLINE_PROPOSAL.md
-!docs/TEST_INDEX.md
-!docs/TESTING_PHASE2_PLAN.md
-!docs/LINT_DISCIPLINE.md
-!docs/TEST_FACTORIES.md
-!docs/HANDOFF_W3_GEO_PILOT.md
-!docs/_archive/
-!docs/_archive/**
-!docs/roadmap-night/
-!docs/roadmap-night/**
-!docs/adr/
-!docs/adr/**
-!docs/CONTRIBUTING.md
-!docs/compliance/
-!docs/compliance/**
-!docs/incidents/
-!docs/incidents/**
-!docs/RUNBOOKS/
-!docs/RUNBOOKS/**
-!docs/maplibre/
-!docs/maplibre/**
-!docs/plans/
-!docs/plans/**
-!docs/MIGRATION_GOVERNANCE.md
-!docs/CAPACITY_PLAN.md
-!docs/SLO.md
-!docs/CHAOS_RUNBOOKS.md
-!docs/observability/
-!docs/observability/**
-!docs/operations/
-!docs/operations/**
-!docs/security/
-!docs/security/**
-!docs/legal/
-!docs/legal/**
-!docs/audit-cleanup-2026-05-12/
-!docs/audit-cleanup-2026-05-12/**
-!docs/audit-2026-05-12/
-!docs/audit-2026-05-12/**
-!docs/audit-2026-05-12-raw/
-!docs/audit-2026-05-12-raw/**
-!docs/superpowers/
-!docs/superpowers/**
-!docs/GOTCHAS_ARCHIVE.md
-!docs/MUTATION_SCOPE_EVALUATION.md
-
-# lib-docs (UFR-022) — INDEX.json + README.md + per-lib LESSONS.md tracked.
-# Per-lib snapshots / PATTERNS.md / sources.json / VERSION = untracked, regenerated locally on demand by doc-fetcher + doc-curator agents.
-lib-docs/**
-!lib-docs/
-!lib-docs/INDEX.json
-!lib-docs/README.md
-!lib-docs/.gitignore
-!lib-docs/*/
-!lib-docs/*/LESSONS.md
-!lib-docs/@*/*/
-!lib-docs/@*/*/LESSONS.md
-
-# frontend docs
-!museum-frontend/docs/
-!museum-frontend/docs/**
-
-# backend perf bench artifacts (EXPLAIN ANALYZE outputs + reports)
-!museum-backend/docs/
-!museum-backend/docs/perf/
-!museum-backend/docs/perf/**
-# backend operations runbooks (provisioning, deploy, incident)
-!museum-backend/docs/operations/
-!museum-backend/docs/operations/**
-# backend observability runbooks (dashboards, funnel goals, alerts)
-!museum-backend/docs/observability/
-!museum-backend/docs/observability/**
+**/docs/
+/AGENTS.md
 
 # OS X
 **/.DS_Store*
@@ -228,10 +121,8 @@ design-system/pnpm-lock.yaml
 # comme .gitnexus lui-même et les snapshots lib-docs). Consommés par /team en local.
 .claude/skills/generated/
 .claude/skills/cluster-skills-index.json
+.claude/skills/gitnexus-area-*/
 
-# Ephemeral agent reports (not source, not docs-for-humans)
-team-reports/
-!team-reports/README.md
 museum-backend/reports/
 new.md
 

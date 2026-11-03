@@ -44,7 +44,6 @@ const BACKEND_ROOT = resolve(__dirname, '../../..');
 const WRAPPER_FILES = [
   'src/modules/chat/adapters/secondary/llm/llm-circuit-breaker.ts',
   'src/modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker.ts',
-  'src/modules/chat/adapters/secondary/guardrails/guardrail-circuit-breaker.ts',
 ] as const;
 
 /**

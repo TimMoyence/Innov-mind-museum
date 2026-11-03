@@ -13,9 +13,6 @@ import { createHash } from 'node:crypto';
 
 import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import { rerankFallbackTotal, rerankLatencyMs } from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import type { RerankerPort, RerankResult } from '@modules/chat/domain/ports/reranker.port';
 import type { CompareMatch } from '@modules/chat/domain/visual-similarity/compare-result.types';
@@ -157,16 +154,6 @@ interface RerankTelemetryPayload {
 }
 
 function emitRerankTelemetry(payload: RerankTelemetryPayload): void {
-  safeTrace('visualSimilarity.metric.rerank', () => {
-    rerankLatencyMs.observe({ caller: CALLER_LABEL, outcome: payload.outcome }, payload.latencyMs);
-    if (payload.outcome === 'fallback' && payload.reason !== undefined) {
-      rerankFallbackTotal.inc({
-        caller: CALLER_LABEL,
-        reason: payload.reason,
-      });
-    }
-  });
-
   if (payload.outcome === 'fallback') {
     logger.warn('reranker_fallback', {
       caller: CALLER_LABEL,
@@ -177,22 +164,6 @@ function emitRerankTelemetry(payload: RerankTelemetryPayload): void {
     });
   }
 
-  safeTrace('visualSimilarity.span.rerank', () => {
-    const lf = getLangfuse();
-    const queryHash = createHash('sha256').update(payload.queryText).digest('hex').slice(0, 16);
-    lf?.trace({
-      name: 'chat.rerank',
-      metadata: {
-        'rerank.caller': CALLER_LABEL,
-        'rerank.candidate_count': payload.candidateCount,
-        'rerank.top_n': payload.topN,
-        'rerank.latency_ms': payload.latencyMs,
-        'rerank.outcome': payload.outcome,
-        'rerank.query_hash': queryHash,
-        ...(payload.reason !== undefined ? { 'rerank.reason': payload.reason } : {}),
-      },
-    });
-  });
 }
 
 /**

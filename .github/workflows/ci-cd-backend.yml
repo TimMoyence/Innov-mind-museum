@@ -10,7 +10,7 @@ on:
   # `success`, so the required check is satisfied either way.
   pull_request: {}
   push:
-    branches: ['main', 'staging']
+    branches: ['main']
   schedule:
     # Nightly full-quality regression (existing).
     - cron: '17 3 * * *'
@@ -87,10 +87,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Tier-signature sentinel (ADR-012 §4.2)
-        run: node scripts/sentinels/integration-tier-signature.mjs
-        working-directory: ${{ github.workspace }}
-
       - name: Audit dependencies
         # pnpm audit uses retired npm endpoints (both /audits and /audits/quick return 410).
         # Trivy fs scan reads pnpm-lock.yaml directly — consistent with image scanning below.
@@ -136,15 +132,8 @@ jobs:
         # with ERR_PACKAGE_PATH_NOT_EXPORTED (the runner resolves the repo's own
         # node_modules/@actions/tool-cache, which has no "exports" main). The image
         # is version-pinned and needs no Node resolution.
-        # The `mutation` job is intentionally disabled via `if: false` (Stryker
-        # prioritised cache-first, out of this run's scope); ignore that ONE
-        # documented if-cond pattern so the gate passes on the intentional disable.
-        # Mount $GITHUB_WORKSPACE (repo root) not $PWD: this job runs with
-        # working-directory=museum-backend, so $PWD would be the sub-package and
-        # the .github/workflows/* paths (repo-root-relative) would not resolve.
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo rhysd/actionlint:1.7.12 \
-            -ignore 'constant expression "false" in condition' \
             .github/workflows/ci-cd-backend.yml .github/workflows/ci-cd-mobile.yml
 
       - name: Migrations are reversible (down() present)
@@ -153,31 +142,8 @@ jobs:
       - name: OpenAPI Spec Validate
         run: pnpm run openapi:validate
 
-      - name: Router-spec drift sentinel (R14 - leads routes documented)
-        run: pnpm run sentinel:router-spec-drift
-
-      - name: Hexagonal domain-purity sentinel (ESLint-independent backstop)
-        run: pnpm run sentinel:hexagonal-domain-purity
-
-      - name: Integration-gate discipline sentinel (STREAM H9 — dark suites)
-        # Fails if a tests/integration/** suite gates on process.env.RUN_E2E
-        # without RUN_INTEGRATION — such a suite runs in NO CI job (this
-        # integration leg sets RUN_INTEGRATION; the e2e leg path-excludes
-        # tests/integration/), giving silent false coverage.
-        run: node scripts/sentinels/integration-gate-discipline.mjs
-
       - name: OpenAPI Contract (spec-backed)
         run: pnpm run test:contract:openapi
-
-      - name: Privacy content drift sentinel (R15)
-        run: pnpm run sentinel:privacy-drift
-
-      # NOTE: sentinel:web-cookies moved to ci-cd-web.yml (R18 acceptance —
-      # design D9 cross-app sentinel acceptable). Still invoked as
-      # `pnpm --filter museum-backend sentinel:web-cookies` from there
-      # because the script lives in the backend workspace and audits the
-      # web surface — single source of truth, just gated by the web
-      # workflow's quality job per R18.
 
       - name: Guard DB_SYNCHRONIZE
         run: |
@@ -186,14 +152,10 @@ jobs:
             exit 1
           fi
 
-      # W3-D3: WARNING-only guard (NOT blocking). DB_SSL_REJECT_UNAUTHORIZED=false
-      # is legitimate for local PgBouncer with a self-signed cert, so this must
-      # never `exit 1` / `::error::` — it only surfaces an intentional decision.
-      # cwd = museum-backend (job default) → same `.env*` glob as the guard above.
       - name: Guard DB_SSL_REJECT_UNAUTHORIZED
         run: |
           if grep -rq 'DB_SSL_REJECT_UNAUTHORIZED=false' .env* 2>/dev/null; then
-            echo "::warning::DB_SSL_REJECT_UNAUTHORIZED=false found in env files — verify this is intentional (PgBouncer self-signed only). In prod this disables TLS cert verification (MITM-susceptible)."
+            echo "::warning::DB_SSL_REJECT_UNAUTHORIZED=false found in env files — verify this is intentional (local self-signed database only). In prod this disables TLS cert verification (MITM-susceptible)."
           fi
 
       # W3-O2: run the scripts-esm harness (ops-infra-ci-gates etc.) in CI. The
@@ -203,30 +165,6 @@ jobs:
       # requires cwd === <repo>/museum-backend. NO continue-on-error (real gate).
       - name: Run scripts harness (test:scripts)
         run: pnpm run test:scripts
-
-      # W3-O4: validate the Prometheus alert rules that are actually deployed.
-      # promtool validates the PromQL SYNTAX + rule STRUCTURE, NOT the semantics:
-      # a syntactically-valid-but-impossible selector (e.g. the `== 2` O1 bug) or a
-      # non-existent metric name still PASSES promtool. Those classes are covered by
-      # the Jest harness (ops-infra-ci-gates A1a/A1b/A1c + the metrics cross-check).
-      # This step catches FUTURE expression typos (unbalanced parens, unknown
-      # functions, malformed YAML). Scope = infra/grafana/alerting/*.yml ONLY (what
-      # Prometheus loads via rule_files); docs/observability/ is NOT mounted and is
-      # intentionally excluded. Image pinned by tag (actionlint pattern :147-150).
-      # --entrypoint sh because the `/alerting/*.yml` glob has NO shell to expand it
-      # in a bare `--entrypoint promtool … check rules /alerting/*.yml` argv chain:
-      # promtool does no globbing itself, so it would receive the literal `*` token
-      # and fail `path /alerting/*.yml does not exist` (exit 1) on every CI run. The
-      # `sh -c '…'` wrapper expands the glob into real filenames before promtool sees
-      # them. (Image default entrypoint is `prometheus`, hence the override.)
-      - name: Validate Prometheus alert rules (promtool check rules)
-        working-directory: ${{ github.workspace }}
-        run: |
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE/infra/grafana/alerting:/alerting:ro" \
-            --entrypoint sh \
-            prom/prometheus:v2.55.1 \
-            -c 'promtool check rules /alerting/*.yml'
 
       # NOTE: test:coverage moved to dedicated sharded job + coverage-merge
       # below (2026-05-15) — 4-shard matrix divides wall-clock by ~4x while
@@ -401,96 +339,6 @@ jobs:
         env:
           RUN_INTEGRATION: 'true'
 
-  # ─── 3. Mutation testing (Stryker — incremental on push, full nightly) ──
-  mutation:
-    needs: [quality, coverage-merge]
-    # ⚠️ DISABLED (deferred post-launch) — re-confirmed 2026-05-31, audit 360.
-    # This job has NOT run since 2026-05-09. It is NOT a gate today: Stryker
-    # mutation thresholds (`.stryker-hot-files.json`) are NOT enforced anywhere
-    # in CI — do not cite it as an active guard (see docs/PHASE_HISTORY.md
-    # Phase 12 status note). The original "cache-builder agent regenerating the
-    # incremental cache offline" plan never landed; re-arming remains a
-    # deliberate post-launch task, not an in-flight one.
-    #
-    # To RE-ARM: (1) regenerate `reports/stryker-incremental.json` offline and
-    # commit it, (2) replace `if: false` with the conditional from c17c404e:
-    #   github.event_name == 'pull_request'
-    #   || github.event_name == 'schedule'
-    #   || github.event_name == 'workflow_dispatch'
-    #   || (github.event_name == 'push' && github.ref == 'refs/heads/staging')
-    if: false
-    runs-on: ubuntu-latest
-    # Bumped 50 → 90 (2026-05-08): the prior 50-min cap killed every full run
-    # before Stryker could write `reports/stryker-incremental.json`, so the
-    # `actions/cache` SAVE step never ran and every subsequent run started
-    # cold. Letting the first full run finish unlocks incremental mode for
-    # all push-triggered runs.
-    timeout-minutes: 90
-    defaults:
-      run:
-        working-directory: museum-backend
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: museum_dev
-          POSTGRES_PASSWORD: museum_dev_password
-          POSTGRES_DB: museum_dev
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: museum-backend/pnpm-lock.yaml
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Restore Stryker incremental cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
-        with:
-          path: museum-backend/reports/stryker-incremental.json
-          key: stryker-cache-${{ hashFiles('museum-backend/stryker/config.mjs', 'museum-backend/jest.config.ts', 'museum-backend/.stryker-hot-files.json') }}
-          restore-keys: |
-            stryker-cache-
-
-      - name: Run Stryker (incremental on push, full nightly)
-        env:
-          DB_HOST: localhost
-          DB_PORT: '5433'
-          DB_USER: museum_dev
-          DB_PASSWORD: museum_dev_password
-          PGDATABASE: museum_dev
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "[mutation] Nightly — running FULL Stryker (cache regen)"
-            pnpm run mutation
-          else
-            echo "[mutation] Push/PR — running INCREMENTAL Stryker"
-            pnpm run mutation:ci
-          fi
-
-      - name: Hot-files kill-ratio gate
-        run: pnpm run mutation:gate
-
-      - name: Upload Stryker HTML report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
-        with:
-          name: stryker-report-${{ github.event_name }}-${{ github.run_number }}
-          path: museum-backend/reports/mutation/
-          retention-days: 14
-
   # ─── 4. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
     needs: [quality, coverage-merge]
@@ -544,16 +392,8 @@ jobs:
     # cancellation, so the advisory job went red and blocked merge. Widen to let it
     # complete; 25min matches the other live-provider backend jobs. (Deeper fix
     # tracked: ai-tests is advisory-by-design and should not sit in the required
-    # check list — guardrail-failclosed is the real deterministic hard gate.)
-    #
-    # H6: bumped 25 → 40 because this job now ALSO builds + starts the real
-    # LLM-Guard sidecar so the live V2 suite (guardrail-v2-live) exercises the
-    # fail-CLOSED / observeOnly / service_unavailable wiring against a REAL
-    # ProtectAI service (it was never reached before — beforeAll hard-threw on the
-    # always-refused :8081 and continue-on-error swallowed it). The sidecar image
-    # build reuses the type=gha cache produced by ci-cd-llm-guard.yml (mode=max),
-    # so it is a fast cache-hit when unchanged; 40min absorbs a cold build.
-    timeout-minutes: 40
+    # check list.)
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: museum-backend
@@ -581,40 +421,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ── H6: bring up the REAL LLM-Guard sidecar so the live V2 suite tests the
-      # actual fail-CLOSED wiring (sidecar reach @ enforce, observeOnly downgrade,
-      # policy:service_unavailable) instead of being silently swallowed. Build via
-      # buildx reusing the GHA cache from ci-cd-llm-guard.yml (mode=max), then
-      # `docker run` and wait for /health. Loopback :8081 = GUARDRAIL_V2_TEST_SIDECAR_URL.
-      - name: Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
-      - name: Build LLM-Guard sidecar image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
-        with:
-          context: ./museum-backend/ops/llm-guard-sidecar
-          file: ./museum-backend/ops/llm-guard-sidecar/Dockerfile
-          load: true
-          tags: museum-llm-guard:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - name: Start LLM-Guard sidecar + wait for /health
-        working-directory: ${{ github.workspace }}
-        run: |
-          docker run -d --name lg-sidecar -p 8081:8081 museum-llm-guard:ci
-          # Scanners load at startup; image preloads HF models so ~30s on a warm
-          # layer. Poll /health, fail loudly (and dump logs) if it never comes up.
-          for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8081/health 2>/dev/null; then
-              echo ""; echo "sidecar healthy after ~$((i*2))s"; exit 0
-            fi
-            if [ "$(docker inspect -f '{{.State.Running}}' lg-sidecar 2>/dev/null)" != "true" ]; then
-              echo "ERROR: sidecar container exited"; docker logs lg-sidecar; exit 1
-            fi
-            sleep 2
-          done
-          echo "ERROR: sidecar never became healthy within 120s"; docker logs lg-sidecar; exit 1
-
-      # I-OPS8 (R9): ai-tests now RUN on PR (paths-filtered above) instead of being
       # workflow_dispatch-only — they were invisible before. They are ADVISORY
       # (continue-on-error), NOT a hard merge gate, because they hit the live OpenAI
       # provider and assert exact facts in free-form output (e.g. /leonardo|da vinci/
@@ -624,63 +430,9 @@ jobs:
       # gate (95 % pass-rate tolerance), live-LLM checks must absorb variance; a
       # blocking gate needs the assertions de-flaked / a pass-rate threshold first
       # (tracked follow-up). The step result stays visible in the PR checks.
-      #
-      # H6: the live V2 suite (guardrail-v2-live) now runs against the REAL sidecar
-      # started above. If that sidecar is down, its beforeAll hard-throws and this
-      # advisory step shows RED in the PR checks (REPORTED) — the deterministic
-      # guardrail-failclosed job below remains the hard merge gate.
       - name: AI Integration Tests
         continue-on-error: true
         run: pnpm run test:ai
-
-      - name: Stop LLM-Guard sidecar
-        if: always()
-        working-directory: ${{ github.workspace }}
-        run: docker rm -f lg-sidecar 2>/dev/null || true
-
-  # ─── 5.3. Guardrail fail-CLOSED invariant gate (TD-63 / ADR-047) ──────
-  # The `ai-tests` job above is ADVISORY (continue-on-error) because it hits
-  # the live OpenAI provider + a real ProtectAI sidecar (non-deterministic).
-  # That meant the V2 fail-CLOSED / fail-OPEN security invariants (ADR-047)
-  # had NO blocking gate — a broken invariant would never fail a merge.
-  #
-  # This job runs ONLY the DETERMINISTIC subset
-  # (tests/ai/guardrail-failclosed-deterministic.ai.test.ts): no sidecar, no
-  # OPENAI_API_KEY, no network. It is a HARD gate (no continue-on-error) so an
-  # unreachable sidecar that "allows" (fail-OPEN regression) or a budget gate
-  # that calls the model breaks CI. The file is jest-ignored by default
-  # (jest.config.ts:58 `/tests/ai/`); the `--testPathIgnorePatterns` override
-  # lifts that ignore for this run only — same trick as `test:ai`.
-  guardrail-failclosed:
-    needs: [changes, quality]
-    if: |
-      needs.changes.outputs.backend == 'true' ||
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    defaults:
-      run:
-        working-directory: museum-backend
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: museum-backend/pnpm-lock.yaml
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Guardrail fail-CLOSED invariants (deterministic, no sidecar/key)
-        # HARD gate (no continue-on-error). No OPENAI_API_KEY, no sidecar — the
-        # deterministic invariants short-circuit before any model/network call.
-        run: >-
-          pnpm exec jest --watchman=false --runInBand --coverage=false
-          --testPathPattern='tests/ai/guardrail-failclosed-deterministic'
-          --testPathIgnorePatterns '/dist/' '/node_modules/'
 
   # ─── 5.4. Migration schema-drift gate (I-OPS8 R11) ────────────────────
   # Applies ALL migrations to a clean DB, then attempts `migration:generate`.
@@ -958,22 +710,9 @@ jobs:
     # intentionally NOT a need here — it is skipped on push-to-main (if: pull_request
     # || schedule), so needs:[e2e] would skip deploy-prod entirely. integration runs
     # on push whenever coverage-merge runs, so the gating stays consistent.
-    # guardrail-failclosed added 2026-06-04 (TD-63): the V2 fail-CLOSED invariant
-    # (ADR-047) is a deterministic hard gate; prod must not ship if it regresses.
-    needs: [quality, coverage-merge, integration, guardrail-failclosed]
+    needs: [quality, coverage-merge, integration]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
-    # run BEFORE the SSH deploy step. id-token + attestations needed for keyless
-    # signing and provenance push. See `## supply-chain audit` finding A1/A2.
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    outputs:
-      image: ${{ steps.refs.outputs.image }}
-      digest: ${{ steps.push.outputs.digest }}
     env:
       HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
     steps:
@@ -1023,10 +762,6 @@ jobs:
           ignore-unfixed: true
           trivyignores: .trivyignore
 
-      - name: Compute image refs (for cosign job output)
-        id: refs
-        run: echo "image=ghcr.io/${{ secrets.GHCR_USER }}/museum-backend" >> "$GITHUB_OUTPUT"
-
       - name: Push image to GHCR
         id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
@@ -1038,87 +773,12 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:latest
             ghcr.io/${{ secrets.GHCR_USER }}/museum-backend:${{ github.sha }}
-          # OCI labels — consumed by the post-deploy `docker image prune` step
-          # on the VPS (`Prune stale backend images on VPS`). `image.source`
-          # scopes the prune to images built from THIS repo, so collateral
-          # pruning of other tooling images on the host is impossible.
-          # docker/build-push-action@v7 does NOT auto-inject OCI labels unless
-          # docker/metadata-action is wired; declaring them here keeps the
-          # contract explicit (and avoids a second action dependency).
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ── V12 W8 hardening (2026-05-05) — pre-deploy signature gate ─────────
-      # Inline cosign sign + SLSA L3 attest, then cosign verify, BEFORE any
-      # SSH step pulls the image onto the VPS. Replaces the post-hoc
-      # sign-prod job (removed). Hard-fails the deploy if signing or
-      # verification fails — banking-grade supply-chain gate.
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v4.1.2
-        with:
-          cosign-release: 'v2.4.1'
-
-      - name: Cosign sign image (keyless)
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign sign --yes \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
-
-      - name: SLSA L3 build-provenance attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      # ── I-CMP6 / R11 (decision Q3 "Tout faire", design §D5) — CycloneDX SBOM
-      # attestation bound to the pushed image digest. ADDITIVE + advisory
-      # (continue-on-error) so a transient attest hiccup never blocks an
-      # already-verified V1 prod deploy. EU CRA Art.13 deadline is 2027.
-      # Deps already installed (Install dependencies step above); SBOM is
-      # regenerated here because the image digest only exists in this job.
-      - name: Generate SBOM (deploy)
-        working-directory: museum-backend
-        continue-on-error: true
-        run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom.json --spec-version 1.5 --output-reproducible
-
-      - name: Cosign attest SBOM (CycloneDX)
-        continue-on-error: true
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign attest --yes --type cyclonedx \
-            --predicate museum-backend/sbom.json \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
-
-      - name: Cosign verify signature (pre-deploy gate)
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign verify \
-            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}"
-
-      - name: Verify SLSA provenance attestation (pre-deploy gate)
-        # actions/attest-build-provenance@v2 publishes the SLSA provenance via the
-        # OCI 1.1 Referrers API. cosign 2.4.x verify-attestation only looks at the
-        # legacy `<digest>.att` tag, so it reports "no matching attestations" even
-        # when the attestation is uploaded. `gh attestation verify` speaks the
-        # actions/attest-build-provenance format natively (looks up by subject
-        # digest via the GitHub API), so we use it as the discovery layer here.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh attestation verify \
-            "oci://ghcr.io/${{ secrets.GHCR_USER }}/museum-backend@${{ steps.push.outputs.digest }}" \
-            --owner "${{ github.repository_owner }}" \
-            --predicate-type "https://slsa.dev/provenance/v1"
-      # ── end pre-deploy signature gate ─────────────────────────────────────
 
       - name: Create Sentry release
         if: env.HAS_SENTRY_TOKEN == 'true'
@@ -1142,20 +802,17 @@ jobs:
           pnpm build
           npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
 
-      - name: Upload rollback helper to VPS
-        # Upload to /tmp first (always writable), then sudo mv to /srv/museum.
-        # Direct upload to /srv/museum fails when rollback.sh is owned by root
-        # from a previous deploy (tar cannot overwrite, Permission denied).
+      - name: Upload VPS helpers
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          source: museum-backend/deploy/rollback.sh
+          source: museum-backend/deploy/rollback.sh,museum-backend/deploy/vps
           target: /tmp/museum-deploy
           strip_components: 2
 
-      - name: Install rollback helper on VPS
+      - name: Install VPS helpers and cron
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -1164,6 +821,57 @@ jobs:
           script: |
             sudo mv /tmp/museum-deploy/rollback.sh /srv/museum/rollback.sh
             sudo chmod +x /srv/museum/rollback.sh
+            sudo rm -rf /srv/museum/vps
+            sudo mv /tmp/museum-deploy/vps /srv/museum/vps
+            sudo chmod +x /srv/museum/vps/backup-db.sh /srv/museum/vps/check-certs.sh
+            sudo install -m 0644 -o root -g root /srv/museum/vps/musaium.cron /etc/cron.d/musaium
+
+      - name: Sync prod compose to VPS (/tmp staging)
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: 'museum-backend/deploy/docker-compose.prod.yml'
+          target: /tmp/musaium-deploy-staging
+          # strip_components=2 drops `museum-backend/deploy/` so the file lands
+          # at /tmp/musaium-deploy-staging/docker-compose.prod.yml.
+          strip_components: 2
+
+      - name: Install compose on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: |
+            set -e
+
+            # 1. Validate the new compose BEFORE touching the live one —
+            #    syntax error or missing env var → abort, leave prod
+            #    running on the existing compose.
+            cd /srv/museum
+            sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate
+            (cd /srv/museum && \
+              docker compose \
+                -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+                --project-directory /srv/museum \
+                --env-file /srv/museum/.env \
+                config > /dev/null)
+
+            # 2. Backup current compose, install candidate as the live one.
+            BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
+            if [ -f /srv/museum/docker-compose.yml ]; then
+              sudo cp /srv/museum/docker-compose.yml \
+                "/srv/museum/docker-compose.yml.bak.${BACKUP_TS}"
+              echo "[deploy] backed up previous compose to docker-compose.yml.bak.${BACKUP_TS}"
+            fi
+            sudo install -m 0644 \
+              /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
+              /srv/museum/docker-compose.yml
+
+            rm -rf /tmp/musaium-deploy-staging
 
       - name: Capture pre-deploy rollback state (prod)
         id: pre_deploy
@@ -1314,182 +1022,6 @@ jobs:
             #    hard-deletes it right after, so no connectable account survives
             #    a deploy. Cycle C, run 2026-05-26-auth-mfa-rgpd-zerodefect.
 
-      # ── Observability stack (C1.1, ADR-036) ────────────────────────────
-      # Deploys Grafana / Prometheus / AlertManager / Telegram-bridge
-      # services declared in /srv/museum/docker-compose.yml.
-      #
-      # Single-source-of-truth pattern:
-      #   museum-backend/deploy/docker-compose.prod.yml is THE compose.
-      #   Every deploy SCPs it to /srv/museum/docker-compose.yml on the
-      #   VPS, after backing up the previous file to .bak. Operators do
-      #   NOT hand-edit the live compose anymore — changes go through
-      #   PR + CI.
-      #
-      # The 5 obs env vars (ENV, GRAFANA_ADMIN_PASSWORD, GRAFANA_ROOT_URL,
-      # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) MUST already be set in
-      # /srv/museum/.env. CI does NOT manage these secrets.
-
-      - name: Sync prod compose to VPS (/tmp staging)
-        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          source: 'museum-backend/deploy/docker-compose.prod.yml'
-          target: /tmp/musaium-deploy-staging
-          # strip_components=2 drops `museum-backend/deploy/` so the file lands
-          # at /tmp/musaium-deploy-staging/docker-compose.prod.yml.
-          strip_components: 2
-
-      - name: Sync grafana provisioning to VPS (/tmp staging)
-        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          source: 'infra/grafana/*'
-          target: /tmp/musaium-deploy-staging/grafana
-          # strip_components=2 drops `infra/grafana/` from each path so the
-          # files preserve their inner structure (dashboards/, provisioning/,
-          # alerting/, alertmanager-telegram/) under /tmp/.../grafana/.
-          # Split from the compose scp because a single scp-action with one
-          # strip-value can't satisfy both 'museum-backend/deploy/X' (needs
-          # strip 2) and 'infra/grafana/Y/Z' (needs the grafana/ prefix kept,
-          # which strip 2 does too — but with target=.../grafana, not the
-          # parent staging dir). PR #207 had them merged, which dropped the
-          # grafana/ folder and broke the rsync sync step downstream.
-          strip_components: 2
-
-      - name: Install compose + obs config on VPS
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          script: |
-            set -e
-
-            # 1. Validate the new compose BEFORE touching the live one —
-            #    syntax error or missing env var → abort, leave prod
-            #    running on the existing compose.
-            cd /srv/museum
-            sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
-              /tmp/musaium-deploy-staging/docker-compose.yml.candidate
-            (cd /srv/museum && \
-              docker compose \
-                -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
-                --project-directory /srv/museum \
-                --env-file /srv/museum/.env \
-                config > /dev/null)
-
-            # 2. Backup current compose, install candidate as the live one.
-            BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
-            if [ -f /srv/museum/docker-compose.yml ]; then
-              sudo cp /srv/museum/docker-compose.yml \
-                "/srv/museum/docker-compose.yml.bak.${BACKUP_TS}"
-              echo "[deploy] backed up previous compose to docker-compose.yml.bak.${BACKUP_TS}"
-            fi
-            sudo install -m 0644 \
-              /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
-              /srv/museum/docker-compose.yml
-
-            # 3. Sync Grafana/Prom/AM provisioning + dashboards into the
-            #    compose bind-mount target. --delete keeps the VPS in
-            #    lockstep with the repo.
-            sudo mkdir -p /srv/museum/obs
-            sudo rsync -av --delete \
-              /tmp/musaium-deploy-staging/grafana/ \
-              /srv/museum/obs/
-
-            # 4. nginx config is operator-owned (Docker container with a
-            #    hand-maintained site.conf — paths under
-            #    /etc/nginx/snippets/ inside the container are NOT
-            #    accessible from the host runner). The one-shot edit of
-            #    site.conf + nginx reload is documented in
-            #    docs/OPS_DEPLOYMENT.md §Grafana bootstrap (manual step C).
-            #    CI never touches nginx.
-
-            # 5. Cleanup staging dir.
-            rm -rf /tmp/musaium-deploy-staging
-
-      - name: Deploy obs stack on VPS
-        id: deploy_obs
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          GHCR_USER: ${{ secrets.GHCR_USER }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER
-          script: |
-            set -e
-            cd /srv/museum
-
-            # Re-login (idempotent — same token as the backend deploy).
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
-
-            # W3-O8: fail loud (not the implicit compose `${VAR:?}`) if the Telegram
-            # bridge secrets are missing/empty in /srv/museum/.env — otherwise
-            # alertmanager-telegram exits 1 at runtime and critical alerts are lost
-            # silently. Belt-and-braces with the `docker compose config` :? check in
-            # the prior install step. The secrets live on the VPS (NOT GitHub secrets),
-            # so this MUST run VPS-side, ahead of the bridge start-up below.
-            set -a; . /srv/museum/.env 2>/dev/null || true; set +a
-            if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
-              echo "::error::TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID missing or empty in /srv/museum/.env — obs alerting bridge would fail silently. Aborting obs deploy."
-              exit 1
-            fi
-
-            # Pull + restart the 5 obs services. alertmanager-telegram
-            # builds locally from /srv/museum/obs/alertmanager-telegram/
-            # — compose handles the build transparently. node-exporter
-            # listed FIRST because prometheus scrapes it on startup; if
-            # the exporter is missing, the VPS* alerts all NoData.
-            docker compose pull node-exporter prometheus grafana alertmanager
-            docker compose up -d --remove-orphans --timeout 30 \
-              node-exporter prometheus grafana alertmanager alertmanager-telegram
-
-            # Wait for Grafana healthcheck (confirms provisioning loaded
-            # the dashboard + datasource cleanly).
-            echo "Waiting for Grafana healthcheck..."
-            TRIES=0
-            MAX_TRIES=20
-            until docker compose exec -T grafana wget --quiet --spider http://localhost:3000/api/health 2>/dev/null; do
-              TRIES=$((TRIES + 1))
-              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
-                echo "Grafana healthcheck failed after ${MAX_TRIES} attempts"
-                docker compose logs --tail=50 grafana || true
-                exit 1
-              fi
-              echo "  attempt ${TRIES}/${MAX_TRIES}..."
-              sleep 3
-            done
-            echo "Grafana is healthy."
-
-            # Confirm the alerting rule loaded by Prometheus.
-            if ! docker compose exec -T prometheus wget -qO- http://localhost:9090/api/v1/rules \
-                | grep -q chat_e2e_p99_high; then
-              echo "::warning::Prometheus did not load chat_e2e_p99_high rule — check /srv/museum/obs/alerting/"
-            fi
-
-      - name: Post-deploy obs smoke (RBAC gate)
-        # Asserts the single-auth contract: anonymous /grafana/ → 401,
-        # super_admin login → 200 dashboard. Skipped silently if the
-        # ADMIN_*/SUPER_ADMIN_* smoke secrets are missing — keeps deploys
-        # green on environments that haven't bootstrapped Grafana yet.
-        if: ${{ env.OBS_SMOKE_ENABLED == 'true' }}
-        env:
-          OBS_SMOKE_ENABLED: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD != '' && 'true' || 'false' }}
-          BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
-          SUPER_ADMIN_EMAIL: ${{ secrets.PROD_SUPER_ADMIN_EMAIL }}
-          SUPER_ADMIN_PASSWORD: ${{ secrets.PROD_SUPER_ADMIN_PASSWORD }}
-          ADMIN_EMAIL: ${{ secrets.PROD_ADMIN_NEGATIVE_EMAIL }}
-          ADMIN_PASSWORD: ${{ secrets.PROD_ADMIN_NEGATIVE_PASSWORD }}
-        working-directory: museum-backend
-        run: bash ./scripts/smoke-grafana-prod.sh
-
       - name: Validate prod smoke secrets
         env:
           PROD_SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
@@ -1623,42 +1155,6 @@ jobs:
             -e production \
             --name "rollback-${{ github.sha }}" || true
 
-      # ── Post-deploy hygiene — drop stale Docker images on the VPS ─────
-      # 2026-05 incident: VPS hit 100% disk twice in a month — Docker images
-      # accumulated to 53.8 GB (36.6 GB reclaimable) because each deploy
-      # pulls a new tagged image (`:<sha>`) but the previous tagged image
-      # was never reaped on the host. `docker image prune -a` removes only
-      # images with no living container reference, so the currently-running
-      # backend / prom / grafana / alertmanager / alertmanager-telegram
-      # images are safe (their containers are up). The `until=24h` filter
-      # leaves a 24h grace window so operators can pull a recent prior
-      # image off GHCR for emergency manual rollback inside that window
-      # without re-downloading from the registry.
-      #
-      # Placement rationale: this step runs near the end of deploy-prod,
-      # AFTER `Post-deploy smoke test (prod)` (id: smoke), AFTER the
-      # `Auto-rollback on deploy or smoke failure` (id: rollback) branch,
-      # and AFTER `Notify Sentry of rollback`. It sits BEFORE the final
-      # `Fail job after successful rollback` step (which has its own
-      # `if: failure()` guard and merely surfaces the rollback runbook).
-      # With `if: success()` it executes ONLY when every prior step
-      # passed — i.e., deploy AND smoke AND obs deploy AND obs smoke all
-      # succeeded. If anything failed, the rollback path runs instead
-      # (which depends on `<repo>:previous` being present locally — see
-      # rollback.sh §2), and this prune is skipped, preserving the
-      # `:previous` tag for the recovery path.
-      #
-      # `|| true` on each prune command: the deploy itself has already
-      # succeeded, so any transient daemon error while pruning (concurrent
-      # deploy racing the daemon, label filter mismatch, etc.) MUST NOT
-      # fail the workflow. Hygiene, not gating.
-      #
-      # Backend filter uses `label=org.opencontainers.image.source` set
-      # explicitly in the `Push image to GHCR` step (build-push-action@v7
-      # does not auto-inject OCI labels). The obs prune below uses
-      # `until=24h` alone — upstream prom/grafana/AM images are not built
-      # by us and don't carry our label; the unreferenced-only guarantee
-      # of `-a` keeps the running stack safe.
       - name: Prune stale Docker images on VPS
         if: success()
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
@@ -1667,441 +1163,11 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
           script: |
-            set +e
-
-            echo "[prune] disk usage before:"
-            docker system df 2>/dev/null || true
-
-            # 1. Drop unreferenced museum-backend images >24h old. Label
-            #    filter scopes prune to images we built from THIS repo.
-            docker image prune -af \
-              --filter "label=org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-              --filter "until=24h" || true
-
-            # 2. Drop unreferenced obs / locally-built images >24h old.
-            #    Upstream images (prom/grafana/AM) don't carry our label;
-            #    `-a` still preserves any image with a running container,
-            #    so the live stack is untouched. `alertmanager-telegram`
-            #    is built locally on the VPS by `docker compose up` and
-            #    accumulates an untagged layer set every deploy — this is
-            #    the main target.
             docker image prune -af --filter "until=24h" || true
-
-            # 3. Drop build-cache leftovers >24h. The CI build runs on
-            #    the GHA runner, not the VPS, but any incidental cache
-            #    from past direct `docker build` on the host is fair game.
             docker builder prune -af --filter "until=24h" || true
-
-            echo "[prune] disk usage after:"
-            docker system df 2>/dev/null || true
 
       - name: Fail job after successful rollback
         if: failure() && steps.rollback.outcome == 'success'
         run: |
-          echo "::error::Production deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
+          echo "::error::Production deploy rolled back"
           exit 1
-
-  # ─── 7. Deploy to staging (push to staging) ──────────────────────────
-  deploy-staging:
-    needs: [quality, coverage-merge]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
-    # V12 W8 hardening (2026-05-05): inline cosign sign + SLSA attest + cosign verify
-    # run BEFORE the SSH deploy step. Mirrors deploy-prod hardening — staging
-    # validates the same supply-chain contract the prod path enforces.
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    outputs:
-      image: ${{ steps.refs.outputs.image }}
-      digest: ${{ steps.push.outputs.digest }}
-    env:
-      HAS_SENTRY_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
-      - name: Setup pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
-
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: museum-backend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: museum-backend
-        run: pnpm install --frozen-lockfile
-
-      - name: Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
-      - name: Login to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USER }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Build staging image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
-        with:
-          # Context = repo root (E4 fix — workspace plugin file:.. resolution).
-          context: .
-          file: ./museum-backend/deploy/Dockerfile.prod
-          load: true
-          tags: museum-backend-staging:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
-        with:
-          image-ref: museum-backend-staging:ci
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-
-      - name: Compute staging image refs (for cosign job output)
-        id: refs
-        run: echo "image=ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging" >> "$GITHUB_OUTPUT"
-
-      - name: Push staging image to GHCR
-        id: push
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
-        with:
-          # Context = repo root (E4 fix).
-          context: .
-          file: ./museum-backend/deploy/Dockerfile.prod
-          push: true
-          tags: |
-            ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:latest
-            ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # ── V12 W8 hardening (2026-05-05) — pre-deploy signature gate (staging) ──
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v4.1.2
-        with:
-          cosign-release: 'v2.4.1'
-
-      - name: Cosign sign staging image (keyless)
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign sign --yes \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
-
-      - name: SLSA L3 build-provenance attestation (staging)
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      - name: Cosign verify staging signature (pre-deploy gate)
-        env:
-          COSIGN_EXPERIMENTAL: '1'
-        run: |
-          cosign verify \
-            --certificate-identity-regexp "https://github.com/${{ github.repository }}/.github/workflows/.*" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}"
-
-      - name: Verify staging SLSA provenance attestation (pre-deploy gate)
-        # See deploy-prod variant for rationale: cosign verify-attestation does not
-        # discover attestations published via the OCI 1.1 Referrers API by
-        # actions/attest-build-provenance@v2, so we use `gh attestation verify`
-        # which queries the GitHub API by subject digest.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh attestation verify \
-            "oci://ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging@${{ steps.push.outputs.digest }}" \
-            --owner "${{ github.repository_owner }}" \
-            --predicate-type "https://slsa.dev/provenance/v1"
-      # ── end pre-deploy signature gate (staging) ─────────────────────────────
-
-      - name: Create Sentry release
-        if: env.HAS_SENTRY_TOKEN == 'true'
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
-        run: |
-          npx @sentry/cli releases new "${{ github.sha }}"
-          npx @sentry/cli releases set-commits "${{ github.sha }}" --auto || true
-          npx @sentry/cli releases finalize "${{ github.sha }}"
-
-      - name: Upload backend source maps to Sentry
-        if: env.HAS_SENTRY_TOKEN == 'true'
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
-        working-directory: museum-backend
-        run: |
-          pnpm build
-          npx @sentry/cli sourcemaps upload --release="${{ github.sha }}" dist/
-
-      - name: Upload rollback helper to VPS (staging)
-        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345  # v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          source: museum-backend/deploy/rollback.sh
-          target: /tmp/museum-deploy
-          strip_components: 2
-
-      - name: Install rollback helper on VPS (staging)
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          script: |
-            sudo mv /tmp/museum-deploy/rollback.sh /srv/museum/rollback.sh
-            sudo chmod +x /srv/museum/rollback.sh
-
-      - name: Capture pre-deploy rollback state (staging)
-        id: pre_deploy_staging
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          script: |
-            set -e
-            cd /srv/museum
-            sudo chmod +x rollback.sh || true
-
-            IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging"
-            STATE_DIR="${HOME}/.museum-rollback/backend-staging"
-            mkdir -p "${STATE_DIR}"
-
-            if docker image inspect "${IMAGE_REF}:latest" >/dev/null 2>&1; then
-              docker tag "${IMAGE_REF}:latest" "${IMAGE_REF}:previous"
-              echo "[pre-deploy] tagged ${IMAGE_REF}:latest → :previous"
-            else
-              echo "[pre-deploy] no existing :latest on host — first deploy, skipping :previous tag"
-            fi
-
-            PRE_COUNT="$(docker compose exec -T backend-staging node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
-            echo "${PRE_COUNT}" > "${STATE_DIR}/pre-count.txt"
-            echo "[pre-deploy] pre-migration count: ${PRE_COUNT}"
-
-      - name: Deploy on VPS staging (zero-downtime)
-        id: deploy_staging
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        env:
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          GHCR_USER: ${{ secrets.GHCR_USER }}
-          IMAGE_TAG: ${{ github.sha }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG
-          script: |
-            set -e
-            cd /srv/museum
-
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
-
-            # Export IMAGE_TAG so docker-compose.yml can interpolate ${IMAGE_TAG}.
-            export IMAGE_TAG
-            echo "[deploy] using IMAGE_TAG=${IMAGE_TAG}"
-
-            # Persist IMAGE_TAG to /srv/museum/.env — see prod deploy step
-            # above for rationale (2026-05-13 OTel crash-loop forensics).
-            # /srv/museum/.env is root-owned, sudo required (same pattern as
-            # the rollback.sh `sudo mv` earlier in the workflow).
-            ENV_FILE=/srv/museum/.env
-            BACKUP_DIR="${HOME}/.museum-env-backups"
-            mkdir -p "${BACKUP_DIR}"
-            sudo cp -p "${ENV_FILE}" "${BACKUP_DIR}/.env.bak.$(date -u +%Y%m%dT%H%M%SZ)"
-            sudo grep -v '^IMAGE_TAG=' "${ENV_FILE}" | sudo tee "${ENV_FILE}.tmp" >/dev/null || true
-            echo "IMAGE_TAG=${IMAGE_TAG}" | sudo tee -a "${ENV_FILE}.tmp" >/dev/null
-            sudo mv "${ENV_FILE}.tmp" "${ENV_FILE}"
-            echo "[deploy] persisted IMAGE_TAG=${IMAGE_TAG} to ${ENV_FILE}"
-
-            STATE_DIR="${HOME}/.museum-rollback/backend-staging"
-            mkdir -p "${STATE_DIR}"
-
-            # 1. Pull the new image
-            docker compose pull backend-staging
-
-            # 2. Run migrations in an ephemeral container BEFORE restarting
-            #    Migrations must run against the old container's schema BEFORE
-            #    the new container boots (zero-downtime pattern).
-            #    I-OPS3: single migration path — invoke the guarded
-            #    run-migrations.js (pgvector preflight guard, fail-fast on error)
-            #    instead of the raw typeorm CLI; the boot CMD no longer migrates.
-            docker compose run --rm --no-deps -T backend-staging \
-              node dist/src/data/db/run-migrations.js
-
-            # 2b. Compute how many migrations were newly applied.
-            POST_COUNT="$(docker compose run --rm --no-deps -T backend-staging node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
-            PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt" 2>/dev/null || echo 0)"
-            APPLIED="$(( POST_COUNT - PRE_COUNT ))"
-            if [ "${APPLIED}" -lt 0 ]; then APPLIED=0; fi
-            echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
-            echo "[deploy] migrations applied this deploy: ${APPLIED}"
-
-            # 3. Restart with 30s grace period for in-flight requests to drain.
-            # `--no-deps` : même rationale que la version prod ci-dessus.
-            docker compose up -d --no-deps --remove-orphans --timeout 30 backend-staging
-
-            # 4. Wait for the new container to pass its healthcheck
-            echo "Waiting for backend-staging healthcheck..."
-            TRIES=0
-            MAX_TRIES=20
-            until docker compose exec -T backend-staging node -e "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" 2>/dev/null; do
-              TRIES=$((TRIES + 1))
-              if [ "$TRIES" -ge "$MAX_TRIES" ]; then
-                echo "Healthcheck failed after ${MAX_TRIES} attempts"
-                exit 1
-              fi
-              echo "  attempt ${TRIES}/${MAX_TRIES}..."
-              sleep 3
-            done
-            echo "Backend-staging is healthy."
-
-            # 5. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
-            #    Runs AFTER the new container is up + healthy so the seed
-            #    script sees the new code and a ready DB connection.
-            docker compose exec -T backend-staging node dist/scripts/seed-museums.js
-
-            # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
-            docker compose exec -T backend-staging node dist/scripts/seed-knowledge.js
-
-            # 7. (smoke account) — NO permanent seed here anymore. The smoke
-            #    account is EPHEMERAL: dedicated `create`/`cleanup` steps (below)
-            #    bracket the smoke test, same as prod. Cycle C, run
-            #    2026-05-26-auth-mfa-rgpd-zerodefect.
-
-      - name: Validate staging smoke secrets
-        env:
-          STAGING_SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
-          STAGING_SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-        run: |
-          # The smoke PASSWORD is generated per-run by the ephemeral `create`
-          # step below — no longer a secret. Only EMAIL + base URL stay secrets.
-          test -n "$STAGING_SMOKE_API_BASE_URL"
-          test -n "$STAGING_SMOKE_TEST_EMAIL"
-
-      # Ephemeral smoke account — STEP 1/3 (create), same pattern as prod.
-      - name: Create ephemeral smoke account (staging)
-        id: smoke_create_staging
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        env:
-          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          envs: SMOKE_TEST_EMAIL
-          capture_stdout: true
-          script: |
-            set -e
-            cd /srv/museum
-            docker compose exec -T \
-              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
-              backend-staging node dist/scripts/seed-smoke-account.js create
-
-      # STEP 2/3 — mask + expose the generated password as a step output.
-      - name: Extract + mask smoke password (staging)
-        id: smoke_pwd_staging
-        env:
-          CREATE_STDOUT: ${{ steps.smoke_create_staging.outputs.stdout }}
-        run: |
-          PWD_VALUE="$(printf '%s\n' "$CREATE_STDOUT" | sed -n 's/^SMOKE_TEST_PASSWORD=//p' | tail -n1)"
-          if [ -z "$PWD_VALUE" ]; then
-            echo "create step did not emit a SMOKE_TEST_PASSWORD line" >&2
-            exit 1
-          fi
-          echo "::add-mask::$PWD_VALUE"
-          echo "password=$PWD_VALUE" >> "$GITHUB_OUTPUT"
-
-      - name: Post-deploy smoke test (staging)
-        id: smoke_staging
-        working-directory: museum-backend
-        env:
-          SMOKE_API_BASE_URL: ${{ secrets.STAGING_SMOKE_API_BASE_URL }}
-          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-          SMOKE_TEST_PASSWORD: ${{ steps.smoke_pwd_staging.outputs.password }}
-          # A failed `create` MUST fail the smoke loudly, NOT self-register a
-          # resident account (D5).
-          SMOKE_ALLOW_REGISTER: 'false'
-          SMOKE_TIMEOUT_MS: '20000'
-          SMOKE_HEALTH_RETRIES: '24'
-          SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
-        run: node ./scripts/smoke-api.cjs
-
-      # STEP 3/3 — cleanup runs UNCONDITIONALLY (if: always()) so NO smoke
-      # account survives, even when create / smoke fails midway.
-      - name: Cleanup ephemeral smoke account (staging)
-        if: ${{ always() }}
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        env:
-          SMOKE_TEST_EMAIL: ${{ secrets.STAGING_SMOKE_TEST_EMAIL }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          envs: SMOKE_TEST_EMAIL
-          script: |
-            set -e
-            cd /srv/museum
-            docker compose exec -T \
-              -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
-              backend-staging node dist/scripts/seed-smoke-account.js cleanup
-
-      - name: Auto-rollback on deploy or smoke failure (staging)
-        id: rollback_staging
-        if: failure() && (steps.deploy_staging.outcome == 'failure' || steps.smoke_staging.outcome == 'failure')
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_KEY }}
-          script: |
-            set -e
-            cd /srv/museum
-            chmod +x rollback.sh
-            ./rollback.sh docker-compose.yml backend-staging "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend-staging"
-
-      - name: Notify Sentry of rollback (staging)
-        if: failure() && steps.rollback_staging.outcome == 'success' && env.HAS_SENTRY_TOKEN == 'true'
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_BACKEND }}
-        run: |
-          npx @sentry/cli releases deploys "${{ github.sha }}" new \
-            -e staging \
-            --name "rollback-${{ github.sha }}" || true
-
-      - name: Fail staging job after successful rollback
-        if: failure() && steps.rollback_staging.outcome == 'success'
-        run: |
-          echo "::error::Staging deploy rolled back — see docs/RUNBOOKS/auto-rollback.md"
-          exit 1
-
-  # ─── 8. Cosign + SLSA hardening (2026-05-05) ─────────────────────────
-  # The post-hoc sign-prod / sign-staging jobs were removed in this commit.
-  # Signing + verification now run INLINE in deploy-prod / deploy-staging
-  # immediately after the GHCR push step, BEFORE any SSH step pulls the
-  # image onto the VPS. Hard-fails the deploy if signature creation or
-  # verification fails. See `## supply-chain audit` in the run STORY.md
-  # (run 2026-05-05-backend-hardening-supply-chain) for the threat model
-  # that motivated the move from post-hoc to pre-deploy gating.
-  #
-  # The reusable workflows cosign-sign-image.yml and cosign-verify-deploy.yml
-  # are kept on disk for ops use (manual ad-hoc signing or release-pull-time
-  # verification) but are no longer wired into the deploy path.

@@ -18,12 +18,7 @@
       "mcp__gitnexus__shape_check",
       "mcp__gitnexus__list_repos",
       "mcp__gitnexus__group_list",
-      "mcp__gitnexus__tool_map",
-      "mcp__repomix__pack_codebase",
-      "mcp__repomix__grep_repomix_output",
-      "mcp__repomix__read_repomix_output",
-      "mcp__repomix__file_system_read_directory",
-      "mcp__repomix__file_system_read_file"
+      "mcp__gitnexus__tool_map"
     ],
     "deny": [
       "Bash(git commit --no-verify*)",
@@ -35,58 +30,6 @@
       "Bash(SKIP_PRE_PUSH=*)",
       "Bash(git -c core.hookspath=* *)",
       "Bash(git -c core.hooksPath=* *)"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/skills/team/team-hooks/post-edit-green-test-freeze.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/lint-on-edit.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "condition": "tool_input.command =~ /^git commit/",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/count-design-debt.py\" --fail-on-debt"
-          },
-          {
-            "type": "command",
-            "command": "(cd \"$(git rev-parse --show-toplevel)\" && bash .claude/hooks/gitnexus-skills-refresh.sh < /dev/null) || true"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/stop-quality-summary.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/ratchet-check.sh",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "/Users/Tim/Desktop/all/dev/Pro/InnovMind/.claude/hooks/ssot-sentinel.sh",
-            "timeout": 15
-          }
-        ]
-      }
     ]
   }
 }

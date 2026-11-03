@@ -4,8 +4,8 @@ import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolv
 import { checkThirdPartyAiConsent } from '@modules/chat/useCase/orchestration/consent-gate';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { badRequest } from '@shared/errors/app.error';
-import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
 import { deriveTier } from '@shared/observability/derive-tier';
+import { maskPersonalData } from '@shared/pii/mask-personal-data';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -35,7 +35,6 @@ import type { WebSearchService } from '@modules/chat/useCase/web-search/web-sear
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DbLookupService } from '@modules/knowledge-extraction/useCase/lookup/db-lookup.service';
-import type { ChatPhaseOutcome } from '@shared/observability/chat-phase-timer';
 import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
 export interface PrepareReady {
@@ -70,7 +69,6 @@ export interface PrepareReady {
    * LLM02 — sanitized user input when provider scrubbed PII. Message service
    * substitutes for `input.text` before LLM call so provider never sees raw PII.
    */
-  redactedText?: string;
   /** Facts wrapped in Spotlighting envelope at orchestrator. */
   routerFacts?: readonly string[];
   /** `'none'` short-circuits envelope. */
@@ -205,21 +203,7 @@ export class PrepareMessagePipeline {
   }> {
     if (!image) return {};
 
-    // A5 R2/R3 — analyzing-image span emitted ONLY when image present.
-    // merged_bug_004 — span MUST emit on failure too (try/finally + outcome
-    // attr; mirrors text-to-speech.openai.ts:115-132). runOcrGuard stays
-    // OUTSIDE wrap — span scope is strictly processImage.
-    const startedAtMs = Date.now();
-    let outcome: ChatPhaseOutcome = 'success';
-    let processed: Awaited<ReturnType<ImageProcessingService['processImage']>>;
-    try {
-      processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
-    } catch (err) {
-      outcome = 'error';
-      throw err;
-    } finally {
-      emitChatPhaseSpan('analyzing-image', startedAtMs, { sessionId, outcome });
-    }
+    const processed = await this.imageProcessor.processImage(image, sessionId, ownerId);
     await this.imageProcessor.runOcrGuard(
       processed.orchestratorImage,
       evaluateUserInputGuardrail,
@@ -343,9 +327,6 @@ export class PrepareMessagePipeline {
       requestedLocale,
       history,
       ownerId,
-      ...(userGuardrail.redactedText !== undefined
-        ? { redactedText: userGuardrail.redactedText }
-        : {}),
       ...(currentArtwork !== undefined ? { currentArtwork } : {}),
       ...enrichment,
     };
@@ -380,13 +361,6 @@ export class PrepareMessagePipeline {
     }
   }
 
-  /**
-   * Fail-open per port (router NEVER throws — ADR-035).
-   *
-   * TD-20 (R13d/R12) — threads per-tenant scope to the judge leg's Langfuse
-   * `generation` via the optional `KnowledgeRouterPort.resolve` 3rd arg. The
-   * scope is built spread-omit (absent => key omitted, never fabricated).
-   */
   private async resolveRouterFacts(
     inputText: string | undefined,
     scope?: LlmJudgeScope,
@@ -428,10 +402,7 @@ export class PrepareMessagePipeline {
       tier: deriveTier(ownerId ?? currentUserId),
       ...(requestId !== undefined ? { requestId } : {}),
     };
-    // A5 R6 — searching-collection span wraps the (parallelized) enrichment
-    // fan-out (C9.6). The three calls are independent — `Promise.all` makes
-    // wall-clock ≈ max(t) instead of sum(t), saving ~200-500ms P50.
-    const enrichmentStartedAtMs = Date.now();
+    const searchText = input.text ? maskPersonalData(input.text).text.trim() : undefined;
     const [
       {
         userMemoryBlock,
@@ -453,7 +424,7 @@ export class PrepareMessagePipeline {
           dbLookup: this.dbLookup,
         },
         history,
-        inputText: input.text?.trim(),
+        inputText: searchText,
         ownerId,
         locale: requestedLocale,
         museumMode: input.context?.museumMode ?? session.museumMode,
@@ -462,12 +433,8 @@ export class PrepareMessagePipeline {
         userId: ownerId ?? currentUserId,
         consentChecker: this.locationConsentChecker,
       }),
-      this.resolveRouterFacts(input.text?.trim(), routerScope),
+      this.resolveRouterFacts(searchText, routerScope),
     ]);
-    emitChatPhaseSpan('searching-collection', enrichmentStartedAtMs, {
-      sessionId: session.id,
-      hasMuseumMode: input.context?.museumMode ?? session.museumMode,
-    });
 
     this.enqueueForExtraction(webSearchResults, requestedLocale);
 
@@ -486,12 +453,22 @@ export class PrepareMessagePipeline {
   buildOrchestratorInput(
     prep: PrepareReady,
     input: PostMessageInput,
-    sanitizedText: string,
+    userText: string,
     requestId?: string,
   ): OrchestratorInput {
     return {
-      history: prep.history,
-      text: sanitizedText,
+      history: prep.history.map((message) =>
+        message.text
+          ? Object.assign(
+              Object.create(Object.getPrototypeOf(message) as object) as ChatMessage,
+              message,
+              {
+                text: maskPersonalData(message.text).text,
+              },
+            )
+          : message,
+      ),
+      text: maskPersonalData(userText).text,
       image: prep.orchestratorImage,
       locale: prep.requestedLocale,
       museumMode: input.context?.museumMode ?? prep.session.museumMode,
@@ -513,7 +490,6 @@ export class PrepareMessagePipeline {
       // R1 cache scoping: museumId+userId pick global-vs-user-scoped key namespace.
       museumId: prep.session.museumId ?? null,
       userId: prep.ownerId ?? null,
-      // C9.0 — Propagated to Langfuse `trace.sessionId` by `withLangfuseTrace`.
       sessionId: prep.session.id,
       // Walk-intent routing for walk prompt section + structured suggestions.
       intent: prep.session.intent,

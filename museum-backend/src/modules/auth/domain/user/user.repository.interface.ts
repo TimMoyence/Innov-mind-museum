@@ -71,7 +71,4 @@ export interface IUserRepository {
    * `undefined` to sidestep the `repo.update(_, { field: undefined })` silent-skip gotcha.
    */
   updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void>;
-
-  /** `null` clears the MFA enrollment deadline; pass `now + 30d` on first admin login post-deploy. */
-  setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void>;
 }

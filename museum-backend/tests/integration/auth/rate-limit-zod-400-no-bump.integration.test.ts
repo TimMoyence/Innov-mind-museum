@@ -52,8 +52,6 @@ import {
 const mockLogin = jest.fn().mockRejectedValue({ statusCode: 401, code: 'INVALID_CREDENTIALS' });
 const mockRefresh = jest.fn().mockRejectedValue({ statusCode: 401, code: 'INVALID_REFRESH' });
 const mockSocialLogin = jest.fn().mockRejectedValue({ statusCode: 401, code: 'INVALID_SOCIAL' });
-const mockChallengeMfa = jest.fn().mockRejectedValue({ statusCode: 401, code: 'INVALID_MFA' });
-const mockRecoveryMfa = jest.fn().mockRejectedValue({ statusCode: 401, code: 'INVALID_RECOVERY' });
 const mockNonceIssue = jest.fn().mockResolvedValue('test-nonce');
 
 // Minimal auth service mock — only login/refresh needed for these routes
@@ -104,19 +102,8 @@ jest.mock('@modules/auth/useCase', () => {
   };
 });
 
-jest.mock('@modules/auth/useCase/totp/mfaSessionToken', () => ({
-  verifyMfaSessionToken: jest.fn().mockReturnValue({ userId: 99 }),
-  issueMfaSessionToken: jest.fn().mockReturnValue('mock-mfa-token'),
-}));
-
 jest.mock('@modules/auth', () => ({
   wireAuthMiddleware: jest.fn(),
-  challengeMfaUseCase: { execute: (...args: unknown[]) => mockChallengeMfa(...args) },
-  disableMfaUseCase: { execute: jest.fn().mockResolvedValue(undefined) },
-  enrollMfaUseCase: { execute: jest.fn().mockResolvedValue({ recoveryCodes: [] }) },
-  getMfaStatusUseCase: { execute: jest.fn().mockResolvedValue({ mfaEnabled: false }) },
-  recoveryMfaUseCase: { execute: (...args: unknown[]) => mockRecoveryMfa(...args) },
-  verifyMfaUseCase: { execute: jest.fn().mockResolvedValue({ enrolledAt: new Date() }) },
 }));
 
 // ---------------------------------------------------------------------------
@@ -165,8 +152,6 @@ describe('R6 + R9 — Rate-limit counter NOT bumped on Zod 400 (integration)', (
     mockLogin.mockRejectedValue({ statusCode: 401, code: 'INVALID_CREDENTIALS' });
     mockRefresh.mockRejectedValue({ statusCode: 401, code: 'INVALID_REFRESH' });
     mockSocialLogin.mockRejectedValue({ statusCode: 401, code: 'INVALID_SOCIAL' });
-    mockChallengeMfa.mockRejectedValue({ statusCode: 401, code: 'INVALID_MFA' });
-    mockRecoveryMfa.mockRejectedValue({ statusCode: 401, code: 'INVALID_RECOVERY' });
   });
 
   afterAll(() => {
@@ -292,60 +277,6 @@ describe('R6 + R9 — Rate-limit counter NOT bumped on Zod 400 (integration)', (
     const count = getBucketCountForKey(socialKey);
     // TODAY count === 1 (bumped), after green: count === undefined / 0
     expect(count ?? 0).toBe(0);
-  });
-
-  // -------------------------------------------------------------------------
-  // Test E — R6: POST /api/auth/mfa/challenge with malformed body must NOT
-  // bump challengeLimiter bucket.
-  // FAILS today: limiter runs BEFORE validateBody.
-  // -------------------------------------------------------------------------
-  it('R6.E — POST /api/auth/mfa/challenge malformed body: challengeLimiter bucket NOT bumped', async () => {
-    // Malformed: code is a number, schema expects string min(6)max(6)
-    const res = await request(app)
-      .post('/api/auth/mfa/challenge')
-      .send({ mfaSessionToken: 'some.mfa.token', code: 999 })
-      .set('Content-Type', 'application/json');
-
-    expect(res.status).toBe(400);
-
-    if (getBucketCountForKey === undefined) {
-      return;
-    }
-
-    // challengeLimiter key = bySessionOrIp(req). With no user and
-    // mfaSessionToken that verifyMfaSessionToken accepts → mfa-session:99
-    const mfaChallengeKey = `mfa-challenge:mfa-session:99`;
-    const ipFallbackKey = `mfa-challenge:ip:127.0.0.1`;
-    const countSession = getBucketCountForKey(mfaChallengeKey);
-    const countIp = getBucketCountForKey(ipFallbackKey);
-    // TODAY at least one of these is 1, after green: both 0/undefined
-    expect((countSession ?? 0) + (countIp ?? 0)).toBe(0);
-  });
-
-  // -------------------------------------------------------------------------
-  // Test F — R6: POST /api/auth/mfa/recovery with malformed body must NOT
-  // bump recoveryLimiter bucket.
-  // FAILS today: limiter runs BEFORE validateBody.
-  // -------------------------------------------------------------------------
-  it('R6.F — POST /api/auth/mfa/recovery malformed body: recoveryLimiter bucket NOT bumped', async () => {
-    // Malformed: recoveryCode is a number, schema expects string min(6)max(32)
-    const res = await request(app)
-      .post('/api/auth/mfa/recovery')
-      .send({ mfaSessionToken: 'some.mfa.token', recoveryCode: 999 })
-      .set('Content-Type', 'application/json');
-
-    expect(res.status).toBe(400);
-
-    if (getBucketCountForKey === undefined) {
-      return;
-    }
-
-    const mfaRecoveryKeySession = `mfa-recovery:mfa-session:99`;
-    const mfaRecoveryKeyIp = `mfa-recovery:ip:127.0.0.1`;
-    const countSession = getBucketCountForKey(mfaRecoveryKeySession);
-    const countIp = getBucketCountForKey(mfaRecoveryKeyIp);
-    // TODAY at least one of these is 1, after green: both 0/undefined
-    expect((countSession ?? 0) + (countIp ?? 0)).toBe(0);
   });
 
   // -------------------------------------------------------------------------

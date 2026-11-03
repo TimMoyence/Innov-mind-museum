@@ -9,13 +9,6 @@ import { createHash } from 'node:crypto';
 
 import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { logger } from '@shared/logger/logger';
-import { getLangfuse } from '@shared/observability/langfuse.client';
-import {
-  chatWebsearchFallbackTotal,
-  rerankFallbackTotal,
-  rerankLatencyMs,
-} from '@shared/observability/prometheus-metrics';
-import { safeTrace } from '@shared/observability/safeTrace';
 
 import type { KnowledgeRouterSource } from '@modules/chat/domain/knowledge/knowledge-router.types';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
@@ -95,12 +88,6 @@ const RERANK_CALLER_LABEL = 'knowledge-router';
 function buildLegSignal(legBudgetMs: number, parentSignal?: AbortSignal): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(legBudgetMs);
   return parentSignal ? AbortSignal.any([timeoutSignal, parentSignal]) : timeoutSignal;
-}
-
-function pickWebsearchOutcome(errored: boolean, resultCount: number): 'hit' | 'empty' | 'error' {
-  if (errored) return 'error';
-  if (resultCount > 0) return 'hit';
-  return 'empty';
 }
 
 /**
@@ -189,9 +176,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     parentSignal?: AbortSignal,
     scope?: LlmJudgeScope,
   ): Promise<KnowledgeRouterResult> {
-    const result = await this.resolveCore(searchTerm, parentSignal, scope);
-    this.emitTelemetry(searchTerm, result);
-    return result;
+    return await this.resolveCore(searchTerm, parentSignal, scope);
   }
 
   private async resolveCore(
@@ -293,21 +278,15 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
   ): Promise<{ webFacts: string[]; webResultCount: number; latencyWeb: number }> {
     const webStart = performance.now();
     const webSignal = buildLegSignal(this.deps.config.wsTimeoutMs, parentSignal);
-    let wsErrored = false;
     const webResults = await this.deps.ws
       .search({ query: searchTermNormalised, signal: webSignal })
       .catch((err: unknown) => {
-        wsErrored = true;
         logger.warn('knowledge_router_ws_error', {
           error: err instanceof Error ? err.message : String(err),
         });
         return [];
       });
     const latencyWeb = performance.now() - webStart;
-
-    chatWebsearchFallbackTotal.inc({
-      outcome: pickWebsearchOutcome(wsErrored, webResults.length),
-    });
 
     const orderedResults = await this.maybeRerankWebResults(searchTermNormalised, webResults);
 
@@ -443,19 +422,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     reason?: 'unavailable' | 'timeout' | 'error';
     errorClass?: string;
   }): void {
-    safeTrace('chat.rerank.metric', () => {
-      rerankLatencyMs.observe(
-        { caller: RERANK_CALLER_LABEL, outcome: payload.outcome },
-        payload.latencyMs,
-      );
-      if (payload.outcome === 'fallback' && payload.reason !== undefined) {
-        rerankFallbackTotal.inc({
-          caller: RERANK_CALLER_LABEL,
-          reason: payload.reason,
-        });
-      }
-    });
-
     if (payload.outcome === 'fallback') {
       logger.warn('reranker_fallback', {
         caller: RERANK_CALLER_LABEL,
@@ -466,45 +432,5 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       });
     }
 
-    safeTrace('chat.rerank.span', () => {
-      const lf = getLangfuse();
-      const queryHash = createHash('sha256').update(payload.searchTerm).digest('hex').slice(0, 16);
-      lf?.trace({
-        name: 'chat.rerank',
-        metadata: {
-          'rerank.caller': RERANK_CALLER_LABEL,
-          'rerank.candidate_count': payload.candidateCount,
-          'rerank.top_n': payload.topN,
-          'rerank.latency_ms': payload.latencyMs,
-          'rerank.outcome': payload.outcome,
-          'rerank.query_hash': queryHash,
-          ...(payload.reason !== undefined ? { 'rerank.reason': payload.reason } : {}),
-        },
-      });
-    });
-  }
-
-  /**
-   * Fail-open via `safeTrace` (R10). `searchTerm` hashed sha256[:16] before
-   * inclusion (NFR7 PII safety). Latency keys flattened for Langfuse flat-tag UI.
-   */
-  private emitTelemetry(searchTerm: string, result: KnowledgeRouterResult): void {
-    const lf = getLangfuse();
-    safeTrace('chat.knowledge.lookup.span', () => {
-      const hash = createHash('sha256').update(searchTerm).digest('hex').slice(0, 16);
-      const latency = result.metadata?.latencyMs ?? {};
-      const metadata: Record<string, unknown> = {
-        'knowledge.source': result.source,
-        'knowledge.fallback_triggered': result.fallback_triggered,
-        'knowledge.search_term_hash': hash,
-      };
-      if (result.judge_confidence !== undefined) {
-        metadata['knowledge.judge_confidence'] = result.judge_confidence;
-      }
-      if (latency.kb !== undefined) metadata['knowledge.latency_ms.kb'] = latency.kb;
-      if (latency.judge !== undefined) metadata['knowledge.latency_ms.judge'] = latency.judge;
-      if (latency.web !== undefined) metadata['knowledge.latency_ms.web'] = latency.web;
-      lf?.trace({ name: 'chat.knowledge.lookup', metadata });
-    });
   }
 }

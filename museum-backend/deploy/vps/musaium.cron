@@ -1,0 +1,3 @@
+PATH=/usr/local/bin:/usr/bin:/bin
+15 2 * * * root /srv/museum/vps/backup-db.sh >> /var/log/musaium-backup.log 2>&1
+30 3 * * * root /srv/museum/vps/check-certs.sh >> /var/log/musaium-cert.log 2>&1

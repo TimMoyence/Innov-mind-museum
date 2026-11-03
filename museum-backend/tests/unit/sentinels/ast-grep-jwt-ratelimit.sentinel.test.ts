@@ -122,8 +122,8 @@ describe('R4 sentinel — jwt-verify-needs-algorithms.yml', () => {
    * Regression guard: no violation in files that are already correctly secured.
    * PASSES today and after green.
    */
-  it('R4.2 — no violation in already-secured files (mfaSessionToken, token-jwt.service, social-token-verifier callers)', () => {
-    const alreadySecuredPatterns = ['mfaSessionToken.ts', 'token-jwt.service.ts'];
+  it('R4.2 — no violation in already-secured files (token-jwt.service, social-token-verifier callers)', () => {
+    const alreadySecuredPatterns = ['token-jwt.service.ts'];
 
     for (const pattern of alreadySecuredPatterns) {
       const violationsInFile = findings.filter((f) => f.file.includes(pattern));
@@ -172,14 +172,11 @@ describe('R8 sentinel — body-keyed-rate-limit-after-validate-body.yml', () => 
 
   /**
    * Post-cluster5 regression guard: the 5 historically-affected route files
-   * (auth-session.route.ts × 4 sites incl. /social-redeem; mfa.route.ts × 2
-   * sites) must remain free of violations. If a reorder regresses, this names
-   * the file in the failure for fast triage.
+   * (auth-session.route.ts × 4 sites incl. /social-redeem) must remain free of
+   * violations. If a reorder regresses, this names the file in the failure.
    */
-  it('R8.2 — auth-session.route.ts and mfa.route.ts remain free of ordering violations', () => {
-    const regressedTargets = findings.filter(
-      (f) => f.file.includes('auth-session.route.ts') || f.file.includes('mfa.route.ts'),
-    );
+  it('R8.2 — auth-session.route.ts remains free of ordering violations', () => {
+    const regressedTargets = findings.filter((f) => f.file.includes('auth-session.route.ts'));
     expect(regressedTargets).toHaveLength(0);
   });
 

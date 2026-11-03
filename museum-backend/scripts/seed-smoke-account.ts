@@ -145,7 +145,7 @@ export async function ensureSmokeConsents(
  * (migration 1772000000001-FixChatSessionsUserFk): a direct user delete would
  * NULL the sessions and leave orphan rows rather than removing them. Step 2
  * deletes the `users` row, whose `ON DELETE CASCADE` children
- * (auth_refresh_tokens, user_consents, social_accounts, api_keys, totp_secrets,
+ * (auth_refresh_tokens, user_consents, social_accounts, api_keys,
  * …) go with it. Wrapped in one transaction so a mid-delete failure rolls back.
  */
 async function hardDeleteUserById(dataSource: DataSource, userId: number): Promise<void> {

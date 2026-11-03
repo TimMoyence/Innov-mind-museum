@@ -1,6 +1,5 @@
 import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
 import type { ChatMessageServiceDeps } from '@modules/chat/useCase/message/chat-message.service';
-import type { PiiSanitizer } from '@modules/chat/domain/ports/pii-sanitizer.port';
 import type {
   ChatRepository,
   SessionMessagesPage,
@@ -1098,16 +1097,8 @@ describe('ChatMessageService', () => {
   // ── PII sanitization ─────────────────────────────────────────────
 
   describe('PII sanitization', () => {
-    const makePiiSanitizer = (): jest.Mocked<PiiSanitizer> => ({
-      sanitize: jest.fn().mockImplementation((text: string) => ({
-        sanitizedText: text.replace(/test@example\.com/g, '[EMAIL]'),
-        detectedPiiCount: 1,
-      })),
-    });
-
     it('passes sanitized text to orchestrator in postMessage', async () => {
-      const piiSanitizer = makePiiSanitizer();
-      const { service, orchestrator } = buildService({ safety: { piiSanitizer } });
+      const { service, orchestrator } = buildService();
 
       await service.postMessage(
         SESSION_ID,
@@ -1116,15 +1107,13 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      expect(piiSanitizer.sanitize).toHaveBeenCalledWith('Contact test@example.com about art');
       expect(orchestrator.generate).toHaveBeenCalledWith(
         expect.objectContaining({ text: 'Contact [EMAIL] about art' }),
       );
     });
 
     it('persists original (unsanitized) user message to database', async () => {
-      const piiSanitizer = makePiiSanitizer();
-      const { service, repo } = buildService({ safety: { piiSanitizer } });
+      const { service, repo } = buildService();
 
       await service.postMessage(
         SESSION_ID,

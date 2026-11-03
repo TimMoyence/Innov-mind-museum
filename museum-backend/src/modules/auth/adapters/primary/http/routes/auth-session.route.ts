@@ -109,19 +109,6 @@ authSessionRouter.post(
     try {
       const { email, password } = req.body;
       const result = await authSessionService.login(email, password);
-
-      // R16 — three login envelope shapes.
-      if ('mfaRequired' in result) {
-        // Nothing privileged happened — no LOGIN_SUCCESS audit row.
-        res.status(200).json(result);
-        return;
-      }
-      if ('mfaEnrollmentRequired' in result) {
-        // 403 intentional — login *failed* (no JWTs issued) despite correct password.
-        res.status(403).json(result);
-        return;
-      }
-
       await finalizeLoginSuccess(req, res, result);
       res.status(200).json(result);
     } catch (error) {

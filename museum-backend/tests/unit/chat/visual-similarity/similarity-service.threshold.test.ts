@@ -44,9 +44,6 @@ import {
 // Langfuse null by default (no LANGFUSE_* env in tests) — short-circuits the
 // `parent?.span(...)` / `parent?.update(...)` calls, same pattern as the
 // frozen sibling suite.
-jest.mock('@shared/observability/langfuse.client', () => ({
-  getLangfuse: jest.fn(() => null),
-}));
 
 import type { EmbeddingsPort, EncodeOutput } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';

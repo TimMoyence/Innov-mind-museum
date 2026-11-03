@@ -3,7 +3,7 @@
  * retention + leads erasure, on the production `DeleteAccountUseCase`.
  *
  * Proves on a real PG (testcontainer, harness pattern) that account deletion:
- *  - R9 — cascades every FK child table to zero rows (totp_secrets,
+ *  - R9 — cascades every FK child table to zero rows (
  *         user_memories, api_keys, user_consents, auth_refresh_tokens,
  *         social_accounts, chat_sessions),
  *  - R8 — RETAINS the user's `audit_logs` rows (no FK to `users`; legal
@@ -68,18 +68,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
     const userId = user.id;
 
     // ── 1 row per FK child table (R9) ───────────────────────────────────────
-    const { TotpSecret } = await import('@modules/auth/domain/totp/totp-secret.entity');
-    await ds.getRepository(TotpSecret).save(
-      ds.getRepository(TotpSecret).create({
-        userId,
-        secretEncrypted: 'aaaa:bbbb:cccc',
-        enrolledAt: new Date(),
-        lastUsedAt: null,
-        lastUsedStep: null,
-        recoveryCodes: [],
-      }),
-    );
-
     const { UserMemory } = await import('@modules/chat/domain/memory/userMemory.entity');
     await ds.getRepository(UserMemory).save(
       ds.getRepository(UserMemory).create({
@@ -206,7 +194,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
     await useCase.execute(userId);
 
     const childTables: { table: string; col: string }[] = [
-      { table: 'totp_secrets', col: 'user_id' },
       { table: 'user_memories', col: 'user_id' },
       { table: 'api_keys', col: 'user_id' },
       { table: 'user_consents', col: 'user_id' },

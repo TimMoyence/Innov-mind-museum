@@ -1,41 +1,3 @@
-/**
- * GENERATED-FROM-CANONICAL — DO NOT EDIT MANUALLY.
- *
- * Source of truth = `museum-backend/src/shared/legal/privacy-content.canonical.json`
- * (ADR-062). A byte-equivalent copy lives at `museum-web/src/lib/legal/`
- * so the museum-web Docker build (which has no access to museum-backend/)
- * stays standalone. The drift sentinel
- * `museum-backend/scripts/sentinels/privacy-content-drift.mjs` enforces
- * the copy stays identical to the BE canonical (byte-equivalence check)
- * AND that this file emits every canonical token verbatim (grep check).
- *
- * Canonical metadata mirror (kept verbatim for drift sentinel grep) ----------
- *   version: 1.0.0
- *   lastUpdated: 2026-05-21
- *   sectionIds: controller, data-collected, purposes, device-permissions,
- *               recipients, transfers, retention, security, rights, minors,
- *               cookies, ai-disclosure, granular-ai-consent, changes
- *   subprocessors:
- *     - OpenAI
- *     - Google Cloud
- *     - DeepSeek
- *     - OVH SAS
- *     - Amazon Web Services
- *     - Expo
- *     - Brevo
- *     - Sentry
- *     - Apple
- *     - Tavily
- *     - Brave
- *     - Unsplash
- *     - Langfuse
- *     - CARTO
- *     - Wikidata
- *     - Wikimedia
- *     - Nominatim
- *     - OpenStreetMap Foundation
- *     - Better-Stack
- */
 import canonical from './legal/privacy-content.canonical.json';
 
 export interface PrivacySection {
@@ -73,58 +35,6 @@ interface CanonicalPrivacy {
 }
 
 const typed = canonical as CanonicalPrivacy;
-
-/**
- * Inline canonical tokens — emitted as TS string literals so the drift
- * sentinel (`privacy-content-drift.mjs`) can find them in the source AFTER
- * its comment-stripping pre-pass. Do not delete or rename: the sentinel
- * greps for each value verbatim. Keep in sync with the canonical JSON; the
- * `sentinel:privacy-drift` CI step catches drift.
- *
- * For the human-readable docblock list of subprocessors, see the canonical
- * JSON. This array is the machine-readable mirror.
- */
-export const PRIVACY_SURFACE_TOKENS = {
-  version: '1.0.0',
-  lastUpdated: '2026-05-21',
-  sectionIds: [
-    'controller',
-    'data-collected',
-    'purposes',
-    'device-permissions',
-    'recipients',
-    'transfers',
-    'retention',
-    'security',
-    'rights',
-    'minors',
-    'cookies',
-    'ai-disclosure',
-    'granular-ai-consent',
-    'changes',
-  ] as const,
-  subprocessors: [
-    'OpenAI',
-    'Google Cloud',
-    'DeepSeek',
-    'OVH SAS',
-    'Amazon Web Services',
-    'Expo',
-    'Brevo',
-    'Sentry',
-    'Apple',
-    'Tavily',
-    'Brave',
-    'Unsplash',
-    'Langfuse',
-    'CARTO',
-    'Wikidata',
-    'Wikimedia',
-    'Nominatim',
-    'OpenStreetMap Foundation',
-    'Better-Stack',
-  ] as const,
-} as const;
 
 const TITLES: Record<LegalLocale, string> = {
   en: 'Privacy Policy (GDPR)',

@@ -7,7 +7,6 @@
  */
 
 import { logger } from '@shared/logger/logger';
-import { chatSourcesRejectedTotal } from '@shared/observability/prometheus-metrics';
 
 import type { CitationSource } from '@modules/chat/domain/chat.types';
 
@@ -55,13 +54,11 @@ export function validateSources(
 
     if (normalizedQuote.length < MIN_NORMALIZED_QUOTE_LENGTH) {
       rejected.push({ source, reason: 'quote-too-short' });
-      chatSourcesRejectedTotal.inc({ reason: 'quote-too-short' });
       continue;
     }
 
     if (!corpus.includes(normalizedQuote)) {
       rejected.push({ source, reason: 'quote-not-found' });
-      chatSourcesRejectedTotal.inc({ reason: 'quote-not-found' });
       continue;
     }
 

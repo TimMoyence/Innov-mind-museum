@@ -27,10 +27,8 @@ jest.mock('@src/config/env', () => ({
     auth: {
       accessTokenSecret: 'unit-test-access-secret-that-is-at-least-32c',
       refreshTokenSecret: 'unit-test-refresh-secret-that-is-at-least-32c',
-      mfaSessionTokenSecret: 'unit-test-mfa-session-secret-at-least-32-chars',
       accessTokenTtl: '15m',
       refreshTokenTtl: '14d',
-      mfaSessionTokenTtlSeconds: 300,
     },
   },
 }));
@@ -39,7 +37,6 @@ import jwt from 'jsonwebtoken';
 
 const ACCESS_SECRET = 'unit-test-access-secret-that-is-at-least-32c';
 const REFRESH_SECRET = 'unit-test-refresh-secret-that-is-at-least-32c';
-const MFA_SESSION_SECRET = 'unit-test-mfa-session-secret-at-least-32-chars';
 
 describe('R2 — Already-secured HS256 sites regression guard', () => {
   let verifySpy: jest.SpyInstance;
@@ -50,37 +47,6 @@ describe('R2 — Already-secured HS256 sites regression guard', () => {
 
   afterEach(() => {
     verifySpy.mockRestore();
-  });
-
-  /**
-   * R2.1 — verifyMfaSessionToken passes algorithms: ['HS256']
-   * Source: mfaSessionToken.ts:40
-   */
-  it('R2.1 — verifyMfaSessionToken passes algorithms: ["HS256"] to jwt.verify', async () => {
-    // Import after mock and spy setup
-    const { verifyMfaSessionToken } = await import('@modules/auth/useCase/totp/mfaSessionToken');
-
-    // TD-JWT-02: include iss+aud so verifyMfaSessionToken doesn't reject before spy fires.
-    const validToken = jwt.sign(
-      { sub: '42', type: 'mfa_session', mfaPending: true },
-      MFA_SESSION_SECRET,
-      {
-        algorithm: 'HS256',
-        expiresIn: 300,
-        issuer: 'musaium-mfa-session',
-        audience: 'musaium-mfa-session',
-      },
-    );
-
-    // Call the function — let it run through
-    verifyMfaSessionToken(validToken);
-
-    expect(verifySpy).toHaveBeenCalledTimes(1);
-    const callArgs = verifySpy.mock.calls[0];
-    // Third argument must include algorithms: ['HS256']
-    expect(callArgs[2]).toMatchObject({ algorithms: ['HS256'] });
-    // Ensure 'none' never appears (R5 coverage at this site)
-    expect(callArgs[2]).not.toMatchObject({ algorithms: expect.arrayContaining(['none']) });
   });
 
   /**

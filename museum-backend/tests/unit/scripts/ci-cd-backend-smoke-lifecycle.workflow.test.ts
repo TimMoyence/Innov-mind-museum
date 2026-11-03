@@ -45,13 +45,16 @@ describe('ci-cd-backend.yml — ephemeral smoke lifecycle (R7)', () => {
     expect(bareInvocations).toEqual([]);
   });
 
-  it('invokes `seed-smoke-account.js create` for both prod and staging deploy', () => {
-    // One create per deploy job (prod + staging) = at least 2.
-    expect(countOccurrences(workflow, 'seed-smoke-account.js create')).toBeGreaterThanOrEqual(2);
-  });
+  it('every deploy job creates then cleans up its ephemeral smoke account', () => {
+    const deployJobs = workflow
+      .split(/^(?= {2}[a-z][a-z0-9-]*:$)/m)
+      .filter((block) => block.startsWith('  deploy-'));
 
-  it('invokes `seed-smoke-account.js cleanup` for both prod and staging deploy', () => {
-    expect(countOccurrences(workflow, 'seed-smoke-account.js cleanup')).toBeGreaterThanOrEqual(2);
+    expect(deployJobs.length).toBeGreaterThan(0);
+    for (const job of deployJobs) {
+      expect(countOccurrences(job, 'seed-smoke-account.js create')).toBe(1);
+      expect(countOccurrences(job, 'seed-smoke-account.js cleanup')).toBe(1);
+    }
   });
 
   it('guards cleanup so it runs unconditionally: an `if: ${{ always() }}` step or a `trap … EXIT` idiom exists', () => {

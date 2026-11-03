@@ -2,8 +2,6 @@ import { validateSources } from '@modules/chat/useCase/orchestration/sources-val
 import { computeSessionUpdates } from '@modules/chat/useCase/session/visit-context';
 import { conflict } from '@shared/errors/app.error';
 import { resolveLocale } from '@shared/i18n/locale';
-import { emitChatPhaseSpan } from '@shared/observability/chat-phase-span';
-import { chatSourcesEmittedTotal } from '@shared/observability/prometheus-metrics';
 import { sanitizePromptInput } from '@shared/validation/input';
 
 import type { PostMessageResult } from './chat.service.types';
@@ -50,13 +48,6 @@ async function applyAntiHallucinationFilters(
     const probeMap = await urlHeadProbe.probeBatch(metadata.sources.map((s) => s.url));
     const reachable = metadata.sources.filter((s) => probeMap.get(s.url)?.reachable === true);
     metadata.sources = reachable.length > 0 ? reachable : undefined;
-  }
-
-  // Cardinality bounded by CitationSource.type literal-union (≤ 4 values).
-  if (metadata.sources && metadata.sources.length > 0) {
-    for (const s of metadata.sources) {
-      chatSourcesEmittedTotal.inc({ type: s.type });
-    }
   }
 }
 
@@ -242,7 +233,6 @@ export async function commitAssistantResponse(
   // guardrail-evaluation.service decides its own phase.
   assistantMetadata.phase = 'done';
   // A5 R9 — terminal Langfuse span (fail-open via safeTrace).
-  emitChatPhaseSpan('done', Date.now(), { sessionId });
 
   return {
     sessionId,

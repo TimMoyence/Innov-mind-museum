@@ -217,21 +217,6 @@ export interface Dictionary {
       googleButton: string;
       divider: string;
       oauthError: string;
-      mfaTitle: string;
-      mfaInstructions: string;
-      mfaCodeLabel: string;
-      mfaCodePlaceholder: string;
-      mfaSubmit: string;
-      mfaUseRecovery: string;
-      mfaRecoveryLabel: string;
-      mfaRecoveryPlaceholder: string;
-      mfaRecoverySubmit: string;
-      mfaRecoveryContinue: string;
-      mfaBackToCode: string;
-      mfaErrorInvalid: string;
-      mfaErrorRateLimited: string;
-      mfaErrorExpired: string;
-      mfaRecoveryRemaining: string;
     };
     common: {
       date: string;
@@ -347,26 +332,6 @@ export interface Dictionary {
         success: string;
         error: string;
       };
-    };
-    mfaPage: {
-      successTitle: string;
-      successBody: string;
-      backToDashboard: string;
-      setupTitle: string;
-      setupIntro: string;
-      generateButton: string;
-      generating: string;
-      qrAriaLabel: string;
-      manualSecretIntro: string;
-      recoveryTitle: string;
-      recoveryWarning: string;
-      copyAll: string;
-      copyAllAria: string;
-      codeLabel: string;
-      codePlaceholder: string;
-      verifyButton: string;
-      verifying: string;
-      errorPrefix: string;
     };
     reportsPage: {
       subtitle: string;

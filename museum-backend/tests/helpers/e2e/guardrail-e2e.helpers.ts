@@ -5,7 +5,6 @@ import { createE2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
 import type { FakeChatModelHandle } from 'tests/helpers/chat/fake-chat-model.fixtures';
 import type { E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
-import type { GuardrailProvider } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { AuditService } from '@shared/audit/audit.service';
 
 /**
@@ -42,7 +41,6 @@ export interface CreateGuardrailE2EHarnessOptions {
    * `makeFakeGuardrailProvider({ block: true })` to exercise the provider-deny
    * path (Case D). Defaults to undefined (no provider wired).
    */
-  guardrailProvider?: GuardrailProvider;
   /** Optional `AuditService` injected into ChatService. */
   auditService?: AuditService;
 }
@@ -71,7 +69,6 @@ export async function createGuardrailE2EHarness(
 
   const harness = await createE2EHarness({
     chatOrchestratorOverride: orchestrator,
-    guardrailProviderOverride: options.guardrailProvider,
     auditServiceOverride: options.auditService,
   });
 

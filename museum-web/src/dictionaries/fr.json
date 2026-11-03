@@ -366,22 +366,7 @@
       "error": "Identifiants invalides",
       "googleButton": "Continuer avec Google",
       "divider": "ou",
-      "oauthError": "La connexion Google a échoué. Réessaie ou utilise ton mot de passe.",
-      "mfaTitle": "Authentification à deux facteurs",
-      "mfaInstructions": "Saisis le code à 6 chiffres de ton application d'authentification.",
-      "mfaCodeLabel": "Code d'authentification",
-      "mfaCodePlaceholder": "123456",
-      "mfaSubmit": "Vérifier et se connecter",
-      "mfaUseRecovery": "Utiliser un code de récupération",
-      "mfaRecoveryLabel": "Code de récupération",
-      "mfaRecoveryPlaceholder": "Code de récupération",
-      "mfaRecoverySubmit": "Se connecter avec un code de récupération",
-      "mfaRecoveryContinue": "Continuer vers l'administration",
-      "mfaBackToCode": "Revenir au code d'authentification",
-      "mfaErrorInvalid": "Ce code est incorrect. Réessaie.",
-      "mfaErrorRateLimited": "Trop de tentatives. Patiente un instant avant de réessayer.",
-      "mfaErrorExpired": "Ta session a expiré. Reconnecte-toi.",
-      "mfaRecoveryRemaining": "{count} codes de récupération restants."
+      "oauthError": "La connexion Google a échoué. Réessaie ou utilise ton mot de passe."
     },
     "common": {
       "date": "Date",
@@ -497,26 +482,6 @@
         "success": "Forfait mis à jour.",
         "error": "Impossible de mettre à jour le forfait."
       }
-    },
-    "mfaPage": {
-      "successTitle": "Authentification à deux facteurs activée",
-      "successBody": "Un code de votre application d'authentification vous sera demandé à chaque future connexion.",
-      "backToDashboard": "Retour au tableau de bord",
-      "setupTitle": "Configurer l'authentification à deux facteurs",
-      "setupIntro": "Scannez le code QR avec Google Authenticator, 1Password ou toute autre application TOTP.",
-      "generateButton": "Générer",
-      "generating": "Génération…",
-      "qrAriaLabel": "Code QR d'enrôlement TOTP",
-      "manualSecretIntro": "Ou saisissez cette clé manuellement :",
-      "recoveryTitle": "Codes de récupération",
-      "recoveryWarning": "Enregistrez-les maintenant — chacun ne peut servir qu'une seule fois si vous perdez l'accès à votre application d'authentification. Nous ne pourrons pas les réafficher.",
-      "copyAll": "Tout copier",
-      "copyAllAria": "Copier tous les codes de récupération dans le presse-papiers",
-      "codeLabel": "Saisissez le code à 6 chiffres",
-      "codePlaceholder": "123456",
-      "verifyButton": "Vérifier",
-      "verifying": "Vérification…",
-      "errorPrefix": "Erreur : "
     },
     "reportsPage": {
       "subtitle": "Consultez et modérez les signalements.",

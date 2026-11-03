@@ -1,10 +1,10 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 import { AuditMetadataSchema } from '@shared/db/jsonb-schemas/audit-metadata.schema';
 import { jsonbValidator } from '@shared/db/jsonb-validator';
 
-/** Immutable audit log entry. INSERT only — no UPDATE/DELETE at the application level. */
 @Entity({ name: 'audit_logs' })
+@Index('IDX_audit_logs_created_at_asc', ['createdAt', 'id'])
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

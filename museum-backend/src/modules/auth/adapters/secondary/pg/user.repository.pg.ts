@@ -211,11 +211,6 @@ export class UserRepositoryPg implements IUserRepository {
     await this.repo.update(userId, update);
   }
 
-  /** R16. Date to start/extend warning window, `null` to clear on enroll success. */
-  async setMfaEnrollmentDeadline(userId: number, deadline: Date | null): Promise<void> {
-    await this.repo.update(userId, { mfaEnrollmentDeadline: deadline });
-  }
-
   /** Transactional. Cascades sessions/tokens/social accounts. */
   async deleteUser(userId: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {

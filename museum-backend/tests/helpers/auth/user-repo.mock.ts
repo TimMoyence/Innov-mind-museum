@@ -35,7 +35,6 @@ export const makeUserRepo = (
     updateContentPreferences: jest.fn().mockResolvedValue(undefined),
     updateTtsVoice: jest.fn().mockResolvedValue(undefined),
     updateProfilePreferences: jest.fn().mockResolvedValue(undefined),
-    setMfaEnrollmentDeadline: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 

@@ -7,17 +7,13 @@ import { createCachePurgeRouter } from '@modules/admin/adapters/primary/http/rou
 import authRouter from '@modules/auth/adapters/primary/http/routes/auth.route';
 import consentRouter from '@modules/auth/adapters/primary/http/routes/consent.route';
 import meRouter from '@modules/auth/adapters/primary/http/routes/me.route';
-import mfaRouter from '@modules/auth/adapters/primary/http/routes/mfa.route';
 import { createChatRouter } from '@modules/chat/adapters/primary/http/routes/chat.route';
 import {
   getArtKeywordRepository,
   getArtworkKnowledgeRepo,
   getCompareImageUseCase,
   getCompareSessionAccessVerifier,
-  getDescribeService,
-  getGuardrailProvider,
   getLlmCircuitBreakerState,
-  getLlmGuardCircuitBreakerState,
   getMessageExplanationUseCase,
   getUpdateSessionContextUseCase,
   getUserMemoryService,
@@ -38,11 +34,9 @@ import telemetryRouter from '@modules/telemetry/adapters/primary/http/routes/fun
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { env } from '@src/config/env';
 
-import type { ProviderHealth } from '@modules/chat/domain/ports/guardrail-provider.port';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { Request, Response } from 'express';
 
 interface ApiRouterDeps {
   chatService: ChatService;
@@ -156,14 +150,12 @@ export const createApiRouter = ({
       (env.llm.provider === 'google' && !!env.llm.googleApiKey);
 
     const cbState = getLlmCircuitBreakerState();
-    const guardCbState = getLlmGuardCircuitBreakerState();
 
     const payload = buildHealthPayload({
       checks: {
         database: dbChecks.database,
         redis: redisStatus,
         llmCircuitBreaker: cbState?.state,
-        llmGuard: guardCbState?.state,
       },
       llmConfigured,
     });
@@ -180,138 +172,11 @@ export const createApiRouter = ({
   // DB SELECT, Redis PING), aggregates qualitative verdict. Distinct from TCP-up — a
   // sidecar accepting connections but blocking every probe = `degraded`, not `up`.
   // Returns 200 even on down — body IS the status report.
-  router.get('/health/deep', createDeepHealthHandler({ healthCheck, cacheService }));
 
   mountDomainRouters(router, chatService, cacheService);
 
   return router;
 };
-
-interface GuardrailHealthCheck extends ProviderHealth {
-  name: string;
-}
-
-/**
- * Defence-in-depth try/catch — adapter promises `never throws` per port contract.
- * Forward-compatible with Phase 2 multi-provider aggregator (ADR-048).
- */
-async function probeGuardrailProviders(): Promise<GuardrailHealthCheck[]> {
-  const provider = getGuardrailProvider();
-  if (!provider) return [];
-  try {
-    const result = await provider.health();
-    return [{ name: provider.name, ...result }];
-  } catch (error) {
-    return [
-      {
-        name: provider.name,
-        status: 'down',
-        latencyMs: 0,
-        lastCheckedAt: new Date().toISOString(),
-        detail: error instanceof Error ? error.message : 'unknown_error',
-      },
-    ];
-  }
-}
-
-/** Mirrors `ProviderHealth.status` shape from GuardrailProvider port (ADR-048). */
-type HealthCheckStatus = 'up' | 'degraded' | 'down';
-
-interface DependencyCheck {
-  status: HealthCheckStatus;
-  latencyMs: number;
-  detail?: string;
-}
-
-async function probeDatabase(
-  healthCheck: () => Promise<{ database: 'up' | 'down' }>,
-): Promise<DependencyCheck> {
-  const start = Date.now();
-  try {
-    const result = await healthCheck();
-    return {
-      status: result.database === 'up' ? 'up' : 'down',
-      latencyMs: Date.now() - start,
-    };
-  } catch (error) {
-    return {
-      status: 'down',
-      latencyMs: Date.now() - start,
-      detail: error instanceof Error ? error.message : 'unknown_error',
-    };
-  }
-}
-
-/** Returns `null` when no cache or Noop — payload encodes "skipped" branch as JSON null. */
-async function probeRedis(
-  cacheService: CacheService | undefined,
-  timeoutMs: number,
-): Promise<DependencyCheck | null> {
-  if (!cacheService || cacheService instanceof NoopCacheService) return null;
-  const start = Date.now();
-  try {
-    const ok = await Promise.race<boolean>([
-      cacheService.ping(),
-      new Promise<boolean>((resolve) =>
-        setTimeout(() => {
-          resolve(false);
-        }, timeoutMs),
-      ),
-    ]);
-    return {
-      status: ok ? 'up' : 'down',
-      latencyMs: Date.now() - start,
-    };
-  } catch (error) {
-    return {
-      status: 'down',
-      latencyMs: Date.now() - start,
-      detail: error instanceof Error ? error.message : 'unknown_error',
-    };
-  }
-}
-
-/** any `down`→down, any `degraded`→degraded, else `up`. Empty → up (no deps = nothing unhealthy). */
-function aggregateStatus(components: HealthCheckStatus[]): HealthCheckStatus {
-  if (components.includes('down')) return 'down';
-  if (components.includes('degraded')) return 'degraded';
-  return 'up';
-}
-
-/** Returns 200 even when aggregate is degraded/down — body IS the status report. */
-function createDeepHealthHandler(deps: {
-  healthCheck: () => Promise<{ database: 'up' | 'down' }>;
-  cacheService: CacheService | undefined;
-}): (req: Request, res: Response) => Promise<void> {
-  const REDIS_PING_TIMEOUT_MS = 2_000;
-  return async (_req, res) => {
-    res.set('Cache-Control', 'no-store');
-    const start = Date.now();
-
-    const guardrailHealthChecks = await probeGuardrailProviders();
-    const dbCheck = await probeDatabase(deps.healthCheck);
-    const redisCheck = await probeRedis(deps.cacheService, REDIS_PING_TIMEOUT_MS);
-
-    const components: HealthCheckStatus[] = [
-      dbCheck.status,
-      ...(redisCheck ? [redisCheck.status] : []),
-      ...guardrailHealthChecks.map((c) => c.status),
-    ];
-
-    res.status(200).json({
-      status: aggregateStatus(components),
-      checks: {
-        guardrails: guardrailHealthChecks,
-        db: dbCheck,
-        redis: redisCheck,
-      },
-      version: env.appVersion,
-      commitSha: env.commitSha ?? null,
-      checkedAt: new Date(start).toISOString(),
-      latencyMs: Date.now() - start,
-    });
-  };
-}
 
 /**
  * Lazy singleton — tests injecting own chatService skip Redis connect cost; missing
@@ -357,7 +222,6 @@ function mountDomainRouters(
       chatService,
       getArtKeywordRepository(),
       getUserMemoryService(),
-      getDescribeService(),
       getCompareImageUseCase(),
       getCompareSessionAccessVerifier(),
       getMessageExplanationUseCase(),
@@ -365,9 +229,6 @@ function mountDomainRouters(
     ),
   );
   router.use('/auth/consent', consentRouter);
-  // Ordering R16: MFA mounted BEFORE catch-all `/auth` so `/auth/mfa/*` resolves to
-  // dedicated TOTP router instead of 404-ing through authRouter.
-  router.use('/auth/mfa', mfaRouter);
   router.use('/auth', authRouter);
   // GDPR DSAR Art 15+20 — `GET /api/users/me/export`. Always uses `req.user.id`,
   // never a path param (anti-IDOR per security audit § 3 T2).

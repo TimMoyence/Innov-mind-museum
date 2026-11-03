@@ -17,7 +17,6 @@ import {
 } from '@modules/chat/useCase/llm/llm-sections/walk-tour-guide';
 import { Semaphore } from '@modules/chat/useCase/llm/semaphore';
 import { logger } from '@shared/logger/logger';
-import { llmCostEurPerHour } from '@shared/observability/prometheus-metrics';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
 
@@ -30,7 +29,6 @@ import {
   isIncludeRawShape,
   recordPromptCacheTelemetry,
 } from './langchain-orchestrator-support';
-import { withLangfuseTrace } from './langchain-orchestrator-tracing';
 import { CircuitOpenError, LLMCircuitBreaker } from './llm-circuit-breaker';
 import { estimateCostCents } from './llm-cost-pricing';
 
@@ -38,12 +36,9 @@ import type {
   ChatModel,
   InvokeSectionInput,
   LangChainChatOrchestratorDeps,
-  LangfuseCallbacksRef,
   UsageMetadata,
-  UsageRef,
 } from './langchain-orchestrator-support';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
-import type { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import type { BaseMessage } from '@langchain/core/messages';
 import type {
   OrchestratorInput,
@@ -55,21 +50,6 @@ import type {
   LlmSectionDefinition,
   MainAssistantOutput,
 } from '@modules/chat/useCase/llm/llm-sections';
-
-/**
- * TD-LF-02 — folds the Langfuse `CallbackHandler` (when present) onto the
- * base `.invoke()` opts. Used by both the section path and the walk path so
- * the wiring is one helper, not two divergent ternaries. Returns the base
- * opts unchanged when no callbacks are registered (pre-LF-02 shape).
- */
-function mergeInvokeOpts(
-  baseOpts: { signal: AbortSignal },
-  callbacksRef: LangfuseCallbacksRef | undefined,
-): { signal: AbortSignal } | { signal: AbortSignal; callbacks: BaseCallbackHandler[] } {
-  const callbacks = callbacksRef?.current;
-  if (!callbacks || callbacks.length === 0) return baseOpts;
-  return { ...baseOpts, callbacks };
-}
 
 /**
  * Insert `WALK_TOUR_GUIDE_SECTION` AFTER the system instructions and BEFORE
@@ -96,26 +76,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     this.costBreaker = deps.costBreaker ?? null;
   }
 
-  /**
-   * C9.4 — records a conservative cost estimate against the cost circuit
-   * breaker and updates the Prom gauge. Fail-open: any failure is logged but
-   * does not propagate into the chat path.
-   */
-  private recordSectionCost(
-    payloadBytes: number,
-    museumId: number | null | undefined,
-    tier: string | undefined,
-  ): void {
+  private recordSectionCost(payloadBytes: number): void {
     if (!this.costBreaker) return;
     try {
       const cents = estimateCostCents(payloadBytes, env.llm.model, env.llm.maxOutputTokens);
       if (cents <= 0) return;
       this.costBreaker.recordCharge(cents);
-      const labels = {
-        tier: tier ?? 'anonymous',
-        museum_id: museumId != null ? String(museumId) : 'none',
-      };
-      llmCostEurPerHour.set(labels, this.costBreaker.getState().hourlySpendCents / 100);
     } catch (err) {
       logger.warn('llm_cost_record_failed', {
         err: err instanceof Error ? err.message : String(err),
@@ -242,7 +208,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             async () =>
               await structured.invoke(
                 input.sectionMessages,
-                mergeInvokeOpts({ signal: input.signal }, input.callbacksRef),
+                { signal: input.signal },
               ),
           ),
         )) as
@@ -277,31 +243,17 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             model: env.llm.model,
             usage,
           },
-          input.usageRef,
         );
 
         // C9.4 — record cost only on success (R2: no charge on error).
-        this.recordSectionCost(input.payloadBytes, input.museumId, input.tier);
+        this.recordSectionCost(input.payloadBytes);
         return parsed;
       },
     );
   }
 
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-    // C9.5 D7 — `usageRef` ferries the section's `usage_metadata` (cache_read
-    // + input/output tokens) up to the enclosing Langfuse generation.end()
-    // call without polluting the public `OrchestratorOutput` port.
-    const usageRef: UsageRef = {};
-    // TD-LF-02 — `callbacksRef` is populated by `withLangfuseTrace` after the
-    // trace is open (and only when Langfuse is enabled). Sections + walk path
-    // read `callbacksRef.current` at `.invoke()` time so LangChain's internal
-    // chain / LLM observations append to the same trace.
-    const callbacksRef: LangfuseCallbacksRef = {};
-    return await withLangfuseTrace(
-      'llm.orchestrate',
-      input,
-      () =>
-        startSpan(
+    return await startSpan(
           {
             name: 'llm.orchestrate',
             op: 'ai.orchestrate',
@@ -314,7 +266,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
           },
           async () => {
             if (input.intent === 'walk') {
-              return await this.generateWalk(input, usageRef, callbacksRef);
+              return await this.generateWalk(input);
             }
 
             // Breaker fast-fail at entry → surface 503; section fallback can't mask a degraded provider.
@@ -348,7 +300,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               };
             }
 
-            const tasks = this.buildSectionTasks(model, prepared, input, usageRef, callbacksRef);
+            const tasks = this.buildSectionTasks(model, prepared, input);
 
             const sectionResults = await runSectionTasks(
               tasks,
@@ -384,9 +336,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
               startedAt,
             });
           },
-        ),
-      usageRef,
-      callbacksRef,
     );
   }
 
@@ -394,8 +343,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     model: ChatModel,
     prepared: ReturnType<typeof buildOrchestratorMessages>,
     input: OrchestratorInput,
-    usageRef: UsageRef,
-    callbacksRef: LangfuseCallbacksRef,
   ): SectionTask<MainAssistantOutput>[] {
     const { sectionPlan, systemPrompt, historyMessages, userMessage } = prepared;
     return sectionPlan.map((section: LlmSectionDefinition) => {
@@ -434,10 +381,8 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
             tier,
             // C9.5 — thread for cache-status telemetry.
             requestId: input.requestId,
-            usageRef,
             // TD-LF-02 — opt-in LangChain CallbackHandler ref (populated by
             // `withLangfuseTrace` when Langfuse is enabled).
-            callbacksRef,
           }),
       };
     });
@@ -474,7 +419,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
   private async invokeWalkStructured(
     withStructuredOutput: NonNullable<NonNullable<ChatModel>['withStructuredOutput']>,
     messages: BaseMessage[],
-    callbacksRef: LangfuseCallbacksRef,
     walkWasHalfOpen: boolean,
     requestId: string | undefined,
   ): Promise<
@@ -492,7 +436,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     });
     const signal = AbortSignal.timeout(env.llm.totalBudgetMs);
     try {
-      return (await structured.invoke(messages, mergeInvokeOpts({ signal }, callbacksRef))) as
+      return (await structured.invoke(messages, { signal })) as
         | WalkAssistantOutput
         | { raw: { usage_metadata?: UsageMetadata }; parsed: WalkAssistantOutput | null };
     } catch (err) {
@@ -509,8 +453,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
   private async generateWalk(
     input: OrchestratorInput,
-    usageRef: UsageRef,
-    callbacksRef: LangfuseCallbacksRef,
   ): Promise<OrchestratorOutput> {
     const model = this.model;
     if (!model) return this.walkFallback('system:missing-llm-api-key');
@@ -563,7 +505,6 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     const rawResult = await this.invokeWalkStructured(
       withStructuredOutput,
       messages,
-      callbacksRef,
       walkWasHalfOpen,
       input.requestId,
     );
@@ -580,12 +521,9 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         model: env.llm.model,
         usage,
       },
-      usageRef,
     );
 
-    // C9.4 — record cost on walk path (bypasses invokeSection). R2: only on success.
-    const walkTier = input.userId == null ? 'anonymous' : 'free';
-    this.recordSectionCost(walkPayloadBytes, input.museumId ?? null, walkTier);
+    this.recordSectionCost(walkPayloadBytes);
 
     // Schema `.default([])` → always present (Zod 4 infers as required).
     const suggestions = result.suggestions;

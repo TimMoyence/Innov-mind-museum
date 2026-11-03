@@ -28,12 +28,6 @@ export interface AuthSessionResponse {
   /** seconds */
   refreshExpiresIn: number;
   user: SafeUser;
-  /**
-   * R16 — present when admin is inside MFA warning window. Absent when not
-   * admin, already enrolled, or MFA already enforced (then shape becomes
-   * `MfaRequiredResponse`).
-   */
-  mfaWarningDaysRemaining?: number;
 }
 
 /**
@@ -58,7 +52,6 @@ export class SessionIssuerService {
     user: SafeUser;
     familyId?: string;
     rotateFrom?: StoredRefreshTokenRow;
-    mfaWarningDaysRemaining?: number;
   }): Promise<AuthSessionResponse> {
     const accessJti = crypto.randomUUID();
     const refreshJti = crypto.randomUUID();
@@ -97,17 +90,13 @@ export class SessionIssuerService {
         })
       : this.refreshTokenRepository.insert(nextTokenRow));
 
-    const response: AuthSessionResponse = {
+    return {
       accessToken,
       refreshToken,
       expiresIn: this.tokenJwt.accessTtlSeconds,
       refreshExpiresIn: this.tokenJwt.refreshTtlSeconds,
       user: params.user,
     };
-    if (params.mfaWarningDaysRemaining !== undefined) {
-      response.mfaWarningDaysRemaining = params.mfaWarningDaysRemaining;
-    }
-    return response;
   }
 
   /** Throws 401 with precise code on violation; revokes family on reuse/replay/idle. */

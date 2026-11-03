@@ -30,9 +30,4 @@ describe('screen-test-coverage sentinel wiring (UFR-021 Phase 2)', () => {
     const ciMobile = read('.github', 'workflows', 'ci-cd-mobile.yml');
     expect(ciMobile).toContain(SENTINEL_REF);
   });
-
-  it('.github/workflows/sentinel-mirror.yml references the sentinel', () => {
-    const sentinelMirror = read('.github', 'workflows', 'sentinel-mirror.yml');
-    expect(sentinelMirror).toContain(SENTINEL_REF);
-  });
 });

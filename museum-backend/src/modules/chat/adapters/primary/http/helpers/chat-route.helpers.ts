@@ -20,18 +20,7 @@ import type { Request, RequestHandler } from 'express';
  */
 const CHAT_ROUTE_TIMEOUT_MARGIN_MS = 2_000;
 
-/**
- * Worst-case serial guardrail budget: LLM-Guard sidecar + LLM judge.
- *
- * NOTE (2026-06-01, hybrid-by-gravity friction): the LLM judge now runs in
- * PARALLEL with the sidecar, not in series, so summing the two timeouts is a
- * deliberate SAFE OVER-ESTIMATION (a ceiling), no longer the literal serial
- * latency. Keep the sum — do NOT lower `judgeTimeoutMs` here to "tighten" the
- * ceiling. A looser-than-reality socket ceiling only ever protects the graceful
- * timeout path; a tighter one risks force-closing the socket mid-answer.
- */
-const serialGuardrailBudgetMs = (): number =>
-  env.guardrails.timeoutMs + env.guardrails.judgeTimeoutMs;
+const serialGuardrailBudgetMs = (): number => env.guardrails.judgeTimeoutMs;
 
 /**
  * Single source of truth for the chat-route socket ceiling (R2 invariant):

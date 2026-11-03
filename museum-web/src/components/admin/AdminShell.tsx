@@ -52,7 +52,6 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
 
   // C1B / R8 — a museum_manager only sees the links it can use (tenant-scoped);
   // every other allow-listed role sees the full nav set.
@@ -116,28 +115,6 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
                 </li>
               );
             })}
-            {isSuperAdmin && (
-              // Super-admin-only ops surface (Grafana iframe). Hidden for
-              // every other role — including `admin` (B2B operator) — so
-              // cross-tenant ops data never appears in a museum operator's
-              // navigation. Server-side defense at nginx auth_request +
-              // RoleGuard at the page layout.
-              <li key="ops-grafana">
-                <Link
-                  href={`${basePath}/ops/grafana`}
-                  onClick={() => {
-                    setSidebarOpen(false);
-                  }}
-                  className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(`${basePath}/ops/grafana`)
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'
-                  }`}
-                >
-                  Ops · Grafana
-                </Link>
-              </li>
-            )}
           </ul>
         </nav>
       </aside>

@@ -15,8 +15,6 @@ import {
   VALID_JWT_ACCESS_SECRET,
   VALID_JWT_REFRESH_SECRET,
   VALID_MEDIA_SIGNING_SECRET,
-  VALID_MFA_ENCRYPTION_KEY,
-  VALID_MFA_SESSION_TOKEN_SECRET,
   validProductionEnv,
 } from 'tests/helpers/config/prod-env.fixtures';
 
@@ -34,8 +32,6 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
     auth: {
       accessTokenSecret: VALID_JWT_ACCESS_SECRET,
       refreshTokenSecret: VALID_JWT_REFRESH_SECRET,
-      mfaEncryptionKey: VALID_MFA_ENCRYPTION_KEY,
-      mfaSessionTokenSecret: VALID_MFA_SESSION_TOKEN_SECRET,
       csrfSecret: VALID_CSRF_SECRET,
       passwordBreachCheckEnabled: true,
       ...overrides,
@@ -52,88 +48,6 @@ describe('validateProductionEnv — secret distinctness branches', () => {
 
   afterEach(() => {
     process.env = { ...originalEnv };
-  });
-
-  it('CSRF_SECRET = MFA_ENCRYPTION_KEY → throws specific distinctness error', () => {
-    process.env.CSRF_SECRET = VALID_MFA_ENCRYPTION_KEY;
-    const env = makeEnv({ csrfSecret: VALID_MFA_ENCRYPTION_KEY });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/CSRF_SECRET must be distinct from MFA_ENCRYPTION_KEY/);
-  });
-
-  it('CSRF_SECRET = MFA_SESSION_TOKEN_SECRET → throws specific distinctness error', () => {
-    process.env.CSRF_SECRET = VALID_MFA_SESSION_TOKEN_SECRET;
-    const env = makeEnv({ csrfSecret: VALID_MFA_SESSION_TOKEN_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/CSRF_SECRET must be distinct from MFA_SESSION_TOKEN_SECRET/);
-  });
-
-  it('MFA_ENCRYPTION_KEY = JWT_ACCESS_SECRET → throws specific distinctness error', () => {
-    process.env.MFA_ENCRYPTION_KEY = VALID_JWT_ACCESS_SECRET;
-    const env = makeEnv({ mfaEncryptionKey: VALID_JWT_ACCESS_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_ENCRYPTION_KEY must be distinct from JWT_ACCESS_SECRET/);
-  });
-
-  it('MFA_ENCRYPTION_KEY = JWT_REFRESH_SECRET → throws specific distinctness error', () => {
-    process.env.MFA_ENCRYPTION_KEY = VALID_JWT_REFRESH_SECRET;
-    const env = makeEnv({ mfaEncryptionKey: VALID_JWT_REFRESH_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_ENCRYPTION_KEY must be distinct from JWT_REFRESH_SECRET/);
-  });
-
-  it('MFA_ENCRYPTION_KEY = MEDIA_SIGNING_SECRET → throws specific distinctness error', () => {
-    process.env.MFA_ENCRYPTION_KEY = VALID_MEDIA_SIGNING_SECRET;
-    const env = makeEnv({ mfaEncryptionKey: VALID_MEDIA_SIGNING_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_ENCRYPTION_KEY must be distinct from MEDIA_SIGNING_SECRET/);
-  });
-
-  it('MFA_SESSION_TOKEN_SECRET = JWT_ACCESS_SECRET → throws specific distinctness error', () => {
-    process.env.MFA_SESSION_TOKEN_SECRET = VALID_JWT_ACCESS_SECRET;
-    const env = makeEnv({ mfaSessionTokenSecret: VALID_JWT_ACCESS_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_SESSION_TOKEN_SECRET must be distinct from JWT_ACCESS_SECRET/);
-  });
-
-  it('MFA_SESSION_TOKEN_SECRET = JWT_REFRESH_SECRET → throws specific distinctness error', () => {
-    process.env.MFA_SESSION_TOKEN_SECRET = VALID_JWT_REFRESH_SECRET;
-    const env = makeEnv({ mfaSessionTokenSecret: VALID_JWT_REFRESH_SECRET });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_SESSION_TOKEN_SECRET must be distinct from JWT_REFRESH_SECRET/);
-  });
-
-  it('MFA_SESSION_TOKEN_SECRET = MFA_ENCRYPTION_KEY → throws threat-model error', () => {
-    process.env.MFA_SESSION_TOKEN_SECRET = VALID_MFA_ENCRYPTION_KEY;
-    const env = makeEnv({ mfaSessionTokenSecret: VALID_MFA_ENCRYPTION_KEY });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/MFA_SESSION_TOKEN_SECRET must be distinct from MFA_ENCRYPTION_KEY/);
-  });
-
-  it('env.auth.mfaEncryptionKey out of sync with MFA_ENCRYPTION_KEY → throws drift error', () => {
-    // process.env keeps the canonical key; env object holds a stale value to
-    // simulate an env.ts wiring drift introduced by a future refactor.
-    const env = makeEnv({ mfaEncryptionKey: 'z'.repeat(48) });
-
-    expect(() => {
-      validateProductionEnv(env);
-    }).toThrow(/env\.auth\.mfaEncryptionKey is out of sync with MFA_ENCRYPTION_KEY/);
   });
 
   // ── GAP-1 (#9): MEDIA_SIGNING_SECRET MUST be length-gated like every other

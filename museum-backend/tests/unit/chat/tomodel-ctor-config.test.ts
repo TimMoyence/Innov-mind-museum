@@ -39,10 +39,6 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-jest.mock('@shared/observability/prometheus-metrics', () => ({
-  llmPromptCacheHitsTotal: { inc: jest.fn() },
-}));
-
 interface MockedEnv {
   llm: {
     provider: 'openai' | 'deepseek' | 'google';

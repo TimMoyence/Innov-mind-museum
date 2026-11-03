@@ -18,8 +18,6 @@ import {
   VALID_JWT_ACCESS_SECRET,
   VALID_JWT_REFRESH_SECRET,
   VALID_MEDIA_SIGNING_SECRET,
-  VALID_MFA_ENCRYPTION_KEY,
-  VALID_MFA_SESSION_TOKEN_SECRET,
 } from '../../helpers/config/prod-env.fixtures';
 
 const STRONG_REDIS_PASSWORD = 'r'.repeat(48);
@@ -40,8 +38,6 @@ const makeEnvWithCache = (cacheOverrides: Partial<NonNullable<AppEnv['cache']>> 
     auth: {
       accessTokenSecret: VALID_JWT_ACCESS_SECRET,
       refreshTokenSecret: VALID_JWT_REFRESH_SECRET,
-      mfaEncryptionKey: VALID_MFA_ENCRYPTION_KEY,
-      mfaSessionTokenSecret: VALID_MFA_SESSION_TOKEN_SECRET,
       csrfSecret: VALID_CSRF_SECRET,
       passwordBreachCheckEnabled: true,
     },
@@ -58,8 +54,6 @@ describe('validateProductionEnv — Redis password hardening (P3.1)', () => {
       MEDIA_SIGNING_SECRET: VALID_MEDIA_SIGNING_SECRET,
       JWT_ACCESS_SECRET: VALID_JWT_ACCESS_SECRET,
       JWT_REFRESH_SECRET: VALID_JWT_REFRESH_SECRET,
-      MFA_ENCRYPTION_KEY: VALID_MFA_ENCRYPTION_KEY,
-      MFA_SESSION_TOKEN_SECRET: VALID_MFA_SESSION_TOKEN_SECRET,
       CSRF_SECRET: VALID_CSRF_SECRET,
       EXPORT_PSEUDONYM_SALT: VALID_EXPORT_PSEUDONYM_SALT,
       OPENAI_API_KEY: 'sk-test',

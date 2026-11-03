@@ -2,12 +2,10 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ChatOpenAI } from '@langchain/openai';
 
 import { logger } from '@shared/logger/logger';
-import { llmPromptCacheHitsTotal } from '@shared/observability/prometheus-metrics';
 import { env } from '@src/config/env';
 
 import type { LLMCircuitBreaker } from './llm-circuit-breaker';
 import type { LlmCostCircuitBreaker } from './llm-cost-circuit-breaker';
-import type { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import type { ChatModel, UsageMetadata } from '@modules/chat/domain/llm/chat-model.port';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
@@ -34,33 +32,6 @@ export type { ChatModel, UsageMetadata };
 
 /** C9.5 R6 — three-bucket prompt-cache classification. */
 export type CacheStatus = 'hit' | 'partial' | 'miss';
-
-/**
- * C9.5 D7 — mutable ref that the orchestrator threads into `withLangfuseTrace`
- * so the section's `usage_metadata` can be lifted into the same
- * `generation.end()` call (R9). The ref is opt-in; null/undefined keeps the
- * C9.0 payload shape untouched.
- */
-export interface UsageRef {
-  current?: UsageMetadata;
-}
-
-/**
- * TD-LF-02 — mutable ref that ferries the `langfuse-langchain`
- * `CallbackHandler` from `withLangfuseTrace` into every `.invoke()` call
- * downstream. `withLangfuseTrace` constructs the handler with `root: trace`
- * so the handler's chain / LLM observations append to the trace it just
- * opened (rather than starting a parallel one). Typed as
- * `BaseCallbackHandler[]` (not `unknown[]`) so the `.invoke({ callbacks })`
- * opt stays structurally compatible with the real LangChain `Callbacks`
- * type ; `langfuse-langchain`'s `CallbackHandler` extends `BaseCallbackHandler`
- * so the assignment is sound at runtime (asserted by the loader). The ref
- * is opt-in : absent / empty array → invoke runs without callbacks,
- * identical to the pre-LF-02 path.
- */
-export interface LangfuseCallbacksRef {
-  current?: BaseCallbackHandler[];
-}
 
 /**
  * C9.5 R10 — runtime predicate distinguishing the `{ raw, parsed }` shape
@@ -117,7 +88,6 @@ interface CacheTelemetryInput {
  */
 export const recordPromptCacheTelemetry = (
   input: CacheTelemetryInput,
-  usageRef?: UsageRef,
 ): void => {
   const status = classifyCacheStatus(input.usage);
   const inputTokens = input.usage?.input_tokens ?? 0;
@@ -135,21 +105,6 @@ export const recordPromptCacheTelemetry = (
     cachedTokens,
     totalTokens,
   });
-
-  // R8 + R12 — Prom Counter, swallowed on failure.
-  try {
-    llmPromptCacheHitsTotal.inc({ cache_status: status, provider: input.provider });
-  } catch (err) {
-    logger.warn('llm_prompt_cache_counter_failed', {
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
-
-  // R9 / D7 — ferry usage to the enclosing Langfuse `generation.end()` via the
-  // mutable ref. `withLangfuseTrace` reads `usageRef.current` if defined.
-  if (usageRef && input.usage) {
-    usageRef.current = input.usage;
-  }
 };
 
 export interface InvokeSectionInput {
@@ -183,7 +138,6 @@ export interface InvokeSectionInput {
    * generation `.end()` call (R9). Undefined when the caller has no Langfuse
    * wrapper above this invocation (walk-intent path).
    */
-  usageRef?: UsageRef;
   /**
    * TD-LF-02 — mutable ref with the `langfuse-langchain` `CallbackHandler`
    * that `withLangfuseTrace` constructs against the just-opened trace. Threaded
@@ -191,7 +145,6 @@ export interface InvokeSectionInput {
    * the same trace root (`updateRoot:true`), powering the Langfuse cost UI.
    * Undefined / empty array = pre-LF-02 path (no callbacks attached).
    */
-  callbacksRef?: LangfuseCallbacksRef;
 }
 
 export interface AssembleResponseInput {
