@@ -35,7 +35,7 @@ jobs:
   changes:
     name: detect changes
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 10
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ai: ${{ steps.filter.outputs.ai }}
@@ -47,7 +47,6 @@ jobs:
           filters: |
             backend:
               - 'museum-backend/**'
-              - 'infra/**'
               - '.github/workflows/ci-cd-backend.yml'
             # I-OPS8 (R9): chat/guardrail paths that the AI-integration tests
             # exercise. The ai-tests job runs on PR only when these change,

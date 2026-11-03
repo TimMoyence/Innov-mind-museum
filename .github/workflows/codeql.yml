@@ -32,7 +32,7 @@ jobs:
   changes:
     name: detect changes
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 10
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
