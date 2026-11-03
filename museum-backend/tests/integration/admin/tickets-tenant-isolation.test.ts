@@ -78,7 +78,6 @@ const MUSEUM_B = 99; // cross-tenant BOLA target
 describeIntegration(
   'admin /tickets — museum_manager tenant isolation (C1B / OWASP API3 BOLA) [integration, real PG + HTTP]',
   () => {
-    jest.setTimeout(180_000);
 
     let harness: IntegrationHarness;
     let app: Express;

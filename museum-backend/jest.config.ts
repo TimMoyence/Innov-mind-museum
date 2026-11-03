@@ -76,6 +76,7 @@ const config: Config.InitialOptions = {
   // net for integration tests that touch transitively-loaded modules holding
   // background sockets (rate-limit sweep, museum-enrichment cache adapter).
   forceExit: true,
+  workerIdleMemoryLimit: '1GB',
 
   // Safety net: reap any leaked museum-ia-e2e-* / museum-ia-redis-* containers
   // after the run. Belt-and-braces — the per-suite afterAll already awaits

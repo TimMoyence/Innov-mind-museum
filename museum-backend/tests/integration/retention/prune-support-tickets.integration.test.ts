@@ -28,7 +28,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number): Date => new Date(Date.now() - n * DAY_MS);
 
 describeIntegration('pruneSupportTickets (real PG) [integration]', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
   let ticketRepo: Repository<SupportTicket>;

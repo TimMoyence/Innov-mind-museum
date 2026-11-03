@@ -114,7 +114,6 @@ const mockChatService: Partial<ChatService> = {
 describeIntegration(
   'monthly-session-quota — 5xx-after-consume MUST NOT inflate the persisted counter [integration, real PG]',
   () => {
-    jest.setTimeout(180_000);
 
     // Free-tier limit is the env default (resolveLimit() → 3); the test never
     // needs to reference it directly — it drives a single create then a forced

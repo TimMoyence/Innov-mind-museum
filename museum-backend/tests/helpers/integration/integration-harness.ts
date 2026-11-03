@@ -4,6 +4,8 @@ import {
   type StartedPostgresTestContainer,
 } from 'tests/helpers/e2e/postgres-testcontainer';
 
+jest.setTimeout(180_000);
+
 /**
  * Test utility: handle for an integration test environment.
  * Wraps a per-Jest-worker Postgres testcontainer with a TypeORM DataSource
@@ -144,7 +146,7 @@ const buildHarness = async (
  */
 export const createIntegrationHarness = async (): Promise<IntegrationHarness> => {
   const workerId = process.env.JEST_WORKER_ID ?? '0';
-  if (cached && cached.workerId === workerId) {
+  if (cached?.workerId === workerId) {
     return cached.harness;
   }
   if (cached) {

@@ -71,7 +71,6 @@ function previousMonthStartUtc(d: Date): Date {
 describeIntegration(
   'PgMonthlyQuotaRepo.tryConsume — persistence contract [integration, real PG]',
   () => {
-    jest.setTimeout(180_000);
 
     const LIMIT = 3;
     const now = new Date();

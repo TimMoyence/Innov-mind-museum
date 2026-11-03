@@ -138,7 +138,6 @@ describeFn('recall@5 (T7.4 — crop-robustness, real ONNX model + pgvector)', ()
   // ONNX encoder; on a cold CI runner that exceeds Jest's default 5s hook
   // timeout (which fails the hook AND leaves `encoder` undefined → the afterAll
   // shutdown crashes). Match the sibling integration suites' generous budget.
-  jest.setTimeout(180_000);
 
   let harness: Awaited<ReturnType<typeof createIntegrationHarness>>;
   let repo: ArtworkEmbeddingRepository;

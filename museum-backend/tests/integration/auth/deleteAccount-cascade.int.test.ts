@@ -36,7 +36,6 @@ const shouldRun = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION 
 const describeIntegration = shouldRun ? describe : describe.skip;
 
 describeIntegration('DeleteAccountUseCase — real cascade + audit retention + leads erasure', () => {
-  jest.setTimeout(180_000);
 
   let harness: IntegrationHarness;
 
