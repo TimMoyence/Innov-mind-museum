@@ -33,7 +33,6 @@
     "off": "Off",
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "not_configured": "Not configured",
     "or_continue_with": "or continue with",
     "settings": "Settings"
   },
@@ -753,20 +752,6 @@
     "error_body": "Recording could not be started. Please try again.",
     "playback_error_title": "Playback error",
     "playback_error_body": "Unable to play this recording."
-  },
-  "startupError": {
-    "badge": "Startup configuration error",
-    "title": "The app cannot start with this build.",
-    "build_context": "Current build context",
-    "build_variant": "Build variant",
-    "api_env": "API environment",
-    "resolved_url": "Resolved base URL",
-    "staging_url": "Staging URL",
-    "prod_url": "Production URL",
-    "how_to_fix": "How to fix it",
-    "step1": "1. Set `EXPO_PUBLIC_API_BASE_URL_STAGING` on the Expo project.",
-    "step2": "2. Set `EXPO_PUBLIC_API_BASE_URL_PROD` on the Expo project.",
-    "step3": "3. Rebuild the app after the environment variables are available to EAS Build."
   },
   "biometric": {
     "lock_title": "App Locked",

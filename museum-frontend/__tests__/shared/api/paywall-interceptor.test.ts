@@ -38,8 +38,7 @@ jest.mock('expo-constants', () => ({
 }));
 
 jest.mock('@/shared/infrastructure/apiConfig', () => ({
-  tryResolveInitialApiBaseUrl: () => ({ url: 'https://api.test.com', error: null }),
-  assertApiBaseUrlAllowed: jest.fn(),
+  resolveInitialApiBaseUrl: () => 'https://api.test.com',
 }));
 
 import {

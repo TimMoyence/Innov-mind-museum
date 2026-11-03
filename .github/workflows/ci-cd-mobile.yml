@@ -200,7 +200,6 @@ jobs:
     #     then Constants.expoConfig.extra.API_BASE_URL — both baked here).
     env:
       APP_VARIANT: development
-      EXPO_PUBLIC_API_ENVIRONMENT: staging
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3000
       # Test-only audio-fixture injection seam (useAudioRecorder.ts): bakes the
       # bundled "Who painted the Mona Lisa" clip into the recorder so the
@@ -680,7 +679,6 @@ jobs:
         working-directory: museum-frontend
     env:
       APP_VARIANT: development
-      EXPO_PUBLIC_API_ENVIRONMENT: staging
       # Baked at the Toxiproxy SHAPED listener (NOT the unshaped :3000 backend) so
       # the device→proxy link is genuinely shaped. This is the load-bearing
       # difference from the `prebuild` job and the fix for the false-green netshape
@@ -1087,8 +1085,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -1100,11 +1096,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Validate preview iOS build env
-        run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
@@ -1128,8 +1119,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -1141,11 +1130,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Validate preview Android build env
-        run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
@@ -1174,8 +1158,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -1191,8 +1173,6 @@ jobs:
 
       - name: Validate internal Android build env
         run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
 
       - name: Prepare Google Play service account key
@@ -1223,8 +1203,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -1236,11 +1214,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Validate production iOS build env
-        run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
@@ -1265,8 +1238,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_STAGING: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_STAGING }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - name: Setup Node
@@ -1278,11 +1249,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Validate production Android build env
-        run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_STAGING"
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
@@ -1307,7 +1273,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
@@ -1326,7 +1291,6 @@ jobs:
 
       - name: Validate iOS submit env
         run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
           test -n "$APPLE_ID"
           test -n "$ASC_APP_ID"
           test -n "$APPLE_TEAM_ID"
@@ -1354,7 +1318,6 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_API_BASE_URL_PROD: ${{ secrets.EXPO_PUBLIC_API_BASE_URL_PROD }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
@@ -1370,7 +1333,6 @@ jobs:
 
       - name: Validate Android submit env
         run: |
-          test -n "$EXPO_PUBLIC_API_BASE_URL_PROD"
           test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
 
       - name: Prepare Google Play service account key

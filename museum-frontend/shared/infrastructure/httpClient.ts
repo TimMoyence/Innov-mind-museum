@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import * as Sentry from '@sentry/react-native';
 
-import { assertApiBaseUrlAllowed, tryResolveInitialApiBaseUrl } from './apiConfig';
+import { resolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
 import { getApiErrorCode, mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
@@ -133,27 +133,7 @@ type HttpRequestConfig = {
   skipQualitySample?: boolean;
 } & Record<string, unknown>;
 
-const initialApiBaseUrlResolution = tryResolveInitialApiBaseUrl();
-if (initialApiBaseUrlResolution.error && __DEV__) {
-  console.warn('[HTTP] Invalid API base URL configuration', initialApiBaseUrlResolution.error);
-}
-
-const DEFAULT_BASE_URL = initialApiBaseUrlResolution.url;
-let runtimeBaseUrl = DEFAULT_BASE_URL;
-
-/**
- * Updates the runtime API base URL used by all subsequent HTTP requests.
- * @param nextUrl - New base URL; falls back to the default when empty.
- * @throws When the URL targets localhost in a non-development build.
- */
-export const setApiBaseUrl = (nextUrl: string): void => {
-  const normalized = nextUrl.trim() || DEFAULT_BASE_URL;
-  assertApiBaseUrlAllowed(normalized);
-  runtimeBaseUrl = normalized;
-};
-
-/** Returns the current runtime API base URL. */
-export const getApiBaseUrl = (): string => runtimeBaseUrl;
+const API_BASE_URL = resolveInitialApiBaseUrl();
 
 let runtimeLocale = 'en';
 
@@ -185,7 +165,7 @@ const wait = async (ms: number): Promise<void> => {
 
 httpClient.interceptors.request.use((config) => {
   const finalConfig = config as typeof config & HttpRequestConfig;
-  finalConfig.baseURL = getApiBaseUrl();
+  finalConfig.baseURL = API_BASE_URL;
   finalConfig._startedAt = Date.now();
 
   const requestId = generateRequestId();

@@ -33,7 +33,6 @@
     "off": "Disattivo",
     "enabled": "Attivato",
     "disabled": "Disattivato",
-    "not_configured": "Non configurato",
     "or_continue_with": "oppure continua con",
     "settings": "Impostazioni"
   },
@@ -753,20 +752,6 @@
     "error_body": "Impossibile avviare la registrazione. Riprova.",
     "playback_error_title": "Errore di riproduzione",
     "playback_error_body": "Impossibile riprodurre questa registrazione."
-  },
-  "startupError": {
-    "badge": "Errore di configurazione all'avvio",
-    "title": "L'app non può avviarsi con questa build.",
-    "build_context": "Contesto build attuale",
-    "build_variant": "Variante build",
-    "api_env": "Ambiente API",
-    "resolved_url": "URL base risolto",
-    "staging_url": "URL staging",
-    "prod_url": "URL produzione",
-    "how_to_fix": "Come risolvere",
-    "step1": "1. Imposta `EXPO_PUBLIC_API_BASE_URL_STAGING` nel progetto Expo.",
-    "step2": "2. Imposta `EXPO_PUBLIC_API_BASE_URL_PROD` nel progetto Expo.",
-    "step3": "3. Ricompila l'app dopo che le variabili d'ambiente sono disponibili per EAS Build."
   },
   "biometric": {
     "lock_title": "App bloccata",

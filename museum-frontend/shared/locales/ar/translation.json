@@ -33,7 +33,6 @@
     "off": "معطّل",
     "enabled": "مفعّل",
     "disabled": "معطّل",
-    "not_configured": "غير مهيّأ",
     "or_continue_with": "أو المتابعة باستخدام",
     "settings": "الإعدادات"
   },
@@ -753,20 +752,6 @@
     "error_body": "تعذّر بدء التسجيل. يرجى المحاولة مرة أخرى.",
     "playback_error_title": "خطأ في التشغيل",
     "playback_error_body": "تعذّر تشغيل هذا التسجيل."
-  },
-  "startupError": {
-    "badge": "خطأ في إعدادات بدء التشغيل",
-    "title": "لا يمكن تشغيل التطبيق بهذه النسخة.",
-    "build_context": "سياق البناء الحالي",
-    "build_variant": "نوع البناء",
-    "api_env": "بيئة API",
-    "resolved_url": "عنوان URL الأساسي المحلّل",
-    "staging_url": "عنوان URL للتجربة",
-    "prod_url": "عنوان URL للإنتاج",
-    "how_to_fix": "كيفية الإصلاح",
-    "step1": "1. قم بتعيين `EXPO_PUBLIC_API_BASE_URL_STAGING` في مشروع Expo.",
-    "step2": "2. قم بتعيين `EXPO_PUBLIC_API_BASE_URL_PROD` في مشروع Expo.",
-    "step3": "3. أعد بناء التطبيق بعد توفّر متغيرات البيئة لـ EAS Build."
   },
   "museumDirectory": {
     "title": "متاحف قريبة",

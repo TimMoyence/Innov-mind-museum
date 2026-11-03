@@ -16,19 +16,9 @@ jest.mock('@/shared/infrastructure/storage', () => {
   };
 });
 
-jest.mock('@/shared/infrastructure/apiConfig', () => ({
-  resolveInitialApiBaseUrl: jest.fn(() => 'https://api.test.com'),
-}));
-
-jest.mock('@/shared/infrastructure/httpClient', () => ({
-  setApiBaseUrl: jest.fn(),
-}));
-
 import { storage } from '@/shared/infrastructure/storage';
-import { setApiBaseUrl } from '@/shared/infrastructure/httpClient';
 import {
   loadRuntimeSettings,
-  applyRuntimeSettings,
   saveDefaultLocale,
   saveDefaultMuseumMode,
   saveGuideLevel,
@@ -60,38 +50,6 @@ describe('loadRuntimeSettings', () => {
     expect(settings.defaultLocale).toBe('fr-FR');
     expect(settings.defaultMuseumMode).toBe(false);
     expect(settings.guideLevel).toBe('expert');
-  });
-
-  it('cleans up legacy API override keys when present', async () => {
-    // Seed under the namespaced keys (what the loader reads) so the cleanup
-    // gate fires; the cleanup then purges BOTH the legacy and new literals.
-    mockStore.set('musaium.runtime.apiBaseUrl', 'https://old.api.com');
-    mockStore.set('musaium.runtime.apiEnvironment', 'staging');
-
-    await loadRuntimeSettings();
-
-    expect(storage.removeItem).toHaveBeenCalledWith('runtime.apiBaseUrl');
-    expect(storage.removeItem).toHaveBeenCalledWith('runtime.apiEnvironment');
-  });
-
-  it('skips cleanup when no legacy keys exist', async () => {
-    await loadRuntimeSettings();
-
-    expect(storage.removeItem).not.toHaveBeenCalled();
-  });
-});
-
-describe('applyRuntimeSettings', () => {
-  beforeEach(() => {
-    mockStore.clear();
-    jest.clearAllMocks();
-  });
-
-  it('loads settings and sets API base URL', async () => {
-    const settings = await applyRuntimeSettings();
-
-    expect(settings.defaultLocale).toBe('en-US');
-    expect(setApiBaseUrl).toHaveBeenCalledWith('https://api.test.com');
   });
 });
 

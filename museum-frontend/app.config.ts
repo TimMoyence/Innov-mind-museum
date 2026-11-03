@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
+import { resolveApiBaseUrl, resolveVariant, type BuildEnv } from './api-url.config';
+
 // `readEnvString` est inliné ici plutôt qu'importé depuis `shared/lib/env.ts` :
 // `app.config.ts` est loadé par Expo CLI (Node.js require) qui (a) n'honore
 // PAS l'alias TS `@/*` (Metro bundler le résout pour l'app, pas Expo prebuild),
@@ -16,18 +18,6 @@ const readEnvString = (value: unknown): string | undefined => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 };
-
-type AppVariant = 'development' | 'preview' | 'production';
-type ApiEnvironment = 'staging' | 'production';
-
-interface RuntimeEnv {
-  EXPO_PUBLIC_API_BASE_URL?: string;
-  EXPO_PUBLIC_API_BASE_URL_STAGING?: string;
-  EXPO_PUBLIC_API_BASE_URL_PROD?: string;
-  EXPO_PUBLIC_API_ENVIRONMENT?: string;
-  EAS_BUILD_PROFILE?: string;
-  APP_VARIANT?: string;
-}
 
 interface ExpoExtra {
   eas?: {
@@ -58,40 +48,9 @@ const nonEmpty = (value?: string): string | undefined => {
   return normalized.length ? normalized : undefined;
 };
 
-const nonPlaceholder = (value?: string): string | undefined => {
-  const normalized = nonEmpty(value);
-  if (!normalized) {
-    return undefined;
-  }
-
-  return normalized.startsWith('$') ? undefined : normalized;
-};
-
-/**
- * Shape of the co-located CommonJS build-time API-URL resolver module
- * (run 2026-06-06-api-url-prod-safety, design D1). It is `require`d (not
- * `import`ed) for the SAME reason `require('./package.json')` is below: Expo
- * CLI loads app.config.ts via Node `require`, which does NOT honor the `@/*`
- * alias nor transitively compile `.ts` imports (lib-docs/expo/LESSONS.md:34).
- * A plain `.js` sibling sidesteps that while keeping the prod-host constant +
- * resolvers in a single, unit-testable source of truth (spec R7).
- */
-interface ApiUrlConfigModule {
-  PROD_API_BASE_URL: string;
-  resolveVariant: (env: RuntimeEnv) => AppVariant;
-  resolveApiEnvironment: (variant: AppVariant, env: RuntimeEnv) => ApiEnvironment;
-  resolveApiBaseUrl: (variant: AppVariant, env: RuntimeEnv) => string;
-  isLocalhostUrl: (value: string) => boolean;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- Expo CLI Node require entry; app.config.ts cannot import the build-time resolvers as a TS module (no ESM/alias resolution at config-load time — lib-docs/expo/LESSONS.md:34). Justification: the resolvers MUST be a require-able .js so a Release/Archive build resolves the prod host without a TS compile step.
-const apiUrlConfig = require('./api-url.config.js') as ApiUrlConfigModule;
-const { resolveVariant, resolveApiEnvironment, resolveApiBaseUrl } = apiUrlConfig;
-
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const env = process.env as RuntimeEnv;
+  const env = process.env as BuildEnv;
   const variant = resolveVariant(env);
-  const apiEnvironment = resolveApiEnvironment(variant, env);
   const configProjectId = nonEmpty((config.extra as ExpoExtra | undefined)?.eas?.projectId);
   const projectId = configProjectId;
 
@@ -362,10 +321,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       API_BASE_URL: resolveApiBaseUrl(variant, env),
-      API_BASE_URL_STAGING: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_STAGING),
-      API_BASE_URL_PRODUCTION: nonPlaceholder(env.EXPO_PUBLIC_API_BASE_URL_PROD),
-      API_ENVIRONMENT: apiEnvironment,
-      APP_VARIANT: variant,
       eas: projectId
         ? {
             projectId,

@@ -7,7 +7,7 @@
 #   2. Start museum-backend Docker stack (Postgres + Redis + Adminer + backend)
 #      if not already up
 #   3. Wait for backend /api/health → 200
-#   4. Switch museum-frontend/.env to .env.local-dev (cert pinning OFF,
+#   4. Switch museum-frontend/.env to .env.example (cert pinning OFF,
 #      localhost:3000, APP_VARIANT=development)
 #   5. Open museum-frontend/ios/Musaium.xcworkspace in Xcode (background)
 #   6. Start Metro in foreground — Ctrl+C stops Metro, Docker stays up
@@ -216,11 +216,8 @@ else
 fi
 
 # ---- 4. Frontend .env switch ----
-step "4/5 Switching museum-frontend/.env → .env.local-dev"
-if [ ! -f "$FRONTEND/.env.local-dev" ]; then
-  fail "Template missing: $FRONTEND/.env.local-dev. Create from .env.local.example."
-fi
-cp "$FRONTEND/.env.local-dev" "$FRONTEND/.env"
+step "4/5 Switching museum-frontend/.env → .env.example"
+cp "$FRONTEND/.env.example" "$FRONTEND/.env"
 ACTIVE_URL=$(grep -E "^EXPO_PUBLIC_API_BASE_URL=" "$FRONTEND/.env" | head -1 | cut -d= -f2)
 ACTIVE_VARIANT=$(grep -E "^APP_VARIANT=" "$FRONTEND/.env" | head -1 | cut -d= -f2)
 ACTIVE_PIN=$(grep -E "^EXPO_PUBLIC_CERT_PINNING_ENABLED=" "$FRONTEND/.env" | head -1 | cut -d= -f2)

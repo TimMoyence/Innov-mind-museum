@@ -15,15 +15,12 @@ jest.mock('expo-constants', () => ({
 }));
 
 jest.mock('@/shared/infrastructure/apiConfig', () => ({
-  tryResolveInitialApiBaseUrl: () => ({ url: 'https://api.test.com', error: null }),
-  assertApiBaseUrlAllowed: jest.fn(),
+  resolveInitialApiBaseUrl: () => 'https://api.test.com',
 }));
 
 import {
   httpClient,
   setTokenProvider,
-  setApiBaseUrl,
-  getApiBaseUrl,
   setLocale,
   getLocale,
   setAuthRefreshHandler,
@@ -69,40 +66,7 @@ describe('httpClient', () => {
     setTokenProvider(null);
     setAuthRefreshHandler(null);
     setUnauthorizedHandler(null);
-    setApiBaseUrl('https://api.test.com');
     setLocale('en');
-  });
-
-  // ── API Base URL ───────────────────────────────────────────────────────────
-
-  describe('setApiBaseUrl / getApiBaseUrl', () => {
-    it('returns the initial base URL', () => {
-      expect(getApiBaseUrl()).toBe('https://api.test.com');
-    });
-
-    it('updates the runtime base URL', () => {
-      setApiBaseUrl('https://new-api.test.com');
-
-      expect(getApiBaseUrl()).toBe('https://new-api.test.com');
-    });
-
-    it('trims whitespace from URL', () => {
-      setApiBaseUrl('  https://trimmed.test.com  ');
-
-      expect(getApiBaseUrl()).toBe('https://trimmed.test.com');
-    });
-
-    it('falls back to default when given empty string', () => {
-      setApiBaseUrl('');
-
-      expect(getApiBaseUrl()).toBe('https://api.test.com');
-    });
-
-    it('falls back to default when given whitespace-only string', () => {
-      setApiBaseUrl('   ');
-
-      expect(getApiBaseUrl()).toBe('https://api.test.com');
-    });
   });
 
   // ── Locale ─────────────────────────────────────────────────────────────────
@@ -173,12 +137,10 @@ describe('httpClient', () => {
       expect(headers.get('X-Request-Id')).toBe('mock-request-id');
     });
 
-    it('sets baseURL from runtime API base URL', async () => {
-      setApiBaseUrl('https://runtime.test.com');
-
+    it('sets baseURL from the build-resolved API base URL', async () => {
       const config = await captureRequestConfig();
 
-      expect(config.baseURL).toBe('https://runtime.test.com');
+      expect(config.baseURL).toBe('https://api.test.com');
     });
   });
 

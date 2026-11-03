@@ -9,9 +9,7 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "APP_VARIANT": "development",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "staging",
-        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:3000"
+        "APP_VARIANT": "development"
       }
     },
     "preview": {
@@ -19,7 +17,6 @@
       "channel": "preview",
       "env": {
         "APP_VARIANT": "preview",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "staging",
         "ENTRY_FILE": "node_modules/expo-router/entry.js"
       }
     },
@@ -27,8 +24,7 @@
       "extends": "production",
       "channel": "internal",
       "env": {
-        "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "staging"
+        "APP_VARIANT": "production"
       }
     },
     "production": {
@@ -36,7 +32,6 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_ENVIRONMENT": "production",
         "EXPO_PUBLIC_PLAUSIBLE_DOMAIN": "musaium.com",
         "ENTRY_FILE": "node_modules/expo-router/entry.js"
       },
