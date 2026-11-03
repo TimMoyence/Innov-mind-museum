@@ -24,8 +24,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATI
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
   let repo: TypeOrmUserMemoryRepository;
 

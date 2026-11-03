@@ -35,8 +35,6 @@ const describeE2E = shouldRunE2E ? describe : describe.skip;
  * covers every data path the worker would exercise.
  */
 describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

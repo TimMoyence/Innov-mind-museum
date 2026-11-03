@@ -4,8 +4,6 @@ import {
   type StartedPostgresTestContainer,
 } from 'tests/helpers/e2e/postgres-testcontainer';
 
-jest.setTimeout(180_000);
-
 /**
  * Test utility: handle for an integration test environment.
  * Wraps a per-Jest-worker Postgres testcontainer with a TypeORM DataSource

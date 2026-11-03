@@ -6,8 +6,6 @@ const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
 describeE2E('chaos: LLM provider failures', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
   let stub: StubLLMOrchestrator;
 

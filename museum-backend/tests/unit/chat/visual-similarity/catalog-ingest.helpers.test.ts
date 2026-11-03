@@ -282,7 +282,7 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
       global.fetch = fetchSpy;
 
       await expect(
-        helpers.downloadThumbnail('https://upload.wikimedia.org/big.jpg', 1024 * 1024),
+        helpers.downloadThumbnail('https://thumbs.example.org/big.jpg', 1024 * 1024),
       ).rejects.toThrow();
     });
   });

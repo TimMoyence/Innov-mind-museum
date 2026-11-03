@@ -7,8 +7,6 @@ const describeE2E = shouldRunE2E ? describe : describe.skip;
 const REFRESH_LIMIT_PER_MIN = 30;
 
 describeE2E('auth /refresh rate-limit e2e (F1 contract)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

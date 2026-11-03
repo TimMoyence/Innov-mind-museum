@@ -17,8 +17,6 @@ const shouldRun = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION 
 const describeE2E = shouldRun ? describe : describe.skip;
 
 describeE2E('PATCH /auth/tts-voice (Spec C T2.4)', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {

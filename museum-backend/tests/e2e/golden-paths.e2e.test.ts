@@ -16,8 +16,6 @@ const describeE2E = shouldRunE2E ? describe : describe.skip;
 describeE2E(
   'golden path e2e flows (HTTP/auth/persistence pipeline — LLM stubbed; quality in tests/ai)',
   () => {
-    jest.setTimeout(180_000);
-
     let harness: E2EHarness;
 
     let isCreateSessionResponse: (value: unknown) => boolean;

@@ -35,8 +35,6 @@ async function promoteToAdmin(
  *   3. Audit-log data integrity — role-change action is logged
  * ════════════════════════════════════════════════════════════════════════ */
 describeE2E('golden path 8 — admin analytics & data integrity', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {
@@ -192,8 +190,6 @@ describeE2E('golden path 8 — admin analytics & data integrity', () => {
  *   7. User sees updated status on their ticket
  * ════════════════════════════════════════════════════════════════════════ */
 describeE2E('golden path 9 — support ticket lifecycle', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {
@@ -374,8 +370,6 @@ describeE2E('golden path 9 — support ticket lifecycle', () => {
  *   7. Museum data integrity verified across operations
  * ════════════════════════════════════════════════════════════════════════ */
 describeE2E('golden path 10 — museum management', () => {
-  jest.setTimeout(180_000);
-
   let harness: E2EHarness;
 
   beforeAll(async () => {
