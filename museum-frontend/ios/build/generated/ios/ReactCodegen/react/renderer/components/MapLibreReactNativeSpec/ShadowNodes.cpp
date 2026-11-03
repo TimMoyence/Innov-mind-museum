@@ -22,6 +22,7 @@ extern const char MLRNAndroidTextureMapViewComponentName[] = "MLRNAndroidTexture
 extern const char MLRNMapViewComponentName[] = "MLRNMapView";
 extern const char MLRNGeoJSONSourceComponentName[] = "MLRNGeoJSONSource";
 extern const char MLRNImageSourceComponentName[] = "MLRNImageSource";
+extern const char MLRNRasterDEMSourceComponentName[] = "MLRNRasterDEMSource";
 extern const char MLRNRasterSourceComponentName[] = "MLRNRasterSource";
 extern const char MLRNVectorSourceComponentName[] = "MLRNVectorSource";
 extern const char MLRNNativeUserLocationComponentName[] = "MLRNNativeUserLocation";

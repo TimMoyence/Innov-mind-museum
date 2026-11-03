@@ -1,0 +1,6 @@
+module react_nativemodule_mutationobserver {
+  umbrella header "React-mutationobservernativemodule-umbrella.h"
+
+  export *
+  module * { export * }
+}

@@ -202,6 +202,8 @@
 #import "react/renderer/observers/intersection/IntersectionObserver.h"
 #import "react/renderer/observers/intersection/IntersectionObserverManager.h"
 #import "react/renderer/observers/intersection/IntersectionObserverState.h"
+#import "react/renderer/observers/mutation/MutationObserver.h"
+#import "react/renderer/observers/mutation/MutationObserverManager.h"
 #import "react/renderer/scheduler/InspectorData.h"
 #import "react/renderer/scheduler/Scheduler.h"
 #import "react/renderer/scheduler/SchedulerDelegate.h"

@@ -3,6 +3,7 @@
 import { useRef, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { Map, Marker } from 'maplibre-gl';
+import { OFFLINE_MAP_STYLE_PATH } from '@musaium/shared/map';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const museums: [number, number][] = [
@@ -46,7 +47,7 @@ export default function DemoMap() {
     try {
       map = new Map({
         container: mapRef.current,
-        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        style: OFFLINE_MAP_STYLE_PATH,
         center: [2.3376, 48.862],
         zoom: 12.5,
         // Allow drag/pan for tactile feel, but lock zoom & rotate to avoid scroll hijack
@@ -68,7 +69,7 @@ export default function DemoMap() {
     // TD-MGL-02 — surface maplibre-gl tile / style / network errors to Sentry
     // instead of swallowing them silently in the console.
     map.on('error', (e) => {
-      Sentry.captureException(e.error ?? new Error('maplibre-gl error (no .error payload)'));
+      Sentry.captureException(e.error);
     });
 
     map.on('load', () => {

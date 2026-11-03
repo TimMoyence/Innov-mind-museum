@@ -3,8 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-version = "0.83.6"
-source = { :git => 'https://github.com/facebook/react-native.git' }
+version = "0.83.10"
+source = { :git => 'https://github.com/react/react-native.git' }
 if version == '1000.0.0'
   # This is an unpublished version, use the latest commit hash of the react-native repo, which we’re presumably in.
   source[:commit] = `git rev-parse HEAD`.strip if system("git rev-parse --git-dir > /dev/null 2>&1")

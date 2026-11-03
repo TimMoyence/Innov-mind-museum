@@ -128,6 +128,17 @@ using MLRNImageSourceShadowNode = ConcreteViewShadowNode<
     MLRNImageSourceEventEmitter,
     MLRNImageSourceState>;
 
+JSI_EXPORT extern const char MLRNRasterDEMSourceComponentName[];
+
+/*
+ * `ShadowNode` for <MLRNRasterDEMSource> component.
+ */
+using MLRNRasterDEMSourceShadowNode = ConcreteViewShadowNode<
+    MLRNRasterDEMSourceComponentName,
+    MLRNRasterDEMSourceProps,
+    MLRNRasterDEMSourceEventEmitter,
+    MLRNRasterDEMSourceState>;
+
 JSI_EXPORT extern const char MLRNRasterSourceComponentName[];
 
 /*

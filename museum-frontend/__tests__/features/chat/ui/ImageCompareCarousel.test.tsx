@@ -167,11 +167,11 @@ describe('ImageCompareCarousel (T8.4)', () => {
     const matches = [
       makeCompareMatch({
         qid: 'Q1',
-        facts: makeArtworkFacts({ qid: 'Q1', title: 'A' }),
+        facts: makeArtworkFacts({ qid: 'Q1', title: 'A', artist: 'Bobbie Nienow' }),
       }),
       makeCompareMatch({
         qid: 'Q2',
-        facts: makeArtworkFacts({ qid: 'Q2', title: 'B' }),
+        facts: makeArtworkFacts({ qid: 'Q2', title: 'B', artist: 'Ben Crooks DDS' }),
       }),
     ];
 

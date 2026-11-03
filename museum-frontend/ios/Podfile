@@ -145,8 +145,13 @@ target 'Musaium' do
     # inherit the fix automatically — no maintenance when deps change.
     # Seen 2026-05-14 (Xcode 26.5 / macOS 26.4.1). Remove only after
     # Apple/CocoaPods publish a confirmed fix for the wholemodule race.
+    minimum_ios = podfile_properties['ios.deploymentTarget'] || '15.1'
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
+        pod_target = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if pod_target && Gem::Version.new(pod_target) < Gem::Version.new(minimum_ios)
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = minimum_ios
+        end
         next unless config.name == 'Debug'
         config.build_settings['SWIFT_COMPILATION_MODE'] = 'singlefile'
       end

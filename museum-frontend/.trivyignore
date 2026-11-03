@@ -1,0 +1,10 @@
+# Accepté par Tim le 2026-11-03. image-size 1.2.1 vient de metro@0.83.5 (build
+# seulement) et ne mesure que nos assets du dépôt ; la 2.x change d'API et casse
+# metro. À retirer quand expo publie un metro avec image-size >= 2.0.3.
+CVE-2025-71329
+CVE-2025-71330
+
+# Accepté par Tim le 2026-11-03. decode-uri-component 0.2.2 vient de
+# query-string@7 (@react-navigation/core) et ne décode que les deep links reçus
+# sur l'appareil de l'utilisateur : aucun serveur exposé. La 0.5.1 est ESM-only.
+CVE-2026-118664

@@ -13,6 +13,9 @@
 #import "react/debug/flags.h"
 #import "react/debug/react_native_assert.h"
 #import "react/debug/react_native_expect.h"
+#import "react/debug/redbox/AnsiParser.h"
+#import "react/debug/redbox/JscSafeUrl.h"
+#import "react/debug/redbox/RedBoxErrorParser.h"
 
 FOUNDATION_EXPORT double react_debugVersionNumber;
 FOUNDATION_EXPORT const unsigned char react_debugVersionString[];

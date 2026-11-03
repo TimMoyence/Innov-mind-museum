@@ -29,6 +29,7 @@
 		@"MLRNNativeUserLocation": NSClassFromString(@"MLRNNativeUserLocationComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNPointAnnotation": NSClassFromString(@"MLRNPointAnnotationComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNRasterSource": NSClassFromString(@"MLRNRasterSourceComponentView"), // @maplibre/maplibre-react-native
+		@"MLRNRasterDEMSource": NSClassFromString(@"MLRNRasterDEMSourceComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNGeoJSONSource": NSClassFromString(@"MLRNGeoJSONSourceComponentView"), // @maplibre/maplibre-react-native
 		@"MLRNVectorSource": NSClassFromString(@"MLRNVectorSourceComponentView"), // @maplibre/maplibre-react-native
 		@"RNGestureHandlerButton": NSClassFromString(@"RNGestureHandlerButtonComponentView"), // react-native-gesture-handler
