@@ -1,6 +1,6 @@
 {
   "name": "React-RCTFabric",
-  "version": "0.83.6",
+  "version": "0.83.10",
   "summary": "RCTFabric for React Native.",
   "homepage": "https://reactnative.dev/",
   "license": "MIT",
@@ -9,8 +9,8 @@
     "ios": "15.1"
   },
   "source": {
-    "git": "https://github.com/facebook/react-native.git",
-    "tag": "v0.83.6"
+    "git": "https://github.com/react/react-native.git",
+    "tag": "v0.83.10"
   },
   "source_files": "Fabric/**/*.{c,h,m,mm,S,cpp}",
   "compiler_flags": "-DRCT_NEW_ARCH_ENABLED=1",

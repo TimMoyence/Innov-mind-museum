@@ -35,6 +35,8 @@ using MLRNGeoJSONSourceState = StateData;
 
 using MLRNImageSourceState = StateData;
 
+using MLRNRasterDEMSourceState = StateData;
+
 using MLRNRasterSourceState = StateData;
 
 using MLRNVectorSourceState = StateData;

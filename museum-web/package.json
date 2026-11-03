@@ -26,10 +26,10 @@
   },
   "dependencies": {
     "@musaium/shared": "file:../packages/musaium-shared",
-    "@sentry/nextjs": "^10.49.0",
-    "maplibre-gl": "^5.23.0",
+    "@sentry/nextjs": "^10.75.2",
+    "maplibre-gl": "^6.4.1",
     "motion": "^12.39.0",
-    "next": "^15.5.18",
+    "next": "^15.5.24",
     "next-plausible": "^3.12.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
@@ -71,12 +71,16 @@
   },
   "pnpm": {
     "overrides": {
-      "brace-expansion@1": ">=1.1.12 <2",
-      "brace-expansion@2": "<6",
+      "brace-expansion@1": ">=1.1.21 <2",
+      "brace-expansion@2": ">=5.0.12 <6",
+      "brace-expansion@5": ">=5.0.12 <6",
       "protocol-buffers-schema": ">=3.6.1",
-      "postcss": ">=8.5.10",
-      "fast-uri": ">=3.1.2",
-      "source-map-js": ">=1.2.2"
+      "postcss": ">=8.5.18 <9",
+      "fast-uri": ">=3.1.9 <4",
+      "source-map-js": ">=1.2.2",
+      "browserslist": ">=4.28.7 <5",
+      "nanoid@3": ">=3.3.18 <4",
+      "sharp": ">=0.35.5 <0.36"
     }
   }
 }

@@ -574,6 +574,44 @@ class MLRNImagesProps final : public ViewProps {
   
 };
 
+enum class MLRNLayerLayerType { Background, Circle, ColorRelief, Fill, FillExtrusion, Heatmap, Hillshade, Line, Raster, Symbol };
+
+static inline void fromRawValue(const PropsParserContext& context, const RawValue &value, MLRNLayerLayerType &result) {
+  auto string = (std::string)value;
+  if (string == "background") { result = MLRNLayerLayerType::Background; return; }
+  if (string == "circle") { result = MLRNLayerLayerType::Circle; return; }
+  if (string == "color-relief") { result = MLRNLayerLayerType::ColorRelief; return; }
+  if (string == "fill") { result = MLRNLayerLayerType::Fill; return; }
+  if (string == "fill-extrusion") { result = MLRNLayerLayerType::FillExtrusion; return; }
+  if (string == "heatmap") { result = MLRNLayerLayerType::Heatmap; return; }
+  if (string == "hillshade") { result = MLRNLayerLayerType::Hillshade; return; }
+  if (string == "line") { result = MLRNLayerLayerType::Line; return; }
+  if (string == "raster") { result = MLRNLayerLayerType::Raster; return; }
+  if (string == "symbol") { result = MLRNLayerLayerType::Symbol; return; }
+  abort();
+}
+
+static inline std::string toString(const MLRNLayerLayerType &value) {
+  switch (value) {
+    case MLRNLayerLayerType::Background: return "background";
+    case MLRNLayerLayerType::Circle: return "circle";
+    case MLRNLayerLayerType::ColorRelief: return "color-relief";
+    case MLRNLayerLayerType::Fill: return "fill";
+    case MLRNLayerLayerType::FillExtrusion: return "fill-extrusion";
+    case MLRNLayerLayerType::Heatmap: return "heatmap";
+    case MLRNLayerLayerType::Hillshade: return "hillshade";
+    case MLRNLayerLayerType::Line: return "line";
+    case MLRNLayerLayerType::Raster: return "raster";
+    case MLRNLayerLayerType::Symbol: return "symbol";
+  }
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+static inline folly::dynamic toDynamic(const MLRNLayerLayerType &value) {
+  return toString(value);
+}
+#endif
+
 class MLRNLayerProps final : public ViewProps {
  public:
   MLRNLayerProps() = default;
@@ -582,7 +620,7 @@ class MLRNLayerProps final : public ViewProps {
 #pragma mark - Props
 
   std::string id{};
-  std::string layerType{};
+  MLRNLayerLayerType layerType{MLRNLayerLayerType::Background};
   std::string source{};
   std::string sourceLayer{};
   std::string afterId{};
@@ -1295,6 +1333,53 @@ class MLRNImageSourceProps final : public ViewProps {
   
 };
 
+enum class MLRNRasterDEMSourceEncoding { Mapbox, Terrarium };
+
+static inline void fromRawValue(const PropsParserContext& context, const RawValue &value, MLRNRasterDEMSourceEncoding &result) {
+  auto string = (std::string)value;
+  if (string == "mapbox") { result = MLRNRasterDEMSourceEncoding::Mapbox; return; }
+  if (string == "terrarium") { result = MLRNRasterDEMSourceEncoding::Terrarium; return; }
+  abort();
+}
+
+static inline std::string toString(const MLRNRasterDEMSourceEncoding &value) {
+  switch (value) {
+    case MLRNRasterDEMSourceEncoding::Mapbox: return "mapbox";
+    case MLRNRasterDEMSourceEncoding::Terrarium: return "terrarium";
+  }
+}
+
+#ifdef RN_SERIALIZABLE_STATE
+static inline folly::dynamic toDynamic(const MLRNRasterDEMSourceEncoding &value) {
+  return toString(value);
+}
+#endif
+
+class MLRNRasterDEMSourceProps final : public ViewProps {
+ public:
+  MLRNRasterDEMSourceProps() = default;
+  MLRNRasterDEMSourceProps(const PropsParserContext& context, const MLRNRasterDEMSourceProps &sourceProps, const RawProps &rawProps);
+
+#pragma mark - Props
+
+  std::string id{};
+  std::string url{};
+  std::vector<std::string> tiles{};
+  int tileSize{512};
+  int minzoom{-1};
+  int maxzoom{-1};
+  std::string attribution{};
+  MLRNRasterDEMSourceEncoding encoding{MLRNRasterDEMSourceEncoding::Mapbox};
+
+  #ifdef RN_SERIALIZABLE_STATE
+  ComponentName getDiffPropsImplementationTarget() const override;
+
+  folly::dynamic getDiffProps(const Props* prevProps) const override;
+  #endif
+
+  
+};
+
 enum class MLRNRasterSourceScheme { Xyz, Tms };
 
 static inline void fromRawValue(const PropsParserContext& context, const RawValue &value, MLRNRasterSourceScheme &result) {
@@ -1327,11 +1412,11 @@ class MLRNRasterSourceProps final : public ViewProps {
   std::string id{};
   std::string url{};
   std::vector<std::string> tiles{};
+  int tileSize{512};
   int minzoom{-1};
   int maxzoom{-1};
-  MLRNRasterSourceScheme scheme{MLRNRasterSourceScheme::Xyz};
   std::string attribution{};
-  int tileSize{512};
+  MLRNRasterSourceScheme scheme{MLRNRasterSourceScheme::Xyz};
 
   #ifdef RN_SERIALIZABLE_STATE
   ComponentName getDiffPropsImplementationTarget() const override;

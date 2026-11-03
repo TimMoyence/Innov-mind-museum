@@ -351,6 +351,13 @@ class MLRNImageSourceEventEmitter : public ViewEventEmitter {
   
   
 };
+class MLRNRasterDEMSourceEventEmitter : public ViewEventEmitter {
+ public:
+  using ViewEventEmitter::ViewEventEmitter;
+
+  
+  
+};
 class MLRNRasterSourceEventEmitter : public ViewEventEmitter {
  public:
   using ViewEventEmitter::ViewEventEmitter;

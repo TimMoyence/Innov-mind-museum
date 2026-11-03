@@ -73,6 +73,10 @@ RCT_EXTERN inline void RCTMLRNPointAnnotationHandleCommand(
 
 @end
 
+@protocol RCTMLRNRasterDEMSourceViewProtocol <NSObject>
+
+@end
+
 @protocol RCTMLRNRasterSourceViewProtocol <NSObject>
 
 @end

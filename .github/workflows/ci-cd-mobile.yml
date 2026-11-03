@@ -111,8 +111,18 @@ jobs:
           corepack enable && pnpm install --frozen-lockfile
           pnpm run openapi:validate
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
+      - name: Trivy dependency scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: museum-frontend
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          skip-dirs: museum-frontend/node_modules,museum-frontend/ios/Pods
+          trivyignores: museum-frontend/.trivyignore
 
       - name: Generate mobile SBOM (CycloneDX)
         continue-on-error: true

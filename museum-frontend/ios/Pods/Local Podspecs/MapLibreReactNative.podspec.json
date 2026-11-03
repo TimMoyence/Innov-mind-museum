@@ -1,6 +1,6 @@
 {
   "name": "MapLibreReactNative",
-  "version": "11.0.0",
+  "version": "11.3.6",
   "summary": "React Native library for creating maps with MapLibre Native for Android & iOS",
   "homepage": "https://github.com/maplibre/maplibre-react-native#readme",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/maplibre/maplibre-react-native.git",
-    "tag": "11.0.0"
+    "tag": "11.3.6"
   },
   "source_files": "ios/**/*.{h,m,mm,cpp}",
   "private_header_files": "ios/**/*.h",

@@ -26,6 +26,7 @@ registry->add(concreteComponentDescriptorProvider<MLRNAndroidTextureMapViewCompo
 registry->add(concreteComponentDescriptorProvider<MLRNMapViewComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<MLRNGeoJSONSourceComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<MLRNImageSourceComponentDescriptor>());
+registry->add(concreteComponentDescriptorProvider<MLRNRasterDEMSourceComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<MLRNRasterSourceComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<MLRNVectorSourceComponentDescriptor>());
 registry->add(concreteComponentDescriptorProvider<MLRNNativeUserLocationComponentDescriptor>());

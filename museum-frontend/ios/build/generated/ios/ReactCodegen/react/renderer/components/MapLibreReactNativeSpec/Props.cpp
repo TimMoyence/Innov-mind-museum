@@ -238,7 +238,7 @@ MLRNLayerProps::MLRNLayerProps(
     const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
 
     id(convertRawProp(context, rawProps, "id", sourceProps.id, {})),
-    layerType(convertRawProp(context, rawProps, "layerType", sourceProps.layerType, {})),
+    layerType(convertRawProp(context, rawProps, "layerType", sourceProps.layerType, {MLRNLayerLayerType::Background})),
     source(convertRawProp(context, rawProps, "source", sourceProps.source, {})),
     sourceLayer(convertRawProp(context, rawProps, "sourceLayer", sourceProps.sourceLayer, {})),
     afterId(convertRawProp(context, rawProps, "afterId", sourceProps.afterId, {})),
@@ -270,7 +270,7 @@ folly::dynamic MLRNLayerProps::getDiffProps(
   }
     
   if (layerType != oldProps->layerType) {
-    result["layerType"] = layerType;
+    result["layerType"] = toDynamic(layerType);
   }
     
   if (source != oldProps->source) {
@@ -687,6 +687,70 @@ folly::dynamic MLRNImageSourceProps::getDiffProps(
   return result;
 }
 #endif
+MLRNRasterDEMSourceProps::MLRNRasterDEMSourceProps(
+    const PropsParserContext &context,
+    const MLRNRasterDEMSourceProps &sourceProps,
+    const RawProps &rawProps): ViewProps(context, sourceProps, rawProps),
+
+    id(convertRawProp(context, rawProps, "id", sourceProps.id, {})),
+    url(convertRawProp(context, rawProps, "url", sourceProps.url, {})),
+    tiles(convertRawProp(context, rawProps, "tiles", sourceProps.tiles, {})),
+    tileSize(convertRawProp(context, rawProps, "tileSize", sourceProps.tileSize, {512})),
+    minzoom(convertRawProp(context, rawProps, "minzoom", sourceProps.minzoom, {-1})),
+    maxzoom(convertRawProp(context, rawProps, "maxzoom", sourceProps.maxzoom, {-1})),
+    attribution(convertRawProp(context, rawProps, "attribution", sourceProps.attribution, {})),
+    encoding(convertRawProp(context, rawProps, "encoding", sourceProps.encoding, {MLRNRasterDEMSourceEncoding::Mapbox})) {}
+    
+#ifdef RN_SERIALIZABLE_STATE
+ComponentName MLRNRasterDEMSourceProps::getDiffPropsImplementationTarget() const {
+  return "MLRNRasterDEMSource";
+}
+
+folly::dynamic MLRNRasterDEMSourceProps::getDiffProps(
+    const Props* prevProps) const {
+  static const auto defaultProps = MLRNRasterDEMSourceProps();
+  const MLRNRasterDEMSourceProps* oldProps = prevProps == nullptr
+      ? &defaultProps
+      : static_cast<const MLRNRasterDEMSourceProps*>(prevProps);
+  if (this == oldProps) {
+    return folly::dynamic::object();
+  }
+  folly::dynamic result = HostPlatformViewProps::getDiffProps(prevProps);
+  
+  if (id != oldProps->id) {
+    result["id"] = id;
+  }
+    
+  if (url != oldProps->url) {
+    result["url"] = url;
+  }
+    
+  if (tiles != oldProps->tiles) {
+    result["tiles"] = toDynamic(tiles);
+  }
+    
+  if (tileSize != oldProps->tileSize) {
+    result["tileSize"] = tileSize;
+  }
+    
+  if (minzoom != oldProps->minzoom) {
+    result["minzoom"] = minzoom;
+  }
+    
+  if (maxzoom != oldProps->maxzoom) {
+    result["maxzoom"] = maxzoom;
+  }
+    
+  if (attribution != oldProps->attribution) {
+    result["attribution"] = attribution;
+  }
+    
+  if (encoding != oldProps->encoding) {
+    result["encoding"] = toDynamic(encoding);
+  }
+  return result;
+}
+#endif
 MLRNRasterSourceProps::MLRNRasterSourceProps(
     const PropsParserContext &context,
     const MLRNRasterSourceProps &sourceProps,
@@ -695,11 +759,11 @@ MLRNRasterSourceProps::MLRNRasterSourceProps(
     id(convertRawProp(context, rawProps, "id", sourceProps.id, {})),
     url(convertRawProp(context, rawProps, "url", sourceProps.url, {})),
     tiles(convertRawProp(context, rawProps, "tiles", sourceProps.tiles, {})),
+    tileSize(convertRawProp(context, rawProps, "tileSize", sourceProps.tileSize, {512})),
     minzoom(convertRawProp(context, rawProps, "minzoom", sourceProps.minzoom, {-1})),
     maxzoom(convertRawProp(context, rawProps, "maxzoom", sourceProps.maxzoom, {-1})),
-    scheme(convertRawProp(context, rawProps, "scheme", sourceProps.scheme, {MLRNRasterSourceScheme::Xyz})),
     attribution(convertRawProp(context, rawProps, "attribution", sourceProps.attribution, {})),
-    tileSize(convertRawProp(context, rawProps, "tileSize", sourceProps.tileSize, {512})) {}
+    scheme(convertRawProp(context, rawProps, "scheme", sourceProps.scheme, {MLRNRasterSourceScheme::Xyz})) {}
     
 #ifdef RN_SERIALIZABLE_STATE
 ComponentName MLRNRasterSourceProps::getDiffPropsImplementationTarget() const {
@@ -729,6 +793,10 @@ folly::dynamic MLRNRasterSourceProps::getDiffProps(
     result["tiles"] = toDynamic(tiles);
   }
     
+  if (tileSize != oldProps->tileSize) {
+    result["tileSize"] = tileSize;
+  }
+    
   if (minzoom != oldProps->minzoom) {
     result["minzoom"] = minzoom;
   }
@@ -737,16 +805,12 @@ folly::dynamic MLRNRasterSourceProps::getDiffProps(
     result["maxzoom"] = maxzoom;
   }
     
-  if (scheme != oldProps->scheme) {
-    result["scheme"] = toDynamic(scheme);
-  }
-    
   if (attribution != oldProps->attribution) {
     result["attribution"] = attribution;
   }
     
-  if (tileSize != oldProps->tileSize) {
-    result["tileSize"] = tileSize;
+  if (scheme != oldProps->scheme) {
+    result["scheme"] = toDynamic(scheme);
   }
   return result;
 }
