@@ -33,7 +33,6 @@
     "off": "オフ",
     "enabled": "有効",
     "disabled": "無効",
-    "not_configured": "未設定",
     "or_continue_with": "または以下で続行",
     "settings": "設定"
   },
@@ -753,20 +752,6 @@
     "error_body": "録音を開始できませんでした。もう一度お試しください。",
     "playback_error_title": "再生エラー",
     "playback_error_body": "この録音を再生できません。"
-  },
-  "startupError": {
-    "badge": "起動時の設定エラー",
-    "title": "このビルドではアプリを起動できません。",
-    "build_context": "現在のビルドコンテキスト",
-    "build_variant": "ビルドバリアント",
-    "api_env": "API環境",
-    "resolved_url": "解決済みベースURL",
-    "staging_url": "ステージングURL",
-    "prod_url": "本番URL",
-    "how_to_fix": "修正方法",
-    "step1": "1. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_STAGING` を設定してください。",
-    "step2": "2. Expoプロジェクトに `EXPO_PUBLIC_API_BASE_URL_PROD` を設定してください。",
-    "step3": "3. 環境変数がEAS Buildで利用可能になった後、アプリを再ビルドしてください。"
   },
   "biometric": {
     "lock_title": "アプリがロックされています",

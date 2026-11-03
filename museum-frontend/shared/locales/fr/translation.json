@@ -33,7 +33,6 @@
     "off": "Désactivé",
     "enabled": "Activé",
     "disabled": "Désactivé",
-    "not_configured": "Non configuré",
     "or_continue_with": "ou continuer avec",
     "settings": "Réglages"
   },
@@ -753,20 +752,6 @@
     "error_body": "L'enregistrement n'a pas pu démarrer. Veuillez réessayer.",
     "playback_error_title": "Erreur de lecture",
     "playback_error_body": "Impossible de lire cet enregistrement."
-  },
-  "startupError": {
-    "badge": "Erreur de configuration au démarrage",
-    "title": "L'application ne peut pas démarrer avec ce build.",
-    "build_context": "Contexte de build actuel",
-    "build_variant": "Variante de build",
-    "api_env": "Environnement API",
-    "resolved_url": "URL de base résolue",
-    "staging_url": "URL de staging",
-    "prod_url": "URL de production",
-    "how_to_fix": "Comment corriger",
-    "step1": "1. Définissez `EXPO_PUBLIC_API_BASE_URL_STAGING` sur le projet Expo.",
-    "step2": "2. Définissez `EXPO_PUBLIC_API_BASE_URL_PROD` sur le projet Expo.",
-    "step3": "3. Reconstruisez l'application une fois les variables d'environnement disponibles pour EAS Build."
   },
   "biometric": {
     "lock_title": "Application verrouillée",

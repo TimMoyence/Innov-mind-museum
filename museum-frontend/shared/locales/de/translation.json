@@ -33,7 +33,6 @@
     "off": "Aus",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert",
-    "not_configured": "Nicht konfiguriert",
     "or_continue_with": "oder fortfahren mit",
     "settings": "Einstellungen"
   },
@@ -753,20 +752,6 @@
     "error_body": "Aufnahme konnte nicht gestartet werden. Bitte erneut versuchen.",
     "playback_error_title": "Wiedergabefehler",
     "playback_error_body": "Diese Aufnahme kann nicht abgespielt werden."
-  },
-  "startupError": {
-    "badge": "Startkonfigurationsfehler",
-    "title": "Die App kann mit diesem Build nicht gestartet werden.",
-    "build_context": "Aktueller Build-Kontext",
-    "build_variant": "Build-Variante",
-    "api_env": "API-Umgebung",
-    "resolved_url": "Aufgelöste Basis-URL",
-    "staging_url": "Staging-URL",
-    "prod_url": "Produktions-URL",
-    "how_to_fix": "So beheben Sie das Problem",
-    "step1": "1. Setzen Sie `EXPO_PUBLIC_API_BASE_URL_STAGING` im Expo-Projekt.",
-    "step2": "2. Setzen Sie `EXPO_PUBLIC_API_BASE_URL_PROD` im Expo-Projekt.",
-    "step3": "3. Erstellen Sie die App neu, nachdem die Umgebungsvariablen für EAS Build verfügbar sind."
   },
   "biometric": {
     "lock_title": "App gesperrt",

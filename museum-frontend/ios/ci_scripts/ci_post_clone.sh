@@ -3,6 +3,8 @@ set -e
 
 echo "=== ci_post_clone.sh ==="
 
+sh "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/ci_scripts/require-xcode.sh"
+
 # Navigate to frontend root
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 

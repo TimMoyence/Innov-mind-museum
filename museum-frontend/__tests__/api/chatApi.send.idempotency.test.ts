@@ -35,7 +35,6 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
 }));
 
 jest.mock('@/shared/infrastructure/httpClient', () => ({
-  getApiBaseUrl: () => 'https://api.test.com',
   getLocale: () => 'en-US',
 }));
 

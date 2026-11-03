@@ -33,7 +33,6 @@
     "off": "关闭",
     "enabled": "已启用",
     "disabled": "已禁用",
-    "not_configured": "未配置",
     "or_continue_with": "或通过以下方式继续",
     "settings": "设置"
   },
@@ -753,20 +752,6 @@
     "error_body": "无法开始录音，请重试。",
     "playback_error_title": "播放错误",
     "playback_error_body": "无法播放此录音。"
-  },
-  "startupError": {
-    "badge": "启动配置错误",
-    "title": "当前构建无法启动应用。",
-    "build_context": "当前构建上下文",
-    "build_variant": "构建变体",
-    "api_env": "API 环境",
-    "resolved_url": "解析后的基础 URL",
-    "staging_url": "预发布 URL",
-    "prod_url": "生产 URL",
-    "how_to_fix": "修复方法",
-    "step1": "1. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_STAGING`。",
-    "step2": "2. 在 Expo 项目中设置 `EXPO_PUBLIC_API_BASE_URL_PROD`。",
-    "step3": "3. 在环境变量对 EAS Build 可用后重新构建应用。"
   },
   "biometric": {
     "lock_title": "应用已锁定",

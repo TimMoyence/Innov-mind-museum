@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { Stack, useNavigationContainerRef } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -24,7 +24,7 @@ import { AuthProvider } from '@/features/auth/application/AuthContext';
 import { BiometricGate } from '@/features/auth/ui/BiometricGate';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKeywordsSync';
-import { applyRuntimeSettings, saveDefaultLocale } from '@/features/settings/runtimeSettings';
+import { saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import i18n from '@/shared/i18n/i18n';
 import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
 import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
@@ -39,12 +39,8 @@ import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { ThemeProvider, useTheme } from '@/shared/ui/ThemeContext';
 import { ConnectivityProvider } from '@/shared/infrastructure/connectivity/ConnectivityProvider';
 import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
-import {
-  getApiConfigurationSnapshot,
-  getStartupConfigurationError,
-} from '@/shared/infrastructure/apiConfig';
+import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
-import { StartupConfigurationErrorScreen } from '@/shared/ui/StartupConfigurationErrorScreen';
 import { initCertPinning } from '@/shared/infrastructure/cert-pinning-init';
 import { readEnvString } from '@/shared/lib/env';
 
@@ -69,7 +65,7 @@ installGlobalErrorHandler();
 // V1 launches ship un-pinned; flip `EXPO_PUBLIC_CERT_PINNING_ENABLED=true`
 // only after capturing real SPKI hashes (see ADR-031, CERT_ROTATION runbook).
 // Fire-and-forget: a slow kill-switch fetch must not block the React tree.
-void initCertPinning({ apiBaseUrl: getApiConfigurationSnapshot().resolvedBaseUrl })
+void initCertPinning({ apiBaseUrl: resolveInitialApiBaseUrl() })
   .then((outcome) => {
     logInitPhase('certPinning.resolved', outcome);
   })
@@ -113,49 +109,9 @@ function RootLayout() {
     }
   }, [ref]);
 
-  const startupConfiguration = useMemo(() => {
-    return {
-      error: getStartupConfigurationError(),
-      snapshot: getApiConfigurationSnapshot(),
-    };
-  }, []);
-  const [runtimeStartupError, setRuntimeStartupError] = useState<Error | null>(null);
-
   useEffect(() => {
-    if (startupConfiguration.error) {
-      return;
-    }
-
     setOnLanguageChange((lang) => void saveDefaultLocale(lang));
-
-    applyRuntimeSettings()
-      .then(() => {
-        logInitPhase('runtimeSettings.applied');
-      })
-      .catch((error: unknown) => {
-        setRuntimeStartupError(
-          error instanceof Error ? error : new Error('Failed to apply runtime settings'),
-        );
-      });
-  }, [startupConfiguration.error]);
-
-  if (startupConfiguration.error) {
-    return (
-      <StartupConfigurationErrorScreen
-        error={startupConfiguration.error}
-        snapshot={startupConfiguration.snapshot}
-      />
-    );
-  }
-
-  if (runtimeStartupError) {
-    return (
-      <StartupConfigurationErrorScreen
-        error={runtimeStartupError}
-        snapshot={startupConfiguration.snapshot}
-      />
-    );
-  }
+  }, []);
 
   return (
     // TD-RNGH-01 — root <GestureHandlerRootView> wrapper required by

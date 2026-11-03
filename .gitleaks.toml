@@ -7,7 +7,7 @@
 # Strategy:
 #   1. Inherit the upstream default ruleset (covers ~160 secret patterns
 #      — AWS, GCP, Stripe, Slack, Twilio, JWT, generic API keys, etc.).
-#   2. Add Musaium-specific rules for provider tokens that appear in .env.local.example.
+#   2. Add Musaium-specific rules for provider tokens that appear in .env.example.
 #   3. Allowlist known-safe example tokens + fixture files that intentionally
 #      embed fake credentials (test vectors).
 #
