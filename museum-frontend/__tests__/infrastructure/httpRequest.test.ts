@@ -39,6 +39,16 @@ describe('httpRequest', () => {
     expect(headers['Content-Type']).toBeUndefined();
   });
 
+  it('forwards a per-request timeout to the HTTP client', async () => {
+    mockRequest.mockResolvedValue({ data: 'ok' });
+
+    await httpRequest('/slow', { timeoutMs: 45_000 });
+    await httpRequest('/fast');
+
+    expect((mockRequest.mock.calls[0][0] as Record<string, unknown>).timeout).toBe(45_000);
+    expect(mockRequest.mock.calls[1][0]).not.toHaveProperty('timeout');
+  });
+
   it('defaults to GET method', async () => {
     mockRequest.mockResolvedValue({ data: 'ok' });
 

@@ -7,7 +7,7 @@ import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evalu
 
 class SilentOrchestrator implements ChatOrchestrator {
   async generate(_input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return { text: 'Réponse du guide.', metadata: {} };
+    return { text: 'Réponse du guide.', metadata: {}, degraded: false };
   }
 }
 

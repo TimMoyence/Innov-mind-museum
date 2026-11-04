@@ -29,6 +29,7 @@ interface RequestOptions {
    * PATTERNS.md:295.
    */
   signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 const isFormData = (body: unknown): body is FormData => {
@@ -102,7 +103,7 @@ const maybeGzipBody = (body: unknown): GzipDecision | null => {
  */
 export const httpRequest = async <T>(
   url: string,
-  { requiresAuth = true, headers, body, method, responseType, signal }: RequestOptions = {},
+  { requiresAuth = true, headers, body, method, responseType, signal, timeoutMs }: RequestOptions = {},
 ): Promise<T> => {
   const finalHeaders: HeadersRecord = {
     ...(headers ?? {}),
@@ -131,6 +132,7 @@ export const httpRequest = async <T>(
       requiresAuth,
       ...(responseType ? { responseType } : {}),
       ...(signal ? { signal } : {}),
+      ...(timeoutMs ? { timeout: timeoutMs } : {}),
     };
 
     const response = await httpClient.request<T>(requestConfig);

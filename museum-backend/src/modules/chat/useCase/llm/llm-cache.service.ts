@@ -10,7 +10,7 @@ import type {
 } from './llm-cache.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-const KEY_VERSION = 'v3';
+const KEY_VERSION = 'v4';
 const KEY_PREFIX = 'llm';
 
 const TTL_GENERIC_S = 7 * 24 * 60 * 60;
@@ -109,7 +109,7 @@ export class LlmCacheServiceImpl implements LlmCacheService {
   }
 
   /**
-   * Key: `llm:v3:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
+   * Key: `llm:v4:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
    * museumId BEFORE userId for `delByPrefix` invalidateMuseum pattern (inverts
    * spec's conceptual order). F1 (2026-05-19) — canonical input now folds in
    * `voiceMode` + `audioDescriptionMode` (truthy-only, mirror imageContentHash

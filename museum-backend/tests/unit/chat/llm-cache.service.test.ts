@@ -219,20 +219,18 @@ describe('LlmCacheServiceImpl', () => {
       await service.store(baseInput, { text: 'x' });
 
       const key = String(cache.set.mock.calls[0][0]);
-      expect(key).toBe('llm:v3:generic:none:anon:6c3364ef2dd9937a4a72638ab32b67b8');
+      expect(key).toBe('llm:v4:generic:none:anon:6c3364ef2dd9937a4a72638ab32b67b8');
     });
 
-    it('D — buildKey output contains the `:v3:` version segment', async () => {
+    it('D — buildKey output contains the `:v4:` version segment', async () => {
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
 
       await service.store(baseInput, { text: 'x' });
 
       const key = String(cache.set.mock.calls[0][0]);
-      expect(key).toContain(':v3:');
-      // v2 namespace is polluted by pre-fix cohorts (FE used to resolve `low`
-      // for every metered connection) — the bump isolates it (US-12.2).
-      expect(key).not.toContain(':v2:');
+      expect(key).toContain(':v4:');
+      expect(key).not.toContain(':v3:');
     });
   });
 

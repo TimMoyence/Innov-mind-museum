@@ -33,6 +33,7 @@ jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
 
 import { GlobalOfflineBannerHost } from '@/shared/infrastructure/connectivity/GlobalOfflineBannerHost';
 import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
+import { OfflineQueueProvider } from '@/features/chat/application/useOfflineQueue';
 import { useDataModePreferenceStore } from '@/features/settings/dataModeStore';
 
 describe('GlobalOfflineBannerHost — offline-only (D-R1, INV-12/INV-13)', () => {
@@ -50,19 +51,19 @@ describe('GlobalOfflineBannerHost — offline-only (D-R1, INV-12/INV-13)', () =>
 
   it('renders the offline banner (offline.title) when isOnline === false', () => {
     mockIsOnline = false;
-    const { getByText } = render(<GlobalOfflineBannerHost />);
+    const { getByText } = render(<GlobalOfflineBannerHost />, { wrapper: OfflineQueueProvider });
     expect(getByText('offline.title')).toBeTruthy();
   });
 
   it('exposes the offline-banner testID for the Maestro flow when offline (INV-13)', () => {
     mockIsOnline = false;
-    const { getByTestId } = render(<GlobalOfflineBannerHost />);
+    const { getByTestId } = render(<GlobalOfflineBannerHost />, { wrapper: OfflineQueueProvider });
     expect(getByTestId('offline-banner')).toBeTruthy();
   });
 
   it('renders null when online', () => {
     mockIsOnline = true;
-    const { toJSON } = render(<GlobalOfflineBannerHost />);
+    const { toJSON } = render(<GlobalOfflineBannerHost />, { wrapper: OfflineQueueProvider });
     expect(toJSON()).toBeNull();
   });
 
@@ -73,6 +74,7 @@ describe('GlobalOfflineBannerHost — offline-only (D-R1, INV-12/INV-13)', () =>
       <DataModeProvider>
         <GlobalOfflineBannerHost />
       </DataModeProvider>,
+      { wrapper: OfflineQueueProvider },
     );
     expect(toJSON()).toBeNull();
   });

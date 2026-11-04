@@ -342,7 +342,7 @@ describe('ChatMediaService', () => {
   // across {audioDescriptionMode × voiceMode} × {global + user-scoped})
   // tested the now-removed `buildFeedbackInvalidationKeys` helper, which
   // emitted `chat:llm:*` keys that have NO writers in the production cache
-  // (real writes go through `LlmCacheServiceImpl` under `llm:v3:*` since the
+  // (real writes go through `LlmCacheServiceImpl` under `llm:v4:*` since the
   // 2026-06-12 lowDataMode KEY_VERSION bump ; `llm:v2:*` at the time). The
   // cartesian targeted 0 real entries.
   //

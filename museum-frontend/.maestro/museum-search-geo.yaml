@@ -85,7 +85,13 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 # Phase 3: Clear the query → the full nearby list reloads with cards.
 # ──────────────────────────────────────────────
+# The empty-result re-render drops the input focus: refocus it so the erase
+# reaches the field.
+- tapOn:
+    text: "Bordeaux"
 - eraseText
+- assertNotVisible:
+    text: "Bordeaux"
 # No hideKeyboard (Android BACK pops the tab — see Phase 2). After clearing the
 # query the nearby list (geo pinned to Bordeaux above) reloads its cards; the
 # first card sits above the keyboard.

@@ -21,20 +21,19 @@ appId: com.musaium.mobile.preview
 # (xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg); backend
 # reachable through the shaped proxy with a working vision LLM provider.
 
-# ── Force low-data mode (compression path) ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
-- waitForAnimationToEnd
-
-# ── Reach the chat composer ──
+# ── Reach the chat composer, then turn data saving on (compression path) ──
 - runFlow:
     file: helpers/chat-entry.yaml
+- runFlow:
+    file: helpers/data-saving-mode.yaml
+    env:
+      MODE: "Économie activée|Saving enabled"
 
-# Low-data banner lights (compression active under low-data).
+# Low-data badge lights (compression active under low-data).
 - extendedWaitUntil:
     visible:
-      text: "Mode économie de données actif|Data saving mode active"
+      id: "low-data-badge"
     timeout: 15000
-    optional: true
 
 # ── Attach a gallery photo (system picker) ──
 - tapOn:
@@ -93,3 +92,9 @@ appId: com.musaium.mobile.preview
       id: "offline-banner"
     timeout: 20000
     optional: true
+
+# ── Cleanup: back to "Automatic" so the preference never leaks ──
+- runFlow:
+    file: helpers/data-saving-mode.yaml
+    env:
+      MODE: "Automatique|Automatic"

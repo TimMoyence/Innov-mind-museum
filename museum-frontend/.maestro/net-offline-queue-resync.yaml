@@ -19,11 +19,17 @@ appId: com.musaium.mobile.preview
 # Prereqs: seeded account; backend reachable through the shaped proxy with a
 # working LLM provider.
 
-# ── Force low-data mode + reach the chat composer ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
-- waitForAnimationToEnd
+# ── Reach the chat composer, then turn data saving on ──
 - runFlow:
     file: helpers/chat-entry.yaml
+- runFlow:
+    file: helpers/data-saving-mode.yaml
+    env:
+      MODE: "Économie activée|Saving enabled"
+- extendedWaitUntil:
+    visible:
+      id: "low-data-badge"
+    timeout: 15000
 
 # ── Go offline BEFORE sending → message must queue, not error ──
 - setAirplaneMode: enabled
@@ -42,11 +48,15 @@ appId: com.musaium.mobile.preview
     id: "send-button"
 
 # Queued — the banner carries a pending count, never a raw failure token.
-- extendedWaitUntil:
-    visible:
-      text: ".*(en attente|pending).*"
-    timeout: 12000
-    optional: true
+# Required on Android (airplane mode is real there); the iOS sim stays online.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: ".*(en attente|pending).*"
+          timeout: 12000
 - assertNotVisible:
     text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
 
@@ -67,3 +77,9 @@ appId: com.musaium.mobile.preview
       id: "chat-bubble-assistant"
     timeout: 90000
     optional: true
+
+# ── Cleanup: back to "Automatic" so the preference never leaks ──
+- runFlow:
+    file: helpers/data-saving-mode.yaml
+    env:
+      MODE: "Automatique|Automatic"

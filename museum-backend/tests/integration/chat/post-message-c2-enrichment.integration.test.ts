@@ -131,6 +131,7 @@ class V2SuggestingOrchestrator implements ChatOrchestrator {
           },
         ],
       },
+      degraded: false,
     };
   }
 }

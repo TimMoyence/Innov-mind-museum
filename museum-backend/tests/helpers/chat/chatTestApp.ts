@@ -427,6 +427,7 @@ class FakeOrchestrator implements ChatOrchestrator {
       },
       citations: ['test-citation'],
     },
+    degraded: false,
   };
 
   async generate(): Promise<OrchestratorOutput> {

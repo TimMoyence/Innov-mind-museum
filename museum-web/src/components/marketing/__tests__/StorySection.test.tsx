@@ -14,6 +14,7 @@ interface MotionProps {
 
 // Motion (formerly framer-motion) relies on IntersectionObserver — stub motion elements with plain HTML
 vi.mock('motion/react', () => ({
+  useReducedMotion: () => false,
   motion: {
     h2: function MotionH2({
       children,

@@ -9,8 +9,9 @@ import type { OverpassMuseumResult, OverpassSearchParams } from './overpass-type
 import type { CacheService } from '@shared/cache/cache.port';
 
 /**
- * `value: []` covers BOTH "live returned empty" and "live failed" — both trigger short
- * negative TTL to shield Overpass from quiet-region / transient-outage hammering.
+ * `value: []` means Overpass answered with no museum; it gets the short negative TTL
+ * to shield Overpass from quiet-region hammering. An outage is held one minute only
+ * (`OUTAGE_CACHE_TTL_SECONDS`) and never overwrites a stored list on background refresh.
  * Distinct from cache miss (entry exists in store). `storedAtMs` enables probabilistic
  * refresh on TTL-unaware cache port.
  *

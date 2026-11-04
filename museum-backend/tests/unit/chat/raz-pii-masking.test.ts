@@ -11,7 +11,7 @@ class RecordingOrchestrator implements ChatOrchestrator {
 
   async generate(input: OrchestratorInput): Promise<OrchestratorOutput> {
     this.inputs.push(input);
-    return { text: 'Réponse du guide sur la Joconde.', metadata: {} };
+    return { text: 'Réponse du guide sur la Joconde.', metadata: {}, degraded: false };
   }
 }
 

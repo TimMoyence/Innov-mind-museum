@@ -7,7 +7,12 @@ import {
   shouldOverpassEarlyRefresh,
   type OverpassCacheEntry,
 } from './overpass-cache';
-import { DEFAULT_TIMEOUT_MS, OVERPASS_ENDPOINTS } from './overpass-constants';
+import {
+  DEFAULT_TIMEOUT_MS,
+  OUTAGE_CACHE_TTL_SECONDS,
+  OVERPASS_ENDPOINTS,
+  SEARCH_BUDGET_MS,
+} from './overpass-constants';
 import { buildBboxQuery, buildOpeningHoursQuery, buildRadiusQuery } from './overpass-queries';
 import { fetchFromEndpoint, postQuery } from './overpass-transport';
 
@@ -72,7 +77,17 @@ export async function queryOverpassOpeningHours(
 export async function queryOverpassMuseums(
   params: OverpassSearchParams,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  budgetMs: number = SEARCH_BUDGET_MS,
 ): Promise<OverpassMuseumResult[]> {
+  return await fetchOverpassMuseums(params, timeoutMs, budgetMs).catch(() => []);
+}
+
+async function fetchOverpassMuseums(
+  params: OverpassSearchParams,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  budgetMs: number = SEARCH_BUDGET_MS,
+): Promise<OverpassMuseumResult[]> {
+  const deadline = Date.now() + budgetMs;
   const { lat, lng, radiusMeters, bbox, q } = params;
   let query: string;
   // Stryker disable ConditionalExpression,BlockStatement: the else-if guard covering lat/lng/radius is verified killable via tests/unit/overpass-client.test.ts (queryOverpassMuseums fallback chain + empty-params skip warn assertion), but Stryker 9.6's perTest coverage map fails to associate those tests with the discriminator-position mutants of an if-else-if chain; manual mutation check confirms the assertions flip.
@@ -87,8 +102,10 @@ export async function queryOverpassMuseums(
   // Stryker restore ConditionalExpression,BlockStatement
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
     try {
-      const results = await fetchFromEndpoint(endpoint, query, timeoutMs, q);
+      const results = await fetchFromEndpoint(endpoint, query, Math.min(timeoutMs, remainingMs), q);
       if (results !== null) return results;
     } catch (error) {
       logger.warn('Overpass endpoint query failed — trying next', {
@@ -103,7 +120,7 @@ export async function queryOverpassMuseums(
   }
 
   logger.warn('All Overpass endpoints failed', { lat, lng, radiusMeters, bbox });
-  return [];
+  throw new Error('All Overpass endpoints failed');
 }
 
 /**
@@ -145,18 +162,22 @@ export function createCachedOverpassClient(cache: CacheService): CachedOverpassS
           cacheKey,
           positiveTtlSeconds,
           negativeTtlSeconds,
-          refresh: queryOverpassMuseums,
+          refresh: fetchOverpassMuseums,
         });
       }
       return cached.value;
     }
 
-    const live = await queryOverpassMuseums(params);
-    const entry: OverpassCacheEntry = {
-      value: live,
-      storedAtMs: Date.now(),
-      ttlSeconds: live.length > 0 ? positiveTtlSeconds : negativeTtlSeconds,
-    };
+    let live: OverpassMuseumResult[];
+    let ttlSeconds: number;
+    try {
+      live = await fetchOverpassMuseums(params);
+      ttlSeconds = live.length > 0 ? positiveTtlSeconds : negativeTtlSeconds;
+    } catch {
+      live = [];
+      ttlSeconds = OUTAGE_CACHE_TTL_SECONDS;
+    }
+    const entry: OverpassCacheEntry = { value: live, storedAtMs: Date.now(), ttlSeconds };
 
     try {
       await cache.set(cacheKey, entry, entry.ttlSeconds);

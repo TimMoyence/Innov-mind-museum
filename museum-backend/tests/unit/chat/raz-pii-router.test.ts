@@ -12,7 +12,7 @@ import type {
 
 class SilentOrchestrator implements ChatOrchestrator {
   async generate(_input: OrchestratorInput): Promise<OrchestratorOutput> {
-    return { text: 'Réponse du guide.', metadata: {} };
+    return { text: 'Réponse du guide.', metadata: {}, degraded: false };
   }
 }
 

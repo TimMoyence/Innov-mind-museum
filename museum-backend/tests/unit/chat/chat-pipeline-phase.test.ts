@@ -42,6 +42,7 @@ import type { ChatAssistantMetadata, ChatPipelinePhase } from '@modules/chat/dom
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
+import { makeArtOutput } from '../../helpers/chat/orchestratorOutput.fixtures';
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const USER_ID = 42;
@@ -55,20 +56,6 @@ const EXPECTED_PHASES: readonly ChatPipelinePhase[] = [
   'done',
 ];
 
-const makeArtOutput = (overrides: Partial<OrchestratorOutput> = {}): OrchestratorOutput => ({
-  text: 'This painting by Monet captures the essence of impressionism.',
-  metadata: {
-    detectedArtwork: {
-      title: 'Water Lilies',
-      artist: 'Monet',
-      confidence: 0.9,
-      source: 'test',
-    },
-    citations: ['catalog'],
-    ...overrides.metadata,
-  },
-  ...overrides,
-});
 
 const makeRepo = (
   session: ChatSession | null = makeSession({

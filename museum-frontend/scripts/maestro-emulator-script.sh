@@ -22,4 +22,6 @@ if [ -f "$FIXTURE" ]; then
     -d file:///sdcard/Download/test-artwork.jpg || true
 fi
 
+bash "$ROOT/museum-frontend/scripts/maestro-seed-accounts.sh"
+
 bash "$ROOT/museum-frontend/scripts/maestro-run-shard.sh" "$SHARD"

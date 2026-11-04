@@ -11,6 +11,7 @@ import {
   setAccessToken,
   getAccessToken,
   authStorage,
+  purgeStaleCredentialsOnFreshInstall,
 } from '@/features/auth/infrastructure/authTokenStore';
 import {
   clearBiometricPreference,
@@ -154,6 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const startedAt = Date.now();
       bootstrapBreadcrumb('start');
       try {
+        await purgeStaleCredentialsOnFreshInstall();
         const refreshToken = await authStorage.getRefreshToken();
         if (!refreshToken) {
           await clearPersistedTokens();

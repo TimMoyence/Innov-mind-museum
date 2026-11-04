@@ -294,10 +294,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
 
             const model = this.model;
             if (!model) {
-              return {
-                text: MISSING_LLM_KEY_FALLBACK,
-                metadata: { citations: ['system:missing-llm-api-key'] },
-              };
+              return this.cannedFallback('system:missing-llm-api-key');
             }
 
             const tasks = this.buildSectionTasks(model, prepared, input);
@@ -399,12 +396,12 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
    * applies: fakes / older SDKs returning the parsed-only shape classify as
    * `'miss'` and telemetry helpers swallow their own failures.
    */
-  /** Walk-path canned fallback ; extracted to keep `generateWalk` under the line cap. */
-  private walkFallback(citation: string): OrchestratorOutput {
+  private cannedFallback(citation: string): OrchestratorOutput {
     return {
       text: MISSING_LLM_KEY_FALLBACK,
       metadata: { citations: [citation] },
       suggestions: undefined,
+      degraded: true,
     };
   }
 
@@ -455,7 +452,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
     input: OrchestratorInput,
   ): Promise<OrchestratorOutput> {
     const model = this.model;
-    if (!model) return this.walkFallback('system:missing-llm-api-key');
+    if (!model) return this.cannedFallback('system:missing-llm-api-key');
 
     // ChatModel.withStructuredOutput is optional (test fakes / older providers).
     if (!model.withStructuredOutput) {
@@ -464,7 +461,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
         provider: env.llm.provider,
         model: env.llm.model,
       });
-      return this.walkFallback('system:missing-structured-output');
+      return this.cannedFallback('system:missing-structured-output');
     }
 
     const prepared = buildOrchestratorMessages(input);
@@ -539,6 +536,7 @@ export class LangChainChatOrchestrator implements ChatOrchestrator {
       text: result.answer,
       metadata: { citations: [] },
       suggestions,
+      degraded: false,
     };
   }
 

@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
+import { OfflineQueueProvider, useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('calls hydrate on mount', () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     // After mount, queue should be empty (no persisted data)
     expect(result.current.pendingCount).toBe(0);
@@ -56,7 +56,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('enqueue adds a message and increments pendingCount', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({ sessionId: 's1', text: 'hello' });
@@ -70,7 +70,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('dequeue removes a message and decrements pendingCount', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({ sessionId: 's1', text: 'first' });
@@ -89,12 +89,12 @@ describe('useOfflineQueue', () => {
 
   it('isOffline reflects useConnectivity', () => {
     mockIsConnected = false;
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
     expect(result.current.isOffline).toBe(true);
   });
 
   it('empty queue has pendingCount=0 and isEmpty-equivalent state', () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     expect(result.current.pendingCount).toBe(0);
     expect(result.current.pendingMessages).toEqual([]);
@@ -103,7 +103,7 @@ describe('useOfflineQueue', () => {
   // ── Image persistence tests ──────────────────────────────────────────────
 
   it('enqueue with imageUri persists the image before storing', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({
@@ -120,7 +120,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('enqueue without imageUri does not call persistOfflineImage', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({ sessionId: 's1', text: 'no image' });
@@ -132,7 +132,7 @@ describe('useOfflineQueue', () => {
   it('enqueue still succeeds if image persistence fails', async () => {
     mockPersistOfflineImage.mockRejectedValue(new Error('disk full'));
 
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({
@@ -148,7 +148,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('dequeue cleans up the persisted image', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     await act(async () => {
       await result.current.enqueue({
@@ -166,7 +166,7 @@ describe('useOfflineQueue', () => {
   });
 
   it('remove cleans up the persisted image', async () => {
-    const { result } = renderHook(() => useOfflineQueue());
+    const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
     let messageId = '';
     await act(async () => {

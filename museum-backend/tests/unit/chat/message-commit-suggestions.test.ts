@@ -35,6 +35,7 @@ const makeRepo = (text: string) =>
 const baseAiResult = (overrides: Partial<OrchestratorOutput> = {}): OrchestratorOutput => ({
   text: 'Voici la Joconde.',
   metadata: {},
+  degraded: false,
   ...overrides,
 });
 

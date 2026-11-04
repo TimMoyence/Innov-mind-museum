@@ -36,6 +36,7 @@ function makeOptimisticLockError(): Error {
 const baseAiResult: OrchestratorOutput = {
   text: 'The artwork is by Monet.',
   metadata: {},
+  degraded: false,
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────────

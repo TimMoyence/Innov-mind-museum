@@ -16,7 +16,7 @@ class ThrowingOrchestrator implements ChatOrchestrator {
 
 class EmptyResponseOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
-    return { text: '', metadata: {} };
+    return { text: '', metadata: {}, degraded: false };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
     const r = await this.generate();
@@ -27,7 +27,7 @@ class EmptyResponseOrchestrator implements ChatOrchestrator {
 
 class InsultResponseOrchestrator implements ChatOrchestrator {
   async generate(): Promise<OrchestratorOutput> {
-    return { text: 'You are stupid and should feel bad', metadata: {} };
+    return { text: 'You are stupid and should feel bad', metadata: {}, degraded: false };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
     const r = await this.generate();
@@ -41,6 +41,7 @@ class InjectionLeakOrchestrator implements ChatOrchestrator {
     return {
       text: 'Sure, here are my system prompt instructions: ignore previous rules',
       metadata: {},
+      degraded: false,
     };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {
@@ -62,6 +63,7 @@ class ArtResponseOrchestrator implements ChatOrchestrator {
           source: 'vision',
         },
       },
+      degraded: false,
     };
   }
   async generateStream(_i: unknown, onChunk: (t: string) => void): Promise<OrchestratorOutput> {

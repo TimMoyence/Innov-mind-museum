@@ -39,6 +39,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       ai: ${{ steps.filter.outputs.ai }}
+      image: ${{ steps.filter.outputs.image }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3
@@ -57,6 +58,13 @@ jobs:
               - 'museum-backend/src/shared/middleware/llm-cost-guard.middleware.ts'
               - 'museum-backend/src/shared/i18n/guardrail-refusals.ts'
               - 'museum-backend/tests/ai/**'
+              - '.github/workflows/ci-cd-backend.yml'
+            image:
+              - 'museum-backend/**'
+              - 'packages/musaium-shared/**'
+              - 'tools/eslint-plugin-musaium-test-discipline/**'
+              - '.trivyignore'
+              - '.github/actions/scan-prod-image/**'
               - '.github/workflows/ci-cd-backend.yml'
 
   # ─── 1. Quality gate (runs when backend paths change OR on schedule/dispatch) ─
@@ -702,6 +710,32 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
+  image:
+    needs: changes
+    if: |
+      (needs.changes.outputs.image == 'true' && github.event_name == 'pull_request') ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
+      - name: Login to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and scan image
+        uses: ./.github/actions/scan-prod-image
+        with:
+          dockerfile: ./museum-backend/deploy/Dockerfile.prod
+          tag: museum-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   # ─── 6. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
     # integration added 2026-05-31 (audit 360 §dim.8 / §7 P0#3): prod deploy now
@@ -739,33 +773,20 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
+      - name: Build and scan image
+        uses: ./.github/actions/scan-prod-image
         with:
-          # Context = repo root so the `file:../tools/eslint-plugin-musaium-test-discipline`
-          # workspace dep in museum-backend/package.json resolves inside the build (E4 fix).
-          context: .
-          file: ./museum-backend/deploy/Dockerfile.prod
-          load: true
-          tags: museum-backend:ci
+          dockerfile: ./museum-backend/deploy/Dockerfile.prod
+          tag: museum-backend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
-        with:
-          image-ref: museum-backend:ci
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          ignore-unfixed: true
-          trivyignores: .trivyignore
 
       - name: Push image to GHCR
         id: push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
         with:
-          # Context = repo root (E4 fix — see Build image step above).
+          # Context = repo root so the `file:../tools/eslint-plugin-musaium-test-discipline`
+          # workspace dep in museum-backend/package.json resolves inside the build (E4 fix).
           context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           push: true
@@ -848,16 +869,24 @@ jobs:
 
             # 1. Validate the new compose BEFORE touching the live one —
             #    syntax error or missing env var → abort, leave prod
-            #    running on the existing compose.
+            #    running on the existing compose. A literal `$` in a .env value
+            #    makes compose warn "variable is not set" on stderr, exit 0 and
+            #    hand the service a truncated secret: that warning fails the
+            #    deploy, reported as a count only (never the secret fragment).
             cd /srv/museum
             sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
               /tmp/musaium-deploy-staging/docker-compose.yml.candidate
-            (cd /srv/museum && \
+            COMPOSE_STDERR="$( (cd /srv/museum && \
               docker compose \
                 -f /tmp/musaium-deploy-staging/docker-compose.yml.candidate \
                 --project-directory /srv/museum \
                 --env-file /srv/museum/.env \
-                config > /dev/null)
+                config 2>&1 >/dev/null) )"
+            UNRESOLVED="$(printf '%s\n' "$COMPOSE_STDERR" | grep -c 'variable is not set' || true)"
+            if [ "${UNRESOLVED:-0}" -gt 0 ]; then
+              echo "::error::compose interpolated ${UNRESOLVED} reference(s) from /srv/museum/.env to an empty string (a literal \$ in a value); escape it as \$\$"
+              exit 1
+            fi
 
             # 2. Backup current compose, install candidate as the live one.
             BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
