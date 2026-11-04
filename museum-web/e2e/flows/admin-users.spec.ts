@@ -9,7 +9,7 @@ test('admin can list users and the seeded admin appears', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /users|utilisateurs/i })).toBeVisible();
 
   // Wait for the users list — grid/table semantics OR cards rendering the email
-  await expect(page.getByRole('main').getByText(email)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeVisible({ timeout: 10_000 });
 });
 
 test('admin can filter users by search', async ({ page }) => {
@@ -17,7 +17,7 @@ test('admin can filter users by search', async ({ page }) => {
   await page.goto('/en/admin/users');
 
   // Wait for initial load
-  await expect(page.getByRole('main').getByText(email)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeVisible({ timeout: 10_000 });
 
   // Users page uses <input type="text" placeholder="Search..."> with no label/role.
   // Use getByPlaceholder which matches the actual DOM; fall back to getByRole if
@@ -29,9 +29,9 @@ test('admin can filter users by search', async ({ page }) => {
   await search.first().fill('e2e-admin');
 
   // Debounced — wait briefly and assert presence
-  await expect(page.getByRole('main').getByText(email)).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeVisible({ timeout: 5_000 });
 
   // Type a fragment that should match nothing
   await search.first().fill('zzzz-no-match-zzzz');
-  await expect(page.getByRole('main').getByText(email)).toBeHidden({ timeout: 5_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeHidden({ timeout: 5_000 });
 });

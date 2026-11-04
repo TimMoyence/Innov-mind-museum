@@ -160,7 +160,7 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );
