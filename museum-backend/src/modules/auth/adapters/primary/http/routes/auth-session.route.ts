@@ -144,15 +144,14 @@ authSessionRouter.post(
     // idempotent (refresh side handled separately). Never throw on bearer
     // verification : a misformed Bearer must not block logout (cf. spec §R7
     // "idempotent ... no leak of token validation details").
-    const bearer = req.headers.authorization?.split(' ')[1];
     let ctx: { accessJti: string; accessExpSec: number } | undefined;
-    if (bearer) {
-      try {
-        const claims = authSessionService.verifyAccessTokenWithClaims(bearer);
-        ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };
-      } catch {
-        // Bearer invalid/expired — silent, no leak.
-      }
+    try {
+      const claims = authSessionService.verifyAccessTokenWithClaims(
+        req.headers.authorization?.split(' ')[1] ?? '',
+      );
+      ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };
+    } catch {
+      // Bearer absent/invalid/expired — silent, no leak.
     }
     await authSessionService.logout(refreshToken, ctx);
     await auditService.log({

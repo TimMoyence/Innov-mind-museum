@@ -495,6 +495,21 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(mockLogout).toHaveBeenCalledWith('rt-to-invalidate', undefined);
     });
 
+    it("R7 · POST /api/auth/logout avec un JWT valide transmet son jti et son expiration à la révocation de l'accès", async () => {
+      mockLogout.mockResolvedValueOnce(undefined);
+
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${makeToken()}`)
+        .send({ refreshToken: 'rt-to-invalidate' });
+
+      expect(res.status).toBe(200);
+      expect(mockLogout).toHaveBeenCalledWith('rt-to-invalidate', {
+        accessJti: expect.any(String),
+        accessExpSec: expect.any(Number),
+      });
+    });
+
     it('GET /api/auth/me returns user profile', async () => {
       const profile = {
         id: 1,
