@@ -19,7 +19,7 @@ test('admin opens a user detail page from the list', async ({ page }) => {
   await page.goto('/en/admin/users');
 
   // Wait for the list to render with the seeded admin's row visible.
-  await expect(page.getByRole('main').getByText(email)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeVisible({ timeout: 10_000 });
 
   // Open the ADMIN's OWN row, not `.first()`: the list is ordered
   // `createdAt DESC` (admin.repository.pg.ts:116), so any user seeded by a
@@ -41,14 +41,14 @@ test('admin opens a user detail page from the list', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 2, name: /status/i })).toBeVisible();
 
   // Email field visible (the operator viewing their own seeded account).
-  await expect(page.getByRole('main').getByText(email)).toBeVisible();
+  await expect(page.getByRole('definition').filter({ hasText: email })).toBeVisible();
 });
 
 test('admin opens the change-role modal from detail page', async ({ page }) => {
   const { email } = getAdminCreds();
 
   await page.goto('/en/admin/users');
-  await expect(page.getByRole('main').getByText(email)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('cell', { name: email })).toBeVisible({ timeout: 10_000 });
 
   await Promise.all([
     page.waitForURL(/\/admin\/users\/\d+$/, { timeout: 30_000 }),
