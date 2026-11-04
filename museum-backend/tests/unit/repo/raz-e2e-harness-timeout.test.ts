@@ -5,7 +5,7 @@ describe('RAZ-M20-E2E-HARNESS-COLD-START', () => {
 
   beforeAll(async () => {
     const start = Date.now();
-    await new Promise((resolve) => setTimeout(resolve, 5_500));
+    await new Promise((resolve) => setTimeout(resolve, 5_600));
     waitedMs = Date.now() - start;
   });
 
