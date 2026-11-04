@@ -13,7 +13,7 @@
  *      brevoRemoval: { removeContact(email): Promise<unknown> }
  *  - `new ExportUserDataUseCase(deps)` where `deps` adds
  *      userMemoryExport / auditLogExport / messageFeedbackExport /
- *      messageReportExport / socialAccountExport / apiKeyExport ports (each
+ *      messageReportExport / socialAccountExport ports (each
  *      `getForUser`/`listForUser`).
  */
 import { DeleteAccountUseCase } from '@modules/auth/useCase/account/deleteAccount.useCase';
@@ -129,7 +129,6 @@ export interface ExportWiring {
   messageFeedbackExport: ListForUserPort<unknown>;
   messageReportExport: ListForUserPort<unknown>;
   socialAccountExport: ListForUserPort<unknown>;
-  apiKeyExport: ListForUserPort<unknown>;
 }
 
 /**

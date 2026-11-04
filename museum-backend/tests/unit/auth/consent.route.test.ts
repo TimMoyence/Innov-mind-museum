@@ -88,13 +88,9 @@ jest.mock('@modules/auth/useCase', () => {
     verifyEmailUseCase: { execute: jest.fn() },
     updateContentPreferencesUseCase: { execute: jest.fn() },
     completeOnboarding: jest.fn(),
-    generateApiKeyUseCase: { execute: jest.fn() },
-    revokeApiKeyUseCase: { execute: jest.fn() },
-    listApiKeysUseCase: { execute: jest.fn() },
     grantConsentUseCase,
     revokeConsentUseCase,
     userConsentRepository: sharedRepo,
-    wireAuthMiddleware: jest.fn(),
   };
 });
 

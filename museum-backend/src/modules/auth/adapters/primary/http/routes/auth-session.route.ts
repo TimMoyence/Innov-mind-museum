@@ -146,7 +146,7 @@ authSessionRouter.post(
     // "idempotent ... no leak of token validation details").
     const bearer = req.headers.authorization?.split(' ')[1];
     let ctx: { accessJti: string; accessExpSec: number } | undefined;
-    if (bearer && !bearer.startsWith('msk_')) {
+    if (bearer) {
       try {
         const claims = authSessionService.verifyAccessTokenWithClaims(bearer);
         ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };

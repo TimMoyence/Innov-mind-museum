@@ -45,7 +45,7 @@ export type ImageCleanupPort = SharedImageCleanupPort;
  *     still resolvable.
  *  4. The DB rows: `chat_sessions` (CASCADE → messages / artwork_matches /
  *     reports / feedback) and `users` (CASCADE → refresh_tokens / social_accounts
- *     / api_keys / consents).
+ *     / consents).
  *
  * NOT erased (by design): the user's `audit_logs` rows — retained under a legal
  * obligation / legitimate interest (immutable INSERT-only hash chain). They
@@ -184,7 +184,7 @@ export class DeleteAccountUseCase {
 
     // 4. DB erasure — txn: chat_sessions (CASCADE → messages, artwork_matches,
     //    reports, feedback), users (CASCADE → refresh_tokens, social_accounts,
-    //    api_keys, consents). audit_logs are RETAINED (legal obligation).
+    //    consents). audit_logs are RETAINED (legal obligation).
     await this.userRepository.deleteUser(userId);
   }
 

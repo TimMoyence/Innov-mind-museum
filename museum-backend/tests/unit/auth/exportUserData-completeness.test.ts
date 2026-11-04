@@ -3,7 +3,7 @@
  *
  * The export payload must include the previously-omitted personal-data
  * categories — UserMemory, the user's own audit_logs, message_feedback,
- * message_reports, social_accounts, api_keys — plus previously-omitted User
+ * message_reports, social_accounts — plus previously-omitted User
  * and ChatSession columns; `schemaVersion` bumps `'1'` → `'2'`; and NO secret /
  * credential key may appear anywhere in the serialized payload (R14).
  *
@@ -14,13 +14,11 @@
  *   messageFeedbackExport.listForUser(userId)
  *   messageReportExport.listForUser(userId)
  *   socialAccountExport.listForUser(userId)
- *   apiKeyExport.listForUser(userId)
  *
  * FAILS at red baseline: the current `ExportUserDataUseCase` ignores these
  * ports, returns `schemaVersion: '1'`, and omits the new categories/columns.
  */
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
-import { makeApiKey } from 'tests/helpers/auth/apiKey.fixtures';
 import { makeSocialAccount } from 'tests/helpers/auth/socialAccount.fixtures';
 import { makeAuditLogEntity } from 'tests/helpers/audit/auditLog.fixtures';
 import { makeMemory } from 'tests/helpers/chat/userMemory.fixtures';
@@ -107,9 +105,6 @@ function buildWiring(userId: number): ExportWiring {
     socialAccountExport: {
       listForUser: async () => [makeSocialAccount({ userId })],
     },
-    apiKeyExport: {
-      listForUser: async () => [makeApiKey({ userId })],
-    },
   };
 }
 
@@ -173,9 +168,14 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
 
     expect(Array.isArray(payload.socialAccounts)).toBe(true);
     expect((payload.socialAccounts as unknown[]).length).toBeGreaterThan(0);
+  });
 
-    expect(Array.isArray(payload.apiKeys)).toBe(true);
-    expect((payload.apiKeys as unknown[]).length).toBeGreaterThan(0);
+  it("RAZ-B2B-EXPORT · l'export RGPD n'a plus de section apiKeys et garde les comptes sociaux", async () => {
+    const useCase = makeExportUserDataUseCase(buildWiring(42));
+    const payload = await runExport(useCase, user);
+
+    expect((payload.socialAccounts as unknown[]).length).toBeGreaterThan(0);
+    expect(payload).not.toHaveProperty('apiKeys');
   });
 
   it('includes the previously-omitted User columns with the entity values (R13)', async () => {
@@ -223,10 +223,5 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     const keys = collectKeys(serialized);
     const offending = keys.filter((k) => SECRET_KEY_RE.test(k));
     expect(offending).toEqual([]);
-
-    // Belt-and-braces: the seeded api-key secrets must not appear as VALUES.
-    const blob = JSON.stringify(serialized);
-    expect(blob).not.toContain('SECRET_HASH_DO_NOT_EXPORT');
-    expect(blob).not.toContain('SECRET_SALT_DO_NOT_EXPORT');
   });
 });

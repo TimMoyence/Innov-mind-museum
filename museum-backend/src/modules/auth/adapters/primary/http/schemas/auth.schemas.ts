@@ -76,11 +76,6 @@ export const confirmEmailChangeSchema = z.object({
   token: z.string().min(1),
 });
 
-export const createApiKeySchema = z.object({
-  name: z.string().min(1).max(100),
-  expiresAt: z.iso.datetime().optional(),
-});
-
 export const updateContentPreferencesSchema = z.object({
   preferences: z
     .array(z.enum(CONTENT_PREFERENCES as readonly [string, ...string[]]))

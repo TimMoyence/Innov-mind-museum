@@ -4,7 +4,6 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { AppDataSource } from '@data/db/data-source';
-import { wireAuthMiddleware } from '@modules/auth';
 import { buildChatService } from '@modules/chat';
 import { setActiveChatModule } from '@modules/chat/chat-module';
 import { museumRepository } from '@modules/museum';
@@ -303,10 +302,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     setActiveChatModule(options.chatModule);
   }
 
-  wireAuthMiddleware();
-
   applyGlobalMiddleware(app);
-
 
   if (!isProd) {
     setupSwagger(app);

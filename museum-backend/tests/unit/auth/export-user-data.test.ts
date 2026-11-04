@@ -39,7 +39,6 @@ const emptyExtraExportPorts = () => ({
   messageFeedbackExport: { listForUser: async () => [] },
   messageReportExport: { listForUser: async () => [] },
   socialAccountExport: { listForUser: async () => [] },
-  apiKeyExport: { listForUser: async () => [] },
 });
 
 describe('ExportUserDataUseCase', () => {
