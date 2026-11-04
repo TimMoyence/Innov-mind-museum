@@ -134,8 +134,7 @@ appId: com.musaium.mobile.preview
       text: "Œuvres similaires|Similar artworks"
     timeout: 60000
 - tapOn:
-    label:
-      text: "Œuvre similaire :|Similar artwork:"
+    text: "(Œuvre similaire :|Similar artwork:).*"
 - waitForAnimationToEnd
 
 # ──────────────────────────────────────────────
