@@ -233,7 +233,7 @@ jobs:
           # `maestro-apk-<os>-` key (different content) can never be restored.
           # The 10.0.2.2 base URL is baked into the bundle, so it is part of the
           # cache identity via app.config.ts in the hash set.
-          key: maestro-apk-release-v2-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
+          key: maestro-apk-release-v2-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/api-url.config.js', 'museum-frontend/babel.config.js', 'museum-frontend/metro.config.js', 'museum-frontend/index.js', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
           restore-keys: |
             maestro-apk-release-v2-${{ runner.os }}-
 
@@ -701,7 +701,7 @@ jobs:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
           # `netshape-v1` namespace: a SEPARATE cache from the :3000 APK so the two
           # (different baked base URL → different bundle content) never cross-restore.
-          key: maestro-apk-netshape-v1-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
+          key: maestro-apk-netshape-v1-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/api-url.config.js', 'museum-frontend/babel.config.js', 'museum-frontend/metro.config.js', 'museum-frontend/index.js', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
           restore-keys: |
             maestro-apk-netshape-v1-${{ runner.os }}-
 
@@ -962,6 +962,7 @@ jobs:
         with:
           name: maestro-netshape-logs
           path: museum-frontend/.maestro/logs/
+          include-hidden-files: true
           retention-days: 7
 
       - name: Weak-net summary (wall-clock compression note)
