@@ -2552,10 +2552,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["refreshToken"],
                 "properties": {
                   "refreshToken": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Mobile sends it here. Web omits it: the HttpOnly refresh_token cookie is read instead. Neither present → 400."
                   }
                 }
               }

@@ -51,7 +51,7 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
   const adminDict = useAdminDict();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // C1B / R8 — a museum_manager only sees the links it can use (tenant-scoped);
   // every other allow-listed role sees the full nav set.
@@ -117,6 +117,17 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
             })}
           </ul>
         </nav>
+
+        <div className="border-t border-primary-100 px-3 py-4">
+          <p className="truncate px-3 pb-2 text-sm text-text-secondary">{user?.email}</p>
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-medium text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary"
+          >
+            {adminDict.logout}
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}

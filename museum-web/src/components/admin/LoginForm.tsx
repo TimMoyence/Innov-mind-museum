@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAdminLocale } from '@/lib/admin-dictionary';
 import { useAuth } from '@/lib/auth';
 import Button from '@/components/ui/Button';
 import type { Dictionary } from '@/lib/i18n';
@@ -36,15 +37,13 @@ function GoogleIcon() {
 export default function LoginForm({ dict }: LoginFormProps) {
   const { login } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
+  const locale = useAdminLocale();
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [inFlight, setInFlight] = useState(false);
-
-  const locale = pathname.split('/')[1] ?? 'fr';
 
   useEffect(() => {
     if (searchParams.get('oauth_error')) {

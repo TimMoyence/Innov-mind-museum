@@ -1,21 +1,20 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useSearchParams, usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiPost } from '@/lib/api';
 import Button from '@/components/ui/Button';
-import type { Dictionary } from '@/lib/i18n';
+import type { Dictionary, Locale } from '@/lib/i18n';
 
 interface ResetPasswordFormProps {
   dict: Dictionary['resetPassword'];
+  locale: Locale;
 }
 
-function ResetPasswordFormInner({ dict }: ResetPasswordFormProps) {
+function ResetPasswordFormInner({ dict, locale }: ResetPasswordFormProps) {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const token = searchParams.get('token');
-  const locale = pathname.split('/')[1] ?? 'fr';
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -156,10 +155,10 @@ function ResetPasswordFormInner({ dict }: ResetPasswordFormProps) {
   );
 }
 
-export default function ResetPasswordForm({ dict }: ResetPasswordFormProps) {
+export default function ResetPasswordForm({ dict, locale }: ResetPasswordFormProps) {
   return (
     <Suspense>
-      <ResetPasswordFormInner dict={dict} />
+      <ResetPasswordFormInner dict={dict} locale={locale} />
     </Suspense>
   );
 }

@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { apiPatch } from '@/lib/api';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import { useAuth } from '@/lib/auth';
 import { useFetchData } from '@/lib/hooks/useFetchData';
@@ -63,8 +62,7 @@ export default function UsersPage() {
   const adminDict = useAdminDict();
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
-  const pathname = usePathname();
-  const locale = pathname.split('/')[1] ?? 'fr';
+  const locale = useAdminLocale();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');

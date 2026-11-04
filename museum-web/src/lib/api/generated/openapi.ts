@@ -170,7 +170,8 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
-            refreshToken: string;
+            /** @description Mobile sends it here. Web omits it: the HttpOnly refresh_token cookie is read instead. Neither present → 400. */
+            refreshToken?: string;
           };
         };
       };

@@ -208,6 +208,7 @@ export interface Dictionary {
     nps: string;
     accessDenied: string;
     goToHomepage: string;
+    logout: string;
     login: {
       title: string;
       emailPlaceholder: string;

@@ -204,6 +204,16 @@ describe('Auth Routes — HTTP Layer', () => {
       });
       expect(res.status).toBe(400);
     });
+
+    it('WEB-SESSION-REFRESH-BORNE · un refreshToken vide dans le corps reste refusé en 400 même avec un cookie refresh_token', async () => {
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', 'refresh_token=rt-from-cookie')
+        .send({ refreshToken: '' });
+
+      expect(res.status).toBe(400);
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
   });
 
   // ── POST /api/auth/social-login — Zod validation rejects ────────

@@ -28,7 +28,7 @@ export const setAccessTokenDenylist = (d: IAccessTokenDenylist): void => {
  * SEC F7 dual auth: Bearer (mobile, precedence) OR `access_token` cookie (web admin).
  * Bearer wins when both present → mobile webviews carrying stray cookies can't swap identity.
  */
-function resolveCredential(req: Request): string | null {
+export function resolveCredential(req: Request): string | null {
   const bearer = req.headers.authorization?.split(' ')[1];
   if (bearer) {
     return bearer;
