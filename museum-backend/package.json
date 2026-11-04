@@ -61,7 +61,7 @@
     "mutation:warm": "stryker run",
     "mutation:baseline": "stryker run stryker/baseline.config.mjs",
     "mutation:chunk": "stryker run --mutate",
-    "catalog:ingest": "node --require dotenv/config -r tsx scripts/catalog-ingest.ts"
+    "catalog:ingest": "node --require dotenv/config -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/catalog-ingest.ts"
   },
   "keywords": [],
   "author": "",
