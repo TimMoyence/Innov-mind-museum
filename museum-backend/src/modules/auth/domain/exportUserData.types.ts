@@ -5,7 +5,7 @@
  *
  * B3 (2026-05-21) — `schemaVersion` bumped `'1'` → `'2'`: adds UserMemory, the
  * subject's own audit_logs, message_feedback, message_reports, social_accounts,
- * api_keys (non-secret), plus previously-omitted User + ChatSession columns.
+ * plus previously-omitted User + ChatSession columns.
  * Secrets/credentials are excluded by EXPLICIT per-field allow-listing (never
  * entity spread) so a future column cannot leak by accident (R14, design D4).
  *
@@ -57,11 +57,6 @@ export interface MessageReportExportPort {
 /** social_accounts rows owned by the user (no secrets on the entity). */
 export interface SocialAccountExportPort {
   listForUser(userId: number): Promise<SocialAccountSource[]>;
-}
-
-/** api_keys owned by the user. Source rows may carry `hash`/`salt`; the use case strips them. */
-export interface ApiKeyExportPort {
-  listForUser(userId: number): Promise<ApiKeySource[]>;
 }
 
 // ─── Source shapes (what the ports return — superset, may carry secrets) ────
@@ -122,18 +117,6 @@ export interface SocialAccountSource {
   providerUserId: string;
   email: string | null;
   createdAt: DateLike;
-}
-
-export interface ApiKeySource {
-  id: number;
-  prefix: string;
-  name: string;
-  museumId?: number | null;
-  expiresAt: NullableDateLike;
-  lastUsedAt: NullableDateLike;
-  isActive: boolean;
-  createdAt: DateLike;
-  // hash / salt MAY be present on the source entity — never exported.
 }
 
 // ─── Exported entry shapes ──────────────────────────────────────────────────
@@ -211,18 +194,6 @@ export interface UserSocialAccountExportEntry {
   provider: string;
   providerUserId: string;
   email: string | null;
-  createdAt: string;
-}
-
-/** No `hash` / `salt` — security credentials are excluded (R14). */
-export interface UserApiKeyExportEntry {
-  id: number;
-  prefix: string;
-  name: string;
-  museumId: number | null;
-  expiresAt: string | null;
-  lastUsedAt: string | null;
-  isActive: boolean;
   createdAt: string;
 }
 
@@ -314,5 +285,4 @@ export interface UserExportPayload {
   messageFeedback: UserMessageFeedbackExportEntry[];
   messageReports: UserMessageReportExportEntry[];
   socialAccounts: UserSocialAccountExportEntry[];
-  apiKeys: UserApiKeyExportEntry[];
 }

@@ -4,7 +4,7 @@
  *
  * Proves on a real PG (testcontainer, harness pattern) that account deletion:
  *  - R9 — cascades every FK child table to zero rows (
- *         user_memories, api_keys, user_consents, auth_refresh_tokens,
+ *         user_memories, user_consents, auth_refresh_tokens,
  *         social_accounts, chat_sessions),
  *  - R8 — RETAINS the user's `audit_logs` rows (no FK to `users`; legal
  *         obligation),
@@ -36,7 +36,6 @@ const shouldRun = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION 
 const describeIntegration = shouldRun ? describe : describe.skip;
 
 describeIntegration('DeleteAccountUseCase — real cascade + audit retention + leads erasure', () => {
-
   let harness: IntegrationHarness;
 
   beforeAll(async () => {
@@ -81,20 +80,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
         summary: null,
         disabledByUser: false,
         sessionCount: 0,
-      }),
-    );
-
-    const { ApiKey } = await import('@modules/auth/domain/api-key/apiKey.entity');
-    await ds.getRepository(ApiKey).save(
-      ds.getRepository(ApiKey).create({
-        prefix: 'pk_test1',
-        hash: 'hmac-hash',
-        salt: 'salt-value',
-        name: 'test key',
-        userId,
-        expiresAt: null,
-        lastUsedAt: null,
-        isActive: true,
       }),
     );
 
@@ -182,7 +167,7 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
   }
 
   async function countWhere(sql: string, params: unknown[] = []): Promise<number> {
-    const rows = (await harness.dataSource.query(sql, params));
+    const rows = await harness.dataSource.query(sql, params);
     return Number(rows[0]?.count ?? 0);
   }
 
@@ -194,7 +179,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
 
     const childTables: { table: string; col: string }[] = [
       { table: 'user_memories', col: 'user_id' },
-      { table: 'api_keys', col: 'user_id' },
       { table: 'user_consents', col: 'user_id' },
       { table: 'auth_refresh_tokens', col: 'userId' },
       { table: 'social_accounts', col: 'userId' },

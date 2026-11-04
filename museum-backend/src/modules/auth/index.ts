@@ -12,14 +12,10 @@ export {
   changeEmailUseCase,
   confirmEmailChangeUseCase,
   verifyEmailUseCase,
-  generateApiKeyUseCase,
-  revokeApiKeyUseCase,
-  listApiKeysUseCase,
   completeOnboarding,
   grantConsentUseCase,
   revokeConsentUseCase,
   userConsentRepository,
-  wireAuthMiddleware,
 } from './useCase';
 
 export { User } from '@modules/auth/domain/user/user.entity';
@@ -34,7 +30,6 @@ export { UserRole } from '@modules/auth/domain/user/user-role';
 export type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 export type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 export type { ISocialAccountRepository } from '@modules/auth/domain/social-account/socialAccount.repository.interface';
-export type { ApiKeyRepository } from '@modules/auth/domain/api-key/apiKey.repository.interface';
 export type {
   SocialTokenVerifier,
   SocialTokenPayload,

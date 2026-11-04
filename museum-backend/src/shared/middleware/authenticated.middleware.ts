@@ -2,8 +2,6 @@ import { authSessionService } from '@modules/auth/useCase';
 import { AppError, unauthorized } from '@shared/errors/app.error';
 import { setUser } from '@shared/observability/sentry';
 
-import { validateApiKey } from './apiKey.middleware';
-
 import type { IAccessTokenDenylist } from '@modules/auth/domain/session/access-token-denylist.port';
 import type { Request, Response, NextFunction } from 'express';
 
@@ -30,23 +28,20 @@ export const setAccessTokenDenylist = (d: IAccessTokenDenylist): void => {
  * SEC F7 dual auth: Bearer (mobile, precedence) OR `access_token` cookie (web admin).
  * Bearer wins when both present → mobile webviews carrying stray cookies can't swap identity.
  */
-function resolveCredential(req: Request): { token: string; source: 'bearer' | 'cookie' } | null {
+function resolveCredential(req: Request): string | null {
   const bearer = req.headers.authorization?.split(' ')[1];
   if (bearer) {
-    return { token: bearer, source: 'bearer' };
+    return bearer;
   }
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
   const cookieToken = cookies?.access_token;
   if (typeof cookieToken === 'string' && cookieToken.length > 0) {
-    return { token: cookieToken, source: 'cookie' };
+    return cookieToken;
   }
   return null;
 }
 
 /**
- * `msk_` Bearer → B2B API-key path. Cookie tokens always JWTs (cookies never carry API keys;
- * stray `msk_*` cookie value indicates tampering).
- *
  * R8 — after `verifyAccessTokenWithClaims` succeeds, the JWT `jti` is checked
  * against the {@link IAccessTokenDenylist}. A denylisted jti throws 401
  * `TOKEN_REVOKED`. The denylist adapter is fail-OPEN on backing-store error
@@ -57,49 +52,12 @@ function resolveCredential(req: Request): { token: string; source: 'bearer' | 'c
  */
 export async function isAuthenticated(
   req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  const credential = resolveCredential(req);
-  if (!credential) {
-    throw unauthorized('Token required');
-  }
-
-  const { token, source } = credential;
-
-  if (source === 'bearer' && token.startsWith('msk_')) {
-    await validateApiKey(token, req, res, next).catch(next);
-    return;
-  }
-
-  let claims;
-  try {
-    claims = authSessionService.verifyAccessTokenWithClaims(token);
-  } catch {
-    throw unauthorized('Invalid token');
-  }
-  if (await denylist.has(claims.jti)) {
-    throw tokenRevoked();
-  }
-  req.user = { id: claims.id, role: claims.role, museumId: claims.museumId };
-  req.museumId = claims.museumId ?? undefined;
-  setUser({ id: String(claims.id) });
-  next();
-}
-
-/** SEC: JWT-only — used by sensitive endpoints (API key management itself). */
-export async function isAuthenticatedJwtOnly(
-  req: Request,
   _res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = resolveCredential(req);
   if (!token) {
     throw unauthorized('Token required');
-  }
-
-  if (token.startsWith('msk_')) {
-    throw unauthorized('JWT authentication required for this endpoint');
   }
 
   let claims;

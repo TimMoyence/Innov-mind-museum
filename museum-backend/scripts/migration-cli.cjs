@@ -41,9 +41,7 @@ if (!operation || !['create', 'generate'].includes(operation)) {
 
 const name = parseName();
 if (!name) {
-  console.error(
-    `Usage: npm run migration:${operation} -- --name=YourMigrationName`,
-  );
+  console.error(`Usage: npm run migration:${operation} -- --name=YourMigrationName`);
   console.error(`   or: npm run migration:${operation} -- YourMigrationName`);
   process.exit(1);
 }
@@ -54,13 +52,14 @@ mkdirSync(resolve(process.cwd(), migrationsDir), { recursive: true });
 const migrationPath = `${migrationsDir}/${name}`;
 const typeormCommand = `migration:${operation}`;
 
-const result = spawnSync(
-  'npm',
-  ['run', 'typeorm', '--', typeormCommand, migrationPath],
-  {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  },
-);
+const [command, args] =
+  operation === 'create'
+    ? [process.execPath, ['./node_modules/typeorm/cli.js', typeormCommand, migrationPath]]
+    : ['npm', ['run', 'typeorm', '--', typeormCommand, migrationPath]];
+
+const result = spawnSync(command, args, {
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+});
 
 process.exit(result.status ?? 1);

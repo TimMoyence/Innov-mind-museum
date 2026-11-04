@@ -2,7 +2,6 @@ import 'reflect-metadata';
 
 import { DataSource } from 'typeorm';
 
-import { ApiKey } from '@modules/auth/domain/api-key/apiKey.entity';
 import { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 import { AuthRefreshToken } from '@modules/auth/domain/refresh-token/authRefreshToken.entity';
 import { SocialAccount } from '@modules/auth/domain/social-account/socialAccount.entity';
@@ -48,7 +47,6 @@ export const AppDataSource = new DataSource({
     UserConsent,
     AuthRefreshToken,
     SocialAccount,
-    ApiKey,
     ChatSession,
     ChatMessage,
     ArtKeyword,

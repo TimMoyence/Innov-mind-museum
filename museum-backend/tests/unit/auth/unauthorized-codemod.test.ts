@@ -22,11 +22,10 @@ import { join } from 'node:path';
 const SRC_ROOT = join(__dirname, '..', '..', '..', 'src');
 
 /**
- * Six call-sites currently shipping a local `unauthorized()` helper. PR-1
+ * Five call-sites currently shipping a local `unauthorized()` helper. PR-1
  * collapses them onto the canonical factory in `@shared/errors/app.error`.
  */
 const CODEMOD_TARGETS = [
-  'shared/middleware/apiKey.middleware.ts',
   'shared/middleware/authenticated.middleware.ts',
   'modules/auth/useCase/session/token-jwt.service.ts',
   'modules/auth/useCase/session/authSession.service.ts',

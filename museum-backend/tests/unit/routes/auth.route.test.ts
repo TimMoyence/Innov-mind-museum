@@ -88,11 +88,7 @@ jest.mock('@modules/auth/useCase', () => {
     },
     verifyEmailUseCase: { execute: (...args: unknown[]) => mockVerifyEmail(...args) },
     completeOnboarding: (...args: unknown[]) => mockCompleteOnboarding(...args),
-    generateApiKeyUseCase: { execute: jest.fn() },
-    revokeApiKeyUseCase: { execute: jest.fn() },
-    listApiKeysUseCase: { execute: jest.fn() },
     userRepository: { getUserById: (...args: unknown[]) => mockGetUserById(...args) },
-    wireAuthMiddleware: jest.fn(),
   };
 });
 
@@ -484,6 +480,19 @@ describe('Auth Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ success: true });
+    });
+
+    it('RAZ-B2B-LOGOUT · POST /api/auth/logout avec un Bearer msk_ réussit et révoque le refresh token', async () => {
+      mockLogout.mockResolvedValueOnce(undefined);
+
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', 'Bearer msk_abcdefgh0123456789abcdefgh0123456789abcdef')
+        .send({ refreshToken: 'rt-to-invalidate' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ success: true });
+      expect(mockLogout).toHaveBeenCalledWith('rt-to-invalidate', undefined);
     });
 
     it('GET /api/auth/me returns user profile', async () => {

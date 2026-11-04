@@ -1,6 +1,5 @@
 /** Auth module composition root — wires repos to use-cases, exports singletons. */
 import { AppDataSource } from '@data/db/data-source';
-import { ApiKeyRepositoryPg } from '@modules/auth/adapters/secondary/pg/apiKey.repository.pg';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
@@ -16,9 +15,6 @@ import {
 import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
 import { GetProfileUseCase } from '@modules/auth/useCase/account/getProfile.useCase';
 import { UpdateProfilePreferencesUseCase } from '@modules/auth/useCase/account/updateProfilePreferences.useCase';
-import { GenerateApiKeyUseCase } from '@modules/auth/useCase/api-keys/generateApiKey.useCase';
-import { ListApiKeysUseCase } from '@modules/auth/useCase/api-keys/listApiKeys.useCase';
-import { RevokeApiKeyUseCase } from '@modules/auth/useCase/api-keys/revokeApiKey.useCase';
 import { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
 import { RevokeConsentUseCase } from '@modules/auth/useCase/consent/revokeConsent.useCase';
 import { UpdateContentPreferencesUseCase } from '@modules/auth/useCase/consent/updateContentPreferences.useCase';
@@ -37,12 +33,9 @@ import { auditService } from '@shared/audit';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
 import { logger } from '@shared/logger/logger';
-import { setApiKeyRepository, setUserRoleResolver } from '@shared/middleware/apiKey.middleware';
 import { env } from '@src/config/env';
 
 import type {
-  ApiKeyExportPort,
-  ApiKeySource,
   AuditLogExportPort,
   AuditLogSource,
   ChatDataExportPort,
@@ -311,23 +304,6 @@ const socialAccountExportProxy: SocialAccountExportPort = {
   },
 };
 
-/** api_keys owned by the user. `hash`/`salt` are stripped downstream by the use case. */
-const apiKeyExportProxy: ApiKeyExportPort = {
-  async listForUser(userId: number): Promise<ApiKeySource[]> {
-    const rows = await apiKeyRepository.findByUserId(userId);
-    return rows.map((k) => ({
-      id: k.id,
-      prefix: k.prefix,
-      name: k.name,
-      museumId: k.museumId ?? null,
-      expiresAt: k.expiresAt,
-      lastUsedAt: k.lastUsedAt,
-      isActive: k.isActive,
-      createdAt: k.createdAt,
-    }));
-  },
-};
-
 const userConsentRepository = new UserConsentRepositoryPg(AppDataSource);
 
 const exportUserDataUseCase = new ExportUserDataUseCase({
@@ -340,7 +316,6 @@ const exportUserDataUseCase = new ExportUserDataUseCase({
   messageFeedbackExport: messageFeedbackExportProxy,
   messageReportExport: messageReportExportProxy,
   socialAccountExport: socialAccountExportProxy,
-  apiKeyExport: apiKeyExportProxy,
 });
 const getProfileUseCase = new GetProfileUseCase(userRepository);
 const changePasswordUseCase = new ChangePasswordUseCase(userRepository, refreshTokenRepository);
@@ -356,12 +331,6 @@ const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
 /** TD-2 — batch endpoint. */
 const updateProfilePreferencesUseCase = new UpdateProfilePreferencesUseCase(userRepository);
 
-// B2B API key programme (msk_* auth).
-const apiKeyRepository = new ApiKeyRepositoryPg(AppDataSource);
-const generateApiKeyUseCase = new GenerateApiKeyUseCase(apiKeyRepository);
-const revokeApiKeyUseCase = new RevokeApiKeyUseCase(apiKeyRepository);
-const listApiKeysUseCase = new ListApiKeysUseCase(apiKeyRepository);
-
 // GDPR consent — every grant/revoke writes a hash-chained `audit_logs` row
 // (S4-P0-02 — Apple Guideline 5.1.2(i) compliance).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository, auditService);
@@ -374,18 +343,6 @@ const registerUseCase = new RegisterUseCase(
   frontendUrl,
   grantConsentUseCase,
 );
-
-/**
- * Called from `createApp()` so module import alone has no side effects on the
- * shared middleware state — keeps test isolation predictable.
- */
-const wireAuthMiddleware = (): void => {
-  setApiKeyRepository(apiKeyRepository);
-  setUserRoleResolver(async (userId) => {
-    const user = await userRepository.getUserById(userId);
-    return user?.role ?? null;
-  });
-};
 
 const completeOnboarding = async (userId: number): Promise<void> => {
   await userRepository.markOnboardingCompleted(userId);
@@ -407,9 +364,6 @@ export {
   changeEmailUseCase,
   confirmEmailChangeUseCase,
   verifyEmailUseCase,
-  generateApiKeyUseCase,
-  revokeApiKeyUseCase,
-  listApiKeysUseCase,
   updateContentPreferencesUseCase,
   updateTtsVoiceUseCase,
   updateProfilePreferencesUseCase,
@@ -418,5 +372,4 @@ export {
   revokeConsentUseCase,
   userConsentRepository,
   userRepository,
-  wireAuthMiddleware,
 };

@@ -1,7 +1,5 @@
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type {
-  ApiKeyExportPort,
-  ApiKeySource,
   AuditLogExportPort,
   AuditLogSource,
   ChatDataExportPort,
@@ -13,7 +11,6 @@ import type {
   SocialAccountExportPort,
   SocialAccountSource,
   SupportDataExportPort,
-  UserApiKeyExportEntry,
   UserAuditLogExportEntry,
   UserConsentExportEntry,
   UserExportPayload,
@@ -37,7 +34,6 @@ interface ExportUserDataDeps {
   messageFeedbackExport: MessageFeedbackExportPort;
   messageReportExport: MessageReportExportPort;
   socialAccountExport: SocialAccountExportPort;
-  apiKeyExport: ApiKeyExportPort;
 }
 
 /** Coerces a Date | string | null to an ISO-8601 string (or null). */
@@ -60,7 +56,7 @@ function toIsoDate(value: Date | string | null | undefined): string | null {
  *
  * SECURITY (R14, design D4): every category is mapped via EXPLICIT per-field
  * allow-listing — never entity spread — so secrets (`password`, `*_token`,
- * api-key `hash`/`salt`, audit `prevHash`/`rowHash`, TOTP) cannot leak even if
+ * audit `prevHash`/`rowHash`) cannot leak even if
  * a future column is added to a source entity.
  */
 export class ExportUserDataUseCase {
@@ -77,7 +73,6 @@ export class ExportUserDataUseCase {
       messageFeedback,
       messageReports,
       socialAccounts,
-      apiKeys,
     ] = await Promise.all([
       this.deps.chatDataExport.getAllUserData(user.id),
       this.deps.reviewDataExport.listForUser(user.id),
@@ -88,7 +83,6 @@ export class ExportUserDataUseCase {
       this.deps.messageFeedbackExport.listForUser(user.id),
       this.deps.messageReportExport.listForUser(user.id),
       this.deps.socialAccountExport.listForUser(user.id),
-      this.deps.apiKeyExport.listForUser(user.id),
     ]);
 
     const consent: UserConsentExportEntry[] = consentRows.map((row) => ({
@@ -135,7 +129,6 @@ export class ExportUserDataUseCase {
       messageFeedback: messageFeedback.map(mapMessageFeedback),
       messageReports: messageReports.map(mapMessageReport),
       socialAccounts: socialAccounts.map(mapSocialAccount),
-      apiKeys: apiKeys.map(mapApiKey),
     };
   }
 }
@@ -197,20 +190,6 @@ function mapSocialAccount(source: SocialAccountSource): UserSocialAccountExportE
     provider: source.provider,
     providerUserId: source.providerUserId,
     email: source.email ?? null,
-    createdAt: toIso(source.createdAt) ?? new Date(0).toISOString(),
-  };
-}
-
-/** EXCLUDES `hash` / `salt` (security credentials, R14). */
-function mapApiKey(source: ApiKeySource): UserApiKeyExportEntry {
-  return {
-    id: source.id,
-    prefix: source.prefix,
-    name: source.name,
-    museumId: source.museumId ?? null,
-    expiresAt: toIso(source.expiresAt),
-    lastUsedAt: toIso(source.lastUsedAt),
-    isActive: source.isActive,
     createdAt: toIso(source.createdAt) ?? new Date(0).toISOString(),
   };
 }

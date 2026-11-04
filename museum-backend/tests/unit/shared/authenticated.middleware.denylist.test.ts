@@ -1,5 +1,5 @@
 /**
- * RED — T1.9 — R8 — `isAuthenticated` / `isAuthenticatedJwtOnly` MUST reject
+ * RED — T1.9 — R8 — `isAuthenticated` MUST reject
  * a revoked access token (jti in denylist) with HTTP 401 `code: 'TOKEN_REVOKED'`.
  *
  * Spec : team-state/2026-05-21-p0-c3-auth-crypto/spec.md §R8.
@@ -47,14 +47,7 @@ jest.mock('@shared/observability/sentry', () => ({
   setUser: jest.fn(),
 }));
 
-jest.mock('@shared/middleware/apiKey.middleware', () => ({
-  validateApiKey: jest.fn(),
-}));
-
-import {
-  isAuthenticated,
-  isAuthenticatedJwtOnly,
-} from '@shared/middleware/authenticated.middleware';
+import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { authSessionService as rawAuthSessionService } from '@modules/auth/useCase';
 
 /**
@@ -93,27 +86,6 @@ const installDenylist = (denylist: IAccessTokenDenylist): void => {
     throw new Error('setAccessTokenDenylist not exported by authenticated.middleware');
   }
   mod.setAccessTokenDenylist(denylist);
-};
-
-interface RevokedAppErrorShape {
-  statusCode: number;
-  code: string;
-  message: string;
-}
-
-const expectAppErrorMatching = (fn: () => void, shape: Partial<RevokedAppErrorShape>): void => {
-  try {
-    fn();
-    throw new Error('Expected AppError to be thrown');
-  } catch (error) {
-    expect(error).toBeInstanceOf(AppError);
-    if (shape.statusCode !== undefined) {
-      expect((error as AppError).statusCode).toBe(shape.statusCode);
-    }
-    if (shape.code !== undefined) {
-      expect((error as AppError).code).toBe(shape.code);
-    }
-  }
 };
 
 describe('authenticated.middleware — access-token denylist (R8)', () => {
@@ -178,48 +150,6 @@ describe('authenticated.middleware — access-token denylist (R8)', () => {
         expect((caught as AppError).code).toBe('TOKEN_REVOKED');
       } else {
         // next(err) async path
-        expect(next).toHaveBeenCalledTimes(1);
-        const errArg = (next as jest.Mock).mock.calls[0][0] as unknown;
-        expect(errArg).toBeInstanceOf(AppError);
-        expect((errArg as AppError).statusCode).toBe(401);
-        expect((errArg as AppError).code).toBe('TOKEN_REVOKED');
-      }
-    });
-  });
-
-  describe('isAuthenticatedJwtOnly', () => {
-    it('denylist.has=true → throws 401 TOKEN_REVOKED on JWT-only path (R8.b — same coverage)', async () => {
-      (authSessionService.verifyAccessTokenWithClaims as jest.Mock).mockReturnValue({
-        id: 8,
-        role: 'admin',
-        museumId: null,
-        jti: 'access-jti-revoked-jwtonly',
-        expSec: Math.floor(Date.now() / 1000) + 600,
-      });
-      installDenylist({
-        add: jest.fn().mockResolvedValue(undefined),
-        has: jest.fn().mockResolvedValue(true),
-      });
-
-      const req = makePartialRequest({ headers: { authorization: 'Bearer revoked-jwt' } });
-      const res = makePartialResponse();
-      const next = makeNext();
-
-      let caught: unknown;
-      try {
-        await Promise.resolve(isAuthenticatedJwtOnly(req, res, next));
-      } catch (e) {
-        caught = e;
-      }
-
-      if (caught) {
-        expectAppErrorMatching(
-          () => {
-            throw caught as Error;
-          },
-          { statusCode: 401, code: 'TOKEN_REVOKED' },
-        );
-      } else {
         expect(next).toHaveBeenCalledTimes(1);
         const errArg = (next as jest.Mock).mock.calls[0][0] as unknown;
         expect(errArg).toBeInstanceOf(AppError);

@@ -31,10 +31,6 @@ jest.mock('@shared/observability/sentry', () => ({
   setUser: jest.fn(),
 }));
 
-jest.mock('@shared/middleware/apiKey.middleware', () => ({
-  validateApiKey: jest.fn(),
-}));
-
 import { authSessionService } from '@modules/auth/useCase';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 

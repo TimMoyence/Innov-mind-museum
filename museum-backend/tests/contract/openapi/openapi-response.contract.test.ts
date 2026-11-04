@@ -161,45 +161,6 @@ describe('openapi response contracts (active API)', () => {
       },
     });
 
-    assertMatchesOpenApiResponse({
-      path: '/api/auth/api-keys',
-      method: 'post',
-      statusCode: 201,
-      payload: {
-        apiKey: {
-          id: 1,
-          prefix: 'msk_abcd1234...',
-          name: 'Test Key',
-          createdAt: new Date().toISOString(),
-        },
-        plaintext: 'msk_abcd1234xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-      },
-    });
-    assertMatchesOpenApiResponse({
-      path: '/api/auth/api-keys',
-      method: 'get',
-      statusCode: 200,
-      payload: {
-        apiKeys: [
-          {
-            id: 1,
-            prefix: 'msk_abcd1234...',
-            name: 'My Key',
-            createdAt: new Date().toISOString(),
-            lastUsedAt: null,
-            expiresAt: null,
-            isActive: true,
-          },
-        ],
-      },
-    });
-    assertMatchesOpenApiResponse({
-      path: '/api/auth/api-keys/{id}',
-      method: 'delete',
-      statusCode: 200,
-      payload: { revoked: true },
-    });
-
     const chatService = buildChatTestService();
 
     const emptySession = await chatService.createSession({
@@ -410,11 +371,6 @@ describe('openapi response contracts (active API)', () => {
       { path: '/api/auth/verify-email', method: 'post', statusCode: 400 },
       { path: '/api/users/me/export', method: 'get', statusCode: 401 },
       { path: '/api/users/me/export', method: 'get', statusCode: 429 },
-      { path: '/api/auth/api-keys', method: 'post', statusCode: 400 },
-      { path: '/api/auth/api-keys', method: 'post', statusCode: 401 },
-      { path: '/api/auth/api-keys', method: 'get', statusCode: 401 },
-      { path: '/api/auth/api-keys/{id}', method: 'delete', statusCode: 401 },
-      { path: '/api/auth/api-keys/{id}', method: 'delete', statusCode: 404 },
       { path: '/api/chat/sessions', method: 'post', statusCode: 400 },
       { path: '/api/chat/sessions', method: 'post', statusCode: 401 },
       { path: '/api/chat/sessions', method: 'get', statusCode: 400 },

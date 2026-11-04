@@ -103,10 +103,3 @@ export const passwordResetLimiter: RequestHandler = createRateLimitMiddleware({
   windowMs: 300_000,
   keyGenerator: byIp,
 });
-
-/** /api-keys — per-user bucket. */
-export const apiKeyLimiter: RequestHandler = createRateLimitMiddleware({
-  limit: 10,
-  windowMs: 60_000,
-  keyGenerator: byUserId,
-});
