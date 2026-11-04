@@ -2,6 +2,7 @@ import { type NextFunction, type Request, type Response, Router } from 'express'
 
 import {
   clearAuthCookies,
+  refreshTokenFromCookie,
   setAuthCookies,
 } from '@modules/auth/adapters/primary/http/helpers/auth-cookies';
 import {
@@ -39,6 +40,7 @@ import {
   AUDIT_AUTH_SOCIAL_LOGIN,
 } from '@shared/audit/audit.types';
 import { logger } from '@shared/logger/logger';
+import { resolveCredential } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
 /**
@@ -120,6 +122,7 @@ authSessionRouter.post(
 
 authSessionRouter.post(
   '/refresh',
+  refreshTokenFromCookie,
   validateBody(refreshSchema),
   // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   refreshLimiter,
@@ -135,23 +138,19 @@ authSessionRouter.post(
 authSessionRouter.post(
   '/logout',
   logoutLimiter,
+  refreshTokenFromCookie,
   validateBody(logoutSchema),
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
-    // R7 — extract the access token bearer (best-effort) so the access-token
-    // denylist gets the `jti` even though it lives outside the refresh path.
-    // Invalid / expired / absent bearer → undefined ctx → logout still
-    // idempotent (refresh side handled separately). Never throw on bearer
-    // verification : a misformed Bearer must not block logout (cf. spec §R7
-    // "idempotent ... no leak of token validation details").
+    // R7 — the access token (Bearer or access_token cookie, best-effort) feeds
+    // the access-token denylist. Absent / invalid / expired → undefined ctx →
+    // logout still idempotent, no leak of token validation details.
     let ctx: { accessJti: string; accessExpSec: number } | undefined;
     try {
-      const claims = authSessionService.verifyAccessTokenWithClaims(
-        req.headers.authorization?.split(' ')[1] ?? '',
-      );
+      const claims = authSessionService.verifyAccessTokenWithClaims(resolveCredential(req) ?? '');
       ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };
     } catch {
-      // Bearer absent/invalid/expired — silent, no leak.
+      // Access token absent/invalid/expired — silent, no leak.
     }
     await authSessionService.logout(refreshToken, ctx);
     await auditService.log({

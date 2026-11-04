@@ -9,7 +9,7 @@
 import { computeCsrfToken } from '@shared/middleware/csrf.middleware';
 import { env } from '@src/config/env';
 
-import type { Response, CookieOptions } from 'express';
+import type { Response, CookieOptions, RequestHandler } from 'express';
 
 export interface CookieSessionInput {
   accessToken: string;
@@ -70,6 +70,16 @@ export function setAuthCookies(res: Response, session: CookieSessionInput): void
     ...(accessMaxAgeMs !== undefined ? { maxAge: accessMaxAgeMs } : {}),
   });
 }
+
+/** Web sends its refresh token as the `refresh_token` cookie; a mobile JSON `refreshToken` wins. */
+export const refreshTokenFromCookie: RequestHandler = (req, _res, next) => {
+  const body = (req.body ?? {}) as { refreshToken?: unknown };
+  const cookie = (req.cookies as Record<string, string | undefined> | undefined)?.refresh_token;
+  if (body.refreshToken === undefined && cookie) {
+    req.body = { ...body, refreshToken: cookie };
+  }
+  next();
+};
 
 /** Mirrors {@link setAuthCookies} paths. */
 export function clearAuthCookies(res: Response): void {

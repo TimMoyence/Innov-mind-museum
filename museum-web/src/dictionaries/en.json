@@ -358,6 +358,7 @@
     "nps": "NPS",
     "accessDenied": "Access Denied",
     "goToHomepage": "Go to homepage",
+    "logout": "Log out",
     "login": {
       "title": "Musaium Administration",
       "emailPlaceholder": "Email",

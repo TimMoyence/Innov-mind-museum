@@ -13,6 +13,7 @@ export const mockAdminDict: Dictionary['admin'] = {
   nps: 'NPS',
   accessDenied: 'Access Denied',
   goToHomepage: 'Go to Homepage',
+  logout: 'Log out',
   login: {
     title: 'Admin Login',
     emailPlaceholder: 'Email',

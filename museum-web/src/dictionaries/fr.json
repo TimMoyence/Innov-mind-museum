@@ -358,6 +358,7 @@
     "nps": "NPS",
     "accessDenied": "Accès refusé",
     "goToHomepage": "Retour à l'accueil",
+    "logout": "Se déconnecter",
     "login": {
       "title": "Administration Musaium",
       "emailPlaceholder": "Email",

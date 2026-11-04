@@ -9,5 +9,5 @@ export default async function ResetPasswordPage({ params }: ResetPasswordPagePro
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
 
-  return <ResetPasswordForm dict={dict.resetPassword} />;
+  return <ResetPasswordForm dict={dict.resetPassword} locale={locale as Locale} />;
 }

@@ -10,8 +10,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAdminDict } from '@/lib/admin-dictionary';
+import { useRouter } from 'next/navigation';
+import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { apiGet, apiPost, registerLogoutHandler } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
 import type { AuthSessionResponse, UserRole } from '@/lib/admin-types';
@@ -102,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // probe never runs because admin-authz is absent).
   const [isHydrating, setIsHydrating] = useState(true);
   const router = useRouter();
+  const locale = useAdminLocale();
 
   // Hydrate session from the HttpOnly access_token cookie on mount.
   // Gated on the readable `admin-authz` hint cookie so the public-route
@@ -139,13 +140,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearAdminAuthzCookie();
-    setUser(null);
-    // Redirect to login — extract locale from current path
-    const segments = window.location.pathname.split('/');
-    const locale = segments[1] ?? 'fr';
-    router.push(`/${locale}/admin/login`);
-  }, [router]);
+    void apiPost('/api/auth/logout', {}, { skipAuthRefresh: true })
+      .catch(() => undefined)
+      .finally(() => {
+        clearAdminAuthzCookie();
+        setUser(null);
+        router.push(`/${locale}/admin/login`);
+      });
+  }, [router, locale]);
 
   // Register the logout handler so api.ts can trigger it on refresh failure
   useEffect(() => {
@@ -204,16 +206,14 @@ export function useAuth(): AuthContextValue {
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading, isHydrating } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
+  const locale = useAdminLocale();
   const blocking = isLoading || isHydrating;
 
   useEffect(() => {
     if (!blocking && !isAuthenticated) {
-      // Derive locale from pathname (e.g. /fr/admin/… → fr)
-      const locale = pathname.split('/')[1] ?? 'fr';
       router.replace(`/${locale}/admin/login`);
     }
-  }, [isAuthenticated, blocking, router, pathname]);
+  }, [isAuthenticated, blocking, router, locale]);
 
   if (blocking) {
     return (
@@ -243,15 +243,14 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const { user, isAuthenticated, isLoading, isHydrating } = useAuth();
   const adminDict = useAdminDict();
   const router = useRouter();
-  const pathname = usePathname();
+  const locale = useAdminLocale();
   const blocking = isLoading || isHydrating;
 
   useEffect(() => {
     if (!blocking && !isAuthenticated) {
-      const locale = pathname.split('/')[1] ?? 'fr';
       router.replace(`/${locale}/admin/login`);
     }
-  }, [isAuthenticated, blocking, router, pathname]);
+  }, [isAuthenticated, blocking, router, locale]);
 
   if (blocking) {
     return (
@@ -280,7 +279,6 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
           type="button"
           className="mt-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors"
           onClick={() => {
-            const locale = pathname.split('/')[1] ?? 'fr';
             router.push(`/${locale}`);
           }}
         >
