@@ -12,6 +12,7 @@ export interface StubLLMOrchestratorOptions {
 interface OrchestratorGenerateResult {
   text: string;
   metadata: Record<string, unknown>;
+  degraded: boolean;
 }
 
 /**
@@ -50,7 +51,7 @@ export class StubLLMOrchestrator {
   private async next(): Promise<OrchestratorGenerateResult> {
     this.callCount += 1;
     if (this.opts.forceFallbackText) {
-      return { text: this.opts.forceFallbackText, metadata: { stub: 'force-fallback' } };
+      return { text: this.opts.forceFallbackText, metadata: { stub: 'force-fallback' }, degraded: true };
     }
     const limit = this.opts.failuresBeforeFallback ?? Number.MAX_SAFE_INTEGER;
     if (this.callCount <= limit) {
@@ -59,6 +60,7 @@ export class StubLLMOrchestrator {
     return {
       text: 'Phase 6 stub fallback (after threshold)',
       metadata: { stub: 'after-threshold', callCount: this.callCount },
+      degraded: false,
     };
   }
 

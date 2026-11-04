@@ -21,7 +21,7 @@
  * it → R-id → spec/source mapping:
  *   R1  store-key === lookup-key                  (read/write parity)   → AC7
  *   R2  computeKey === store-key === lookup-key    (persistence stamp)  → AC7
- *   R3  key format llm:v3:{ctx}:{museum|none}:{user|anon}:{32-hex}      → AC8
+ *   R3  key format llm:v4:{ctx}:{museum|none}:{user|anon}:{32-hex}      → AC8
  *       (v3 since 2026-06-12 — lowDataMode KEY_VERSION bump, US-12.2/INV-21,
  *       run undefined-network-detection-reliability ; supersedes the §4
  *       never-edit constraint of the ORIGINAL characterization run for the
@@ -79,11 +79,11 @@ describe('cache-key parity contract (sentinel: cache-key-parity)', () => {
   });
 
   // ── R3 — exact key format ─────────────────────────────────────────────
-  it('R3 — key matches llm:v3:{ctx}:{museum|none}:{user|anon}:{32-lowercase-hex}', () => {
+  it('R3 — key matches llm:v4:{ctx}:{museum|none}:{user|anon}:{32-lowercase-hex}', () => {
     const key = service.computeKey(makeLlmCacheKeyInput());
 
     expect(key).toMatch(
-      /^llm:v3:(generic|museum-mode|personalized):(\d+|none):(\d+|anon):[0-9a-f]{32}$/,
+      /^llm:v4:(generic|museum-mode|personalized):(\d+|none):(\d+|anon):[0-9a-f]{32}$/,
     );
   });
 

@@ -395,7 +395,7 @@ export class ChatMessageService {
   /** Bypass mirrors lookup (invariant: miss→store→hit). */
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
-    if (!llmCache) return;
+    if (!llmCache || aiResult.degraded) return;
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return;

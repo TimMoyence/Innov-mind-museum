@@ -6,6 +6,12 @@ import { useUserProfileStore } from '@/features/settings/infrastructure/userProf
 import { AUTH_ROUTE, HOME_ROUTE, ONBOARDING_ROUTE } from './routes';
 
 /**
+ * Email magic-link screens, opened while signed out (forgotten password) or right
+ * after registration (before onboarding). The one-time token is checked server-side.
+ */
+const MAGIC_LINK_SCREENS = new Set(['reset-password', 'verify-email', 'confirm-email-change']);
+
+/**
  * Guards navigation based on authentication state.
  * Redirects unauthenticated users to the auth screen and authenticated users away from it.
  * Forces first-launch users through onboarding before reaching home.
@@ -25,6 +31,12 @@ export const useProtectedRoute = (): void => {
     const isAuthRoute = currentRoot === 'auth';
     const segmentParts = segments as string[];
     const isOnboardingRoute = currentRoot === '(stack)' && segmentParts[1] === 'onboarding';
+    const isMagicLinkRoute =
+      currentRoot === '(stack)' && MAGIC_LINK_SCREENS.has(segmentParts[1] ?? '');
+
+    if (isMagicLinkRoute) {
+      return;
+    }
 
     if (!isAuthenticated && !isAuthRoute) {
       router.replace(AUTH_ROUTE);

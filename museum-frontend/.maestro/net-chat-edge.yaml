@@ -17,7 +17,7 @@ appId: com.musaium.mobile.preview
 #
 # The preference is set AFTER chat-entry: its `launchApp clearState` wipes any
 # preference set before it. The settings route is a regular route, so this
-# works in the release APK the nightly runs (the `(dev)` routes are __DEV__-only).
+# works in the release APK the nightly runs.
 #
 # DEVICE→PROXY: on the Android nightly matrix the app's API base URL points at
 # the Toxiproxy shaped listener (10.0.2.2:3100) seeded from
@@ -33,16 +33,10 @@ appId: com.musaium.mobile.preview
     file: helpers/chat-entry.yaml
 
 # ── Turn the data saving mode on from Settings, then come back to the chat ──
-- openLink: "musaium:///(stack)/settings"
-- scrollUntilVisible:
-    element:
-      text: "Économie activée|Saving enabled"
-    direction: DOWN
-    timeout: 20000
-- tapOn:
-    text: "Économie activée|Saving enabled"
-- back
-- waitForAnimationToEnd
+- runFlow:
+    file: helpers/data-saving-mode.yaml
+    env:
+      MODE: "Économie activée|Saving enabled"
 
 # ── Low-data badge must light (preference 'low' + online) — NON-optional ──
 - extendedWaitUntil:

@@ -1,0 +1,46 @@
+name: scan-prod-image
+description: Build a production image into the local Docker daemon and fail on any fixed HIGH or CRITICAL vulnerability.
+
+inputs:
+  dockerfile:
+    description: Dockerfile path, relative to the repository root build context.
+    required: true
+  tag:
+    description: Local tag given to the built image.
+    required: true
+  build-args:
+    description: Newline-separated build arguments.
+    required: false
+    default: ''
+  cache-from:
+    description: Buildx cache source.
+    required: false
+    default: ''
+  cache-to:
+    description: Buildx cache destination.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Build image
+      uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7
+      with:
+        context: .
+        file: ${{ inputs.dockerfile }}
+        load: true
+        tags: ${{ inputs.tag }}
+        build-args: ${{ inputs.build-args }}
+        cache-from: ${{ inputs.cache-from }}
+        cache-to: ${{ inputs.cache-to }}
+
+    - name: Trivy image scan
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
+      with:
+        image-ref: ${{ inputs.tag }}
+        format: table
+        severity: CRITICAL,HIGH
+        exit-code: '1'
+        ignore-unfixed: true
+        trivyignores: .trivyignore

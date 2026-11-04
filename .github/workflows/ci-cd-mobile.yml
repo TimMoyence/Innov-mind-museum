@@ -57,6 +57,12 @@ concurrency:
 permissions:
   contents: read
 
+# Every Maestro run logs in with the same seeded free-tier account and opens a
+# chat session in many flows; the production cap (3 per month) would 402 them.
+# The seed reads the same value, so the paywall account stays exhausted.
+env:
+  FREE_TIER_MONTHLY_SESSION_LIMIT: '1000'
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -447,37 +453,9 @@ jobs:
           # nightly chat-compare carousel renders header-only and its strengthened
           # per-card assert fails RED — by design.
           CHAT_COMPARE_PROVISION: ${{ matrix.shard == 'chat' && '1' || '' }}
-          # Seed the dedicated quota-exhausted paywall account ONLY on the
-          # `museum` shard (the only shard that runs modal-paywall-quota-upsell.yaml).
-          SEED_PAYWALL_ACCOUNT: ${{ matrix.shard == 'museum' && '1' || '' }}
-        run: |
-          ./scripts/maestro-runner-setup.sh
-          # Seed the two FIXED Maestro login accounts (direct DB insert, bypasses
-          # the HTTP register breach-check):
-          #   1. e2e-test-login@test.musaium.dev / TestPassword123! — quick-login.yaml
-          #   2. apple.test@apple.com / Apple1234! — auth-login-happy, auth-account-delete,
-          #      cert-pinning-smoke (the Apple-review fixed account).
-          cd ../museum-backend
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
-            pnpm seed:e2e-maestro-account
-          # 3. e2e-paywall@test.musaium.dev / TestPassword123! — DEDICATED account
-          #    for modal-paywall-quota-upsell.yaml with its free-tier monthly
-          #    session quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1), so the flow's
-          #    first `POST /api/sessions` returns 402 → the QuotaUpsellModal opens
-          #    via the REAL axios-402 interceptor (no dev-route deeplink). Separate
-          #    email so the other museum-shard flows that create real sessions are
-          #    not 402'd. Only seeded on the `museum` shard (where the flow runs).
-          if [ "${SEED_PAYWALL_ACCOUNT:-}" = "1" ]; then
-            E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
-              DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-              E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
-              pnpm seed:e2e-maestro-account
-          fi
+        # The Maestro accounts are seeded by maestro-emulator-script.sh at the
+        # start of every shard attempt (maestro-seed-accounts.sh).
+        run: ./scripts/maestro-runner-setup.sh
 
       - name: Enable KVM (hardware-accelerated emulator)
         run: |
@@ -764,6 +742,7 @@ jobs:
               - 'museum-frontend/features/chat/**'
               - 'museum-frontend/shared/infrastructure/connectivity/**'
               - 'museum-frontend/.maestro/net-*.yaml'
+              - 'museum-frontend/.maestro/helpers/**'
               - 'museum-frontend/.maestro/shards.json'
               - 'museum-backend/src/shared/net-shaping/**'
               - 'scripts/net-shaping/**'
@@ -885,12 +864,7 @@ jobs:
           REDIS_PORT: '6379'
           EXTRACTION_WORKER_ENABLED: 'false'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          ./scripts/maestro-runner-setup.sh
-          cd ../museum-backend
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5432 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            pnpm seed:e2e-maestro-account
+        run: ./scripts/maestro-runner-setup.sh
 
       # Seed the Toxiproxy proxy + the per-profile toxics from the W1 mapper.
       # `profile-to-toxics.mjs <profile>` emits the admin-API JSON (NO inline
@@ -1037,26 +1011,7 @@ jobs:
       - name: Boot backend (docker-compose + migrations + API)
         run: ./scripts/maestro-runner-setup.sh
       - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
-        # The iOS nightly suite runs every flow (maestro-run-shard.sh all),
-        # including auth-login-happy and modal-paywall-quota-upsell. Seed the same
-        # fixed accounts the Android shards seed so those flows can log in. The
-        # paywall account is seeded with its quota PRE-EXHAUSTED (E2E_EXHAUST_QUOTA=1)
-        # so modal-paywall-quota-upsell drives the real 402 → QuotaUpsellModal path
-        # (the iOS nightly is a Debug build, but the flow no longer relies on the
-        # removed (dev) preview route — it uses the production 402 trigger).
-        run: |
-          cd museum-backend
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            E2E_LOGIN_EMAIL=apple.test@apple.com E2E_LOGIN_PASSWORD='Apple1234!' \
-            pnpm seed:e2e-maestro-account
-          E2E_SEED_ALLOW=1 E2E_EXHAUST_QUOTA=1 DB_HOST=localhost DB_PORT=5433 DB_USER=museum_dev \
-            DB_PASSWORD=museum_dev_password PGDATABASE=museum_dev \
-            E2E_LOGIN_EMAIL=e2e-paywall@test.musaium.dev E2E_LOGIN_PASSWORD='TestPassword123!' \
-            pnpm seed:e2e-maestro-account
+        run: DB_PORT=5433 ./scripts/maestro-seed-accounts.sh
       - name: Boot iOS Simulator
         run: |
           xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true

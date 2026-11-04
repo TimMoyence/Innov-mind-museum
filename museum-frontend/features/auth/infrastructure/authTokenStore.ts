@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import { storage } from '@/shared/infrastructure/storage';
+import { USER_PROFILE_STORAGE_KEY } from '@/features/settings/infrastructure/userProfileStore';
 
 let accessToken = '';
 
@@ -76,6 +77,32 @@ const secureTokenStore = (key: string) => ({
 
 const refreshTokenStore = secureTokenStore(REFRESH_TOKEN_KEY);
 const accessTokenStore = secureTokenStore(ACCESS_TOKEN_KEY);
+
+const INSTALL_MARKER_KEY = 'auth.installMarker';
+
+/**
+ * iOS keeps the Keychain when the app is uninstalled, so a previous install's
+ * refresh token would reopen its session. App data (AsyncStorage) is wiped with
+ * the install: no marker and no profile means a brand-new install, whose
+ * Keychain tokens belong to someone else. An install that predates the marker
+ * has a profile and keeps its session. Runs once per install and never throws.
+ */
+export const purgeStaleCredentialsOnFreshInstall = async (): Promise<void> => {
+  try {
+    if ((await storage.getItem(INSTALL_MARKER_KEY)) !== null) {
+      return;
+    }
+    if ((await storage.getItem(USER_PROFILE_STORAGE_KEY)) === null) {
+      await Promise.all([
+        refreshTokenStore.clear().catch(() => undefined),
+        accessTokenStore.clear().catch(() => undefined),
+      ]);
+    }
+    await storage.setItem(INSTALL_MARKER_KEY, '1');
+  } catch {
+    return;
+  }
+};
 
 /** Persistent storage for auth credentials, using expo-secure-store on native and AsyncStorage on web. */
 export const authStorage = {

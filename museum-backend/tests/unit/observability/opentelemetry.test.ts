@@ -170,6 +170,7 @@ describe('opentelemetry — initOpenTelemetry', () => {
       '@opentelemetry/instrumentation-fs': { enabled: false },
       '@opentelemetry/instrumentation-dns': { enabled: false },
       '@opentelemetry/instrumentation-router': { enabled: false },
+      '@opentelemetry/instrumentation-openai': { enabled: false },
     });
 
     // NodeSDK ctor receives the wired pieces

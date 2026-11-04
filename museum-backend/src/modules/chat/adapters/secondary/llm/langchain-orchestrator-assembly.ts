@@ -151,5 +151,5 @@ export function assembleResponse(params: AssembleResponseInput): OrchestratorOut
   Sentry.getActiveSpan()?.setAttribute('llm.latency_ms', totalLatencyMs);
   Sentry.getActiveSpan()?.setAttribute('llm.degraded', degraded);
 
-  return { text, metadata };
+  return { text, metadata, degraded };
 }

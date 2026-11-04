@@ -73,6 +73,7 @@ function makeRecordingOrchestrator(output: Partial<OrchestratorOutput> = {}): {
   const fakeOutput: OrchestratorOutput = {
     text: 'Synthetic assistant response',
     metadata: {},
+    degraded: false,
     ...output,
   };
 

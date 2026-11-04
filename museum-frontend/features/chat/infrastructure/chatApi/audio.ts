@@ -6,7 +6,13 @@ import type { GuideLevel } from '@/features/settings/runtimeSettings';
 
 import type { PostMessageResponseDTO } from '../../domain/contracts';
 import { isPostMessageResponseDTO } from '../../domain/contracts';
-import { CHAT_BASE, appendRnFile, audioMimeByExtension, ensureContract } from './_internals';
+import {
+  CHAT_BASE,
+  MODEL_REPLY_TIMEOUT_MS,
+  appendRnFile,
+  audioMimeByExtension,
+  ensureContract,
+} from './_internals';
 
 export interface PostAudioMessageParams {
   sessionId: string;
@@ -95,6 +101,7 @@ export const postAudioMessage = async (
     // upload fails on-device ("Network unavailable"). The image-compare upload
     // (imageComparisonApi.ts) already sets this same header for the same reason.
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeoutMs: MODEL_REPLY_TIMEOUT_MS,
   });
 
   return ensureContract(data, isPostMessageResponseDTO, 'post-audio-message');
@@ -109,6 +116,7 @@ export const synthesizeSpeech = async (messageId: string): Promise<ArrayBuffer |
     const response = await httpRequest<ArrayBuffer>(`${CHAT_BASE}/messages/${messageId}/tts`, {
       method: 'POST',
       responseType: 'arraybuffer',
+      timeoutMs: MODEL_REPLY_TIMEOUT_MS,
     });
     // 204 No Content: Axios returns empty/zero-length data
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive response check

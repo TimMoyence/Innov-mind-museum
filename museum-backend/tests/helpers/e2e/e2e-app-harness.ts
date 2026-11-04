@@ -314,6 +314,7 @@ export async function createE2EHarness(options?: E2EHarnessOptions): Promise<E2E
         return {
           text: 'Synthetic assistant response for e2e',
           metadata: { citations: ['e2e'] },
+          degraded: false,
         };
       },
     } as ChatOrchestrator);

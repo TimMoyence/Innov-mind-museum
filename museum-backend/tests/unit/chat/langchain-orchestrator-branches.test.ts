@@ -154,6 +154,25 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
       expect(result.metadata.diagnostics?.degraded).toBe(true);
     });
 
+    it('flags the fallback answer as degraded on the output itself, diagnostics or not', async () => {
+      const failing = new LangChainChatOrchestrator({
+        model: { invoke: jest.fn().mockRejectedValue(new Error('Invalid API key')), stream: jest.fn() },
+        circuitBreaker: new LLMCircuitBreaker({ failureThreshold: 100 }),
+      });
+      const answering = new LangChainChatOrchestrator({
+        model: {
+          invoke: jest.fn(),
+          stream: jest.fn(),
+          withStructuredOutput: jest.fn(() => ({
+            invoke: jest.fn().mockResolvedValue({ text: 'A masterpiece by Monet.', citations: [] }),
+          })),
+        },
+      });
+
+      await expect(failing.generate(makeInput())).resolves.toMatchObject({ degraded: true });
+      await expect(answering.generate(makeInput())).resolves.toMatchObject({ degraded: false });
+    });
+
     it('retries on retryable errors (timeout)', async () => {
       const model = {
         invoke: jest

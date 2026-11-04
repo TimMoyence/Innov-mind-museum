@@ -33,11 +33,13 @@ class WalkAwareOrchestrator implements ChatOrchestrator {
         text: 'Welcome to the guided walk.',
         metadata: { citations: ['walk:test'] },
         suggestions: ['Mona Lisa', 'Vénus de Milo'],
+        degraded: false,
       };
     }
     return {
       text: 'Generic art response.',
       metadata: { citations: ['test'] },
+      degraded: false,
     };
   }
 }
@@ -91,6 +93,7 @@ describe('chat walk-intent integration (service-level)', () => {
           text: 'Walk response without suggestions.',
           metadata: { citations: ['walk:empty'] },
           suggestions: [],
+          degraded: false,
         };
       },
     };

@@ -57,6 +57,7 @@ function makeRecordingOrchestrator(overrideOutput?: Partial<OrchestratorOutput>)
   const fakeOutput: OrchestratorOutput = {
     text: 'Synthetic assistant response',
     metadata: {},
+    degraded: false,
     ...overrideOutput,
   };
   const orchestrator: ChatOrchestrator = {

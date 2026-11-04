@@ -10,8 +10,17 @@ export const OVERPASS_ENDPOINTS = [
   'https://overpass.private.coffee/api/interpreter',
 ];
 
-/** Low so worst-case (3 × 6s) stays under VPS nginx gateway timeout (~20s). Real queries < 3s. */
+/** Per-endpoint ceiling. Real queries < 3s. */
 export const DEFAULT_TIMEOUT_MS = 6_000;
+
+/**
+ * Whole museum search across the endpoint chain: the mobile client gives up at
+ * 15s, so Overpass must leave room for the rest of the request.
+ */
+export const SEARCH_BUDGET_MS = 9_000;
+
+/** Every endpoint failed: hold the empty answer briefly so searches stay fast, then retry. */
+export const OUTAGE_CACHE_TTL_SECONDS = 60;
 
 /**
  * RESOURCE ADMISSION BUDGET, not a real timeout. Server refuses if N seems insufficient.

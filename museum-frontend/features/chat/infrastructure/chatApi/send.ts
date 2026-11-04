@@ -12,6 +12,7 @@ import type {
 import { isCreateSessionResponseDTO, isPostMessageResponseDTO } from '../../domain/contracts';
 import {
   CHAT_BASE,
+  MODEL_REPLY_TIMEOUT_MS,
   appendRnFile,
   ensureContract,
   normalizeImageMimeTypeFromExtension,
@@ -162,6 +163,7 @@ export const postMessage = async (params: PostMessageParams): Promise<PostMessag
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/messages`, {
     method: 'POST',
     body: payload,
+    timeoutMs: MODEL_REPLY_TIMEOUT_MS,
     ...(Object.keys(headers).length > 0 ? { headers } : {}),
   });
 

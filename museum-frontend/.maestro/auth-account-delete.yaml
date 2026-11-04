@@ -2,13 +2,10 @@ appId: com.musaium.mobile.preview
 ---
 # Auth — Account deletion (login → settings → delete → confirm → logout)
 #
-# Login as a deletable seeded account, navigate to Settings → Danger Zone,
-# tap "Delete account", confirm the native Alert, and expect to land back
-# on the auth screen (auto-logout after backend success).
-#
-# WARNING: This flow DESTROYS the account it logs into. It uses the seeded
-# apple.test@apple.com / Apple1234! account — the validation harness MUST
-# RE-SEED that account after every run of this flow.
+# Logs in with its own seeded account (e2e-delete@test.musaium.dev, used by no
+# other flow), then Settings → Danger Zone → "Delete account" → confirm the
+# native Alert, and expects to land back on the auth screen. The account is
+# recreated before every shard attempt (scripts/maestro-seed-accounts.sh).
 #
 # Notes (see AUTH_FLOWS_NOTES.md):
 #   - Home reaches Settings only via the hero gear button (testID
@@ -36,25 +33,20 @@ appId: com.musaium.mobile.preview
     id: "analytics-consent-decline"
 
 # ──────────────────────────────────────────────
-# Phase 1: Login (seeded deletable account, hard-coded — RE-SEED after run)
+# Phase 1: Login with the dedicated deletable account
 # ──────────────────────────────────────────────
 - tapOn:
     id: "email-input"
-- inputText: "apple.test@apple.com"
-
+- inputText: "e2e-delete@test.musaium.dev"
 - tapOn:
     id: "password-input"
-- inputText: "Apple1234!"
-
+- inputText: "TestPassword123!"
 - hideKeyboard
-
 - tapOn:
     id: "auth-submit"
-# iOS native "Save Password?" dialog
 - tapOn:
     text: "Plus tard|Not Now"
     optional: true
-
 - waitForAnimationToEnd:
     timeout: 10000
 

@@ -3,6 +3,8 @@ import { createAppError } from '@/shared/types/AppError';
 /** Base path for all chat HTTP endpoints. */
 export const CHAT_BASE = '/api/chat';
 
+export const MODEL_REPLY_TIMEOUT_MS = 60_000;
+
 /** Maps audio file extensions to MIME types for `postAudioMessage` form uploads. */
 export const audioMimeByExtension: Record<string, string> = {
   m4a: 'audio/mp4',

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 
 interface StoryStep {
   title: string;
@@ -97,15 +97,20 @@ function ListIcon() {
 
 const STEP_ICONS = [BuildingIcon, CameraIcon, SparklesIcon, ListIcon] as const;
 
+type MotionTarget = Record<string, number>;
+
 export function StorySection({ title, subtitle, steps }: StorySectionProps) {
+  const reduceMotion = useReducedMotion();
+  const entrance = (from: MotionTarget, to: MotionTarget) =>
+    reduceMotion ? { initial: false as const } : { initial: from, whileInView: to };
+
   return (
     <section className="py-24 px-6 max-w-5xl mx-auto" aria-labelledby="story-section-title">
       <motion.h2
         id="story-section-title"
         className="text-3xl md:text-4xl font-semibold text-center mb-3 text-text-primary"
         style={{ letterSpacing: '-0.03em' }}
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
+        {...entrance({ opacity: 0, y: 12 }, { opacity: 1, y: 0 })}
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
@@ -113,8 +118,7 @@ export function StorySection({ title, subtitle, steps }: StorySectionProps) {
       </motion.h2>
       <motion.p
         className="text-center text-base text-text-secondary mb-12"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
+        {...entrance({ opacity: 0 }, { opacity: 1 })}
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
       >
@@ -126,8 +130,7 @@ export function StorySection({ title, subtitle, steps }: StorySectionProps) {
         <motion.div
           aria-hidden="true"
           className="hidden md:block absolute top-12 left-12 right-12 h-px bg-gradient-to-r from-primary-500/30 via-primary-500/60 to-primary-500/30"
-          initial={{ scaleX: 0, originX: 0 }}
-          whileInView={{ scaleX: 1 }}
+          {...entrance({ scaleX: 0, originX: 0 }, { scaleX: 1 })}
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.8, ease: 'easeOut', delay: 0.4 }}
         />
@@ -138,8 +141,7 @@ export function StorySection({ title, subtitle, steps }: StorySectionProps) {
             <motion.article
               key={step.title}
               className="flex flex-col items-center text-center gap-3"
-              initial={{ opacity: 0, y: 16, scale: 0.92 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              {...entrance({ opacity: 0, y: 16, scale: 0.92 }, { opacity: 1, y: 0, scale: 1 })}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.4, ease: 'easeOut', delay: 0.15 * index }}
             >

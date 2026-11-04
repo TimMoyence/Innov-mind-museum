@@ -142,6 +142,24 @@ describe('queryOverpassMuseums', () => {
     expect(results).toEqual([]);
   });
 
+  it('gives up on Overpass once the search budget is spent, however many endpoints remain', async () => {
+    fetchSpy.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted', 'AbortError'));
+          });
+        }),
+    );
+    const startedAt = Date.now();
+
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }, 60, 90);
+
+    expect(results).toEqual([]);
+    expect(Date.now() - startedAt).toBeLessThan(150);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('falls back to second endpoint when first returns non-OK', async () => {
     // Main instance 504, Kumi returns data
     fetchSpy

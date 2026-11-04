@@ -88,6 +88,7 @@ export interface OrchestratorInput {
 export interface OrchestratorOutput {
   text: string;
   metadata: ChatAssistantMetadata;
+  degraded: boolean;
   /**
    * Returned only when intent='walk'. Up to 3 strings (each ≤60 chars),
    * validated by walkAssistantOutputSchema. Undefined for other intents.

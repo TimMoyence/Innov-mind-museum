@@ -1,0 +1,12 @@
+appId: com.musaium.mobile.preview
+---
+- openLink: "musaium:///(stack)/settings"
+- scrollUntilVisible:
+    element:
+      text: "${MODE}"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "${MODE}"
+- back
+- waitForAnimationToEnd

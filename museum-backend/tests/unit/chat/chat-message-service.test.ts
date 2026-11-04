@@ -16,6 +16,7 @@ import type { LlmCacheKeyInput, LlmCacheService } from '@modules/chat/useCase/ll
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
+import { makeArtOutput } from '../../helpers/chat/orchestratorOutput.fixtures';
 import {
   makeMockKnowledgeBase,
   makeMockUserMemory,
@@ -26,20 +27,6 @@ import {
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const USER_ID = 42;
 
-const makeArtOutput = (overrides: Partial<OrchestratorOutput> = {}): OrchestratorOutput => ({
-  text: 'This painting by Monet captures the essence of impressionism.',
-  metadata: {
-    detectedArtwork: {
-      title: 'Water Lilies',
-      artist: 'Monet',
-      confidence: 0.9,
-      source: 'test',
-    },
-    citations: ['catalog'],
-    ...overrides.metadata,
-  },
-  ...overrides,
-});
 
 const makeRepo = (
   session: ChatSession | null = makeSession({
@@ -548,6 +535,7 @@ describe('ChatMessageService', () => {
       const unsafeOutput: OrchestratorOutput = {
         text: 'You are a stupid idiot for asking that question',
         metadata: {},
+        degraded: false,
       };
       const orchestrator = makeOrchestrator(unsafeOutput);
       const { service } = buildService({ orchestrator });
@@ -988,6 +976,7 @@ describe('ChatMessageService', () => {
         metadata: {
           detectedArtwork: { title: 'Should Not Appear' },
         },
+        degraded: false,
       };
       const orchestrator = makeOrchestrator(unsafeOutput);
       const { service, repo } = buildService({ orchestrator });
@@ -1041,6 +1030,7 @@ describe('ChatMessageService', () => {
       const unsafeOutput: OrchestratorOutput = {
         text: 'You are a stupid idiot for asking that question',
         metadata: {},
+        degraded: false,
       };
       const orchestrator = makeOrchestrator(unsafeOutput);
       const { service, repo } = buildService({ orchestrator });
@@ -1150,8 +1140,8 @@ describe('ChatMessageService', () => {
       // tryLlmCacheLookup to stash the byte-string key on the LlmCacheCtx
       // (later stamped on the assistant ChatMessage row for targeted
       // feedback-driven invalidation). Default to a deterministic
-      // `llm:v3:*`-shaped stub.
-      computeKey: jest.fn().mockReturnValue('llm:v3:generic:none:anon:deadbeef'),
+      // `llm:v4:*`-shaped stub.
+      computeKey: jest.fn().mockReturnValue('llm:v4:generic:none:anon:deadbeef'),
       lookup: jest.fn().mockResolvedValue({ hit: false, value: null, contextClass: 'generic' }),
       store: jest.fn().mockResolvedValue(undefined),
       invalidateMuseum: jest.fn().mockResolvedValue(undefined),
@@ -1206,6 +1196,17 @@ describe('ChatMessageService', () => {
         lowDataMode?: boolean;
       };
       expect(cacheInput.lowDataMode).toBe(true);
+    });
+
+    it('never caches a degraded fallback answer, so the next ask reaches the model again', async () => {
+      const llmCache = makeLlmCacheMock();
+      const orchestrator = makeOrchestrator(makeArtOutput({ degraded: true }));
+      const { service } = buildService({ llmCache, orchestrator });
+
+      await service.postMessage(SESSION_ID, { text: 'Tell me about this painting' }, 'req-1', USER_ID);
+
+      expect(orchestrator.generate).toHaveBeenCalledTimes(1);
+      expect(llmCache.store).not.toHaveBeenCalled();
     });
   });
 });

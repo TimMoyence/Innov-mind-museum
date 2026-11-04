@@ -174,4 +174,40 @@ describe('useProtectedRoute', () => {
 
     expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
   });
+
+  it.each(['reset-password', 'verify-email', 'confirm-email-change'])(
+    'lets a signed-out visitor open the %s link from their email',
+    (screen) => {
+      mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false, isFirstLaunch: false });
+      mockedUseSegments.mockReturnValue(['(stack)', screen]);
+
+      renderHook(() => {
+        useProtectedRoute();
+      });
+
+      expect(mockReplace).not.toHaveBeenCalled();
+    },
+  );
+
+  it('lets a fresh registrant open the verify-email link before onboarding', () => {
+    mockedUseAuth.mockReturnValue({ isAuthenticated: true, isLoading: false, isFirstLaunch: true });
+    mockedUseSegments.mockReturnValue(['(stack)', 'verify-email']);
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('still sends a signed-out visitor away from any other stack screen', () => {
+    mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false, isFirstLaunch: false });
+    mockedUseSegments.mockReturnValue(['(stack)', 'settings']);
+
+    renderHook(() => {
+      useProtectedRoute();
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith('/auth');
+  });
 });

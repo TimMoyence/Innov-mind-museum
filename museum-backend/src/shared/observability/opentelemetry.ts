@@ -46,6 +46,7 @@ export function initOpenTelemetry(): void {
         // request) + instrumentation-express (chain span) cover our needs. DO NOT re-enable;
         // bumping setMaxListeners is NOT the fix.
         '@opentelemetry/instrumentation-router': { enabled: false },
+        '@opentelemetry/instrumentation-openai': { enabled: false },
       }),
     ],
   });

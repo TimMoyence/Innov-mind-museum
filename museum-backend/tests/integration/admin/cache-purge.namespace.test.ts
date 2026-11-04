@@ -1,6 +1,6 @@
 /**
  * I-FIX1 Vague C — POST /api/admin/museums/:id/cache/purge MUST invalidate the
- * REAL namespace `llm:v3:{museum-mode|personalized}:{museumId}:*` (the layout
+ * REAL namespace `llm:v4:{museum-mode|personalized}:{museumId}:*` (the layout
  * actually written by `LlmCacheServiceImpl.buildKey` — see
  * `llm-cache.service.ts:110-115`), NOT the dead `chat:llm:{museumId}:`
  * prefix that the route currently uses (`cache-purge.route.ts:25`).
@@ -22,15 +22,15 @@
  *   dimension — US-12.2/INV-21, run undefined-network-detection-reliability.)
  *
  * Acceptance (R-IFIX1a / R-IFIX1b) :
- *   - Seed real LLM cache entries under `llm:v3:museum-mode:42:anon:<sha>` AND
- *     `llm:v3:personalized:42:anon:<sha>` via the `LlmCacheServiceImpl.store`
+ *   - Seed real LLM cache entries under `llm:v4:museum-mode:42:anon:<sha>` AND
+ *     `llm:v4:personalized:42:anon:<sha>` via the `LlmCacheServiceImpl.store`
  *     contract (so the keys match the real write path byte-for-byte — no
  *     hand-rolled key string that could drift from the service layout).
  *   - POST /api/admin/museums/42/cache/purge as admin.
  *   - Assert : both seeded keys are GONE from the cache (lookup miss via
  *     `service.lookup()` — same byte-for-byte derivation).
- *   - Assert : `delByPrefix` was called with `llm:v3:museum-mode:42:` AND
- *     `llm:v3:personalized:42:` (spy on the underlying cache).
+ *   - Assert : `delByPrefix` was called with `llm:v4:museum-mode:42:` AND
+ *     `llm:v4:personalized:42:` (spy on the underlying cache).
  *   - Assert : `delByPrefix` was NOT called with the legacy `chat:llm:42:`
  *     prefix (regression guard against the dead namespace).
  *   - Also lock museum-id boundary : a cache entry seeded for museum 99 MUST
@@ -158,7 +158,7 @@ const seedMuseumEntry = async (
   return { input, payload };
 };
 
-describe('I-FIX1 — POST /admin/museums/:id/cache/purge invalidates llm:v3:* namespace (R-IFIX1)', () => {
+describe('I-FIX1 — POST /admin/museums/:id/cache/purge invalidates llm:v4:* namespace (R-IFIX1)', () => {
   let memory: MemoryCacheService;
 
   beforeEach(() => {
@@ -201,7 +201,7 @@ describe('I-FIX1 — POST /admin/museums/:id/cache/purge invalidates llm:v3:* na
     expect(postPersonalized.hit).toBe(false);
   });
 
-  it('R-IFIX1a — delByPrefix is called with BOTH llm:v3:museum-mode:42: AND llm:v3:personalized:42: (correct namespace)', async () => {
+  it('R-IFIX1a — delByPrefix is called with BOTH llm:v4:museum-mode:42: AND llm:v4:personalized:42: (correct namespace)', async () => {
     const { cache, delByPrefixSpy } = wrapCacheWithSpy(memory);
 
     await seedMuseumEntry(cache, 42, 'museum-mode', 'q1');
@@ -219,8 +219,8 @@ describe('I-FIX1 — POST /admin/museums/:id/cache/purge invalidates llm:v3:* na
     expect(res.status).toBe(200);
 
     const prefixCalls = delByPrefixSpy.mock.calls.map((call) => call[0]);
-    expect(prefixCalls).toEqual(expect.arrayContaining(['llm:v3:museum-mode:42:']));
-    expect(prefixCalls).toEqual(expect.arrayContaining(['llm:v3:personalized:42:']));
+    expect(prefixCalls).toEqual(expect.arrayContaining(['llm:v4:museum-mode:42:']));
+    expect(prefixCalls).toEqual(expect.arrayContaining(['llm:v4:personalized:42:']));
   });
 
   it('R-IFIX1a — delByPrefix is NOT called with the legacy chat:llm:42: prefix (regression guard against the dead namespace)', async () => {
@@ -259,8 +259,8 @@ describe('I-FIX1 — POST /admin/museums/:id/cache/purge invalidates llm:v3:* na
 
     // Museum 99 entry must still be in the cache — the purge for 42 is
     // strictly scoped. Green : `invalidateMuseum(42)` uses
-    // `llm:v3:museum-mode:42:` (note the trailing colon — boundary char) and
-    // does not match `llm:v3:museum-mode:99:`. RED at baseline trivially
+    // `llm:v4:museum-mode:42:` (note the trailing colon — boundary char) and
+    // does not match `llm:v4:museum-mode:99:`. RED at baseline trivially
     // passes (the wrong prefix removes nothing), but this assertion stays
     // green during the green phase too — it's a non-regression boundary lock.
     const postSurvivor = await lookupService.lookup<typeof survivor.payload>(survivor.input);

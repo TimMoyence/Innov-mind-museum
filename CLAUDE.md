@@ -87,7 +87,7 @@ Backend `@src/*`, `@modules/*`, `@data/*`, `@shared/*` ; frontend `@/*` → `./*
 - `ON CONFLICT (…)` exige une contrainte unique réelle : sans elle Postgres rejette l'insert.
 - pgvector ≥ 0.7.0 requis pour `halfvec(768)` ; index HNSW `halfvec_ip_ops`, déclaré `synchronize: false` dans l'entité car TypeORM ne sait pas le représenter.
 - Un FK sans relation se déclare par `@ForeignKey(() => Cible, { name, onDelete })`, sinon le générateur de migrations propose de le supprimer.
-- Cache LLM : `LlmCacheServiceImpl` seul, clé `llm:v3:{contextClass}:{museumId|none}:{userId|anon}:{sha256}` (`llm-cache.service.ts` `KEY_VERSION`). Toute clé de cache dérivée d'un réglage utilisateur inclut ce réglage (TTS : la voix).
+- Cache LLM : `LlmCacheServiceImpl` seul, clé `llm:v4:{contextClass}:{museumId|none}:{userId|anon}:{sha256}` (`llm-cache.service.ts` `KEY_VERSION`). Toute clé de cache dérivée d'un réglage utilisateur inclut ce réglage (TTS : la voix). Une réponse `degraded` (repli d'un LLM en échec) ne se met jamais en cache.
 - CI : `pnpm dev` démarre BullMQ, il faut le service `redis:7-alpine` ; `migration:run` crée l'extension vector, image `pgvector/pgvector:pg16` ; santé sur `/api/health`, jamais `/health`.
 - Toute queue BullMQ avec un `add()` a son `new Worker()` démarré au boot (`startEnrichmentWorker()` dans `src/index.ts`).
 - Un middleware qui incrémente un compteur ou un quota passe après les validateurs qui court-circuitent (Zod 400).

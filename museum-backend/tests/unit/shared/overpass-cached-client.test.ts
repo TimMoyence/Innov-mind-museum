@@ -114,27 +114,52 @@ describe('createCachedOverpassClient', () => {
   });
 
   describe('live failure path', () => {
-    it('caches the empty array with the short negative TTL when Overpass all-endpoints fails', async () => {
+    it('holds an Overpass outage for one minute only, not for the hour an empty place gets', async () => {
       global.fetch = jest
         .fn()
         .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
       const cache = makeCache();
       const client = createCachedOverpassClient(cache);
 
-      const result = await client({ lat: 48.86, lng: 2.34, radiusMeters: 5_000 });
+      const duringOutage = await client({ lat: 48.86, lng: 2.34, radiusMeters: 5_000 });
 
-      // The raw client returns [] on full failure (see queryOverpassMuseums).
-      expect(result).toEqual([]);
+      expect(duringOutage).toEqual([]);
       expect(cache.set).toHaveBeenCalledTimes(1);
-
       const [, stored, ttl] = cache.set.mock.calls[0] as [
         string,
-        { value: unknown; storedAtMs: number; ttlSeconds: number },
+        { value: unknown; ttlSeconds: number },
         number,
       ];
       expect(stored.value).toEqual([]);
-      expect(stored.ttlSeconds).toBe(3_600);
-      expect(ttl).toBe(3_600);
+      expect(ttl).toBe(60);
+      expect(stored.ttlSeconds).toBe(60);
+
+      global.fetch = okFetch() as unknown as typeof fetch;
+      const afterRecovery = await client({ lat: 48.86, lng: 2.34, radiusMeters: 5_000 });
+
+      expect(afterRecovery).toEqual([SAMPLE_PARSED]);
+    });
+
+    it('keeps the cached list when a background refresh hits an Overpass outage', async () => {
+      global.fetch = jest
+        .fn()
+        .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+      jest.spyOn(Math, 'random').mockReturnValue(0);
+      const ttlSeconds = 86_400;
+      const cache = makeCache({
+        get: jest.fn().mockResolvedValue({
+          value: [SAMPLE_PARSED],
+          storedAtMs: Date.now() - 0.99 * ttlSeconds * 1_000,
+          ttlSeconds,
+        }),
+      });
+      const client = createCachedOverpassClient(cache);
+
+      const result = await client({ lat: 48.86, lng: 2.34, radiusMeters: 5_000 });
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(result).toEqual([SAMPLE_PARSED]);
+      expect(cache.set).not.toHaveBeenCalled();
     });
 
     it('caches an empty successful response with the short negative TTL (not positive)', async () => {

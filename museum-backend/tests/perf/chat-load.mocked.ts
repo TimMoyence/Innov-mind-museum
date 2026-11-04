@@ -23,6 +23,7 @@ class MockLatencyOrchestrator implements ChatOrchestrator {
     return {
       text: 'Synthetic response for perf profiling.',
       metadata: {},
+      degraded: false,
     };
   }
 

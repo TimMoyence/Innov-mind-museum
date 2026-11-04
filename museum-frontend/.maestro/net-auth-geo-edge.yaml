@@ -3,7 +3,7 @@ appId: com.musaium.mobile.preview
 # screen: AuthScreen
 # runtime: NIGHTLY weak-net (device→Toxiproxy, not validated in unit CI)
 #
-# W3-06 — Auth login + geo resolution under EDGE / low-data (Layer 3 device track).
+# W3-06 — Auth login + geo resolution under EDGE (Layer 3 device track).
 #
 # Proves the cold-start critical path (login → home → reach a museum context that
 # resolves coarse location) survives a shaped (EDGE) link: the login round-trip
@@ -19,10 +19,6 @@ appId: com.musaium.mobile.preview
 #
 # Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!;
 # backend reachable through the shaped proxy.
-
-# ── Force low-data mode (shaped/compression path) ──
-- openLink: "musaium:///(dev)/force-data-mode?value=low"
-- waitForAnimationToEnd
 
 # ── Launch fresh → land on the auth screen ──
 - launchApp:

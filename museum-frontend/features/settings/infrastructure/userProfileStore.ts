@@ -4,6 +4,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { storage } from '@/shared/infrastructure/storage';
 import type { ContentPreference } from '@/shared/types/content-preference';
 
+export const USER_PROFILE_STORAGE_KEY = 'musaium.userProfile';
+
 /**
  * User profile store — currently holds content preferences only.
  *
@@ -81,7 +83,7 @@ export const useUserProfileStore = create<UserProfileState>()(
       },
     }),
     {
-      name: 'musaium.userProfile',
+      name: USER_PROFILE_STORAGE_KEY,
       storage: createJSONStorage(() => storage),
       version: 1,
       partialize: (state) => ({
