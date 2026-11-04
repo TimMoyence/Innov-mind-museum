@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { Map, Marker } from 'maplibre-gl';
+import { Map, Marker, getVersion, setWorkerUrl } from 'maplibre-gl';
 import { OFFLINE_MAP_STYLE_PATH } from '@musaium/shared/map';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -43,6 +43,8 @@ export default function DemoMap() {
     // resolves to the boundary's "Try again" button). The demo map is decorative
     // — the overlay chrome below renders regardless — so we fail soft: report once
     // to Sentry and skip the live map rather than crash the page.
+    setWorkerUrl(`/maplibre/maplibre-gl-worker-${getVersion()}.mjs`);
+
     let map: Map;
     try {
       map = new Map({

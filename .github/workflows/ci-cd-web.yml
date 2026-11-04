@@ -154,7 +154,7 @@ jobs:
         run: nohup pnpm dev > /tmp/be.log 2>&1 &
       - name: Wait for backend health
         run: |
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then exit 0; fi
             sleep 2
           done
@@ -178,7 +178,7 @@ jobs:
         run: nohup pnpm start > /tmp/web.log 2>&1 &
       - name: Wait for web ready
         run: |
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl -fsS http://localhost:3001/en > /dev/null 2>&1; then exit 0; fi
             sleep 2
           done
@@ -269,7 +269,7 @@ jobs:
         run: nohup pnpm dev > /tmp/be.log 2>&1 &
       - name: Wait for backend
         run: |
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then exit 0; fi
             sleep 2
           done
@@ -288,7 +288,7 @@ jobs:
         run: nohup pnpm start > /tmp/web.log 2>&1 &
       - name: Wait for web
         run: |
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl -fsS http://localhost:3001/en > /dev/null 2>&1; then exit 0; fi
             sleep 2
           done
