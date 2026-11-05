@@ -151,13 +151,18 @@ describe('queryOverpassMuseums', () => {
           });
         }),
     );
-    const startedAt = Date.now();
+    jest.useFakeTimers();
+    try {
+      const pending = queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }, 60, 90);
 
-    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }, 60, 90);
+      await jest.advanceTimersByTimeAsync(60);
+      await jest.advanceTimersByTimeAsync(30);
 
-    expect(results).toEqual([]);
-    expect(Date.now() - startedAt).toBeLessThan(150);
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+      await expect(pending).resolves.toEqual([]);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('falls back to second endpoint when first returns non-OK', async () => {
