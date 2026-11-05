@@ -1,4 +1,5 @@
 import '../helpers/test-utils';
+import { ScrollView, StyleSheet } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { makeEnrichedImage } from '../helpers/factories/chat.factories';
@@ -126,5 +127,17 @@ describe('ImageCarousel', () => {
     render(<ImageCarousel images={images} onImagePress={onImagePress} />);
     expect(screen.getByText('Public domain reference')).toBeTruthy();
     expect(screen.getByText('Curated catalogue entry')).toBeTruthy();
+  });
+
+  it('keeps the strip as tall as its thumbnails instead of stretching the chat bubble', () => {
+    const view = render(
+      <ImageCarousel
+        images={[makeEnrichedImage({ url: 'https://a.com/1.jpg' })]}
+        onImagePress={onImagePress}
+      />,
+    );
+
+    const strip = view.UNSAFE_getByType(ScrollView);
+    expect(StyleSheet.flatten(strip.props.style)).toMatchObject({ flexGrow: 0 });
   });
 });

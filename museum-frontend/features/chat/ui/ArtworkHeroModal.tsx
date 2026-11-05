@@ -23,7 +23,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { BackHandler, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +58,7 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
   onClose,
 }: ArtworkHeroModalProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
@@ -112,7 +113,7 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaView style={styles.root} accessibilityViewIsModal>
           <Pressable
-            style={styles.closeButton}
+            style={[styles.closeButton, { top: insets.top + space['4'] }]}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t('chat.artworkHero.modal.close')}
@@ -182,8 +183,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: space['4'],
-    right: space['4'],
+    end: space['4'],
     zIndex: 10,
   },
   imageArea: {
