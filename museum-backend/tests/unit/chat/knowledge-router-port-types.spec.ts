@@ -20,6 +20,7 @@ describe('KnowledgeRouterPort (T3.1)', () => {
       async resolve(searchTerm: string, _signal?: AbortSignal): Promise<KnowledgeRouterResult> {
         return {
           facts: [`fact for ${searchTerm}`],
+          sources: [],
           source: 'wikidata',
           fallback_triggered: false,
           metadata: {
@@ -36,12 +37,14 @@ describe('KnowledgeRouterPort (T3.1)', () => {
   it('accepts every documented source value (wikidata|web|none)', () => {
     const wd: KnowledgeRouterResult = {
       facts: [],
+      sources: [],
       source: 'wikidata',
       fallback_triggered: false,
       metadata: { searchTerm: 'x', latencyMs: {} },
     };
     const web: KnowledgeRouterResult = {
       facts: [],
+      sources: [],
       source: 'web',
       fallback_triggered: true,
       judge_confidence: 0.3,
@@ -49,6 +52,7 @@ describe('KnowledgeRouterPort (T3.1)', () => {
     };
     const none: KnowledgeRouterResult = {
       facts: [],
+      sources: [],
       source: 'none',
       fallback_triggered: false,
       metadata: { searchTerm: 'x', latencyMs: {} },
@@ -62,6 +66,7 @@ describe('KnowledgeRouterPort (T3.1)', () => {
       async resolve(searchTerm: string): Promise<KnowledgeRouterResult> {
         return {
           facts: [],
+          sources: [],
           source: 'none',
           fallback_triggered: false,
           metadata: { searchTerm, latencyMs: {} },

@@ -109,6 +109,39 @@ const makeService = (config: Partial<typeof defaultConfig> = {}): MockedDeps => 
 // Tests — 7 cascade cases (spec R6 / plan §G Step 3.2 phase Red)
 // ---------------------------------------------------------------------------
 
+describe('KnowledgeRouterService — web pages become citable sources', () => {
+  it('turns each web result the facts came from into a source', async () => {
+    const { kb, ws, judge, service } = makeService();
+    kb.lookup.mockResolvedValueOnce(null);
+    judge.evaluate.mockResolvedValueOnce(makeJudgeResult({ confidence: 0.3 }));
+    ws.search.mockResolvedValueOnce([
+      makeSearchResult(),
+      makeSearchResult({ url: 'not a url' }),
+      makeSearchResult({ url: 'https://example.org/short', snippet: 'Too short' }),
+    ]);
+
+    const result = await service.resolve('obscure artist');
+
+    expect(result.sources).toEqual([
+      {
+        url: 'https://example.org/mona-lisa',
+        type: 'web',
+        title: 'Mona Lisa overview',
+        quote: 'A celebrated 16th-century portrait painting.',
+      },
+    ]);
+  });
+
+  it('has no source when the knowledge base answered', async () => {
+    const { kb, service } = makeService();
+    kb.lookup.mockResolvedValueOnce(makeFacts());
+
+    const result = await service.resolve('Mona Lisa');
+
+    expect(result.sources).toEqual([]);
+  });
+});
+
 describe('KnowledgeRouterService — cascade KB → judge → WebSearch', () => {
   // Case 1 — KB hit short-circuits the cascade. Fully-populated facts exercise
   // every optional branch in `formatKbFacts` so the new file's branch coverage

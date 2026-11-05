@@ -10,7 +10,11 @@ import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
 import type { PostMessageResult } from './chat.service.types';
-import type { EnrichedImage, PostMessageInput } from '@modules/chat/domain/chat.types';
+import type {
+  CitationSource,
+  EnrichedImage,
+  PostMessageInput,
+} from '@modules/chat/domain/chat.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
@@ -71,6 +75,8 @@ export interface PrepareReady {
    */
   /** Facts wrapped in Spotlighting envelope at orchestrator. */
   routerFacts?: readonly string[];
+  /** Web pages behind `routerFacts`, shown as sources when the model cites none. */
+  routerSources?: readonly CitationSource[];
   /** `'none'` short-circuits envelope. */
   routerSource?: KnowledgeRouterSource;
 }
@@ -364,14 +370,22 @@ export class PrepareMessagePipeline {
   private async resolveRouterFacts(
     inputText: string | undefined,
     scope?: LlmJudgeScope,
-  ): Promise<{ routerFacts: readonly string[]; routerSource: KnowledgeRouterSource }> {
+  ): Promise<{
+    routerFacts: readonly string[];
+    routerSources: readonly CitationSource[];
+    routerSource: KnowledgeRouterSource;
+  }> {
     const router = this.knowledgeRouter;
     const searchTerm = inputText?.trim();
     if (!router || !searchTerm) {
-      return { routerFacts: [], routerSource: 'none' };
+      return { routerFacts: [], routerSources: [], routerSource: 'none' };
     }
     const result = await router.resolve(searchTerm, undefined, scope);
-    return { routerFacts: result.facts, routerSource: result.source };
+    return {
+      routerFacts: result.facts,
+      routerSources: result.sources,
+      routerSource: result.source,
+    };
   }
 
   private async enrichAndResolveLocation(args: {
@@ -390,6 +404,7 @@ export class PrepareMessagePipeline {
     enrichedImages: EnrichedImage[];
     resolvedLocation: ResolvedLocation | undefined;
     routerFacts: readonly string[];
+    routerSources: readonly CitationSource[];
     routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId, requestId } = args;
@@ -413,7 +428,7 @@ export class PrepareMessagePipeline {
         enrichedImages,
       },
       resolvedLocation,
-      { routerFacts, routerSource },
+      { routerFacts, routerSources, routerSource },
     ] = await Promise.all([
       fetchEnrichmentData({
         deps: {
@@ -446,6 +461,7 @@ export class PrepareMessagePipeline {
       enrichedImages,
       resolvedLocation: resolvedLocation ?? undefined,
       routerFacts,
+      routerSources,
       routerSource,
     };
   }

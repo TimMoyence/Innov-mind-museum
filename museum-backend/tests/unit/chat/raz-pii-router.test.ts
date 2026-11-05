@@ -21,7 +21,7 @@ class RecordingRouter implements KnowledgeRouterPort {
 
   async resolve(searchTerm: string): Promise<KnowledgeRouterResult> {
     this.terms.push(searchTerm);
-    return { facts: [], source: 'none', fallback_triggered: false };
+    return { facts: [], sources: [], source: 'none', fallback_triggered: false };
   }
 }
 
