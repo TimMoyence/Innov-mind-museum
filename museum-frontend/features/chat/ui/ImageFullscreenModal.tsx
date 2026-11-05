@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -39,6 +39,7 @@ const COUNTER_COLOR = semantic.fullscreenModal.counterColor;
 export const ImageFullscreenModal = React.memo(
   ({ images, initialIndex, visible, onClose }: ImageFullscreenModalProps) => {
     const { t } = useTranslation();
+    const insets = useSafeAreaInsets();
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const reduceMotion = useReducedMotion();
     const { width: screenWidth } = useWindowDimensions();
@@ -144,7 +145,7 @@ export const ImageFullscreenModal = React.memo(
         <SafeAreaView style={styles.root}>
           {/* Close button */}
           <Pressable
-            style={styles.closeButton}
+            style={[styles.closeButton, { top: insets.top + space['4'] }]}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.chat.fullscreen_close')}
@@ -220,7 +221,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: space['12.5'],
     end: semantic.screen.padding,
     zIndex: 10,
   },

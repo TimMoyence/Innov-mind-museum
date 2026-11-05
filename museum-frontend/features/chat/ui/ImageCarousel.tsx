@@ -127,7 +127,9 @@ export const ImageCarousel = React.memo(({ images, onImagePress }: ImageCarousel
 ImageCarousel.displayName = 'ImageCarousel';
 
 const styles = StyleSheet.create({
-  container: {},
+  container: {
+    flexGrow: 0,
+  },
   contentContainer: {
     flexDirection: 'row',
   },
