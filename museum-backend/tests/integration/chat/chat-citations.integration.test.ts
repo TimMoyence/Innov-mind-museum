@@ -163,6 +163,7 @@ describe('chat citations end-to-end integration (T6.1)', () => {
     ];
     const router = makeFixedRouter({
       facts: routerFacts,
+      sources: [],
       source: 'wikidata',
       fallback_triggered: false,
       metadata: { searchTerm: 'Mona Lisa', latencyMs: { kb: 11 } },
@@ -220,6 +221,7 @@ describe('chat citations end-to-end integration (T6.1)', () => {
     ];
     const router = makeFixedRouter({
       facts: routerFacts,
+      sources: [],
       source: 'wikidata',
       fallback_triggered: false,
       metadata: { searchTerm: 'Tell me about Mona Lisa', latencyMs: { kb: 13 } },

@@ -7,9 +7,11 @@
 
 import { createHash } from 'node:crypto';
 
+import { CitationSourceSchema } from '@modules/chat/domain/chat.types';
 import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
 import { logger } from '@shared/logger/logger';
 
+import type { CitationSource } from '@modules/chat/domain/chat.types';
 import type { KnowledgeRouterSource } from '@modules/chat/domain/knowledge/knowledge-router.types';
 import type { KnowledgeBaseProvider } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { RerankerPort } from '@modules/chat/domain/ports/reranker.port';
@@ -24,6 +26,8 @@ export type { KnowledgeRouterSource };
 
 export interface KnowledgeRouterResult {
   facts: string[];
+  /** Web pages the facts were taken from, citable as-is; empty unless source = web. */
+  sources: CitationSource[];
   source: KnowledgeRouterSource;
   /** True iff the WebSearch leg was exercised (regardless of outcome). */
   fallback_triggered: boolean;
@@ -191,6 +195,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     if (parentSignal?.aborted) {
       return {
         facts: [],
+        sources: [],
         source: 'none',
         fallback_triggered: false,
         metadata: { searchTerm: searchTermNormalised, latencyMs },
@@ -216,6 +221,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     if (kbFacts) {
       return {
         facts: formatKbFacts(kbFacts),
+        sources: [],
         source: 'wikidata',
         fallback_triggered: false,
         metadata: { searchTerm: searchTermNormalised, latencyMs },
@@ -239,6 +245,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     if (judge.confidence >= this.deps.config.threshold) {
       return {
         facts: [],
+        sources: [],
         source: 'none',
         fallback_triggered: false,
         judge_confidence: judge.confidence,
@@ -248,7 +255,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
 
     // Leg 3 — WebSearch (Tavily → Brave → Google CSE → SearXNG → DuckDuckGo
     // fallback, 1500ms; each present iff its env key(s) are set — C9.15 reversed 2026-06-13).
-    const { webFacts, webResultCount, latencyWeb } = await this.runWebSearchLeg(
+    const { webFacts, webSources, webResultCount, latencyWeb } = await this.runWebSearchLeg(
       searchTermNormalised,
       parentSignal,
     );
@@ -256,6 +263,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
 
     return {
       facts: webFacts,
+      sources: webSources,
       source: webResultCount > 0 ? 'web' : 'none',
       fallback_triggered: true,
       judge_confidence: judge.confidence,
@@ -275,7 +283,12 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
   private async runWebSearchLeg(
     searchTermNormalised: string,
     parentSignal: AbortSignal | undefined,
-  ): Promise<{ webFacts: string[]; webResultCount: number; latencyWeb: number }> {
+  ): Promise<{
+    webFacts: string[];
+    webSources: CitationSource[];
+    webResultCount: number;
+    latencyWeb: number;
+  }> {
     const webStart = performance.now();
     const webSignal = buildLegSignal(this.deps.config.wsTimeoutMs, parentSignal);
     const webResults = await this.deps.ws
@@ -290,9 +303,19 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
 
     const orderedResults = await this.maybeRerankWebResults(searchTermNormalised, webResults);
 
-    const webFacts = orderedResults.slice(0, MAX_WEB_FACTS).map((r) => `${r.title}: ${r.snippet}`);
+    const usedResults = orderedResults.slice(0, MAX_WEB_FACTS);
+    const webFacts = usedResults.map((r) => `${r.title}: ${r.snippet}`);
+    const webSources = usedResults.flatMap((r) => {
+      const source = CitationSourceSchema.safeParse({
+        url: r.url,
+        type: 'web',
+        title: r.title.slice(0, 300),
+        quote: r.snippet.slice(0, 500),
+      });
+      return source.success ? [source.data] : [];
+    });
 
-    return { webFacts, webResultCount: webResults.length, latencyWeb };
+    return { webFacts, webSources, webResultCount: webResults.length, latencyWeb };
   }
 
   /**
@@ -431,6 +454,5 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
         queryHash: createHash('sha256').update(payload.searchTerm).digest('hex').slice(0, 16),
       });
     }
-
   }
 }

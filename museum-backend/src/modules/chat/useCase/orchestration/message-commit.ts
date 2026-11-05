@@ -6,7 +6,7 @@ import { sanitizePromptInput } from '@shared/validation/input';
 
 import type { PostMessageResult } from './chat.service.types';
 import type { UrlHeadProbe } from './url-head-probe';
-import type { EnrichedImage } from '@modules/chat/domain/chat.types';
+import type { CitationSource, EnrichedImage } from '@modules/chat/domain/chat.types';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
@@ -34,13 +34,23 @@ interface CommitDeps {
  */
 async function applyAntiHallucinationFilters(
   metadata: ReturnType<typeof buildCommitPayload>['assistantMetadata'],
-  routerFacts: readonly string[] | undefined,
+  grounding: {
+    allowed: boolean;
+    routerFacts?: readonly string[];
+    routerSources?: readonly CitationSource[];
+  },
   urlHeadProbe: UrlHeadProbe | undefined,
 ): Promise<void> {
+  const { allowed, routerFacts, routerSources } = grounding;
   // R4 — drop hallucinated quotes.
   if (metadata.sources && metadata.sources.length > 0 && routerFacts && routerFacts.length > 0) {
     const { valid } = validateSources(metadata.sources, [...routerFacts]);
     metadata.sources = valid.length > 0 ? valid : undefined;
+  }
+
+  // An answer grounded on web pages shows them even when the model cited none.
+  if (allowed && !metadata.sources?.length && routerSources?.length) {
+    metadata.sources = [...routerSources];
   }
 
   // R5 — drop unreachable URLs. Injected only where latency cost accepted.
@@ -162,6 +172,8 @@ export async function commitAssistantResponse(
     ip?: string;
     /** Absent → grounding gate skipped (NFR8 backward-compat). */
     routerFacts?: readonly string[];
+    /** Web pages the router grounded the answer on (empty unless source = web). */
+    routerSources?: readonly CitationSource[];
     /**
      * PR-P0-1 (2026-05-23) — exact `llm:{KEY_VERSION}:*` Redis key emitted by
      * `LlmCacheServiceImpl.computeKey` when the assistant response was
@@ -172,8 +184,7 @@ export async function commitAssistantResponse(
     cacheKey?: string | null;
   },
 ): Promise<PostMessageResult> {
-  const { requestedLocale, ownerId, enrichedImages, requestId, ip, routerFacts, cacheKey } =
-    options;
+  const { requestedLocale, ownerId, enrichedImages, requestId, ip, cacheKey } = options;
   const outputCheck = await deps.guardrail.evaluateOutput({
     text: aiResult.text,
     metadata: aiResult.metadata,
@@ -197,7 +208,8 @@ export async function commitAssistantResponse(
 
   // C4 — run after guardrail so dropped sources never reach persisted row or
   // API response. In-place mutation matches rest of commit flow.
-  await applyAntiHallucinationFilters(assistantMetadata, routerFacts, deps.urlHeadProbe);
+  const grounding = { ...options, allowed: outputCheck.allowed };
+  await applyAntiHallucinationFilters(assistantMetadata, grounding, deps.urlHeadProbe);
 
   const assistantMessage = await persistAssistantMessage(deps.repository, sessionId, {
     assistantText,

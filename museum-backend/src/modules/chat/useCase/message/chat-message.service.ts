@@ -233,6 +233,7 @@ export class ChatMessageService {
         requestId: auditCtx?.requestId,
         ip: auditCtx?.ip,
         routerFacts: prep.routerFacts,
+        routerSources: prep.routerSources,
         // PR-P0-1 (2026-05-23) — stamp the LLM-cache-invalidation cookie
         // on the assistant row so feedback can purge the exact entry.
         cacheKey: auditCtx?.cacheKey ?? null,

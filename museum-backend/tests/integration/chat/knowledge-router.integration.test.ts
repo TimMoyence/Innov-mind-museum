@@ -75,6 +75,7 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
   it('case 1 — KB hit: source=wikidata, fallback=false, latencyMs.kb measured', async () => {
     const routerResult: KnowledgeRouterResult = {
       facts: ['Mona Lisa (Wikidata Q12418).', 'Artist: Leonardo da Vinci.'],
+      sources: [],
       source: 'wikidata',
       fallback_triggered: false,
       metadata: { searchTerm: 'Tell me about Mona Lisa', latencyMs: { kb: 17 } },
@@ -110,6 +111,7 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
     const wsFacts = ['About Mona Lisa: a 16th-century portrait.', 'Mona Lisa site: A description.'];
     const routerResult: KnowledgeRouterResult = {
       facts: wsFacts,
+      sources: [],
       source: 'web',
       fallback_triggered: true,
       judge_confidence: 0.2,
@@ -134,6 +136,7 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
   it('case 3 — KB miss + judge HIGH: source=none, fallback NOT triggered (judge ≥ 0.7)', async () => {
     const routerResult: KnowledgeRouterResult = {
       facts: [],
+      sources: [],
       source: 'none',
       fallback_triggered: false,
       judge_confidence: 0.92,
@@ -173,6 +176,7 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
       async resolve() {
         return {
           facts: [],
+          sources: [],
           source: 'none',
           fallback_triggered: true,
           judge_confidence: 0,
