@@ -28,6 +28,7 @@ import {
 } from 'tests/helpers/e2e/redis-testcontainer';
 
 import { Queue } from 'bullmq';
+import Redis from 'ioredis';
 
 import type { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/purgeDeadEnrichments.useCase';
 import type { RefreshStaleEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/refreshStaleEnrichments.useCase';
@@ -39,39 +40,16 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
   jest.setTimeout(60_000);
 
   let container: StartedRedisTestContainer;
-
-  // CI race guard (added 2026-05-22): swallow ioredis "Connection is closed"
-  // events that surface AFTER BullMQ workers/queues have already returned
-  // from .close(). Locally the TCP RST race never reproduces (macOS Docker
-  // Desktop keeps the loopback socket alive long enough). On ubuntu-latest
-  // GH runners the docker shutdown is abrupt enough that the residual
-  // ioredis client emits an unhandled rejection → Jest escalates to suite
-  // failure. We restore the original listeners in afterAll so other suites
-  // (e.g. anything that ran before this one in --runInBand mode) keep their
-  // own escalation behaviour intact.
-  const originalUnhandled = process.listeners('unhandledRejection').slice();
+  let redisProbe: Redis;
 
   beforeAll(async () => {
-    process.removeAllListeners('unhandledRejection');
-    process.on('unhandledRejection', (reason) => {
-      const message = reason instanceof Error ? reason.message : String(reason);
-      if (/Connection is closed/i.test(message)) return;
-      for (const listener of originalUnhandled) {
-        listener.call(process, reason, Promise.reject(reason));
-      }
-    });
     container = await startRedisTestContainer();
+    redisProbe = new Redis(container.connection);
   });
 
   afterAll(async () => {
-    // Same race — let ioredis sockets fully RST before docker rm kills Redis.
-    // .close() promises already resolved by here; this is just TCP cleanup.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await redisProbe.quit();
     await container.stop();
-    process.removeAllListeners('unhandledRejection');
-    for (const listener of originalUnhandled) {
-      process.on('unhandledRejection', listener);
-    }
   });
 
   // ── Stub use cases ─────────────────────────────────────────────────────────
@@ -162,6 +140,41 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
       });
 
       await expect(adapter.stop()).resolves.toBeUndefined();
+    });
+
+    it('stop() without a successful start() still releases the queue connection', async () => {
+      const baseline = await connectedClients(redisProbe);
+      const adapter = new BullmqEnrichmentSchedulerAdapter(makeRefreshUseCase(), {
+        connection: container.connection,
+      });
+      await waitFor(async () => {
+        expect(await connectedClients(redisProbe)).toBeGreaterThan(baseline);
+      });
+
+      await adapter.stop();
+
+      await waitFor(async () => {
+        expect(await connectedClients(redisProbe)).toBe(baseline);
+      });
+    });
+
+    it('start() resolves once the worker is connected', async () => {
+      const baseline = await connectedClients(redisProbe);
+      const adapter = new BullmqEnrichmentSchedulerAdapter(makeRefreshUseCase(), {
+        connection: container.connection,
+      });
+      await waitFor(async () => {
+        expect(await connectedClients(redisProbe)).toBeGreaterThan(baseline);
+      });
+      const withQueueOnly = await connectedClients(redisProbe);
+
+      await adapter.start();
+
+      try {
+        expect(await connectedClients(redisProbe)).toBeGreaterThan(withQueueOnly);
+      } finally {
+        await adapter.stop();
+      }
     });
 
     it('stop() removes the scheduler + closes worker + queue without throwing', async () => {
@@ -271,18 +284,17 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
   });
 });
 
-/**
- * Polls the assertion until it passes (or 8s elapses). Mirrors testing-library's waitFor.
- * @param assertion - Callback whose thrown error retries until it returns cleanly.
- * @param timeoutMs - Hard deadline; rethrows the last assertion error after expiry.
- */
-async function waitFor(assertion: () => void, timeoutMs = 8000): Promise<void> {
+async function connectedClients(probe: Redis): Promise<number> {
+  const list = (await probe.client('LIST')) as string;
+  return list.trim().split('\n').length;
+}
+
+async function waitFor(assertion: () => void | Promise<void>, timeoutMs = 8000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  // Probe every 100ms with an explicit deadline; retains deterministic exit.
   let lastError: unknown;
   while (Date.now() < deadline) {
     try {
-      assertion();
+      await assertion();
       return;
     } catch (err) {
       lastError = err;

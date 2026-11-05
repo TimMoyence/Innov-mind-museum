@@ -110,19 +110,25 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
         kind: 'worker_error',
       });
     });
+    try {
+      await this.worker.waitUntilReady();
+    } catch (err) {
+      await this.stop();
+      throw err;
+    }
   }
 
   /** Best-effort on each step so a failure draining one resource doesn't leak the others. */
   async stop(): Promise<void> {
-    if (!this.started) return;
-    this.started = false;
-
-    try {
-      await this.queue.removeJobScheduler(STALE_ENRICHMENT_SCAN_SCHEDULER_ID);
-    } catch (err) {
-      logger.warn('enrichment_scheduler_remove_failed', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+    if (this.started) {
+      this.started = false;
+      try {
+        await this.queue.removeJobScheduler(STALE_ENRICHMENT_SCAN_SCHEDULER_ID);
+      } catch (err) {
+        logger.warn('enrichment_scheduler_remove_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     if (this.worker) {
