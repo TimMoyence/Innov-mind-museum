@@ -6,7 +6,6 @@
  * - Cache lookup first (TTL 1h, key includes sha256(buffer)+locale+topK+sorted(museumQids)+museumId).
  * - Encode → on `EncoderUnavailableError`: `fallbackReason: 'encoder_unavailable'` (R11).
  * - findNearest with `topN = max(20, 4*topK)` (R3); empty → `'no_visual_neighbor'` (R10).
- * - Enrich; candidates with no resolved facts dropped (UFR-013: never fabricate).
  * - V1: NO query facts → metadataScore=0, finalScore=wVisual*visualScore. V2 wires query through.
  * - Sort desc, truncate, template (no LLM, D5). Cache write fail-soft.
  */
@@ -103,7 +102,6 @@ export interface CompareInput {
   queryText?: string;
 }
 
-
 /** R3 — `max(20, 4*topK)`. */
 function resolveTopN(topK: number, override: number | undefined): number {
   if (override !== undefined) {
@@ -126,6 +124,12 @@ function resultCacheKey(input: CompareInput): string {
   const tenantPart = input.museumId != null ? String(input.museumId) : '';
   const topKPart = String(input.topK);
   return `${RESULT_CACHE_KEY_PREFIX}:${input.locale}:${topKPart}:${museumPart}:t${tenantPart}:${hash}`;
+}
+
+function catalogFacts({ qid, metadata }: NearestResult): ArtworkFacts {
+  const facts: ArtworkFacts = { qid, title: metadata.title, imageUrl: metadata.imageUrl };
+  if (metadata.artist !== undefined) facts.artist = metadata.artist;
+  return facts;
 }
 
 /**
@@ -243,8 +247,9 @@ export class VisualSimilarityService {
 
     result.matches = await this.applyOptionalRerank(input.queryText, result.matches);
 
-
-    await this.writeCache(cacheKey, result);
+    if (result.matches.every(({ qid }) => factsByQid.has(qid))) {
+      await this.writeCache(cacheKey, result);
+    }
     return result;
   }
 
@@ -330,8 +335,7 @@ export class VisualSimilarityService {
     const { neighbours, factsByQid, locale, topK, modelVersion, startedAt } = args;
     const matches: CompareMatch[] = [];
     for (const neighbour of neighbours) {
-      const facts = factsByQid.get(neighbour.qid);
-      if (facts === undefined) continue;
+      const facts = factsByQid.get(neighbour.qid) ?? catalogFacts(neighbour);
       matches.push(scoreCandidate(neighbour, facts, this.weights, locale));
     }
     matches.sort((a, b) => b.finalScore - a.finalScore);

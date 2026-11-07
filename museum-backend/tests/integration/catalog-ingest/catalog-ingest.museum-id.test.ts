@@ -33,14 +33,13 @@
  * (runIngest) is the producer — we capture what it emits, not construct it.
  */
 import { makePartialResponse, makeFetchSpy } from '../../helpers/fetch/fetch-mock.helpers';
-import { EMBEDDING_DIM } from '../../helpers/chat/visual-similarity/embedding.fixtures';
+import {
+  makeCapturingEmbeddingRepo,
+  makeStubEncoder,
+} from '../../helpers/chat/visual-similarity/catalog-ingest.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
-import type {
-  ArtworkEmbeddingRepository,
-  ArtworkEmbeddingRow,
-  UpsertBatchResult,
-} from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
+import type { ArtworkEmbeddingRepository } from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
 
 // Silence logger noise from the SUT during these tests.
 jest.mock('@shared/logger/logger', () => ({
@@ -82,40 +81,6 @@ const { runIngest } = require('../../../scripts/catalog-ingest') as {
 const TENANT_MUSEUM_ID = 42;
 const NUM_FIXTURE_ROWS = 5;
 const originalFetch = global.fetch;
-
-/**
- * Capturing mock for `ArtworkEmbeddingRepository.upsertBatch` — records every
- * row the SUT hands over so the test can assert on the tenant-scoping field.
- */
-const makeCapturingRepo = (): ArtworkEmbeddingRepository & { captured: ArtworkEmbeddingRow[] } => {
-  const captured: ArtworkEmbeddingRow[] = [];
-  const repo = {
-    upsertBatch: async (rows: ArtworkEmbeddingRow[]): Promise<UpsertBatchResult> => {
-      captured.push(...rows);
-      return { inserted: rows.length, updated: 0, skipped: 0 };
-    },
-    findNearest: async () => [],
-    findByQid: async () => null,
-    count: async () => captured.length,
-    get captured(): ArtworkEmbeddingRow[] {
-      return captured;
-    },
-  } as unknown as ArtworkEmbeddingRepository & { captured: ArtworkEmbeddingRow[] };
-  return repo;
-};
-
-/** Deterministic encoder — vector orthogonal across calls. */
-const makeMockEncoder = (): EmbeddingsPort => {
-  let calls = 0;
-  return {
-    encode: async () => {
-      const vector = new Float32Array(EMBEDDING_DIM);
-      vector[calls % EMBEDDING_DIM] = 1;
-      calls += 1;
-      return { vector, modelVersion: 'siglip2-base-patch16-224@v1' };
-    },
-  } as unknown as EmbeddingsPort;
-};
 
 /**
  * Build a SPARQL JSON binding for one fixture row. URI for `license` mirrors
@@ -181,8 +146,8 @@ describe('catalog-ingest CLI museum_id scoping (T-A2 — Wave A C3)', () => {
       makeBinding(`Q${500_000 + i}`, `Fixture ${String(i)}`, 'Q3329534'),
     );
     wireFetchMock(bindings);
-    const repo = makeCapturingRepo();
-    const encoder = makeMockEncoder();
+    const repo = makeCapturingEmbeddingRepo();
+    const encoder = makeStubEncoder();
 
     const result = await runIngest({
       museumQids: ['Q3329534'],
@@ -208,8 +173,8 @@ describe('catalog-ingest CLI museum_id scoping (T-A2 — Wave A C3)', () => {
       makeBinding(`Q${600_000 + i}`, `Public ${String(i)}`, 'Q19675'),
     );
     wireFetchMock(bindings);
-    const repo = makeCapturingRepo();
-    const encoder = makeMockEncoder();
+    const repo = makeCapturingEmbeddingRepo();
+    const encoder = makeStubEncoder();
 
     const result = await runIngest({
       museumQids: ['Q19675'],

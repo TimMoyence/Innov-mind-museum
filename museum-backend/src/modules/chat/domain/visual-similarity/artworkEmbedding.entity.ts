@@ -47,6 +47,9 @@ export class ArtworkEmbedding {
   @Column({ type: 'text', name: 'title' })
   title!: string;
 
+  @Column({ type: 'text', name: 'artist', nullable: true })
+  artist?: string | null;
+
   @Column({ type: 'text', name: 'image_url' })
   imageUrl!: string;
 

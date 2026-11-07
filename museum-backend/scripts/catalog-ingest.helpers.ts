@@ -26,9 +26,11 @@
  * standalone). The User-Agent uses the contact mailbox documented in
  * `wikidata.client.ts`.
  */
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+
 import { logger } from '@shared/logger/logger';
 
-import type { ArtworkImageLicense } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 import type { ArtworkMetadata } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
 const WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
@@ -219,17 +221,10 @@ function cell(binding: SparqlBinding, key: string): string | undefined {
  * SPARQL call; the per-thumbnail rate-limit lives in {@link downloadThumbnail}.
  *
  * @param qid - Wikidata QID of the museum to enumerate.
- * @param license - License allow-list (passed through; filtering is done by
- *   the CLI, not this generator — keeps the SPARQL projection cacheable).
  * @param lang - Language code for `wikibase:label` resolution.
  */
 export async function* fetchArtworksOfMuseum(
   qid: string,
-  // The license allow-list is intentionally accepted but not used here:
-  // the upstream CLI filters by license after fetch (see catalog-ingest.ts).
-  // Reserved for a future SPARQL-side prefilter optimisation.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for SPARQL-side prefilter optimisation; see catalog-ingest.ts. Approved-by: phase-7-architect
-  license: ArtworkImageLicense[],
   lang: string,
 ): AsyncIterable<ArtworkSeed> {
   const sparql = buildArtworksOfMuseumSparql(qid, lang);
@@ -351,9 +346,20 @@ async function rateLimit(hostname: string): Promise<void> {
  * @param maxBytes - Hard cap on the response payload size.
  */
 export async function downloadThumbnail(url: string, maxBytes: number): Promise<Buffer> {
-  const hostname = getHostname(url);
-  await rateLimit(hostname);
+  await rateLimit(getHostname(url));
+  return fetchThumbnail(url, maxBytes);
+}
 
+function assertWithinCap(body: Buffer, maxBytes: number, url: string): Buffer {
+  if (body.byteLength > maxBytes) {
+    throw new Error(
+      `catalog_ingest_thumbnail_body_oversize: ${String(body.byteLength)} > maxBytes ${String(maxBytes)} for ${url}`,
+    );
+  }
+  return body;
+}
+
+export async function fetchThumbnail(url: string, maxBytes: number): Promise<Buffer> {
   const response = await fetch(url, {
     headers: {
       'User-Agent': WIKIDATA_USER_AGENT,
@@ -374,14 +380,7 @@ export async function downloadThumbnail(url: string, maxBytes: number): Promise<
     }
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  if (buffer.byteLength > maxBytes) {
-    throw new Error(
-      `catalog_ingest_thumbnail_body_oversize: ${String(buffer.byteLength)} > maxBytes ${String(maxBytes)} for ${url}`,
-    );
-  }
-  return buffer;
+  return assertWithinCap(Buffer.from(await response.arrayBuffer()), maxBytes, url);
 }
 
 /**
@@ -403,4 +402,46 @@ export function normalizeMetadata(seed: ArtworkSeed): ArtworkMetadata {
     metadata.date = seed.inception;
   }
   return metadata;
+}
+
+const CSV_HEADER = 'qid,title,artist,license,museum_qid,image_url,image_file';
+const CSV_COLUMN_COUNT = CSV_HEADER.split(',').length;
+
+export interface CsvIngestSource {
+  museumQids: string[];
+  fetchArtworks: (museumQid: string) => AsyncIterable<ArtworkSeed>;
+  download: (url: string, maxBytes: number) => Promise<Buffer>;
+}
+
+export async function readCsvCatalog(csvPath: string): Promise<CsvIngestSource> {
+  const [header = '', ...rows] = (await readFile(csvPath, 'utf8')).split(/\r?\n/);
+  if (header.trim() !== CSV_HEADER) {
+    throw new Error(`catalog_ingest_csv_bad_header: expected ${CSV_HEADER}`);
+  }
+  const files = new Map<string, string>();
+  const seeds: ArtworkSeed[] = [];
+  rows.forEach((line, index) => {
+    if (line.trim() === '') return;
+    const cells = line.split(',').map((cell) => cell.trim());
+    const [qid, title, artist, license, museumQid, imageUrl, imageFile] = cells;
+    if (cells.length !== CSV_COLUMN_COUNT || cells.includes('') || files.has(imageUrl)) {
+      throw new Error(`catalog_ingest_csv_bad_row: line ${String(index + 2)}`);
+    }
+    files.set(imageUrl, join(dirname(csvPath), imageFile));
+    seeds.push({ qid, title, artist, license, museumQid, imageUrl });
+  });
+
+  return {
+    museumQids: [...new Set(seeds.map((seed) => seed.museumQid))],
+    fetchArtworks: async function* (museumQid) {
+      yield* seeds.filter((seed) => seed.museumQid === museumQid);
+    },
+    download: async (url, maxBytes) => {
+      const file = files.get(url);
+      if (file === undefined) {
+        throw new Error(`catalog_ingest_csv_unknown_image: ${url}`);
+      }
+      return assertWithinCap(await readFile(file), maxBytes, url);
+    },
+  };
 }
