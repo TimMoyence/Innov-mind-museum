@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { AppError, badRequest, unauthorized } from '@shared/errors/app.error';
+import { AppError, invalidInput, unauthorized } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from './login-rate-limiter';
@@ -53,7 +53,7 @@ export class AuthSessionService {
 
   async login(email: string, password: string): Promise<AuthSessionResponse> {
     if (!email.trim() || !password) {
-      throw badRequest('email and password are required');
+      throw invalidInput('email and password are required');
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -123,7 +123,7 @@ export class AuthSessionService {
   async refresh(refreshToken: string): Promise<AuthSessionResponse> {
     const token = refreshToken.trim();
     if (!token) {
-      throw badRequest('refreshToken is required');
+      throw invalidInput('refreshToken is required');
     }
 
     const claims = this.tokenJwt.verifyRefreshToken(token);

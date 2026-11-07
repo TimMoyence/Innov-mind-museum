@@ -3,7 +3,7 @@ import {
   isContentPreference,
   type ContentPreference,
 } from '@modules/auth/domain/consent/content-preference';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
@@ -19,15 +19,15 @@ export class UpdateContentPreferencesUseCase {
     preferences: unknown,
   ): Promise<{ contentPreferences: ContentPreference[] }> {
     if (!Array.isArray(preferences)) {
-      throw badRequest('preferences must be an array');
+      throw invalidInput('preferences must be an array');
     }
     // Anti-DoS cap — dedup below guarantees final array ≤ CONTENT_PREFERENCES.length (3).
     if (preferences.length > MAX_RAW_PAYLOAD_LENGTH) {
-      throw badRequest(`preferences payload too large`);
+      throw invalidInput(`preferences payload too large`);
     }
     for (const value of preferences) {
       if (!isContentPreference(value)) {
-        throw badRequest(
+        throw invalidInput(
           `invalid preference "${String(value)}"; allowed: ${CONTENT_PREFERENCES.join(', ')}`,
         );
       }

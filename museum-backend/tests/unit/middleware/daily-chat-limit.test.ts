@@ -32,7 +32,7 @@ import {
 } from '@shared/middleware/rate-limit.middleware';
 import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { env } from '@src/config/env';
-import { makePartialRequest } from '../../helpers/http/express-mock.helpers';
+import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
 /** Flush microtask cycles — needed for the Redis path's promise chain. */
 const flushAsync = async (): Promise<void> => {
@@ -51,17 +51,7 @@ type MockRes = Response & {
   json: jest.Mock;
   setHeader: jest.Mock;
 };
-const makeMockRes = (): MockRes => {
-  const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
-    send: jest.fn().mockReturnThis(),
-    setHeader: jest.fn().mockReturnThis(),
-    end: jest.fn(),
-    locals: {},
-  };
-  return res as unknown as MockRes;
-};
+const makeMockRes = (): MockRes => makePartialResponse() as MockRes;
 
 const todayStr = (): string => new Date().toISOString().slice(0, 10);
 

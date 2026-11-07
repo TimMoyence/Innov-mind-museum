@@ -1,5 +1,5 @@
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { assertPagination } from '@shared/types/pagination';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
@@ -30,7 +30,7 @@ export class ListAllReviewsUseCase {
     const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
     if (input.status && !REVIEW_STATUSES.includes(input.status as ReviewStatus)) {
-      throw badRequest(`status must be one of: ${REVIEW_STATUSES.join(', ')}`);
+      throw invalidInput(`status must be one of: ${REVIEW_STATUSES.join(', ')}`);
     }
 
     const filters: ListReviewsFilters = {

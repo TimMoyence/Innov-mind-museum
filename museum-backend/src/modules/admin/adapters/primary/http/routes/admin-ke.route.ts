@@ -2,7 +2,7 @@ import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 
 import { auditService } from '@shared/audit';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
@@ -37,7 +37,7 @@ export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
     async (req: Request, res: Response) => {
       const id = parseStringParam(req, 'id');
       if (!id) {
-        throw badRequest('id param is required');
+        throw invalidInput('id param is required');
       }
       const adminId = req.user?.id ?? null;
 

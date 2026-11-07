@@ -12,6 +12,8 @@ import {
 import type { AppError } from '@shared/errors/app.error';
 import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 
+import { makeCountedUnit as countedUnit } from '../../helpers/rate-limit/counted-unit.fixtures';
+
 beforeEach(() => {
   _resetAllAttempts();
 });
@@ -43,7 +45,7 @@ const makeMockRedisStore = (overrides: MockRedisStoreOverrides = {}): MockRedisS
     .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
     .mockImplementation((...args) => {
       const windowMs = args[1];
-      return Promise.resolve({ count: 1, resetAt: Date.now() + windowMs });
+      return Promise.resolve(countedUnit(1, Date.now() + windowMs));
     });
   const defaultReset = jest
     .fn<ReturnType<ResetFn>, Parameters<ResetFn>>()
@@ -301,7 +303,7 @@ describe('login-rate-limiter — distributed Redis path', () => {
         .mockImplementation((...args): Promise<IncrementResult> => {
           const windowMs = args[1];
           // simulate 9 peer-instance failures already recorded
-          return Promise.resolve({ count: 10, resetAt: Date.now() + windowMs });
+          return Promise.resolve(countedUnit(10, Date.now() + windowMs));
         }),
     });
     setLoginRateLimitStore(mock);
@@ -456,7 +458,7 @@ describe('login-rate-limiter — fail-closed degraded mode', () => {
       increment: jest
         .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
         .mockRejectedValueOnce(new Error('down'))
-        .mockResolvedValueOnce({ count: 1, resetAt: Date.now() + 10 * 60 * 1000 }),
+        .mockResolvedValueOnce(countedUnit(1, Date.now() + 10 * 60 * 1000)),
       lockoutEval: jest.fn().mockRejectedValueOnce(new Error('down')).mockResolvedValueOnce(2),
     });
     setLoginRateLimitStore(mock);

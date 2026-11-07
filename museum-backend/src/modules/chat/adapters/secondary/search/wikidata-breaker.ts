@@ -41,8 +41,6 @@ export class WikidataBreakerClient implements KnowledgeBaseProvider {
       group: 'knowledge-base',
     });
 
-    this.breaker.fallback(() => null);
-
     this.breaker.on('open', () => {
       this.openSince = Date.now();
     });

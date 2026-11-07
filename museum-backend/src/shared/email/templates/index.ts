@@ -11,6 +11,5 @@ export {
   buildReviewModerationEmail,
   REVIEW_LOCALES,
   type ReviewModerationEmailInput,
-  type ReviewLocale,
   type ReviewStatus,
 } from './review-moderation.template';

@@ -5,7 +5,7 @@ import {
   buildS3SignedReadUrlFromRef,
   isS3ImageRef,
 } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import type { Request, RequestHandler } from 'express';
@@ -106,7 +106,7 @@ const imageFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, 
     cb(null, true);
     return;
   }
-  cb(badRequest(`Unsupported image content type: ${file.mimetype || 'unknown'}`));
+  cb(invalidInput(`Unsupported image content type: ${file.mimetype || 'unknown'}`));
 };
 
 const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
@@ -116,7 +116,7 @@ const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, 
     cb(null, true);
     return;
   }
-  cb(badRequest(`Unsupported audio content type: ${file.mimetype || 'unknown'}`));
+  cb(invalidInput(`Unsupported audio content type: ${file.mimetype || 'unknown'}`));
 };
 
 export const upload = multer({
@@ -153,7 +153,7 @@ const enforceContextSizeLimit = (input: unknown): void => {
   if (typeof input === 'string') len = input.length;
   else if (typeof input === 'object' && input !== null) len = JSON.stringify(input).length;
   if (len > MAX_CONTEXT_LENGTH) {
-    throw badRequest('context payload too large');
+    throw invalidInput('context payload too large');
   }
 };
 
@@ -163,12 +163,12 @@ const parseRawContextObject = (input: unknown): Record<string, unknown> => {
     try {
       raw = JSON.parse(input);
     } catch {
-      throw badRequest('context must be valid JSON when provided as string');
+      throw invalidInput('context must be valid JSON when provided as string');
     }
   }
 
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    throw badRequest('context must be an object');
+    throw invalidInput('context must be an object');
   }
 
   return raw as Record<string, unknown>;
@@ -176,7 +176,7 @@ const parseRawContextObject = (input: unknown): Record<string, unknown> => {
 
 const parseLocation = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw badRequest('context.location must be a string');
+  if (typeof value !== 'string') throw invalidInput('context.location must be a string');
   return value;
 };
 
@@ -193,14 +193,14 @@ const parseBoolean = (value: unknown, fieldName: string): boolean | undefined =>
     if (lower === 'true') return true;
     if (lower === 'false') return false;
   }
-  throw badRequest(`${fieldName} must be a boolean`);
+  throw invalidInput(`${fieldName} must be a boolean`);
 };
 
 const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefined => {
   if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw badRequest('context.guideLevel must be a string');
+  if (typeof value !== 'string') throw invalidInput('context.guideLevel must be a string');
   if (!['beginner', 'intermediate', 'expert'].includes(value)) {
-    throw badRequest('context.guideLevel must be beginner, intermediate, or expert');
+    throw invalidInput('context.guideLevel must be beginner, intermediate, or expert');
   }
   return value as 'beginner' | 'intermediate' | 'expert';
 };
@@ -208,10 +208,10 @@ const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefine
 /** Length + charset cap only; whitelist downstream via resolveLocale. */
 const parseLocale = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw badRequest('context.locale must be a string');
-  if (value.length > 10) throw badRequest('context.locale is too long');
+  if (typeof value !== 'string') throw invalidInput('context.locale must be a string');
+  if (value.length > 10) throw invalidInput('context.locale is too long');
   if (!/^[A-Za-z0-9_-]*$/.test(value)) {
-    throw badRequest('context.locale must match BCP47 charset (alnum, dash, underscore)');
+    throw invalidInput('context.locale must match BCP47 charset (alnum, dash, underscore)');
   }
   return value;
 };

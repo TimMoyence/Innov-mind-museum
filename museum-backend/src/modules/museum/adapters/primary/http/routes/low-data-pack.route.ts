@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
@@ -25,7 +25,7 @@ export function createLowDataPackRouter(service: LowDataPackService): Router {
       try {
         const museumId = parseStringParam(req, 'id');
         if (!museumId) {
-          throw badRequest('museum id param is required');
+          throw invalidInput('museum id param is required');
         }
         const locale = typeof req.query.locale === 'string' ? req.query.locale : 'fr';
         const pack = await service.getLowDataPack(museumId, locale);

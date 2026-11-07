@@ -43,6 +43,7 @@ export function makePartialResponse(): Response {
     json: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),
     setHeader: jest.fn().mockReturnThis(),
+    once: jest.fn().mockReturnThis(),
     end: jest.fn(),
     locals: {},
   } as unknown as Response;

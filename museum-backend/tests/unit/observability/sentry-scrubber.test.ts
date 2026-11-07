@@ -131,7 +131,7 @@ describe('sentry-scrubber — scrubEvent', () => {
   });
 
   describe('user.email fingerprinting', () => {
-    it('replaces email with 8-char sha256 fingerprint', () => {
+    it('replaces email with the 8-char shared fingerprint', () => {
       const event = makeEvent({ user: { email: 'alice@example.com' } });
       const scrubbed = scrubEvent(event);
       expect(scrubbed.user?.email).toBeUndefined();

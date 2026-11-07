@@ -10,7 +10,7 @@ import {
   getExportSupportTicketsUseCase,
 } from '@modules/admin/useCase/export/composition';
 import { writeBomHeader, writeCsvRow } from '@shared/csv/csv-writer';
-import { badRequest, forbidden } from '@shared/errors/app.error';
+import { forbidden, invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 
@@ -126,12 +126,12 @@ adminExportRouter.get(
   async (req: Request, res: Response) => {
     const parsed = exportKindParamSchema.safeParse({ kind: req.params.kind });
     if (!parsed.success) {
-      throw badRequest('Unsupported export kind');
+      throw invalidInput('Unsupported export kind');
     }
     // R10 forward-compat — from/to accepted, V1 ignores (R11 365d default in repo).
     const query = exportQuerySchema.safeParse(req.query);
     if (!query.success) {
-      throw badRequest('Invalid export query');
+      throw invalidInput('Invalid export query');
     }
 
     const { kind } = parsed.data;

@@ -21,10 +21,10 @@ import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestrati
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import {
   AppError,
-  badRequest,
   compareGuardrailBlocked,
   compareInvalidImage,
   compareInvalidTopK,
+  invalidInput,
 } from '@shared/errors/app.error';
 import { extractLangCode } from '@shared/i18n/locale';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
@@ -78,7 +78,7 @@ export interface CompareRouterDeps {
   ) => Promise<{ museumId: number | null }>;
   /**
    * B-03 (GDPR Art. 7) — third-party AI image-share consent gate, parity with
-   * STT (`chat-media.route.ts`) and describe (`chat-describe.route.ts`). Injectable
+   * STT (`chat-media.route.ts`). Injectable
    * for tests; defaults to the production `buildThirdPartyAiConsentChecker()`.
    */
   consentChecker?: ThirdPartyAiConsentChecker;
@@ -128,7 +128,7 @@ function normaliseMuseumQids(body: Record<string, unknown>): Record<string, unkn
 
 /**
  * True iff EVERY issue is rooted at `topK` — keeps COMPARE_INVALID_TOPK
- * scoped to topK-sole failures (design.md §5); multi-field failures degrade
+ * scoped to topK-sole failures; multi-field failures degrade
  * to generic BAD_REQUEST.
  */
 function isTopKOnlyZodFailure(issues: readonly z.core.$ZodIssue[]): boolean {
@@ -140,7 +140,7 @@ function isTopKOnlyZodFailure(issues: readonly z.core.$ZodIssue[]): boolean {
  * Re-emit shared ImageProcessingService BAD_REQUEST errors as the FE-facing
  * COMPARE_* taxonomy. Non-BAD_REQUEST errors (e.g. 503 encoder) bubble through
  * unchanged. "Image contains disallowed content" is the OCR guardrail
- * signature (image-processing.service.ts:193).
+ * signature (ImageProcessingService.runOcrGuard).
  */
 function mapUseCaseError(error: unknown): unknown {
   if (!(error instanceof AppError)) return error;
@@ -149,7 +149,7 @@ function mapUseCaseError(error: unknown): unknown {
   if (error.message === 'Image contains disallowed content') {
     return compareGuardrailBlocked(error.message, error.details);
   }
-  return compareInvalidImage(error.message, error.details);
+  return compareInvalidImage(error.message, error.details, error.inputRejected);
 }
 
 function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPartyAiConsentChecker) {
@@ -158,7 +158,7 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
     // the handler head: short-circuits BEFORE `verifySessionAccess` and the
     // use-case so a denied photo never reaches the SigLIP encoder. Read-only,
     // runs after auth (401 for anon) → no mutating-middleware regress. Parity
-    // with STT / describe gates.
+    // with the STT gate.
     const { scope } = resolveActiveProviderForScope('image');
     const granted = await consentChecker.isGranted(getRequestUser(req)?.id, scope);
     if (!granted) {
@@ -167,7 +167,7 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
     }
 
     if (!req.file) {
-      throw compareInvalidImage('image file is required');
+      throw compareInvalidImage('image file is required', undefined, true);
     }
 
     const normalisedBody = normaliseMuseumQids((req.body ?? {}) as Record<string, unknown>);
@@ -175,11 +175,11 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
     if (!parsed.success) {
       const issues = parsed.error.issues;
       const formatted = formatZodIssues(issues);
-      // R17 / design.md §5 — topK-only failures get the dedicated code.
+      // R17 — topK-only failures get the dedicated code.
       if (isTopKOnlyZodFailure(issues)) {
         throw compareInvalidTopK(formatted, issues);
       }
-      throw badRequest(formatted);
+      throw invalidInput(formatted);
     }
 
     const body = parsed.data;
@@ -233,8 +233,8 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
 export const createCompareRouter = (deps: CompareRouterDeps): Router => {
   const router = Router();
 
-  // B-03 — default to the production checker (parity `createMediaRouter` /
-  // `createDescribeRouter`); tests inject an override via `deps.consentChecker`.
+  // B-03 — default to the production checker (parity `createMediaRouter`);
+  // tests inject an override via `deps.consentChecker`.
   const consentChecker = deps.consentChecker ?? buildThirdPartyAiConsentChecker();
 
   // SEC BLOCKER 2026-05-10 — without limiters an authenticated attacker can

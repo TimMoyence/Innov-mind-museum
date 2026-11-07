@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-import { badRequest } from '@shared/errors/app.error';
+import { badRequest, invalidInput } from '@shared/errors/app.error';
 import { BCRYPT_ROUNDS } from '@shared/security/bcrypt';
 import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 import { validatePassword } from '@shared/validation/password';
@@ -23,7 +23,7 @@ export class ResetPasswordUseCase {
   async execute(token: string, newPassword: string) {
     const pw = validatePassword(newPassword);
     if (!pw.valid) {
-      throw badRequest(pw.reason ?? 'Invalid password');
+      throw invalidInput(pw.reason ?? 'Invalid password');
     }
     // F10 — block breached passwords at reset; same fail-open semantics as registration.
     await assertPasswordNotBreached(newPassword);

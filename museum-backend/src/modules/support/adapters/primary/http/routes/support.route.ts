@@ -13,7 +13,7 @@ import {
   getTicketDetailUseCase,
   addTicketMessageUseCase,
 } from '@modules/support/useCase';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
@@ -30,8 +30,8 @@ const supportContactLimiter = createRateLimitMiddleware({
 
 supportRouter.post(
   '/contact',
-  supportContactLimiter,
   validateBody(submitSupportContactSchema),
+  supportContactLimiter,
   async (req: Request, res: Response) => {
     const { name, email, message } = req.body as {
       name: string;
@@ -108,7 +108,7 @@ supportRouter.get(
 
 supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Response) => {
   const ticketId = parseStringParam(req, 'id');
-  if (!ticketId) throw badRequest('ticket id param is required');
+  if (!ticketId) throw invalidInput('ticket id param is required');
   const ticket = await getTicketDetailUseCase.execute({
     ticketId,
     userId: req.user?.id ?? 0,
@@ -125,7 +125,7 @@ supportRouter.post(
   async (req: Request, res: Response) => {
     const { text } = req.body as { text: string };
     const ticketId = parseStringParam(req, 'id');
-    if (!ticketId) throw badRequest('ticket id param is required');
+    if (!ticketId) throw invalidInput('ticket id param is required');
 
     const message = await addTicketMessageUseCase.execute({
       ticketId,

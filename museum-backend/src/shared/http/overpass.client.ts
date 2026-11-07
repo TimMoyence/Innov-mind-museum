@@ -1,3 +1,4 @@
+import { OUTAGE_CACHE_TTL_SECONDS } from '@shared/cache/probabilistic-refresh';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -7,12 +8,7 @@ import {
   shouldOverpassEarlyRefresh,
   type OverpassCacheEntry,
 } from './overpass-cache';
-import {
-  DEFAULT_TIMEOUT_MS,
-  OUTAGE_CACHE_TTL_SECONDS,
-  OVERPASS_ENDPOINTS,
-  SEARCH_BUDGET_MS,
-} from './overpass-constants';
+import { DEFAULT_TIMEOUT_MS, OVERPASS_ENDPOINTS, SEARCH_BUDGET_MS } from './overpass-constants';
 import { buildBboxQuery, buildOpeningHoursQuery, buildRadiusQuery } from './overpass-queries';
 import { fetchFromEndpoint, postQuery } from './overpass-transport';
 

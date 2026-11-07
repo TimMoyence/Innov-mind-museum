@@ -1,5 +1,5 @@
 import { auditService, AUDIT_ADMIN_REPORT_RESOLVED } from '@shared/audit';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminReportDTO, ReportStatus } from '@modules/admin/domain/admin/admin.types';
@@ -20,7 +20,7 @@ export class ResolveReportUseCase {
 
   async execute(input: ResolveReportUseCaseInput): Promise<AdminReportDTO> {
     if (!VALID_STATUSES.includes(input.status as ReportStatus)) {
-      throw badRequest(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+      throw invalidInput(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
 
     const result = await this.repository.resolveReport({

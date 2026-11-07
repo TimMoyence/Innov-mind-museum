@@ -32,23 +32,31 @@ export async function clearMessageAudio(
  * (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`). MUST run BEFORE user row delete
  * (CASCADE wipes messages/sessions).
  */
-export async function findLegacyImageRefsByUserId(
+async function findStoredRefsByUserId(
   messageRepo: Repository<ChatMessage>,
   userId: number,
+  column: 'imageRef' | 'audioUrl',
 ): Promise<string[]> {
   const rows = await messageRepo
     .createQueryBuilder('message')
-    .select('message.imageRef', 'imageRef')
+    .select(`message.${column}`, column)
     .innerJoin('message.session', 'session')
     .where('session.userId = :userId', { userId })
-    .andWhere('message.imageRef IS NOT NULL')
-    .getRawMany<{ imageRef: string | null }>();
+    .andWhere(`message.${column} IS NOT NULL`)
+    .getRawMany<Record<typeof column, string | null>>();
 
   const refs = rows
-    .map((row) => row.imageRef)
+    .map((row) => row[column])
     .filter((ref): ref is string => typeof ref === 'string' && ref.length > 0);
 
   return Array.from(new Set(refs));
+}
+
+export function findLegacyImageRefsByUserId(
+  messageRepo: Repository<ChatMessage>,
+  userId: number,
+): Promise<string[]> {
+  return findStoredRefsByUserId(messageRepo, userId, 'imageRef');
 }
 
 /**
@@ -59,21 +67,9 @@ export async function findLegacyImageRefsByUserId(
  * (`chat-audios/YYYY/MM/<uuid>`) carry no user segment, so a prefix scan is
  * impossible — the DB ref set is the only reliable source.
  */
-export async function findAudioRefsByUserId(
+export function findAudioRefsByUserId(
   messageRepo: Repository<ChatMessage>,
   userId: number,
 ): Promise<string[]> {
-  const rows = await messageRepo
-    .createQueryBuilder('message')
-    .select('message.audioUrl', 'audioUrl')
-    .innerJoin('message.session', 'session')
-    .where('session.userId = :userId', { userId })
-    .andWhere('message.audioUrl IS NOT NULL')
-    .getRawMany<{ audioUrl: string | null }>();
-
-  const refs = rows
-    .map((row) => row.audioUrl)
-    .filter((ref): ref is string => typeof ref === 'string' && ref.length > 0);
-
-  return Array.from(new Set(refs));
+  return findStoredRefsByUserId(messageRepo, userId, 'audioUrl');
 }

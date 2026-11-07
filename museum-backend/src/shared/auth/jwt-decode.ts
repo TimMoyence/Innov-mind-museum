@@ -11,13 +11,16 @@ import { z, type ZodType } from 'zod';
  * familyId extraction) where the signature is checked elsewhere or unverified
  * data is acceptable by design.
  */
-export function decodeJwtPayload<T>(token: string | undefined, schema: ZodType<T>): T | null {
+function decodeJwtSegment<T>(
+  token: string | undefined,
+  segment: 0 | 1,
+  schema: ZodType<T>,
+): T | null {
   if (typeof token !== 'string') return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   try {
-    const json = Buffer.from(parts[1], 'base64url').toString('utf8');
-    const raw = JSON.parse(json) as unknown;
+    const raw = JSON.parse(Buffer.from(parts[segment], 'base64url').toString('utf8')) as unknown;
     const result = schema.safeParse(raw);
     return result.success ? result.data : null;
   } catch {
@@ -25,19 +28,12 @@ export function decodeJwtPayload<T>(token: string | undefined, schema: ZodType<T
   }
 }
 
-/** Decodes JWT header WITHOUT verifying. Used by OIDC verifiers to discover `kid` for JWKS lookup before signature verification. */
+export function decodeJwtPayload<T>(token: string | undefined, schema: ZodType<T>): T | null {
+  return decodeJwtSegment(token, 1, schema);
+}
+
 export function decodeJwtHeader<T>(token: string, schema: ZodType<T>): T | null {
-  if (typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const json = Buffer.from(parts[0], 'base64url').toString('utf8');
-    const raw = JSON.parse(json) as unknown;
-    const result = schema.safeParse(raw);
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
+  return decodeJwtSegment(token, 0, schema);
 }
 
 /** Common Zod schema for the OIDC-style header carrying `kid` + `alg`. */

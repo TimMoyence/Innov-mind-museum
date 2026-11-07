@@ -43,7 +43,7 @@ import { getChatSessionForModerationUseCase } from '@modules/admin/useCase/chat/
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { getNpsUseCase } from '@modules/review/useCase';
 import { computeTenantScope } from '@shared/authz/tenant-scope';
-import { badRequest, forbidden } from '@shared/errors/app.error';
+import { forbidden, invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
@@ -54,9 +54,9 @@ const adminRouter: Router = Router();
 
 function parseUserIdParam(req: Request): number {
   const raw = parseStringParam(req, 'id');
-  if (!raw) throw badRequest('Invalid user ID');
+  if (!raw) throw invalidInput('Invalid user ID');
   const userId = Number.parseInt(raw, 10);
-  if (Number.isNaN(userId)) throw badRequest('Invalid user ID');
+  if (Number.isNaN(userId)) throw invalidInput('Invalid user ID');
   return userId;
 }
 
@@ -249,7 +249,7 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   async (req: Request, res: Response) => {
     const sessionId = parseStringParam(req, 'id');
-    if (!sessionId) throw badRequest('Invalid session ID');
+    if (!sessionId) throw invalidInput('Invalid session ID');
 
     const result = await getChatSessionForModerationUseCase().execute({
       sessionId,
@@ -387,7 +387,7 @@ adminRouter.patch(
   validateBody(resolveReportSchema),
   async (req: Request, res: Response) => {
     const reportId = parseStringParam(req, 'id');
-    if (!reportId) throw badRequest('Invalid report ID');
+    if (!reportId) throw invalidInput('Invalid report ID');
     const { status, reviewerNotes } = req.body as {
       status: string;
       reviewerNotes?: string;
@@ -487,7 +487,7 @@ adminRouter.patch(
   validateBody(updateTicketSchema),
   async (req: Request, res: Response) => {
     const ticketId = parseStringParam(req, 'id');
-    if (!ticketId) throw badRequest('Invalid ticket ID');
+    if (!ticketId) throw invalidInput('Invalid ticket ID');
     const { status, priority, assignedTo } = req.body as {
       status?: string;
       priority?: string;
@@ -545,7 +545,7 @@ adminRouter.patch(
   validateBody(moderateReviewSchema),
   async (req: Request, res: Response) => {
     const reviewId = parseStringParam(req, 'id');
-    if (!reviewId) throw badRequest('Invalid review ID');
+    if (!reviewId) throw invalidInput('Invalid review ID');
     const { status } = req.body as { status: string };
     const actorId = req.user?.id;
     if (!actorId) {

@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { badRequest, invalidInput } from '@shared/errors/app.error';
 import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
@@ -18,7 +18,7 @@ export class ConfirmEmailChangeUseCase {
   /** @throws {AppError} 400 if token invalid or expired. */
   async execute(token: string): Promise<{ confirmed: true }> {
     if (!token.trim()) {
-      throw badRequest('Email change token is required');
+      throw invalidInput('Email change token is required');
     }
 
     const hashedToken = hashEmailTokenForLookup(token);

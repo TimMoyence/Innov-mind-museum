@@ -1,5 +1,6 @@
 import { type Request, type Response, Router } from 'express';
 
+import { auditOwnAccount } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import {
   updateContentPreferencesSchema,
   updateProfilePreferencesSchema,
@@ -13,7 +14,6 @@ import {
   updateProfilePreferencesUseCase,
   updateTtsVoiceUseCase,
 } from '@modules/auth/useCase';
-import { auditService } from '@shared/audit';
 import {
   AUDIT_ACCOUNT_DELETED,
   AUDIT_ACCOUNT_DELETION_REQUESTED,
@@ -66,15 +66,8 @@ authProfileRouter.patch(
     const jwtUser = requireUser(req);
     const { preferences } = req.body;
     const result = await updateContentPreferencesUseCase.execute(jwtUser.id, preferences);
-    await auditService.log({
-      action: AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      metadata: { preferences: result.contentPreferences },
-      ip: req.ip,
-      requestId: req.requestId,
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED, {
+      preferences: result.contentPreferences,
     });
     res.status(200).json({ contentPreferences: result.contentPreferences });
   },
@@ -89,15 +82,8 @@ authProfileRouter.patch(
     const jwtUser = requireUser(req);
     const { voice } = req.body;
     const result = await updateTtsVoiceUseCase.execute(jwtUser.id, voice);
-    await auditService.log({
-      action: AUDIT_AUTH_TTS_VOICE_UPDATED,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      metadata: { voice: result.ttsVoice },
-      ip: req.ip,
-      requestId: req.requestId,
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_TTS_VOICE_UPDATED, {
+      voice: result.ttsVoice,
     });
     res.status(200).json({ ttsVoice: result.ttsVoice });
   },
@@ -114,16 +100,7 @@ authProfileRouter.patch(
     const jwtUser = requireUser(req);
     const patch = req.body as ProfilePreferencesPatch;
     const result = await updateProfilePreferencesUseCase.execute(jwtUser.id, patch);
-    await auditService.log({
-      action: AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      metadata: { patch },
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED, { patch });
     res.status(200).json(result);
   },
 );
@@ -134,15 +111,7 @@ authProfileRouter.patch(
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
     await completeOnboarding(jwtUser.id);
-    await auditService.log({
-      action: AUDIT_AUTH_ONBOARDING_COMPLETED,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_ONBOARDING_COMPLETED);
     res.status(204).end();
   },
 );
@@ -151,15 +120,7 @@ authProfileRouter.delete('/account', isAuthenticated, async (req: Request, res: 
   const user = requireUser(req);
   // R1 (Cycle D) — durable "deletion requested" trace BEFORE any erasure runs,
   // so a failed `execute()` still leaves proof the request was received.
-  await auditService.log({
-    action: AUDIT_ACCOUNT_DELETION_REQUESTED,
-    actorType: 'user',
-    actorId: user.id,
-    targetType: 'user',
-    targetId: String(user.id),
-    ip: req.ip,
-    requestId: req.requestId,
-  });
+  await auditOwnAccount(req, user.id, AUDIT_ACCOUNT_DELETION_REQUESTED);
 
   // If `execute()` throws (DB down, rollback), the rejection propagates to the
   // global errorHandler (Express 5 async forwarding) → 5xx, and ACCOUNT_DELETED
@@ -167,15 +128,7 @@ authProfileRouter.delete('/account', isAuthenticated, async (req: Request, res: 
   await deleteAccountUseCase.execute(user.id);
 
   // R2 — ACCOUNT_DELETED only AFTER a successful erasure.
-  await auditService.log({
-    action: AUDIT_ACCOUNT_DELETED,
-    actorType: 'user',
-    actorId: user.id,
-    targetType: 'user',
-    targetId: String(user.id),
-    ip: req.ip,
-    requestId: req.requestId,
-  });
+  await auditOwnAccount(req, user.id, AUDIT_ACCOUNT_DELETED);
   res.status(200).json({ deleted: true });
 });
 

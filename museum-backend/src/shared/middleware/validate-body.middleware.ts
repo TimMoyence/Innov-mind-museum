@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import type { Request, Response, NextFunction } from 'express';
@@ -16,7 +16,7 @@ export function validateBody<T extends z.ZodType>(schema: T) {
     // typed `data` output flows through to the assignment.
     const result = schema.safeParse(req.body as unknown);
     if (!result.success) {
-      throw badRequest(formatZodIssues(result.error.issues));
+      throw invalidInput(formatZodIssues(result.error.issues));
     }
     req.body = result.data as unknown;
     next();

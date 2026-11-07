@@ -16,7 +16,7 @@ import {
   updateMuseumUseCase,
 } from '@modules/museum/useCase';
 import { auditService } from '@shared/audit';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { byUserId, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
@@ -115,16 +115,16 @@ const handleListMuseums = async (_req: Request, res: Response) => {
 
 const handleGetMuseum = async (req: Request, res: Response) => {
   const idOrSlug = parseStringParam(req, 'idOrSlug');
-  if (!idOrSlug) throw badRequest('idOrSlug param is required');
+  if (!idOrSlug) throw invalidInput('idOrSlug param is required');
   const museum = await getMuseumUseCase.execute(idOrSlug);
   res.json({ museum });
 };
 
 /** Throws 400 if missing/NaN/≤0. */
 const parseMuseumIdParam = (raw: string | undefined): number => {
-  if (!raw) throw badRequest(INVALID_MUSEUM_ID);
+  if (!raw) throw invalidInput(INVALID_MUSEUM_ID);
   const id = Number.parseInt(raw, 10);
-  if (Number.isNaN(id) || id <= 0) throw badRequest(INVALID_MUSEUM_ID);
+  if (Number.isNaN(id) || id <= 0) throw invalidInput(INVALID_MUSEUM_ID);
   return id;
 };
 
@@ -148,9 +148,9 @@ const buildHandleGetEnrichmentStatus = (useCase: EnrichMuseumUseCase) => {
 
 const handleUpdateMuseum = async (req: Request, res: Response) => {
   const rawId = parseStringParam(req, 'id');
-  if (!rawId) throw badRequest(INVALID_MUSEUM_ID);
+  if (!rawId) throw invalidInput(INVALID_MUSEUM_ID);
   const id = Number.parseInt(rawId, 10);
-  if (Number.isNaN(id)) throw badRequest(INVALID_MUSEUM_ID);
+  if (Number.isNaN(id)) throw invalidInput(INVALID_MUSEUM_ID);
   const museum = await updateMuseumUseCase.execute(id, req.body as UpdateMuseumInput);
   await auditService.log({
     action: 'MUSEUM_UPDATED',
@@ -195,8 +195,8 @@ export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router =>
   museumRouter.get(
     '/search',
     isAuthenticated,
-    searchLimiter,
     validateQuery(searchMuseumsQuerySchema),
+    searchLimiter,
     buildHandleSearch(searchMuseumsUseCase),
   );
 
@@ -211,8 +211,8 @@ export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router =>
     museumRouter.get(
       '/detect-museum',
       isAuthenticated,
-      detectLimiter,
       validateQuery(detectMuseumQuerySchema),
+      detectLimiter,
       buildHandleDetectMuseum(deps.detectMuseumUseCase),
     );
   }

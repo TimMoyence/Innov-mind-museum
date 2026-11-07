@@ -1,5 +1,5 @@
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type { CreateTicketInput, TicketDTO } from '@modules/support/domain/ticket/support.types';
@@ -27,17 +27,17 @@ export class CreateTicketUseCase {
   async execute(input: CreateTicketUseCaseInput): Promise<TicketDTO> {
     const subject = input.subject.trim();
     if (!subject || subject.length < 1 || subject.length > 256) {
-      throw badRequest('subject must be between 1 and 256 characters');
+      throw invalidInput('subject must be between 1 and 256 characters');
     }
 
     const description = input.description.trim();
     if (!description || description.length < 1 || description.length > 5000) {
-      throw badRequest('description must be between 1 and 5000 characters');
+      throw invalidInput('description must be between 1 and 5000 characters');
     }
 
     const validPriorities: string[] = ['low', 'medium', 'high'];
     if (input.priority && !validPriorities.includes(input.priority)) {
-      throw badRequest(`priority must be one of: ${validPriorities.join(', ')}`);
+      throw invalidInput(`priority must be one of: ${validPriorities.join(', ')}`);
     }
 
     const createInput: CreateTicketInput = {

@@ -1,5 +1,5 @@
 import { AUDIT_ADMIN_CHAT_SESSION_VIEWED } from '@shared/audit/audit.types';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { SessionResult } from '@modules/chat/useCase/orchestration/chat.service.types';
@@ -117,7 +117,7 @@ export class GetChatSessionForModerationUseCase {
       // A malformed UUID makes the pg driver throw on the `id = $1` predicate.
       // Treat it as a client error (400) rather than leaking a 500 — same
       // 400-on-bad-id contract as the owner read.
-      throw badRequest('Invalid session id format');
+      throw invalidInput('Invalid session id format');
     }
     if (!session) {
       throw notFound('Chat session not found');

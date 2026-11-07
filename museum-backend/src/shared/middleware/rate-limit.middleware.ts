@@ -1,22 +1,20 @@
 import { AppError, tooManyRequests } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { onInputRejected } from '@shared/middleware/input-rejected';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 import { env } from '@src/config/env';
 
-import type { RedisRateLimitStore } from './redis-rate-limit-store';
+import { releaseCountedUnit } from './redis-rate-limit-store';
+
+import type { RateLimitBucket, RedisRateLimitStore } from './redis-rate-limit-store';
 import type { Request, RequestHandler } from 'express';
 
 /** Retry-After seconds on fail-CLOSED. */
 const FAIL_CLOSED_RETRY_AFTER_SECONDS = 30;
 
-interface Bucket {
-  count: number;
-  resetAt: number;
-}
-
-const store = new InMemoryBucketStore<Bucket>({
+const store = new InMemoryBucketStore<RateLimitBucket>({
   isExpired: (entry, now) => entry.resetAt <= now,
 });
 
@@ -58,6 +56,7 @@ interface RateLimitOptions {
   errorMessage?: string;
   /** Custom HTTP status on cap (default `429`). PR-11 (R1). */
   statusCode?: 429 | 402;
+  countRejected?: boolean;
 }
 
 let anonymousBucketSeq = 0;
@@ -82,6 +81,7 @@ interface BucketContext {
   windowMs: number;
   res: Res;
   next: Next;
+  admit: (release: () => void) => void;
   capError: CapError;
   /**
    * Snapshot of `env.rateLimit.failClosed` captured at request entry. Reading
@@ -106,27 +106,29 @@ const buildCapError = (limit: number, capError: CapError): AppError => {
   return tooManyRequests('Too many requests. Please retry later.');
 };
 
+const rejectOverCap = ({ limit, res, next, capError }: BucketContext, resetAt: number): void => {
+  const retryAfterSec = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  res.setHeader('Retry-After', retryAfterSec.toString());
+  next(buildCapError(limit, capError));
+};
+
 const consumeMemoryBucket = (ctx: BucketContext): void => {
-  const { key, limit, windowMs, res, next, capError } = ctx;
+  const { key, limit, windowMs, admit } = ctx;
   const now = Date.now();
   const current = store.get(key);
+  const open = current && current.resetAt > now ? current : null;
 
-  if (!current || current.resetAt <= now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    next();
+  if (open && open.count >= limit) {
+    rejectOverCap(ctx, open.resetAt);
     return;
   }
 
-  if (current.count >= limit) {
-    const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
-    res.setHeader('Retry-After', retryAfterSec.toString());
-    next(buildCapError(limit, capError));
-    return;
-  }
-
-  current.count += 1;
-  store.set(key, current);
-  next();
+  const bucket = open ?? { count: 0, resetAt: now + windowMs };
+  bucket.count += 1;
+  store.set(key, bucket);
+  admit(() => {
+    releaseCountedUnit(store, key, bucket);
+  });
 };
 
 /**
@@ -159,6 +161,23 @@ const handleRedisFailure = (redisError: unknown, ctx: BucketContext): void => {
   consumeMemoryBucket(ctx);
 };
 
+const consumeRedisBucket = (redis: RedisRateLimitStore, ctx: BucketContext): void => {
+  void redis
+    .increment(ctx.key, ctx.windowMs)
+    .then(({ count, resetAt, release }) => {
+      if (count > ctx.limit) {
+        rejectOverCap(ctx, resetAt);
+        return;
+      }
+      ctx.admit(() => {
+        void release();
+      });
+    })
+    .catch((redisError: unknown) => {
+      handleRedisFailure(redisError, ctx);
+    });
+};
+
 export const createRateLimitMiddleware = ({
   limit,
   windowMs,
@@ -167,6 +186,7 @@ export const createRateLimitMiddleware = ({
   errorCode,
   errorMessage,
   statusCode,
+  countRejected = false,
 }: RateLimitOptions): RequestHandler => {
   // PR-11 R8 — empty-string opts OUT of the namespace prefix. `undefined`
   // still falls back to a unique anon prefix (legacy behaviour). `??` is
@@ -189,31 +209,23 @@ export const createRateLimitMiddleware = ({
     // PR-11 R7 — windowMs may be a function resolved per-request.
     const resolvedWindowMs = typeof windowMs === 'function' ? windowMs(req) : windowMs;
     const key = usePrefix ? `${namespace}:${rawKey}` : rawKey;
+    const admit = (release: () => void): void => {
+      if (!countRejected) onInputRejected(res, release);
+      next();
+    };
     const ctx: BucketContext = {
       key,
       limit,
       windowMs: resolvedWindowMs,
       res,
       next,
+      admit,
       capError,
       failClosed: env.rateLimit.failClosed,
     };
 
     if (redisStore) {
-      void redisStore
-        .increment(key, resolvedWindowMs)
-        .then(({ count, resetAt }) => {
-          if (count > limit) {
-            const retryAfterSec = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
-            res.setHeader('Retry-After', retryAfterSec.toString());
-            next(buildCapError(limit, capError));
-            return;
-          }
-          next();
-        })
-        .catch((redisError: unknown) => {
-          handleRedisFailure(redisError, ctx);
-        });
+      consumeRedisBucket(redisStore, ctx);
       return;
     }
 

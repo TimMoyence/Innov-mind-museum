@@ -19,9 +19,6 @@ export const DEFAULT_TIMEOUT_MS = 6_000;
  */
 export const SEARCH_BUDGET_MS = 9_000;
 
-/** Every endpoint failed: hold the empty answer briefly so searches stay fast, then retry. */
-export const OUTAGE_CACHE_TTL_SECONDS = 60;
-
 /**
  * RESOURCE ADMISSION BUDGET, not a real timeout. Server refuses if N seems insufficient.
  * Empirically (2026-04-10): timeout:25 rejected 504 in ~5s on dense zones; timeout:180

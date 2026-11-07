@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import type { Request, Response, NextFunction } from 'express';
@@ -14,7 +14,7 @@ export function validateQuery<T extends z.ZodType>(schema: T) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      throw badRequest(formatZodIssues(result.error.issues));
+      throw invalidInput(formatZodIssues(result.error.issues));
     }
     res.locals.validatedQuery = result.data;
     next();

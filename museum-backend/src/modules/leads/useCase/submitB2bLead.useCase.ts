@@ -7,11 +7,10 @@ import {
   type B2bLeadPayload,
   type B2bLeadRole,
 } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 import { validateEmail } from '@shared/validation/email';
-
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 
@@ -54,31 +53,31 @@ function computeDedupKey(emailNormalized: string, museumNormalized: string): str
 function validateB2bLead(input: SubmitB2bLeadInput): B2bLeadPayload {
   // R11 — consent must be true even if FE skipped checkbox (direct curl).
   if (!input.consent) {
-    throw badRequest('consent must be true');
+    throw invalidInput('consent must be true');
   }
 
   const email = input.email.trim().toLowerCase();
   if (!validateEmail(email)) {
-    throw badRequest('email must be valid');
+    throw invalidInput('email must be valid');
   }
 
   const name = input.name.trim();
   if (!name || name.length > 120) {
-    throw badRequest('name must be between 1 and 120 characters');
+    throw invalidInput('name must be between 1 and 120 characters');
   }
 
   const museum = input.museum.trim();
   if (!museum || museum.length > 200) {
-    throw badRequest('museum must be between 1 and 200 characters');
+    throw invalidInput('museum must be between 1 and 200 characters');
   }
 
   if (!ROLE_SET.has(input.role)) {
-    throw badRequest('role must be one of director|curator|digital|other');
+    throw invalidInput('role must be one of director|curator|digital|other');
   }
 
   const message = input.message.trim();
   if (message.length < 10 || message.length > 5000) {
-    throw badRequest('message must be between 10 and 5000 characters');
+    throw invalidInput('message must be between 10 and 5000 characters');
   }
 
   return {

@@ -14,6 +14,10 @@
       "types": "./dist/observability/index.d.ts",
       "default": "./dist/observability/index.js"
     },
+    "./net-profiles": {
+      "types": "./dist/net-profiles/index.d.ts",
+      "default": "./dist/net-profiles/index.js"
+    },
     "./map": {
       "types": "./dist/map/index.d.ts",
       "default": "./dist/map/index.js"

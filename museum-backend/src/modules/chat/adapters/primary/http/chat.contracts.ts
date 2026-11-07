@@ -4,7 +4,7 @@ import {
   createSessionSchema,
   postMessageSchema,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import type {
@@ -35,7 +35,7 @@ const optionalString = (payload: RecordValue, key: string): string | undefined =
     return undefined;
   }
   if (typeof value !== 'string') {
-    throw badRequest(`${key} must be a string`);
+    throw invalidInput(`${key} must be a string`);
   }
   return value;
 };
@@ -54,7 +54,7 @@ const optionalNumber = (payload: RecordValue, key: string): number | undefined =
       return parsed;
     }
   }
-  throw badRequest(`${key} must be a number`);
+  throw invalidInput(`${key} must be a number`);
 };
 
 export interface CreateSessionRequest {
@@ -177,7 +177,7 @@ export interface ApiErrorResponse {
 export const parseCreateSessionRequest = (payload: unknown): CreateSessionRequest => {
   const result = createSessionSchema.safeParse(payload);
   if (!result.success) {
-    throw badRequest(formatZodIssues(result.error.issues));
+    throw invalidInput(formatZodIssues(result.error.issues));
   }
   return result.data;
 };
@@ -185,25 +185,25 @@ export const parseCreateSessionRequest = (payload: unknown): CreateSessionReques
 export const parsePostMessageRequest = (payload: unknown): PostMessageRequest => {
   const result = postMessageSchema.safeParse(payload);
   if (!result.success) {
-    throw badRequest(formatZodIssues(result.error.issues));
+    throw invalidInput(formatZodIssues(result.error.issues));
   }
   return result.data as PostMessageRequest;
 };
 
 export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
   if (!isRecord(payload)) {
-    throw badRequest('Query must be an object');
+    throw invalidInput('Query must be an object');
   }
 
   const cursorRaw = payload.cursor;
   const limitRaw = payload.limit;
 
   if (cursorRaw !== undefined && typeof cursorRaw !== 'string') {
-    throw badRequest('cursor must be a string');
+    throw invalidInput('cursor must be a string');
   }
 
   if (limitRaw !== undefined && typeof limitRaw !== 'string' && typeof limitRaw !== 'number') {
-    throw badRequest('limit must be a number');
+    throw invalidInput('limit must be a number');
   }
 
   return {
@@ -217,22 +217,22 @@ export const parseListSessionsQuery = (payload: unknown): ListSessionsQuery => {
 
 export const parseReportMessageRequest = (payload: unknown): ReportMessageRequest => {
   if (!isRecord(payload)) {
-    throw badRequest('Payload must be an object');
+    throw invalidInput('Payload must be an object');
   }
 
   const reason = payload.reason;
   if (typeof reason !== 'string' || !reason.trim()) {
-    throw badRequest('reason is required');
+    throw invalidInput('reason is required');
   }
 
   const allowedReasons: ReportReason[] = ['offensive', 'inaccurate', 'inappropriate', 'other'];
   if (!allowedReasons.includes(reason as ReportReason)) {
-    throw badRequest('reason must be offensive, inaccurate, inappropriate, or other');
+    throw invalidInput('reason must be offensive, inaccurate, inappropriate, or other');
   }
 
   const comment = optionalString(payload, 'comment');
   if (comment && comment.length > 500) {
-    throw badRequest('comment must be 500 characters or fewer');
+    throw invalidInput('comment must be 500 characters or fewer');
   }
 
   return {
@@ -243,17 +243,17 @@ export const parseReportMessageRequest = (payload: unknown): ReportMessageReques
 
 export const parseFeedbackMessageRequest = (payload: unknown): FeedbackMessageRequest => {
   if (!isRecord(payload)) {
-    throw badRequest('Payload must be an object');
+    throw invalidInput('Payload must be an object');
   }
 
   const value = payload.value;
   if (typeof value !== 'string' || !value.trim()) {
-    throw badRequest('value is required');
+    throw invalidInput('value is required');
   }
 
   const allowedValues: FeedbackValue[] = ['positive', 'negative'];
   if (!allowedValues.includes(value as FeedbackValue)) {
-    throw badRequest('value must be positive or negative');
+    throw invalidInput('value must be positive or negative');
   }
 
   return { value: value as FeedbackValue };
@@ -319,7 +319,7 @@ export interface ExplanationParams {
 export const parseExplanationParams = (params: unknown): ExplanationParams => {
   const result = ExplanationParamsSchema.safeParse(params);
   if (!result.success) {
-    throw badRequest(formatZodIssues(result.error.issues));
+    throw invalidInput(formatZodIssues(result.error.issues));
   }
   return { messageId: result.data.id };
 };

@@ -1,15 +1,8 @@
-import { logger } from '@shared/logger/logger';
-
 import type {
   ImageSourceClient,
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
 
-/**
- * C2 v2 (2026-05). Mirrors UnsplashClient pattern: AbortController hard timeout, fail-open
- * (`[]`). OSMF policy mandates descriptive User-Agent (matches WikidataClient header).
- * Public endpoint, fixed host — no SSRF surface.
- */
 export class WikimediaCommonsClient implements ImageSourceClient {
   private readonly searchUrl = 'https://commons.wikimedia.org/w/api.php';
   private readonly userAgent = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
@@ -33,15 +26,20 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       const titles = await this.searchFileTitles(trimmed, perPage, controller.signal);
       if (titles.length === 0) return [];
       return await this.fetchImageInfo(titles, controller.signal);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg !== 'This operation was aborted') {
-        logger.warn('image_enrichment_commons_failed', { query: trimmed, error: msg });
-      }
-      return [];
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private async fetchJson<T>(params: URLSearchParams, signal: AbortSignal): Promise<T> {
+    const res = await fetch(`${this.searchUrl}?${params.toString()}`, {
+      headers: { 'User-Agent': this.userAgent },
+      signal,
+    });
+    if (!res.ok) throw new Error(`commons_http_${String(res.status)}`);
+    const data = (await res.json()) as T & { error?: { code?: unknown } };
+    if (data.error !== undefined) throw new Error(`commons_api_${String(data.error.code)}`);
+    return data;
   }
 
   private async searchFileTitles(
@@ -58,18 +56,10 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       format: 'json',
       origin: '*',
     });
-    const res = await fetch(`${this.searchUrl}?${params.toString()}`, {
-      headers: { 'User-Agent': this.userAgent },
+    const data = await this.fetchJson<{ query?: { search?: { title?: unknown }[] } }>(
+      params,
       signal,
-    });
-    if (!res.ok) {
-      logger.warn('image_enrichment_commons_failed', {
-        query,
-        error: `HTTP ${String(res.status)}`,
-      });
-      return [];
-    }
-    const data = (await res.json()) as { query?: { search?: { title?: unknown }[] } };
+    );
     const search = data.query?.search;
     if (!Array.isArray(search)) return [];
     return search
@@ -86,14 +76,10 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       format: 'json',
       origin: '*',
     });
-    const res = await fetch(`${this.searchUrl}?${params.toString()}`, {
-      headers: { 'User-Agent': this.userAgent },
+    const data = await this.fetchJson<{ query?: { pages?: Record<string, unknown> } }>(
+      params,
       signal,
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      query?: { pages?: Record<string, unknown> };
-    };
+    );
     const pages = data.query?.pages;
     if (!pages || typeof pages !== 'object') return [];
     return Object.values(pages)

@@ -1,21 +1,11 @@
-import { CONSENT_SCOPES, CONSENT_SOURCES } from '@modules/auth/domain/consent/userConsent.entity';
-import { badRequest } from '@shared/errors/app.error';
+import { isConsentScope, isConsentSource } from '@modules/auth/domain/consent/userConsent.entity';
+import { invalidInput } from '@shared/errors/app.error';
 
 import { buildConsentAuditMetadata, mapScopeToGrantAuditAction } from './consent-audit-mapping';
 
-import type {
-  ConsentScope,
-  ConsentSource,
-  UserConsent,
-} from '@modules/auth/domain/consent/userConsent.entity';
+import type { UserConsent } from '@modules/auth/domain/consent/userConsent.entity';
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type { AuditLogEntry } from '@shared/audit';
-
-const isConsentScope = (value: string): value is ConsentScope =>
-  (CONSENT_SCOPES as readonly string[]).includes(value);
-
-const isConsentSource = (value: string): value is ConsentSource =>
-  (CONSENT_SOURCES as readonly string[]).includes(value);
 
 /** Subset of AuditService (decoupled for tests). */
 export interface ConsentAuditSink {
@@ -46,13 +36,13 @@ export class GrantConsentUseCase {
     auditContext?: ConsentAuditContext,
   ): Promise<UserConsent> {
     if (!isConsentScope(scope)) {
-      throw badRequest(`Unknown consent scope: ${scope}`);
+      throw invalidInput(`Unknown consent scope: ${scope}`);
     }
     if (!isConsentSource(source)) {
-      throw badRequest(`Unknown consent source: ${source}`);
+      throw invalidInput(`Unknown consent source: ${source}`);
     }
     if (!version || version.length > 32) {
-      throw badRequest('Invalid consent version');
+      throw invalidInput('Invalid consent version');
     }
     const row = await this.repository.grant(userId, scope, version, source);
     if (this.auditSink) {

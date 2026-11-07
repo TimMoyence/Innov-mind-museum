@@ -1,4 +1,4 @@
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extensionByMime } from '@shared/media/mime-extensions';
 import {
@@ -54,12 +54,12 @@ const assertOpenAiAvailable = (): void => {
 const decodeAudioPayload = (base64: string): Buffer => {
   const normalizedBase64 = base64.trim();
   if (!normalizedBase64) {
-    throw badRequest('Audio payload is empty');
+    throw invalidInput('Audio payload is empty');
   }
 
   const audioBuffer = Buffer.from(normalizedBase64, 'base64');
   if (!audioBuffer.byteLength) {
-    throw badRequest('Audio payload is invalid');
+    throw invalidInput('Audio payload is invalid');
   }
   return audioBuffer;
 };
@@ -223,7 +223,6 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
     }
   }
 }
-
 
 function classifySttError(err: unknown): ChatPhaseErrorType {
   if (err instanceof AppError) {

@@ -7,7 +7,7 @@ import {
   revokeConsentUseCase,
   userConsentRepository,
 } from '@modules/auth/useCase';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
@@ -47,7 +47,7 @@ consentRouter.post(
 consentRouter.delete('/:scope', isAuthenticated, async (req: Request, res: Response) => {
   const jwtUser = requireUser(req);
   const scope = parseStringParam(req, 'scope');
-  if (!scope) throw badRequest('scope param is required');
+  if (!scope) throw invalidInput('scope param is required');
   await revokeConsentUseCase.execute(jwtUser.id, scope, {
     ip: req.ip,
     requestId: req.requestId,

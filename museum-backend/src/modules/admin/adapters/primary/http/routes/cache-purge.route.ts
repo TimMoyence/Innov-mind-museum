@@ -2,7 +2,7 @@ import { type Request, type Response, Router } from 'express';
 
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
 import { auditService } from '@shared/audit';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
@@ -40,7 +40,7 @@ export function createCachePurgeRouter(cache: CacheService): Router {
     requireRole('admin'),
     async (req: Request, res: Response) => {
       const museumIdStr = parseStringParam(req, 'id');
-      if (!museumIdStr) throw badRequest('museum id param is required');
+      if (!museumIdStr) throw invalidInput('museum id param is required');
       // I-FIX1 — validate integer. `invalidateMuseum(museumId: number)` is
       // typed and the key layout uses `String(museumId)` segment, so any
       // non-integer here would either silently target the wrong namespace or
@@ -52,7 +52,7 @@ export function createCachePurgeRouter(cache: CacheService): Router {
         museumIdInt < 1 ||
         String(museumIdInt) !== museumIdStr
       ) {
-        throw badRequest('museum id must be a positive integer');
+        throw invalidInput('museum id must be a positive integer');
       }
       const adminId = req.user?.id ?? null;
       const start = Date.now();

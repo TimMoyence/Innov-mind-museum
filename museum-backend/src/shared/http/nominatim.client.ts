@@ -1,5 +1,6 @@
 import {
   createBackgroundRefresh,
+  OUTAGE_CACHE_TTL_SECONDS,
   shouldEarlyRefresh,
   type RefreshableEntry,
 } from '@shared/cache/probabilistic-refresh';
@@ -255,6 +256,15 @@ export async function reverseGeocodeWithNominatim(
   return value;
 }
 
+async function reverseGeocodeOrThrow(
+  lat: number,
+  lng: number,
+): Promise<NominatimReverseResult | null> {
+  const { outcome, value } = await fetchReverseLive(lat, lng, DEFAULT_TIMEOUT_MS);
+  if (outcome === 'error') throw new Error('nominatim_unavailable');
+  return value;
+}
+
 /**
  * `value: null` is a SENTINEL (distinct from cache miss) — caches the empty live
  * response short-term to shield Nominatim from repeat misses. `storedAtMs` enables
@@ -323,7 +333,7 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
       if (shouldEarlyRefresh(cached, Date.now())) {
         triggerBackgroundRefresh({
           cacheKey,
-          refresh: () => reverseGeocodeWithNominatim(lat, lng),
+          refresh: () => reverseGeocodeOrThrow(lat, lng),
           positiveTtlSeconds,
           negativeTtlSeconds,
         });
@@ -331,12 +341,16 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
       return cached.value;
     }
 
-    const live = await reverseGeocodeWithNominatim(lat, lng);
-    const entry: ReverseGeocodeCacheEntry = {
-      value: live,
-      storedAtMs: Date.now(),
-      ttlSeconds: live ? positiveTtlSeconds : negativeTtlSeconds,
-    };
+    let live: NominatimReverseResult | null;
+    let ttlSeconds: number;
+    try {
+      live = await reverseGeocodeOrThrow(lat, lng);
+      ttlSeconds = live ? positiveTtlSeconds : negativeTtlSeconds;
+    } catch {
+      live = null;
+      ttlSeconds = OUTAGE_CACHE_TTL_SECONDS;
+    }
+    const entry: ReverseGeocodeCacheEntry = { value: live, storedAtMs: Date.now(), ttlSeconds };
 
     try {
       await cache.set(cacheKey, entry, entry.ttlSeconds);

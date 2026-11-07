@@ -20,7 +20,7 @@ import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-sto
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
 import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
-import { badRequest } from '@shared/errors/app.error';
+import { badRequest, invalidInput } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
@@ -50,12 +50,12 @@ function createAudioHandler(chatService: ChatService, consentChecker: ThirdParty
     };
 
     if (!req.file) {
-      throw badRequest('audio file is required');
+      throw invalidInput('audio file is required');
     }
 
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
-      throw badRequest('session id param is required');
+      throw invalidInput('session id param is required');
     }
 
     // B7 (R4/R5/R6) — gate STT on `third_party_ai_audio_<provider>` BEFORE
@@ -93,7 +93,7 @@ function createImageServeHandler(chatService: ChatService) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
-      throw badRequest(MESSAGE_ID_REQUIRED);
+      throw invalidInput(MESSAGE_ID_REQUIRED);
     }
     const verification = verifySignedChatImageReadUrl({
       messageId,
@@ -153,7 +153,7 @@ function createReportHandler(chatService: ChatService) {
     const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
-      throw badRequest(MESSAGE_ID_REQUIRED);
+      throw invalidInput(MESSAGE_ID_REQUIRED);
     }
     const payload = parseReportMessageRequest(req.body ?? {});
     const result = await chatService.reportMessage(
@@ -171,7 +171,7 @@ function createFeedbackHandler(chatService: ChatService) {
     const user = requireUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
-      throw badRequest(MESSAGE_ID_REQUIRED);
+      throw invalidInput(MESSAGE_ID_REQUIRED);
     }
     const payload = parseFeedbackMessageRequest(req.body ?? {});
     const result = await chatService.setMessageFeedback(messageId, user.id, payload.value);
@@ -184,7 +184,7 @@ function createImageUrlHandler(chatService: ChatService) {
     const currentUser = getRequestUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
-      throw badRequest(MESSAGE_ID_REQUIRED);
+      throw invalidInput(MESSAGE_ID_REQUIRED);
     }
     const image = await chatService.getMessageImageRef(messageId, currentUser?.id);
     const signed = buildImageReadUrl({
@@ -204,7 +204,7 @@ function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAi
     const currentUser = getRequestUser(req);
     const messageId = parseStringParam(req, 'messageId');
     if (!messageId) {
-      throw badRequest(MESSAGE_ID_REQUIRED);
+      throw invalidInput(MESSAGE_ID_REQUIRED);
     }
 
     // B1 (R1/R2/R3) — gate TTS on `third_party_ai_audio_<provider>` BEFORE the

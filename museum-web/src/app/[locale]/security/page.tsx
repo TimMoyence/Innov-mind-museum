@@ -1,4 +1,5 @@
 import { type Locale } from '@/lib/i18n';
+import { LegalSections } from '@/components/shared/LegalSections';
 import { getAlternates, getOpenGraph } from '@/lib/seo';
 import { getSecurityContent } from '@/lib/security-content';
 import type { Metadata } from 'next';
@@ -58,16 +59,7 @@ export default async function SecurityPage({ params }: SecurityPageProps) {
 
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <article className="prose prose-slate max-w-none">
-          {security.sections.map((section) => (
-            <div key={section.id} id={section.id} className="mb-10">
-              <h2 className="text-xl font-semibold text-text-primary">{section.title}</h2>
-              {section.paragraphs.map((paragraph, i) => (
-                <p key={i} className="mt-3 text-text-secondary leading-relaxed">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          ))}
+          <LegalSections sections={security.sections} />
         </article>
       </section>
     </div>

@@ -13,7 +13,10 @@ import {
   registerLimiter,
   socialLoginLimiter,
 } from '@modules/auth/adapters/primary/http/helpers/auth-rate-limiters';
-import { pickEmailLocale } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
+import {
+  auditOwnAccount,
+  pickEmailLocale,
+} from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import {
   auditLoginError,
   finalizeLoginSuccess,
@@ -73,8 +76,8 @@ const authSessionRouter: Router = Router();
 
 authSessionRouter.post(
   '/register',
-  registerLimiter,
   validateBody(registerSchema),
+  registerLimiter,
   async (req: Request, res: Response) => {
     const { email, password, firstname, lastname, dateOfBirth } = req.body;
     const locale = pickEmailLocale(req);
@@ -88,23 +91,15 @@ authSessionRouter.post(
       ip: req.ip,
       requestId: req.requestId,
     });
-    await auditService.log({
-      action: AUDIT_AUTH_REGISTER,
-      actorType: 'user',
-      actorId: user.id,
-      targetType: 'user',
-      targetId: String(user.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, user.id, AUDIT_AUTH_REGISTER);
     res.status(201).json({ user: { id: user.id, email: user.email } });
   },
 );
 
 authSessionRouter.post(
   '/login',
-  loginLimiter,
   validateBody(loginSchema),
+  loginLimiter,
   // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   loginByAccountLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -137,9 +132,9 @@ authSessionRouter.post(
 
 authSessionRouter.post(
   '/logout',
-  logoutLimiter,
   refreshTokenFromCookie,
   validateBody(logoutSchema),
+  logoutLimiter,
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
     // R7 — the access token (Bearer or access_token cookie, best-effort) feeds
@@ -173,16 +168,7 @@ authSessionRouter.post(
   async (req: Request, res: Response) => {
     const { provider, idToken, nonce } = req.body;
     const session = await socialLoginUseCase.execute(provider, idToken, nonce);
-    await auditService.log({
-      action: AUDIT_AUTH_SOCIAL_LOGIN,
-      actorType: 'user',
-      actorId: session.user.id,
-      targetType: 'user',
-      targetId: String(session.user.id),
-      metadata: { provider },
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, session.user.id, AUDIT_AUTH_SOCIAL_LOGIN, { provider });
     // F7 — dual-mode (same as /login).
     setAuthCookies(res, session);
     res.status(200).json(session);

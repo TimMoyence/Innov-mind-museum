@@ -8,7 +8,7 @@ import { buildLlmCacheInput } from '@modules/chat/useCase/message/llm-cache-inpu
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
-import { AppError, badRequest, serviceUnavailable } from '@shared/errors/app.error';
+import { AppError, badRequest, countedRefusal, serviceUnavailable } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
@@ -465,7 +465,9 @@ export class ChatMessageService {
       requestId,
       currentUserId,
       ip,
-    );
+    ).catch((error: unknown) => {
+      throw countedRefusal(error);
+    });
 
     return {
       ...response,

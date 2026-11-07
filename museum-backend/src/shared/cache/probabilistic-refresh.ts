@@ -29,6 +29,8 @@ import type { CacheService } from '@shared/cache/cache.port';
  */
 export const EARLY_REFRESH_THRESHOLD_DEFAULT = 0.9;
 
+export const OUTAGE_CACHE_TTL_SECONDS = 60;
+
 /**
  * Minimal cache-entry shape the helper operates on. Generic over the payload
  * type so callers can union with `null` for sentinel-cached negatives without

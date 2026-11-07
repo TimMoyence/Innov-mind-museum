@@ -34,7 +34,7 @@ export interface ScheduledJobHandle {
 const DEFAULT_ATTEMPTS = 1;
 
 /** Logs error under `label`, never rethrows. */
-async function safeClose(label: string, step: () => Promise<unknown>): Promise<void> {
+export async function safeClose(label: string, step: () => Promise<unknown>): Promise<void> {
   try {
     await step();
   } catch (err) {

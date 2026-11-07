@@ -1,4 +1,4 @@
-import { badRequest, notFound, forbidden } from '@shared/errors/app.error';
+import { forbidden, invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type { TicketMessageDTO } from '@modules/support/domain/ticket/support.types';
@@ -17,7 +17,7 @@ export class AddTicketMessageUseCase {
   async execute(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
     const text = input.text.trim();
     if (!text || text.length < 1 || text.length > 5000) {
-      throw badRequest('text must be between 1 and 5000 characters');
+      throw invalidInput('text must be between 1 and 5000 characters');
     }
 
     const isAdminOrMod = input.senderRole === 'admin' || input.senderRole === 'moderator';

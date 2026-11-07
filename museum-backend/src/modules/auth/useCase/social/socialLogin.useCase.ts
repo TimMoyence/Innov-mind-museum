@@ -1,4 +1,4 @@
-import { AppError } from '@shared/errors/app.error';
+import { AppError, invalidInput } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
@@ -64,11 +64,7 @@ export class SocialLoginUseCase {
     nonce?: string,
   ): Promise<AuthSessionResponse> {
     if (!idToken.trim()) {
-      throw new AppError({
-        message: 'idToken is required',
-        statusCode: 400,
-        code: 'BAD_REQUEST',
-      });
+      throw invalidInput('idToken is required');
     }
 
     await this.assertNonce(nonce);

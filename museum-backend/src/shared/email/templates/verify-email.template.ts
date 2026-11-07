@@ -1,21 +1,13 @@
-import { renderEmailLayout } from './layout';
+import { renderLinkEmail, type LinkEmailCopy } from './link-email';
+
+import type { EmailLocale } from '@shared/email/email-locale';
 
 export interface VerifyEmailInput {
   verifyUrl: string;
-  locale?: 'fr' | 'en';
+  locale?: EmailLocale;
 }
 
-const COPY: Record<
-  'fr' | 'en',
-  {
-    heading: string;
-    preheader: string;
-    lead: string;
-    expires: string;
-    ignored: string;
-    cta: string;
-  }
-> = {
+const COPY: Record<EmailLocale, LinkEmailCopy> = {
   fr: {
     heading: 'Bienvenue sur Musaium',
     preheader: 'Confirmez votre email pour activer votre compagnon de musée.',
@@ -36,22 +28,5 @@ const COPY: Record<
 };
 
 export function buildVerifyEmail(input: VerifyEmailInput): string {
-  const locale = input.locale ?? 'en';
-  const copy = COPY[locale];
-
-  const bodyHtml = `
-    <p style="margin:0 0 16px 0;">${copy.lead}</p>
-    <p style="margin:0 0 16px 0;color:#475569;">${copy.expires}</p>
-    <p style="margin:0;color:#64748B;font-size:14px;line-height:1.6;">${copy.ignored}</p>
-  `;
-
-  return renderEmailLayout({
-    heading: copy.heading,
-    bodyHtml,
-    ctaLabel: copy.cta,
-    ctaUrl: input.verifyUrl,
-    fallbackUrl: input.verifyUrl,
-    preheader: copy.preheader,
-    locale,
-  });
+  return renderLinkEmail(COPY, input.verifyUrl, input.locale);
 }

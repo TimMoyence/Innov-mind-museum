@@ -4,7 +4,10 @@ import {
   changeEmailLimiter,
   emailVerificationLimiter,
 } from '@modules/auth/adapters/primary/http/helpers/auth-rate-limiters';
-import { pickEmailLocale } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
+import {
+  auditOwnAccount,
+  pickEmailLocale,
+} from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import {
   changeEmailSchema,
   confirmEmailChangeSchema,
@@ -31,23 +34,14 @@ const authEmailRouter: Router = Router();
 authEmailRouter.put(
   '/change-email',
   isAuthenticated,
-  changeEmailLimiter,
   validateBody(changeEmailSchema),
+  changeEmailLimiter,
   async (req: Request, res: Response) => {
     const jwtUser = requireUser(req);
     const { newEmail, currentPassword } = req.body;
     const locale = pickEmailLocale(req);
     const token = await changeEmailUseCase.execute(jwtUser.id, newEmail, currentPassword, locale);
-    await auditService.log({
-      action: AUDIT_AUTH_EMAIL_CHANGE_REQUEST,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      metadata: { newEmail },
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_EMAIL_CHANGE_REQUEST, { newEmail });
     res.status(200).json({
       message: 'A confirmation email has been sent to the new address.',
       // SEC-HARDENING (L7): test env only. Leaking in dev (shared staging DBs)
@@ -59,8 +53,8 @@ authEmailRouter.put(
 
 authEmailRouter.post(
   '/confirm-email-change',
-  emailVerificationLimiter,
   validateBody(confirmEmailChangeSchema),
+  emailVerificationLimiter,
   async (req: Request, res: Response) => {
     const { token } = req.body;
     const result = await confirmEmailChangeUseCase.execute(token);
@@ -76,8 +70,8 @@ authEmailRouter.post(
 
 authEmailRouter.post(
   '/verify-email',
-  emailVerificationLimiter,
   validateBody(verifyEmailSchema),
+  emailVerificationLimiter,
   async (req: Request, res: Response) => {
     const { token } = req.body;
     const result = await verifyEmailUseCase.execute(token);

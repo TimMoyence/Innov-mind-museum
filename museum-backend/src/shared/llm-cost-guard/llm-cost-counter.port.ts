@@ -12,6 +12,6 @@ export interface LlmCostCounter {
   /** Returns 0 (never undefined) for unincremented bucket. */
   get(userId: string, day: string): Promise<number>;
 
-  /** Atomic. 25h TTL applied only on first INCR of day (no sliding expiry). `dollars` ≥ 0 (no debits). */
+  /** Atomic. 25h TTL applied only on first INCR of day (no sliding expiry). */
   increment(userId: string, day: string, dollars: number): Promise<number>;
 }

@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 
 export interface PaginationParams {
   page: number;
@@ -43,10 +43,10 @@ export function assertPagination(
   const maxLimit = opts?.maxLimit ?? 100;
 
   if (!Number.isInteger(page) || page < 1) {
-    throw badRequest('page must be a positive integer');
+    throw invalidInput('page must be a positive integer');
   }
   if (!Number.isInteger(limit) || limit < 1 || limit > maxLimit) {
-    throw badRequest(`limit must be between 1 and ${String(maxLimit)}`);
+    throw invalidInput(`limit must be between 1 and ${String(maxLimit)}`);
   }
 
   return { page, limit };

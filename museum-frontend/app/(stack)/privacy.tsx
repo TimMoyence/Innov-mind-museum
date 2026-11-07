@@ -9,6 +9,7 @@ import {
   isPrivacyPlaceholderValue,
 } from '@/features/legal/privacyPolicyContent';
 import { PrivacyMetaRow } from '@/features/legal/ui/PrivacyMetaRow';
+import { LegalSections } from '@/features/legal/ui/LegalSections';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { semantic } from '@/shared/ui/tokens';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -209,21 +210,7 @@ export default function PrivacyScreen() {
           </View>
         </GlassCard>
 
-        {PRIVACY_POLICY_CONTENT.sections.map((section) => (
-          <GlassCard key={section.id} style={styles.sectionCard} intensity={52}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
-            <View style={styles.paragraphGroup}>
-              {section.paragraphs.map((paragraph, index) => (
-                <Text
-                  key={`${section.id}-${String(index)}`}
-                  style={[styles.paragraph, { color: theme.textSecondary }]}
-                >
-                  {paragraph}
-                </Text>
-              ))}
-            </View>
-          </GlassCard>
-        ))}
+        <LegalSections sections={PRIVACY_POLICY_CONTENT.sections} />
 
         <GlassCard style={styles.ctaCard} intensity={54}>
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>

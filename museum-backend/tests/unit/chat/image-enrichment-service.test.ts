@@ -7,6 +7,7 @@ jest.mock('@shared/logger/logger', () => ({
   },
 }));
 
+import { WikimediaCommonsClient } from '@modules/chat/adapters/secondary/search/wikimedia-commons.client';
 import { ImageEnrichmentService } from '@modules/chat/useCase/image/image-enrichment.service';
 
 import type { ImageEnrichmentConfig } from '@modules/chat/useCase/image/image-enrichment.service';
@@ -379,12 +380,7 @@ describe('ImageEnrichmentService', () => {
       };
       const service = new ImageEnrichmentService(unsplash, makeConfig(), undefined, musaium);
 
-      const result = await service.enrich(
-        'Mona Lisa',
-        'https://wiki.org/p18.jpg',
-        undefined,
-        true,
-      );
+      const result = await service.enrich('Mona Lisa', 'https://wiki.org/p18.jpg', undefined, true);
       expect(result[0].source).toBe('musaium');
     });
 
@@ -434,17 +430,13 @@ describe('ImageEnrichmentService', () => {
         ]),
       };
       const service = new ImageEnrichmentService(unsplash, makeConfig(), undefined, musaium);
-      const result = await service.enrich(
-        ['Mona Lisa'],
-        undefined,
-        [
-          {
-            query: 'Mona Lisa',
-            caption: 'Mona Lisa at the Louvre',
-            rationale: 'The exact work the visitor asked about.',
-          },
-        ],
-      );
+      const result = await service.enrich(['Mona Lisa'], undefined, [
+        {
+          query: 'Mona Lisa',
+          caption: 'Mona Lisa at the Louvre',
+          rationale: 'The exact work the visitor asked about.',
+        },
+      ]);
       expect(result[0].caption).toBe('Mona Lisa at the Louvre');
       expect(result[0].rationale).toBe('The exact work the visitor asked about.');
     });
@@ -455,5 +447,43 @@ describe('ImageEnrichmentService', () => {
     const img = makeEnrichedImage();
     expect(img.rationale).toBeDefined();
     expect(typeof img.rationale).toBe('string');
+  });
+
+  it('TIMER · une source qui rejette avant le délai ne laisse aucun minuteur armé', async () => {
+    jest.useFakeTimers();
+    try {
+      const unsplash = makeMockUnsplash();
+      unsplash.searchPhotos.mockRejectedValue(new Error('Unsplash 503'));
+      const service = new ImageEnrichmentService(unsplash, makeConfig());
+
+      await expect(service.enrich('Mona Lisa')).resolves.toEqual([]);
+
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('PANNE-CACHE · un vrai vide de Commons (200 sans résultat) se garde en cache : la demande suivante n’interroge pas Commons', async () => {
+    const originalFetch = global.fetch;
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ batchcomplete: '', query: { search: [] } }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    try {
+      const service = new ImageEnrichmentService(
+        undefined,
+        makeConfig(),
+        new WikimediaCommonsClient(),
+      );
+
+      await expect(service.enrich('Mona Lisa')).resolves.toEqual([]);
+      await expect(service.enrich('Mona Lisa')).resolves.toEqual([]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });

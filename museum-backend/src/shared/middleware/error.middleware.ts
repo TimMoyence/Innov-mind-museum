@@ -2,6 +2,7 @@ import { MulterError } from 'multer';
 
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
+import { markInputRejected } from '@shared/middleware/input-rejected';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
 import type { ErrorRequestHandler, Response, Request } from 'express';
@@ -65,6 +66,7 @@ const normalizeError = (error: unknown): unknown => {
       message: error.message,
       statusCode: 400,
       code: 'BAD_REQUEST',
+      inputRejected: true,
     });
   }
 
@@ -136,5 +138,6 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   }
 
   applyResponseHeaders(res, normalizedError);
+  markInputRejected(res, isAppErrorLike(normalizedError) && normalizedError.inputRejected);
   res.status(statusCode).json(buildPayload(normalizedError, requestId));
 };

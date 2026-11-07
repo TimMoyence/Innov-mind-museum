@@ -1,6 +1,6 @@
 import { findNearbyMuseums } from '@modules/chat/useCase/enrichment/nearby-museums.provider';
 import { isValidSessionListCursor } from '@modules/chat/useCase/image/chat-image.helpers';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import { ensureSessionAccess } from './session-access';
@@ -87,7 +87,7 @@ export class ChatSessionService {
    */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     if (input.userId !== undefined && (!Number.isInteger(input.userId) || input.userId <= 0)) {
-      throw badRequest('userId must be a positive integer');
+      throw invalidInput('userId must be a positive integer');
     }
 
     const { museumName, visitContext } = await this.resolveMuseumInfo(input);
@@ -216,12 +216,12 @@ export class ChatSessionService {
 
   async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     if (currentUserId === undefined || !Number.isInteger(currentUserId) || currentUserId <= 0) {
-      throw badRequest('Authenticated user id is required');
+      throw invalidInput('Authenticated user id is required');
     }
     const userId = currentUserId;
 
     if (page.cursor && !isValidSessionListCursor(page.cursor)) {
-      throw badRequest('Invalid cursor format');
+      throw invalidInput('Invalid cursor format');
     }
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
