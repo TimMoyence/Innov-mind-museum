@@ -43,7 +43,7 @@ async function driveFailures(
 ): Promise<void> {
   inner.lookupOrThrow.mockRejectedValue(new WikidataTransientError(new Error('5xx'), 'search'));
   for (let i = 0; i < n; i++) {
-    await client.lookup(QUERY);
+    await expect(client.lookup(QUERY)).rejects.toThrow();
   }
 }
 
@@ -71,7 +71,7 @@ describe('WikidataBreakerClient', () => {
     expect(client.getState().openSince).toBeGreaterThan(0);
   });
 
-  it('3) OPEN state returns null without invoking inner', async () => {
+  it('3) OPEN state signals the outage without invoking inner, so no caller mistakes it for a legitimate empty', async () => {
     const inner = makeInner();
     const client = new WikidataBreakerClient(inner as never, baseConfig);
 
@@ -79,9 +79,8 @@ describe('WikidataBreakerClient', () => {
     expect(client.getState().name).toBe('OPEN');
 
     const callsBeforeProbe = inner.lookupOrThrow.mock.calls.length;
-    const result = await client.lookup(QUERY);
 
-    expect(result).toBeNull();
+    await expect(client.lookup(QUERY)).rejects.toThrow('Breaker is open');
     expect(inner.lookupOrThrow.mock.calls.length).toBe(callsBeforeProbe);
   });
 
@@ -126,7 +125,7 @@ describe('WikidataBreakerClient', () => {
     inner.lookupOrThrow.mockReset();
     inner.lookupOrThrow.mockRejectedValue(new WikidataTransientError(new Error('5xx'), 'search'));
 
-    await client.lookup(QUERY);
+    await expect(client.lookup(QUERY)).rejects.toThrow('wikidata_transient_search');
 
     expect(client.getState().name).toBe('OPEN');
   });

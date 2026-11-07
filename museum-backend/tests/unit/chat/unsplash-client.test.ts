@@ -79,32 +79,28 @@ describe('UnsplashClient', () => {
     });
   });
 
-  describe('non-ok HTTP responses', () => {
-    it('returns empty array on 401 Unauthorized', async () => {
+  describe('non-ok HTTP responses signal the outage instead of an empty result', () => {
+    it('rejects on 401 Unauthorized', async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: false,
         status: 401,
       });
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('unsplash_search_http_401');
     });
 
-    it('returns empty array on 429 Rate Limited', async () => {
+    it('rejects on 429 Rate Limited', async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: false,
         status: 429,
       });
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('unsplash_search_http_429');
     });
   });
 
   describe('timeout / abort handling', () => {
-    it('returns empty array on AbortError (timeout)', async () => {
+    it('rejects on AbortError (timeout)', async () => {
       fetchSpy.mockImplementationOnce(
         () =>
           new Promise((_resolve, reject) => {
@@ -116,27 +112,21 @@ describe('UnsplashClient', () => {
           }),
       );
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('This operation was aborted');
     });
   });
 
   describe('network error handling', () => {
-    it('returns empty array on network failure', async () => {
+    it('rejects on network failure', async () => {
       fetchSpy.mockRejectedValueOnce(new Error('Failed to fetch'));
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('Failed to fetch');
     });
 
-    it('returns empty array on non-Error throw', async () => {
+    it('rejects on non-Error throw', async () => {
       fetchSpy.mockRejectedValueOnce('string error');
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toBe('string error');
     });
   });
 
@@ -268,26 +258,22 @@ describe('UnsplashClient', () => {
       expect(photos).toHaveLength(1);
     });
 
-    it('returns empty array when data.results is not an array', async () => {
+    it('rejects as an outage when data.results is not an array', async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ results: 'not-an-array' }),
       });
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('unsplash_search_malformed');
     });
 
-    it('returns empty array when data.results is undefined', async () => {
+    it('rejects as an outage when data.results is undefined', async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({}),
       });
 
-      const photos = await client.searchPhotos('monet');
-
-      expect(photos).toEqual([]);
+      await expect(client.searchPhotos('monet')).rejects.toThrow('unsplash_search_malformed');
     });
   });
 });

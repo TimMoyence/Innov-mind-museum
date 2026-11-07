@@ -1,7 +1,7 @@
 import { type Request, type Response, Router } from 'express';
 
+import { auditOwnAccount } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import { exportUserDataUseCase, userRepository } from '@modules/auth/useCase';
-import { auditService } from '@shared/audit';
 import { AUDIT_DATA_EXPORT } from '@shared/audit/audit.types';
 import { AppError } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
@@ -57,25 +57,15 @@ meRouter.get('/me/export', isAuthenticated, exportLimiter, async (req: Request, 
   const byteSize = Buffer.byteLength(serialised, 'utf8');
 
   // Audit MUST be durable before response is observable (SOC2 CC7.2 / GDPR Art. 30).
-  await auditService.log({
-    action: AUDIT_DATA_EXPORT,
-    actorType: 'user',
-    actorId: jwtUser.id,
-    targetType: 'user',
-    targetId: String(jwtUser.id),
-    metadata: {
-      byteSize,
-      sessionsCount: payload.chatSessions.length,
-      reviewsCount: payload.reviews.length,
-      ticketsCount: payload.supportTickets.length,
-      mediaCount: payload.chatSessions.reduce(
-        (acc, s) =>
-          acc + s.messages.filter((m) => Boolean(m.imageRef) || Boolean(m.audioUrl)).length,
-        0,
-      ),
-    },
-    ip: req.ip,
-    requestId: req.requestId,
+  await auditOwnAccount(req, jwtUser.id, AUDIT_DATA_EXPORT, {
+    byteSize,
+    sessionsCount: payload.chatSessions.length,
+    reviewsCount: payload.reviews.length,
+    ticketsCount: payload.supportTickets.length,
+    mediaCount: payload.chatSessions.reduce(
+      (acc, s) => acc + s.messages.filter((m) => Boolean(m.imageRef) || Boolean(m.audioUrl)).length,
+      0,
+    ),
   });
 
   res.status(200);

@@ -75,16 +75,16 @@ describe('WikimediaCommonsClient (C2 v2)', () => {
     expect(firstUrl).toContain('srnamespace=6');
   });
 
-  it('returns [] when stage 1 search hits HTTP 429 (rate-limit fail-open)', async () => {
+  it('rejects when stage 1 search hits HTTP 429, so the outage is never cached as an empty result', async () => {
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce(new Response('', { status: 429 })) as unknown as typeof fetch;
 
     const client = new WikimediaCommonsClient();
-    expect(await client.searchPhotos('foo')).toEqual([]);
+    await expect(client.searchPhotos('foo')).rejects.toThrow('commons_http_429');
   });
 
-  it('returns [] on malformed JSON payload (defence-in-depth)', async () => {
+  it('rejects on malformed JSON payload', async () => {
     global.fetch = jest.fn().mockResolvedValueOnce(
       new Response('not-json-at-all', {
         status: 200,
@@ -93,13 +93,15 @@ describe('WikimediaCommonsClient (C2 v2)', () => {
     ) as unknown as typeof fetch;
 
     const client = new WikimediaCommonsClient();
-    expect(await client.searchPhotos('foo')).toEqual([]);
+    await expect(client.searchPhotos('foo')).rejects.toThrow('is not valid JSON');
   });
 
   it('returns [] when stage 1 returns empty results (no titles to enrich)', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ query: { search: [] } }), { status: 200 }),
-    ) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ query: { search: [] } }), { status: 200 }),
+      ) as unknown as typeof fetch;
 
     const client = new WikimediaCommonsClient();
     expect(await client.searchPhotos('foo')).toEqual([]);
@@ -117,7 +119,7 @@ describe('WikimediaCommonsClient (C2 v2)', () => {
     ) as unknown as typeof fetch;
 
     const client = new WikimediaCommonsClient(50);
-    expect(await client.searchPhotos('foo')).toEqual([]);
+    await expect(client.searchPhotos('foo')).rejects.toThrow('This operation was aborted');
   });
 
   it('returns [] when query is whitespace-only (early bail)', async () => {

@@ -1,6 +1,6 @@
 import { UserRole } from '@modules/auth/domain/user/user-role';
 import { auditService, AUDIT_ADMIN_ROLE_CHANGE } from '@shared/audit';
-import { badRequest, notFound, conflict } from '@shared/errors/app.error';
+import { conflict, invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
@@ -20,7 +20,7 @@ export class ChangeUserRoleUseCase {
     const validRoles: string[] = Object.values(UserRole);
 
     if (!validRoles.includes(input.newRole)) {
-      throw badRequest(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+      throw invalidInput(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
     }
 
     // Guard: prevent removing the last admin.

@@ -10,7 +10,7 @@ import {
   extendTimeoutForUpload,
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { idempotencyMiddleware } from '@modules/chat/adapters/primary/http/middleware/idempotency.middleware';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
 import { llmCostGuard } from '@shared/middleware/llm-cost-guard.middleware';
@@ -75,7 +75,7 @@ function createPostMessageHandler(chatService: ChatService) {
 
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
-      throw badRequest('session id param is required');
+      throw invalidInput('session id param is required');
     }
 
     const result = await chatService.postMessage(
@@ -103,7 +103,7 @@ function createListArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepository) {
     const locale = typeof req.query.locale === 'string' ? req.query.locale : '%';
     const sinceRaw = typeof req.query.since === 'string' ? req.query.since : undefined;
     if (sinceRaw && Number.isNaN(Date.parse(sinceRaw))) {
-      throw badRequest('since must be a valid ISO date');
+      throw invalidInput('since must be a valid ISO date');
     }
     const keywords = sinceRaw
       ? await artKeywordRepo.findByLocaleSince(locale, new Date(sinceRaw))
@@ -129,19 +129,19 @@ function createBulkUpsertArtKeywordsHandler(artKeywordRepo?: ArtKeywordRepositor
     }
     const { keywords, locale } = req.body as { keywords?: unknown[]; locale?: string };
     if (!Array.isArray(keywords) || keywords.length === 0) {
-      throw badRequest('keywords must be a non-empty array of strings');
+      throw invalidInput('keywords must be a non-empty array of strings');
     }
     if (keywords.length > 100) {
-      throw badRequest('Maximum 100 keywords per request');
+      throw invalidInput('Maximum 100 keywords per request');
     }
     const validated = keywords.filter(
       (k): k is string => typeof k === 'string' && k.trim().length > 0 && k.length <= 200,
     );
     if (validated.length === 0) {
-      throw badRequest('keywords must contain at least one valid string');
+      throw invalidInput('keywords must contain at least one valid string');
     }
     if (locale && (typeof locale !== 'string' || locale.length > 10)) {
-      throw badRequest('locale must be a string of max 10 characters');
+      throw invalidInput('locale must be a string of max 10 characters');
     }
     await artKeywordRepo.bulkUpsert(validated, locale ?? 'en');
     res.status(201).json({ created: validated.length });

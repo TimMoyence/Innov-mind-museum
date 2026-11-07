@@ -214,6 +214,7 @@ function applyGlobalMiddleware(app: Express): void {
       limit: env.rateLimit.ipLimit,
       windowMs: env.rateLimit.windowMs,
       keyGenerator: byIp,
+      countRejected: true,
     }),
   );
   app.use(

@@ -12,7 +12,7 @@ import {
   type CreateSessionBody,
   type UpdateSessionContextBody,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { monthlySessionQuota } from '@shared/middleware/monthly-session-quota.middleware';
@@ -35,7 +35,7 @@ const buildGetSessionHandler =
     const currentUser = getRequestUser(req);
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
-      throw badRequest('session id param is required');
+      throw invalidInput('session id param is required');
     }
     const result = await chatService.getSession(
       sessionId,
@@ -71,7 +71,7 @@ const buildUpdateSessionContextHandler =
     const user = requireUser(req);
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
-      throw badRequest('session id param is required');
+      throw invalidInput('session id param is required');
     }
     const payload = req.body as UpdateSessionContextBody;
     // The Zod schema produces optional fields (`undefined` when absent).
@@ -133,7 +133,7 @@ export const createSessionRouter = (
     const currentUser = getRequestUser(req);
     const sessionId = parseStringParam(req, 'id');
     if (!sessionId) {
-      throw badRequest('session id param is required');
+      throw invalidInput('session id param is required');
     }
     const result = await chatService.deleteSessionIfEmpty(sessionId, currentUser?.id);
     res.status(200).json(result);
@@ -156,8 +156,8 @@ export const createSessionRouter = (
     router.patch(
       '/sessions/:id/context',
       isAuthenticated,
-      contextUpdateLimiter,
       validateBody(updateSessionContextSchema),
+      contextUpdateLimiter,
       buildUpdateSessionContextHandler(updateSessionContextUseCase),
     );
   }

@@ -3,7 +3,7 @@ import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-
 import { resolveLocationForMessage } from '@modules/chat/useCase/location-resolver';
 import { checkThirdPartyAiConsent } from '@modules/chat/useCase/orchestration/consent-gate';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { maskPersonalData } from '@shared/pii/mask-personal-data';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
@@ -175,10 +175,10 @@ export class PrepareMessagePipeline {
 
   private validateMessageInput(text: string | undefined, image: PostMessageInput['image']): void {
     if (text && text.length > env.llm.maxTextLength) {
-      throw badRequest(`text must be <= ${String(env.llm.maxTextLength)} characters`);
+      throw invalidInput(`text must be <= ${String(env.llm.maxTextLength)} characters`);
     }
     if (!text && !image) {
-      throw badRequest('Either text or image is required');
+      throw invalidInput('Either text or image is required');
     }
   }
 

@@ -1,22 +1,13 @@
-import { renderEmailLayout } from './layout';
+import { renderLinkEmail, type LinkEmailCopy } from './link-email';
+
+import type { EmailLocale } from '@shared/email/email-locale';
 
 export interface ChangeEmailEmailInput {
   confirmUrl: string;
-  locale?: 'fr' | 'en';
+  locale?: EmailLocale;
 }
 
-const COPY: Record<
-  'fr' | 'en',
-  {
-    heading: string;
-    preheader: string;
-    lead: string;
-    expires: string;
-    ignored: string;
-    cta: string;
-    footerNote: string;
-  }
-> = {
+const COPY: Record<EmailLocale, LinkEmailCopy> = {
   fr: {
     heading: "Changement d'adresse email",
     preheader: 'Confirmez votre nouvelle adresse email Musaium.',
@@ -42,23 +33,5 @@ const COPY: Record<
 };
 
 export function buildChangeEmailEmail(input: ChangeEmailEmailInput): string {
-  const locale = input.locale ?? 'en';
-  const copy = COPY[locale];
-
-  const bodyHtml = `
-    <p style="margin:0 0 16px 0;">${copy.lead}</p>
-    <p style="margin:0 0 16px 0;color:#475569;">${copy.expires}</p>
-    <p style="margin:0;color:#64748B;font-size:14px;line-height:1.6;">${copy.ignored}</p>
-  `;
-
-  return renderEmailLayout({
-    heading: copy.heading,
-    bodyHtml,
-    ctaLabel: copy.cta,
-    ctaUrl: input.confirmUrl,
-    fallbackUrl: input.confirmUrl,
-    preheader: copy.preheader,
-    locale,
-    footerNote: copy.footerNote,
-  });
+  return renderLinkEmail(COPY, input.confirmUrl, input.locale);
 }

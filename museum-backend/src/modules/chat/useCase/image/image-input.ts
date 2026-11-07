@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 
 interface DecodedImage {
   mimeType: string;
@@ -70,13 +70,13 @@ export const decodeBase64Image = (input: string): DecodedImage => {
 
 export const assertImageSize = (sizeBytes: number, maxBytes: number): void => {
   if (sizeBytes > maxBytes) {
-    throw badRequest(`Image exceeds max size of ${String(maxBytes)} bytes`);
+    throw invalidInput(`Image exceeds max size of ${String(maxBytes)} bytes`);
   }
 };
 
 export const assertMimeType = (mimeType: string, allowed: string[]): void => {
   if (!allowed.includes(mimeType)) {
-    throw badRequest(`Unsupported image mime type: ${mimeType}`);
+    throw invalidInput(`Unsupported image mime type: ${mimeType}`);
   }
 };
 
@@ -105,6 +105,6 @@ export const detectImageMimeFromBytes = (base64: string): string | null => {
 export const assertMagicBytes = (base64: string): void => {
   const detected = detectImageMimeFromBytes(base64);
   if (!detected) {
-    throw badRequest('Uploaded file does not appear to be a valid image');
+    throw invalidInput('Uploaded file does not appear to be a valid image');
   }
 };

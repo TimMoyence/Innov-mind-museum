@@ -128,12 +128,7 @@ describe('R7 — auth-session.route.ts: validateBody BEFORE body-keyed limiters'
     expect(validateIdx).toBeLessThan(accountLimiterIdx);
   });
 
-  /**
-   * R7.1b — POST /login: IP-keyed loginLimiter must remain BEFORE validateBody
-   * (design.md §D4 rule: IP-keyed limiter protects validator from CPU exhaustion).
-   * PASSES today and after green — this is the preserved ordering.
-   */
-  it("R7.1b — POST '/login': loginLimiter (IP-keyed) stays BEFORE validateBody (D4 rule)", () => {
+  it("R7.1b — POST '/login': validateBody appears BEFORE the IP-keyed loginLimiter, so a rejected form never consumes the limit (decision 2026-11-07)", () => {
     const block = extractRouteBlock(source, '/login');
     expect(block).not.toBe('');
 
@@ -142,9 +137,7 @@ describe('R7 — auth-session.route.ts: validateBody BEFORE body-keyed limiters'
 
     expect(loginLimiterIdx).toBeGreaterThanOrEqual(0);
     expect(validateIdx).toBeGreaterThanOrEqual(0);
-
-    // loginLimiter (IP-keyed) must be BEFORE validateBody — design D4
-    expect(loginLimiterIdx).toBeLessThan(validateIdx);
+    expect(validateIdx).toBeLessThan(loginLimiterIdx);
   });
 
   /**

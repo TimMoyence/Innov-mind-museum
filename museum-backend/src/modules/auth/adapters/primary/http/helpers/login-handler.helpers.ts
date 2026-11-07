@@ -11,6 +11,8 @@ import {
 import { AppError } from '@shared/errors/app.error';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 
+import { auditOwnAccount } from './auth-route.helpers';
+
 import type { Request, Response } from 'express';
 
 interface LoginSuccessSession extends CookieSessionInput {
@@ -22,15 +24,7 @@ export async function finalizeLoginSuccess(
   res: Response,
   session: LoginSuccessSession,
 ): Promise<void> {
-  await auditService.log({
-    action: AUDIT_AUTH_LOGIN_SUCCESS,
-    actorType: 'user',
-    actorId: session.user.id,
-    targetType: 'user',
-    targetId: String(session.user.id),
-    ip: req.ip,
-    requestId: req.requestId,
-  });
+  await auditOwnAccount(req, session.user.id, AUDIT_AUTH_LOGIN_SUCCESS);
   // F7 — dual-mode: JSON envelope (mobile) + httpOnly cookies (web). JSON unchanged.
   setAuthCookies(res, session);
 }

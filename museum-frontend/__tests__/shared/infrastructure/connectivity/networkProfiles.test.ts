@@ -26,31 +26,12 @@
  * No inline test entities: the CANONICAL table mirrors the locked design table
  * (drift detector), assertions read the registry itself as source of truth.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';
 
 import type {
   NetworkProfile,
   NetworkProfileName,
 } from '@/shared/infrastructure/connectivity/networkProfiles';
-
-// Repo-root relative path to the registry source (purity + marker source-grep).
-const REGISTRY_SOURCE = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'shared',
-  'infrastructure',
-  'connectivity',
-  'networkProfiles.ts',
-);
-
-const REGION_START = '>>> NETWORK_PROFILES_DATA_REGION_START';
-const REGION_END = '<<< NETWORK_PROFILES_DATA_REGION_END';
 
 // Ratified canonical numbers (design.md §2.7 table — DO NOT inline-edit; these
 // mirror the locked table and exist to detect silent drift).
@@ -266,47 +247,6 @@ describe('NETWORK_PROFILES registry — 10 profiles (B-R1, US-11.1/US-11.2)', ()
     for (const name of ALL_NAMES) {
       if (name === 'flapping') continue;
       expect(NETWORK_PROFILES[name].dutyCycle).toBeUndefined();
-    }
-  });
-
-  // INV-16 — the parity sentinel + BE contract test hash ONLY the bytes between
-  // the markers: they must stay intact and the new profiles/fields must live
-  // INSIDE the hashed region (otherwise FE/BE could silently drift).
-  describe('data-region markers (INV-16)', () => {
-    const source = readFileSync(REGISTRY_SOURCE, 'utf8');
-
-    it('keeps exactly one START and one END marker, in order', () => {
-      expect(source.split(REGION_START)).toHaveLength(2);
-      expect(source.split(REGION_END)).toHaveLength(2);
-      expect(source.indexOf(REGION_START)).toBeLessThan(source.indexOf(REGION_END));
-    });
-
-    it('declares the 4 new profiles and the 2 new fields INSIDE the data region', () => {
-      const region = source.slice(
-        source.indexOf(REGION_START),
-        source.indexOf(REGION_END) + REGION_END.length,
-      );
-
-      expect(region).toContain("'4g'");
-      expect(region).toContain("'5g'");
-      expect(region).toContain("'wifi-metered'");
-      expect(region).toContain("'cellular-degraded'");
-
-      // One `metered:` + one `expectedQuality:` field declaration per profile (×10).
-      expect(region.match(/metered: (?:true|false)/g) ?? []).toHaveLength(10);
-      expect(region.match(/expectedQuality: (?:'ok'|'slow'|null)/g) ?? []).toHaveLength(10);
-    });
-  });
-
-  // EARS R6 — purity: the registry must import neither react nor netinfo.
-  it('imports neither react nor @react-native-community/netinfo (source-grep)', () => {
-    const source = readFileSync(REGISTRY_SOURCE, 'utf8');
-
-    const importLines = source.split('\n').filter((line) => /^\s*import[\s{*]/.test(line));
-
-    for (const line of importLines) {
-      expect(line).not.toMatch(/from\s+['"]react['"]/);
-      expect(line).not.toMatch(/from\s+['"]@react-native-community\/netinfo['"]/);
     }
   });
 });

@@ -9,6 +9,8 @@ import {
 
 import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 
+import { makeCountedUnit } from '../../helpers/rate-limit/counted-unit.fixtures';
+
 /**
  * RED (UFR-022) — I-SEC6 / spec R8.
  * The sliding-window Redis key MUST be derived by hashing the normalized email
@@ -38,7 +40,7 @@ interface SpyStore {
 const makeSpyStore = (): SpyStore => {
   const increment = jest
     .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
-    .mockImplementation((...args) => Promise.resolve({ count: 1, resetAt: Date.now() + args[1] }));
+    .mockImplementation((...args) => Promise.resolve(makeCountedUnit(1, Date.now() + args[1])));
   const reset = jest.fn<ReturnType<ResetFn>, Parameters<ResetFn>>().mockResolvedValue(undefined);
 
   const store = {

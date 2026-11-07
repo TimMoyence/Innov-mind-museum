@@ -36,6 +36,7 @@ export declare const SENSITIVE_QUERY_KEYS: ReadonlySet<string>;
 export declare const SENSITIVE_BREADCRUMB_PATHS: readonly string[];
 /** Replacement marker written in place of redacted values. */
 export declare const REDACTED = "[redacted]";
+export declare const hashEmail: (email: string) => string | undefined;
 /** Minimal shape of a Sentry event we read. Stays structural to avoid a hard SDK dep. */
 export interface ScrubbableEvent {
     request?: {

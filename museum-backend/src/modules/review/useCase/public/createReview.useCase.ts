@@ -1,4 +1,4 @@
-import { badRequest, unauthorized } from '@shared/errors/app.error';
+import { invalidInput, unauthorized } from '@shared/errors/app.error';
 
 import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
@@ -53,12 +53,12 @@ export class CreateReviewUseCase {
     // Wave B C7 / R-C7b — NPS 0-10 range (was 1-5; back-compat: 1-5 still
     // valid since the new range is a strict superset).
     if (!Number.isInteger(input.rating) || input.rating < 0 || input.rating > 10) {
-      throw badRequest('rating must be an integer between 0 and 10');
+      throw invalidInput('rating must be an integer between 0 and 10');
     }
 
     const comment = input.comment.trim();
     if (!comment || comment.length < 10 || comment.length > 2000) {
-      throw badRequest('comment must be between 10 and 2000 characters');
+      throw invalidInput('comment must be between 10 and 2000 characters');
     }
 
     const derivedName = buildReviewDisplayName(input.user).slice(0, 128);

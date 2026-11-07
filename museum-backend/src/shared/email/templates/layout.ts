@@ -1,3 +1,5 @@
+import type { EmailLocale } from '@shared/email/email-locale';
+
 /**
  * Musaium email layout — single source of truth for charte graphique.
  * Mirrors mobile app design (museum-frontend/shared/ui/).
@@ -49,14 +51,14 @@ export interface EmailLayoutInput {
   fallbackUrl?: string;
   /** Hidden inbox preview, plain text only, ≤120 chars. */
   preheader?: string;
-  locale?: 'fr' | 'en';
+  locale?: EmailLocale;
   /** Footer context line ("Why am I receiving this?"). */
   footerNote?: string;
   /** Defaults to `<FRONTEND_URL>/images/logo.png`. */
   logoUrl?: string;
 }
 
-const FOOTER_COPY: Record<'fr' | 'en', { tagline: string; legal: string; sentBy: string }> = {
+const FOOTER_COPY: Record<EmailLocale, { tagline: string; legal: string; sentBy: string }> = {
   fr: {
     tagline: 'Votre compagnon de musée personnel',
     legal:
@@ -70,7 +72,7 @@ const FOOTER_COPY: Record<'fr' | 'en', { tagline: string; legal: string; sentBy:
   },
 };
 
-const FALLBACK_PROMPT: Record<'fr' | 'en', string> = {
+const FALLBACK_PROMPT: Record<EmailLocale, string> = {
   fr: 'Bouton non visible ? Copiez ce lien :',
   en: 'Button not showing? Copy this link:',
 };

@@ -1,14 +1,15 @@
 import { escapeHtml } from '../escape-html';
 import { renderEmailLayout } from './layout';
 
-export type ReviewLocale = 'fr' | 'en';
+import type { EmailLocale } from '@shared/email/email-locale';
+
 export type ReviewStatus = 'approved' | 'rejected';
 
 export interface ReviewModerationEmailInput {
   recipientName: string;
   rating: number;
   comment: string;
-  locale: ReviewLocale;
+  locale: EmailLocale;
   status: ReviewStatus;
 }
 
@@ -23,7 +24,7 @@ interface LocaleCopy {
   rejectedTag: string;
 }
 
-export const REVIEW_LOCALES: Record<ReviewLocale, LocaleCopy> = {
+export const REVIEW_LOCALES: Record<EmailLocale, LocaleCopy> = {
   fr: {
     subject: (status) =>
       status === 'approved' ? 'Votre avis a été publié' : 'Votre avis a été refusé',

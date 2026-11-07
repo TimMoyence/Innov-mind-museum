@@ -1,7 +1,10 @@
 import { type Request, type Response, Router } from 'express';
 
 import { passwordResetLimiter } from '@modules/auth/adapters/primary/http/helpers/auth-rate-limiters';
-import { pickEmailLocale } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
+import {
+  auditOwnAccount,
+  pickEmailLocale,
+} from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -34,23 +37,15 @@ authPasswordRouter.put(
     const jwtUser = requireUser(req);
     const { currentPassword, newPassword } = req.body;
     await changePasswordUseCase.execute(jwtUser.id, currentPassword, newPassword);
-    await auditService.log({
-      action: AUDIT_AUTH_PASSWORD_CHANGE,
-      actorType: 'user',
-      actorId: jwtUser.id,
-      targetType: 'user',
-      targetId: String(jwtUser.id),
-      ip: req.ip,
-      requestId: req.requestId,
-    });
+    await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_PASSWORD_CHANGE);
     res.status(200).json({ message: 'Password changed successfully.' });
   },
 );
 
 authPasswordRouter.post(
   '/forgot-password',
-  passwordResetLimiter,
   validateBody(forgotPasswordSchema),
+  passwordResetLimiter,
   async (req: Request, res: Response) => {
     const { email } = req.body;
     const locale = pickEmailLocale(req);
@@ -73,8 +68,8 @@ authPasswordRouter.post(
 
 authPasswordRouter.post(
   '/reset-password',
-  passwordResetLimiter,
   validateBody(resetPasswordSchema),
+  passwordResetLimiter,
   async (req: Request, res: Response) => {
     const { token, newPassword } = req.body;
     await resetPasswordUseCase.execute(token, newPassword);

@@ -107,9 +107,9 @@ const requireAnalyticsConsentHeader = (req: Request, res: Response, next: NextFu
 
 telemetryRouter.post(
   '/funnel',
-  funnelLimiter,
   requireAnalyticsConsentHeader,
   validateBody(funnelEventSchema),
+  funnelLimiter,
   async (req: Request, res: Response) => {
     const body = req.body as FunnelEventInput;
     const port = getTelemetryPort();

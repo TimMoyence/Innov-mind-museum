@@ -1,6 +1,7 @@
 import { AppError } from '@shared/errors/app.error';
 import { LlmCostGuard, LlmCostGuardError } from '@shared/llm-cost-guard/llm-cost-guard';
 import { logger } from '@shared/logger/logger';
+import { onInputRejected } from '@shared/middleware/input-rejected';
 import { env } from '@src/config/env';
 
 import type { LlmCostCounter } from '@shared/llm-cost-guard/llm-cost-counter.port';
@@ -120,7 +121,7 @@ const toHttpAppError = (err: LlmCostGuardError): AppError =>
  */
 export const llmCostGuard: RequestHandler = (
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
 ): void => {
   if (!llmCostCounter) {
@@ -155,6 +156,14 @@ export const llmCostGuard: RequestHandler = (
   guard
     .assertAllowed(userId, estimatedCostUsd)
     .then(() => {
+      onInputRejected(res, () => {
+        guard.refund().catch((err: unknown) => {
+          logger.warn('llm_cost_refund_failed', {
+            userId,
+            reason: err instanceof Error ? err.message : String(err),
+          });
+        });
+      });
       next();
     })
     .catch((err: unknown) => {

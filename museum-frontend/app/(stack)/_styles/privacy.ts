@@ -1,31 +1,16 @@
 import { StyleSheet } from 'react-native';
 
+import { legalScreenStyles } from '@/features/legal/ui/legal.styles';
 import { fontSize, lineHeightPx, radius, semantic, space } from '@/shared/ui/tokens';
 
 export const styles = StyleSheet.create({
-  screen: {
-    paddingTop: semantic.screen.paddingXL,
-    paddingHorizontal: semantic.card.paddingLarge,
-    paddingBottom: space['3.5'],
-  },
-  menuWrap: {
-    alignItems: 'center',
-    marginBottom: space['2.5'],
-  },
-  scrollContent: {
-    gap: semantic.screen.gapSmall,
-    paddingBottom: space['5.5'],
-  },
+  ...legalScreenStyles,
   heroCard: {
     padding: semantic.card.paddingLarge,
     gap: space['2.5'],
   },
   heroHeader: {
     gap: semantic.card.gapSmall,
-  },
-  title: {
-    fontSize: semantic.section.titleSizeLarge,
-    fontWeight: '700',
   },
   statusPill: {
     alignSelf: 'flex-start',
@@ -37,10 +22,6 @@ export const styles = StyleSheet.create({
   statusPillText: {
     fontSize: semantic.badge.fontSizeSmall,
     fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: semantic.form.labelSize,
-    lineHeight: lineHeightPx['19'],
   },
   metaList: {
     gap: semantic.card.gapSmall,
@@ -128,46 +109,8 @@ export const styles = StyleSheet.create({
     fontSize: semantic.card.captionSize,
     lineHeight: semantic.card.paddingLarge,
   },
-  sectionCard: {
-    padding: semantic.card.padding,
-    gap: semantic.card.gapSmall,
-  },
-  sectionTitle: {
-    fontWeight: '700',
-    fontSize: fontSize['base-'],
-  },
-  paragraphGroup: {
-    gap: semantic.card.gapSmall,
-  },
-  paragraph: {
-    fontSize: semantic.form.labelSize,
-    lineHeight: space['5'],
-  },
-  ctaCard: {
-    padding: semantic.card.padding,
-    gap: semantic.card.gapSmall,
-  },
   ctaRow: {
     gap: space['2.5'],
     marginTop: space['0.5'],
-  },
-  primaryButton: {
-    borderRadius: semantic.button.radiusSmall,
-    alignItems: 'center',
-    paddingVertical: semantic.button.paddingY,
-  },
-  primaryButtonText: {
-    fontWeight: '700',
-    fontSize: semantic.form.labelSize,
-  },
-  secondaryButton: {
-    borderRadius: semantic.button.radiusSmall,
-    borderWidth: semantic.input.borderWidth,
-    alignItems: 'center',
-    paddingVertical: semantic.button.paddingY,
-  },
-  secondaryButtonText: {
-    fontWeight: '700',
-    fontSize: semantic.form.labelSize,
   },
 });

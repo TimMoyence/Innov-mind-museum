@@ -1,6 +1,6 @@
 import { validate as isUuid } from 'uuid';
 
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
@@ -53,7 +53,7 @@ export const ensureSessionAccess = async (
   currentUserId?: number,
 ): Promise<ChatSession> => {
   if (!isUuid(sessionId)) {
-    throw badRequest('Invalid session id format');
+    throw invalidInput('Invalid session id format');
   }
 
   const session = await repository.getSessionById(sessionId);
@@ -72,7 +72,7 @@ export const ensureMessageAccess = async (
   currentUserId?: number,
 ): Promise<NonNullable<Awaited<ReturnType<ChatRepository['getMessageById']>>>> => {
   if (!isUuid(messageId)) {
-    throw badRequest('Invalid message id format');
+    throw invalidInput('Invalid message id format');
   }
 
   const row = await repository.getMessageById(messageId);

@@ -55,6 +55,7 @@ const mockRes = (): Response & { _status: number; _body: unknown } => {
   const res = {
     _status: 0,
     _body: undefined as unknown,
+    locals: {},
     status(code: number) {
       res._status = code;
       return res;

@@ -14,7 +14,7 @@
  *   golden-input/golden-output identity test that guards against silent drift.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.isUrlLikeValue = exports.scrubRecord = exports.scrubHeaders = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
+exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.isUrlLikeValue = exports.scrubRecord = exports.scrubHeaders = exports.hashEmail = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
 /** Header names (case-insensitive) whose values must be redacted before leaving the app. */
 exports.SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/i;
 /** Body / extra field names whose values must be redacted before leaving the app. */
@@ -61,6 +61,16 @@ exports.SENSITIVE_BREADCRUMB_PATHS = [
 ];
 /** Replacement marker written in place of redacted values. */
 exports.REDACTED = '[redacted]';
+const hashEmail = (email) => {
+    if (!email)
+        return undefined;
+    let hash = 0xdeadbeef;
+    for (let i = 0; i < email.length; i += 1) {
+        hash = Math.imul(hash ^ email.charCodeAt(i), 2654435761);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 8);
+};
+exports.hashEmail = hashEmail;
 /** Returns a copy of `headers` with sensitive values redacted. */
 const scrubHeaders = (headers) => {
     const out = { ...headers };

@@ -79,6 +79,7 @@ export class LlmCostGuard {
   private readonly counter: LlmCostCounter;
   private readonly logger: Logger;
   private readonly clock: () => Date;
+  private charged: { userId: string; day: string; dollars: number } | null = null;
 
   constructor(options: LlmCostGuardOptions) {
     this.killSwitchEnabled = options.killSwitchEnabled;
@@ -156,6 +157,14 @@ export class LlmCostGuard {
         capUsd: this.dailyCapUsd,
       });
     }
+    this.charged = { userId, day, dollars: estimatedCostUsd };
+  }
+
+  async refund(): Promise<void> {
+    if (!this.charged) return;
+    const { userId, day, dollars } = this.charged;
+    this.charged = null;
+    await this.counter.increment(userId, day, -dollars);
   }
 
   /** Shape asserted verbatim by tests — do not rename fields. */

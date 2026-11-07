@@ -1,6 +1,6 @@
 import { UserTier } from '@modules/auth/domain/user/user-tier';
 import { auditService, AUDIT_ADMIN_USER_TIER_CHANGED } from '@shared/audit';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
@@ -26,7 +26,7 @@ export class ChangeUserTierUseCase {
   async execute(input: ChangeUserTierInput): Promise<AdminUserDTO> {
     const validTiers: string[] = Object.values(UserTier);
     if (!validTiers.includes(input.newTier)) {
-      throw badRequest(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
+      throw invalidInput(`Invalid tier. Must be one of: ${validTiers.join(', ')}`);
     }
 
     const previous = await this.repository.getUserById(input.userId);

@@ -21,6 +21,7 @@ import {
   type CookieSessionInput,
 } from '@modules/auth/adapters/primary/http/helpers/auth-cookies';
 import { socialLoginLimiter } from '@modules/auth/adapters/primary/http/helpers/auth-rate-limiters';
+import { auditOwnAccount } from '@modules/auth/adapters/primary/http/helpers/auth-route.helpers';
 import {
   signGoogleOAuthState,
   verifyGoogleOAuthState,
@@ -28,7 +29,6 @@ import {
 } from '@modules/auth/adapters/secondary/social/google-oauth-state';
 import { exchangeGoogleAuthCode } from '@modules/auth/adapters/secondary/social/google-token-exchange';
 import { nonceStore, socialLoginUseCase, socialOtcStore } from '@modules/auth/useCase';
-import { auditService } from '@shared/audit';
 import { AUDIT_AUTH_SOCIAL_LOGIN } from '@shared/audit/audit.types';
 import { env } from '@src/config/env';
 
@@ -283,18 +283,9 @@ authGoogleOauthRouter.get(
       return;
     }
 
-    await auditService.log({
-      action: AUDIT_AUTH_SOCIAL_LOGIN,
-      actorType: 'user',
-      actorId: outcome.session.user.id,
-      targetType: 'user',
-      targetId: String(outcome.session.user.id),
-      metadata: {
-        provider: 'google',
-        flow: outcome.platform === 'mobile' ? 'mobile-redirect' : 'web-redirect',
-      },
-      ip: req.ip,
-      requestId: req.requestId,
+    await auditOwnAccount(req, outcome.session.user.id, AUDIT_AUTH_SOCIAL_LOGIN, {
+      provider: 'google',
+      flow: outcome.platform === 'mobile' ? 'mobile-redirect' : 'web-redirect',
     });
 
     if (outcome.platform === 'mobile') {

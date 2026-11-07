@@ -60,8 +60,8 @@ export class KnowledgeBaseService {
     }
 
     try {
-      const { facts, source } = await this.fetchAndCascade(key, language);
-      await this.writeCache(cacheKey, facts);
+      const { facts, source, answered } = await this.fetchAndCascade(key, language);
+      if (answered) await this.writeCache(cacheKey, facts);
       logger.info('kb_lookup_success', { searchTerm: key, found: facts !== null, source });
       return facts;
     } catch (err) {
@@ -101,14 +101,15 @@ export class KnowledgeBaseService {
   private async fetchAndCascade(
     key: string,
     language: string | undefined,
-  ): Promise<{ facts: ArtworkFacts | null; source: 'live' | 'dump' }> {
+  ): Promise<{ facts: ArtworkFacts | null; source: 'live' | 'dump'; answered: boolean }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
     }, this.config.timeoutMs);
 
+    let facts: ArtworkFacts | null;
     try {
-      const facts = await Promise.race<ArtworkFacts | null>([
+      facts = await Promise.race<ArtworkFacts | null>([
         this.provider.lookup({ searchTerm: key, language }),
         new Promise<null>((_, reject) => {
           controller.signal.addEventListener('abort', () => {
@@ -116,12 +117,15 @@ export class KnowledgeBaseService {
           });
         }),
       ]);
-
-      if (facts !== null) return { facts, source: 'live' };
-      return await this.applyCascade(key, language);
+    } catch (err) {
+      this.logFetchError(key, err);
+      return { ...(await this.applyCascade(key, language)), answered: false };
     } finally {
       clearTimeout(timeout);
     }
+
+    if (facts !== null) return { facts, source: 'live', answered: true };
+    return { ...(await this.applyCascade(key, language)), answered: true };
   }
 
   /**

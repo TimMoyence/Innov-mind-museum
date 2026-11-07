@@ -46,6 +46,12 @@ export type ConsentScope = (typeof CONSENT_SCOPES)[number];
 export const CONSENT_SOURCES = ['ui', 'api', 'registration'] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
+export const isConsentScope = (value: string): value is ConsentScope =>
+  (CONSENT_SCOPES as readonly string[]).includes(value);
+
+export const isConsentSource = (value: string): value is ConsentSource =>
+  (CONSENT_SOURCES as readonly string[]).includes(value);
+
 /**
  * Single grant (or past grant) of a scope. `revokedAt=null` = active.
  * New grants for the same (user, scope) insert new rows so history is preserved.

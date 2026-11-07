@@ -1,5 +1,5 @@
 import { isTtsVoice, type TtsVoice } from '@modules/chat/domain/voice-catalog';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
@@ -13,7 +13,7 @@ export class UpdateTtsVoiceUseCase {
    */
   async execute(userId: number, voice: TtsVoice | null): Promise<{ ttsVoice: TtsVoice | null }> {
     if (voice !== null && !isTtsVoice(voice)) {
-      throw badRequest(`invalid voice "${String(voice)}"`);
+      throw invalidInput(`invalid voice "${String(voice)}"`);
     }
     const user = await this.userRepository.getUserById(userId);
     if (!user) {

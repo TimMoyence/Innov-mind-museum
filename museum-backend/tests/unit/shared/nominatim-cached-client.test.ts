@@ -113,7 +113,7 @@ describe('createCachedNominatimClient', () => {
   });
 
   describe('live failure path', () => {
-    it('returns null and caches the null sentinel with the short negative TTL', async () => {
+    it('returns null and caches the null sentinel with the outage TTL, never the negative TTL of a real miss', async () => {
       global.fetch = jest
         .fn()
         .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
@@ -131,8 +131,8 @@ describe('createCachedNominatimClient', () => {
         number,
       ];
       expect(stored.value).toBeNull();
-      expect(stored.ttlSeconds).toBe(3_600);
-      expect(ttl).toBe(3_600);
+      expect(stored.ttlSeconds).toBe(60);
+      expect(ttl).toBe(60);
     });
 
     it('fails open when the cache read itself throws and still serves the live result', async () => {

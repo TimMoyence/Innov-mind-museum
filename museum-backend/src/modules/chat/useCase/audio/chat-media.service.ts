@@ -2,7 +2,7 @@ import { validate as isUuid } from 'uuid';
 
 import { resolveLocalImageMeta } from '@modules/chat/useCase/image/chat-image.helpers';
 import { ensureMessageAccess } from '@modules/chat/useCase/session/session-access';
-import { AppError, badRequest, notFound } from '@shared/errors/app.error';
+import { AppError, badRequest, invalidInput, notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
@@ -67,7 +67,7 @@ export class ChatMediaService {
     contentType?: string;
   }> {
     if (!isUuid(messageId)) {
-      throw badRequest('Invalid message id format');
+      throw invalidInput('Invalid message id format');
     }
 
     const row = await this.repository.getMessageById(messageId);
@@ -103,7 +103,7 @@ export class ChatMediaService {
   ): Promise<ReportMessageResult> {
     const allowedReasons: ReportReason[] = ['offensive', 'inaccurate', 'inappropriate', 'other'];
     if (!allowedReasons.includes(reason)) {
-      throw badRequest('Invalid report reason');
+      throw invalidInput('Invalid report reason');
     }
 
     const row = await ensureMessageAccess(messageId, this.repository, currentUserId);

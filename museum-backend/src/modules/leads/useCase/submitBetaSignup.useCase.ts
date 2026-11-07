@@ -1,8 +1,7 @@
 import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { validateEmail } from '@shared/validation/email';
-
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 import type {
@@ -45,12 +44,12 @@ export class SubmitBetaSignupUseCase {
   async execute(input: SubmitBetaSignupInput): Promise<void> {
     // R11 — consent must be literally true even if wire schema skipped (direct curl).
     if (!input.consent) {
-      throw badRequest('consent must be true');
+      throw invalidInput('consent must be true');
     }
 
     const email = input.email.trim().toLowerCase();
     if (!validateEmail(email)) {
-      throw badRequest('email must be valid');
+      throw invalidInput('email must be valid');
     }
 
     // R7 — honeypot silent drop BEFORE any persistence. Whitespace-only NOT a hit.

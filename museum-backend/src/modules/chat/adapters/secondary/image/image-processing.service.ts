@@ -28,7 +28,7 @@ const SHARP_DECODE_OPTIONS = {
 /** Always 400 (user input). Do not surface sharp's raw error message — can leak internal paths. */
 export class ImageDecodeError extends AppError {
   constructor(message = 'Uploaded image could not be decoded') {
-    super({ message, statusCode: 400, code: 'IMAGE_DECODE_FAILED' });
+    super({ message, statusCode: 400, code: 'IMAGE_DECODE_FAILED', inputRejected: true });
     this.name = 'ImageDecodeError';
   }
 }

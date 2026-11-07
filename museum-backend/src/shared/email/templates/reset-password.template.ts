@@ -1,22 +1,13 @@
-import { renderEmailLayout } from './layout';
+import { renderLinkEmail, type LinkEmailCopy } from './link-email';
+
+import type { EmailLocale } from '@shared/email/email-locale';
 
 export interface ResetPasswordEmailInput {
   resetUrl: string;
-  locale?: 'fr' | 'en';
+  locale?: EmailLocale;
 }
 
-const COPY: Record<
-  'fr' | 'en',
-  {
-    heading: string;
-    preheader: string;
-    lead: string;
-    expires: string;
-    ignored: string;
-    cta: string;
-    footerNote: string;
-  }
-> = {
+const COPY: Record<EmailLocale, LinkEmailCopy> = {
   fr: {
     heading: 'Réinitialisation du mot de passe',
     preheader: 'Choisissez un nouveau mot de passe Musaium en un clic.',
@@ -42,23 +33,5 @@ const COPY: Record<
 };
 
 export function buildResetPasswordEmail(input: ResetPasswordEmailInput): string {
-  const locale = input.locale ?? 'en';
-  const copy = COPY[locale];
-
-  const bodyHtml = `
-    <p style="margin:0 0 16px 0;">${copy.lead}</p>
-    <p style="margin:0 0 16px 0;color:#475569;">${copy.expires}</p>
-    <p style="margin:0;color:#64748B;font-size:14px;line-height:1.6;">${copy.ignored}</p>
-  `;
-
-  return renderEmailLayout({
-    heading: copy.heading,
-    bodyHtml,
-    ctaLabel: copy.cta,
-    ctaUrl: input.resetUrl,
-    fallbackUrl: input.resetUrl,
-    preheader: copy.preheader,
-    locale,
-    footerNote: copy.footerNote,
-  });
+  return renderLinkEmail(COPY, input.resetUrl, input.locale);
 }

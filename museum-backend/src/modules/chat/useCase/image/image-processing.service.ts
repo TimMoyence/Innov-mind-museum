@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, badRequest, invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -78,7 +78,7 @@ export class ImageProcessingService {
   ): Promise<ProcessedImage> {
     if (image.source === 'url') {
       if (!isSafeImageUrl(image.value)) {
-        throw badRequest('Image URL must be a safe HTTPS URL');
+        throw invalidInput('Image URL must be a safe HTTPS URL');
       }
       return { imageRef: image.value, orchestratorImage: image };
     }
@@ -89,10 +89,10 @@ export class ImageProcessingService {
       const sizeBytes = image.sizeBytes;
 
       if (!mimeType || typeof mimeType !== 'string') {
-        throw badRequest('Uploaded image mime type is required');
+        throw invalidInput('Uploaded image mime type is required');
       }
       if (!Number.isFinite(sizeBytes)) {
-        throw badRequest('Uploaded image size is required');
+        throw invalidInput('Uploaded image size is required');
       }
 
       assertMimeType(mimeType, env.upload.allowedMimeTypes);

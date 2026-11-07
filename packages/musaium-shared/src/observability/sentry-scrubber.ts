@@ -64,6 +64,15 @@ export const SENSITIVE_BREADCRUMB_PATHS: readonly string[] = [
 /** Replacement marker written in place of redacted values. */
 export const REDACTED = '[redacted]';
 
+export const hashEmail = (email: string): string | undefined => {
+  if (!email) return undefined;
+  let hash = 0xdeadbeef;
+  for (let i = 0; i < email.length; i += 1) {
+    hash = Math.imul(hash ^ email.charCodeAt(i), 2654435761);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 8);
+};
+
 /** Minimal shape of a Sentry event we read. Stays structural to avoid a hard SDK dep. */
 export interface ScrubbableEvent {
   request?: {

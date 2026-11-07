@@ -1,6 +1,6 @@
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { auditService, AUDIT_ADMIN_TICKET_UPDATED } from '@shared/audit';
-import { badRequest, notFound } from '@shared/errors/app.error';
+import { invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
@@ -31,14 +31,14 @@ export class UpdateTicketStatusUseCase {
 
   async execute(input: UpdateTicketStatusInput): Promise<TicketDTO> {
     if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
-      throw badRequest(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
+      throw invalidInput(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
     }
     if (input.priority && !TICKET_PRIORITIES.includes(input.priority as TicketPriority)) {
-      throw badRequest(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
+      throw invalidInput(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
     }
 
     if (!input.status && !input.priority && input.assignedTo === undefined) {
-      throw badRequest('At least one of status, priority, or assignedTo must be provided');
+      throw invalidInput('At least one of status, priority, or assignedTo must be provided');
     }
 
     // C1B — read-before-write so the tenant ownership guard (BOLA write side)

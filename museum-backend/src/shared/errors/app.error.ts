@@ -4,6 +4,7 @@ export class AppError extends Error {
   readonly details?: unknown;
   /** Applied by error middleware (e.g. Retry-After on 429). */
   readonly headers?: Record<string, string>;
+  readonly inputRejected: boolean;
 
   constructor(params: {
     message: string;
@@ -11,6 +12,7 @@ export class AppError extends Error {
     code?: string;
     details?: unknown;
     headers?: Record<string, string>;
+    inputRejected?: boolean;
   }) {
     super(params.message);
     this.name = 'AppError';
@@ -18,6 +20,7 @@ export class AppError extends Error {
     this.code = params.code ?? 'INTERNAL_ERROR';
     this.details = params.details;
     this.headers = params.headers;
+    this.inputRejected = params.inputRejected ?? false;
   }
 }
 
@@ -41,6 +44,20 @@ export const badRequest = (message: string, details?: unknown): AppError => {
     code: 'BAD_REQUEST',
   });
 };
+
+export const invalidInput = (message: string): AppError =>
+  new AppError({ message, statusCode: 400, code: 'BAD_REQUEST', inputRejected: true });
+
+export const countedRefusal = (error: unknown): unknown =>
+  error instanceof AppError && error.inputRejected
+    ? new AppError({
+        message: error.message,
+        statusCode: error.statusCode,
+        code: error.code,
+        details: error.details,
+        headers: error.headers,
+      })
+    : error;
 
 export const notFound = (message: string, details?: unknown): AppError => {
   return new AppError({
@@ -115,12 +132,17 @@ export const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError =
 };
 
 /** C3 — POST /chat/compare: missing image / unsupported MIME / magic-byte / OCR-injection fail (R6/R12). FE branches on code to prompt retake. */
-export const compareInvalidImage = (message: string, details?: unknown): AppError => {
+export const compareInvalidImage = (
+  message: string,
+  details?: unknown,
+  inputRejected = false,
+): AppError => {
   return new AppError({
     message,
     statusCode: 400,
     code: 'COMPARE_INVALID_IMAGE',
     details,
+    inputRejected,
   });
 };
 
@@ -131,6 +153,7 @@ export const compareInvalidTopK = (message: string, details?: unknown): AppError
     statusCode: 400,
     code: 'COMPARE_INVALID_TOPK',
     details,
+    inputRejected: true,
   });
 };
 

@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { badRequest, invalidInput } from '@shared/errors/app.error';
 import { hashEmailTokenForLookup } from '@shared/security/single-use-email-token';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
@@ -9,7 +9,7 @@ export class VerifyEmailUseCase {
   async execute(token: string): Promise<{ verified: true }> {
     const trimmed = token.trim();
     if (!trimmed) {
-      throw badRequest('Verification token is required');
+      throw invalidInput('Verification token is required');
     }
 
     // SEC (H2): hash the raw token before lookup — DB only stores the SHA-256 digest.

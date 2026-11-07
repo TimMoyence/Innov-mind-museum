@@ -1,4 +1,4 @@
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 
 import type { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
@@ -9,11 +9,11 @@ export class CreateMuseumUseCase {
 
   async execute(input: CreateMuseumInput): Promise<Museum> {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: input fields may be undefined from external API input
-    if (!input.name?.trim()) throw badRequest('Museum name is required');
+    if (!input.name?.trim()) throw invalidInput('Museum name is required');
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: input fields may be undefined from external API input
-    if (!input.slug?.trim()) throw badRequest('Museum slug is required');
+    if (!input.slug?.trim()) throw invalidInput('Museum slug is required');
     if (!/^[a-z0-9-]+$/.test(input.slug)) {
-      throw badRequest('Slug must contain only lowercase letters, numbers, and hyphens');
+      throw invalidInput('Slug must contain only lowercase letters, numbers, and hyphens');
     }
     return await this.repository.create(input);
   }

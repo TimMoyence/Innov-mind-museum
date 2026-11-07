@@ -101,7 +101,7 @@ export class ImageEnrichmentService {
       // Parallel fan-out: per-term × per-source. Each (term, source) pair is
       // an independent Promise; sources fail-open per pair so a Commons error
       // doesn't block Unsplash on the same term.
-      const tasks: Promise<EnrichedImage[]>[] = [];
+      const tasks: Promise<EnrichedImage[] | null>[] = [];
       for (const term of cleaned) {
         const ann = annotationByTerm.get(term.toLowerCase());
         if (this.musaiumClient) {
@@ -115,15 +115,17 @@ export class ImageEnrichmentService {
         }
       }
       const fetched = await Promise.all(tasks);
-      for (const batch of fetched) candidates.push(...batch);
+      for (const batch of fetched) candidates.push(...(batch ?? []));
 
       const results = this.sortAndDedup(candidates, museumMode === true);
 
-      this.evictIfNeeded();
-      this.cache.set(cacheKey, {
-        images: results,
-        expiresAt: Date.now() + this.config.cacheTtlMs,
-      });
+      if (!fetched.includes(null)) {
+        this.evictIfNeeded();
+        this.cache.set(cacheKey, {
+          images: results,
+          expiresAt: Date.now() + this.config.cacheTtlMs,
+        });
+      }
 
       logger.info('image_enrichment_success', { searchTerms: cleaned, count: results.length });
       return results;
@@ -186,21 +188,18 @@ export class ImageEnrichmentService {
     };
   }
 
-  /**
-   * Fail-open: any throw / timeout / malformed-result resolves to `[]` for
-   * this (source, term) pair. Other tasks in the fan-out are unaffected.
-   */
   private async fetchSourcePhotos(
     client: ImageSourceClient,
     source: EnrichedImageSource,
     searchTerm: string,
     annotation: SuggestedImageAnnotation | undefined,
-  ): Promise<EnrichedImage[]> {
+  ): Promise<EnrichedImage[] | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const photos = await Promise.race([
         client.searchPhotos(searchTerm),
         new Promise<never>((_, reject) => {
-          setTimeout(() => {
+          timer = setTimeout(() => {
             reject(new Error('IMAGE_ENRICHMENT_TIMEOUT'));
           }, this.config.fetchTimeoutMs);
         }),
@@ -211,7 +210,9 @@ export class ImageEnrichmentService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.warn(`image_enrichment_${source}_failed`, { searchTerm, error: msg });
-      return [];
+      return null;
+    } finally {
+      clearTimeout(timer);
     }
   }
 

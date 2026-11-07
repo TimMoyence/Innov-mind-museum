@@ -13,6 +13,19 @@ export function makeUnsplashPhoto(overrides: Partial<ImageSourcePhoto> = {}): Im
   };
 }
 
+export const makeUnsplashApiResult = (overrides: Record<string, unknown> = {}) => ({
+  urls: {
+    regular: 'https://img.unsplash.com/regular.jpg',
+    small: 'https://img.unsplash.com/small.jpg',
+  },
+  description: 'A beautiful painting',
+  alt_description: 'oil on canvas',
+  width: 1920,
+  height: 1080,
+  user: { name: 'Jane Doe' },
+  ...overrides,
+});
+
 /** Returns a fully-typed jest mock of UnsplashClient (single method: searchPhotos). */
 export function makeUnsplashClientMock(
   photos: ImageSourcePhoto[] = [],

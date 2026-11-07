@@ -1,5 +1,5 @@
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
-import { badRequest } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { assertPagination } from '@shared/types/pagination';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
@@ -26,10 +26,10 @@ export class ListUserTicketsUseCase {
     const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
     if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
-      throw badRequest(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
+      throw invalidInput(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
     }
     if (input.priority && !TICKET_PRIORITIES.includes(input.priority as TicketPriority)) {
-      throw badRequest(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
+      throw invalidInput(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
     }
 
     const filters: ListTicketsFilters = {

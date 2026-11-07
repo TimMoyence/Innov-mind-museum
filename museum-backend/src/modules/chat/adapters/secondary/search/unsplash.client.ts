@@ -1,11 +1,8 @@
-import { logger } from '@shared/logger/logger';
-
 import type {
   ImageSourceClient,
   ImageSourcePhoto,
 } from '@modules/chat/domain/ports/image-source.port';
 
-/** Never throws — returns `[]` on any failure. */
 export class UnsplashClient implements ImageSourceClient {
   private readonly baseUrl = 'https://api.unsplash.com';
 
@@ -24,24 +21,15 @@ export class UnsplashClient implements ImageSourceClient {
         signal: controller.signal,
       });
 
-      if (!res.ok) {
-        logger.warn('unsplash_search_error', { status: res.status, query });
-        return [];
-      }
+      if (!res.ok) throw new Error(`unsplash_search_http_${String(res.status)}`);
 
       const data = (await res.json()) as { results?: unknown[] };
-      if (!Array.isArray(data.results)) return [];
+      if (!Array.isArray(data.results)) throw new Error('unsplash_search_malformed');
 
       return data.results
         .filter((r): r is Record<string, unknown> => r != null && typeof r === 'object')
         .map((r) => this.mapResult(r))
         .filter((p): p is ImageSourcePhoto => p !== null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg !== 'This operation was aborted') {
-        logger.warn('unsplash_search_failed', { query, error: msg });
-      }
-      return [];
     } finally {
       clearTimeout(timeout);
     }

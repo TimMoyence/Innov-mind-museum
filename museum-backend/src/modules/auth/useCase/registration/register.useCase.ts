@@ -1,6 +1,6 @@
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildVerifyEmail } from '@shared/email/templates';
-import { AppError, badRequest } from '@shared/errors/app.error';
+import { AppError, invalidInput } from '@shared/errors/app.error';
 import { POLICY_VERSION } from '@shared/legal/policy-version';
 import { logger } from '@shared/logger/logger';
 import { issueEmailToken } from '@shared/security/single-use-email-token';
@@ -52,20 +52,15 @@ export class RegisterUseCase {
     const normalizedEmail = input.email.trim().toLowerCase();
 
     if (!validateEmail(normalizedEmail)) {
-      throw badRequest('Invalid email format');
+      throw invalidInput('Invalid email format');
     }
 
     this.assertDigitalMajority(input.dateOfBirth);
 
     const pw = validatePassword(input.password);
     if (!pw.valid) {
-      throw badRequest(pw.reason ?? 'Invalid password');
+      throw invalidInput(pw.reason ?? 'Invalid password');
     }
-
-    // F10 — block known-breached passwords via HIBP k-anonymity. Throws
-    // AppError(PASSWORD_BREACHED, 400) on hit; fails open with Sentry warning
-    // if HIBP unavailable (no SLA).
-    await assertPasswordNotBreached(input.password);
 
     let sanitizedFirstname: string | undefined;
     let sanitizedLastname: string | undefined;
@@ -73,8 +68,13 @@ export class RegisterUseCase {
       sanitizedFirstname = validateNameField(input.firstname, 'firstname');
       sanitizedLastname = validateNameField(input.lastname, 'lastname');
     } catch (error) {
-      throw badRequest((error as Error).message);
+      throw invalidInput((error as Error).message);
     }
+
+    // F10 — block known-breached passwords via HIBP k-anonymity. Throws
+    // AppError(PASSWORD_BREACHED, 400) on hit; fails open with Sentry warning
+    // if HIBP unavailable (no SLA).
+    await assertPasswordNotBreached(input.password);
 
     const user = await this.userRepository.registerUser(
       normalizedEmail,
@@ -106,11 +106,11 @@ export class RegisterUseCase {
     // (returns 400), but a falsy DOB reaching here MUST hard-fail rather than
     // silently bypass the age check. Never parse `undefined` into `new Date(...)`.
     if (!dateOfBirth) {
-      throw badRequest('dateOfBirth is required');
+      throw invalidInput('dateOfBirth is required');
     }
     const parsed = new Date(`${dateOfBirth}T00:00:00Z`);
     if (Number.isNaN(parsed.getTime())) {
-      throw badRequest('Invalid dateOfBirth');
+      throw invalidInput('Invalid dateOfBirth');
     }
     if (calculateAgeYears(parsed) < MINIMUM_AGE_FOR_REGISTRATION) {
       throw new AppError({
