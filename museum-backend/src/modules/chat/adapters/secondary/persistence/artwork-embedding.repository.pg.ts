@@ -35,6 +35,7 @@ interface ArtworkEmbeddingSqlRow {
   museum_qid: string | null;
   museum_id: number | null;
   title: string;
+  artist: string | null;
   image_url: string;
   license: ArtworkEmbedding['license'];
   image_source: ArtworkEmbedding['imageSource'];
@@ -52,11 +53,51 @@ interface ArtworkEmbeddingNearestSqlRow extends ArtworkEmbeddingSqlRow {
 /** Serialises a vector to pgvector text literal `[v1,v2,…]` (consumed by ::halfvec). */
 const serialiseVector = (vector: Float32Array): string => `[${Array.from(vector).join(',')}]`;
 
+const ROW_CASTS = {
+  qid: 'text',
+  museum_qid: 'text',
+  museum_id: 'integer',
+  title: 'text',
+  artist: 'text',
+  image_url: 'text',
+  license: 'text',
+  image_source: 'text',
+  embedding: 'halfvec',
+  embedding_model_version: 'text',
+} as const;
+const ROW_COLUMNS = Object.keys(ROW_CASTS).join(', ');
+
+const rowValues = (
+  rows: ArtworkEmbeddingRow[],
+): { values: string; params: (string | number | null)[] } => {
+  const casts = Object.values(ROW_CASTS);
+  const placeholder = (row: number, column: number): string =>
+    '$' + String(row * casts.length + column + 1) + '::' + casts[column];
+  return {
+    values: rows
+      .map((_, row) => `(${casts.map((_cast, column) => placeholder(row, column)).join(', ')})`)
+      .join(', '),
+    params: rows.flatMap((row) => [
+      row.qid,
+      row.metadata.museumQid ?? null,
+      row.museumId ?? null,
+      row.metadata.title,
+      row.metadata.artist ?? null,
+      row.metadata.imageUrl,
+      row.license,
+      row.imageSource,
+      serialiseVector(row.vector),
+      row.embeddingModelVersion,
+    ]),
+  };
+};
+
 const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   qid: row.qid,
   museumQid: row.museum_qid,
   museumId: row.museum_id,
   title: row.title,
+  artist: row.artist,
   imageUrl: row.image_url,
   license: row.license,
   imageSource: row.image_source,
@@ -74,6 +115,9 @@ const toNearestMetadata = (row: ArtworkEmbeddingSqlRow): ArtworkMetadata => {
   };
   if (row.museum_qid !== null) {
     metadata.museumQid = row.museum_qid;
+  }
+  if (row.artist !== null) {
+    metadata.artist = row.artist;
   }
   return metadata;
 };
@@ -114,7 +158,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     }
 
     const rows: ArtworkEmbeddingNearestSqlRow[] = await this.dataSource.query(
-      `SELECT qid, museum_qid, museum_id, title, image_url, license, image_source,
+      `SELECT qid, museum_qid, museum_id, title, artist, image_url, license, image_source,
               embedding, embedding_model_version, created_at, updated_at,
               ((1 - (embedding <#> $1::halfvec)) / 2) AS similarity
        FROM artwork_embeddings
@@ -133,12 +177,6 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     }));
   }
 
-  /**
-   * Idempotent (key=qid). Single transaction: (1) classify via VALUES CTE on
-   * `(vector, model_version)` → skipped iff identical; (2) write non-skipped
-   * via `INSERT … ON CONFLICT (qid) DO UPDATE`. `updated_at` only bumps on
-   * actual changes. Empty input short-circuits without a DB call.
-   */
   async upsertBatch(rows: ArtworkEmbeddingRow[]): Promise<UpsertBatchResult> {
     if (rows.length === 0) {
       return { inserted: 0, updated: 0, skipped: 0 };
@@ -168,26 +206,18 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     skipped: number;
     skipMask: boolean[];
   }> {
-    // 3 placeholders per row: (qid, embedding, model_version).
-    const valuesClauses: string[] = [];
-    const params: string[] = [];
-    for (const [idx, row] of rows.entries()) {
-      const base = idx * 3;
-      valuesClauses.push(
-        `($${String(base + 1)}, $${String(base + 2)}::halfvec, $${String(base + 3)})`,
-      );
-      params.push(row.qid, serialiseVector(row.vector), row.embeddingModelVersion);
-    }
-
+    const { values, params } = rowValues(rows);
     const sql = `
-      WITH input(qid, embedding, model_version) AS (
-        VALUES ${valuesClauses.join(', ')}
-      )
+      WITH input(${ROW_COLUMNS}) AS (VALUES ${values})
       SELECT i.qid AS qid,
              (e.qid IS NULL) AS is_insert,
              COALESCE(e.qid IS NOT NULL
                       AND e.embedding = i.embedding
-                      AND e.embedding_model_version = i.model_version, false) AS is_skip
+                      AND (e.museum_qid, e.museum_id, e.title, e.artist, e.image_url, e.license,
+                           e.image_source, e.embedding_model_version)
+                          IS NOT DISTINCT FROM
+                          (i.museum_qid, i.museum_id, i.title, i.artist, i.image_url, i.license,
+                           i.image_source, i.embedding_model_version), false) AS is_skip
       FROM input i
       LEFT JOIN artwork_embeddings e ON e.qid = i.qid
     `;
@@ -225,43 +255,16 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     return { inserted, updated, skipped, skipMask };
   }
 
-  /**
-   * 9 placeholders/row + `updated_at = now()` on conflict (concurrent ingests
-   * cannot regress it). `museum_id` (OWASP LLM08 tenant, `museums.id`) ≠
-   * `museum_qid` (Wikidata public ref). Both default NULL.
-   */
   private async writeBatch(manager: EntityManager, rows: ArtworkEmbeddingRow[]): Promise<void> {
-    const valuesClauses: string[] = [];
-    const params: (string | number | null)[] = [];
-
-    for (const [idx, row] of rows.entries()) {
-      const base = idx * 9;
-      valuesClauses.push(
-        `($${String(base + 1)}, $${String(base + 2)}, $${String(base + 3)}, ` +
-          `$${String(base + 4)}, $${String(base + 5)}, $${String(base + 6)}, ` +
-          `$${String(base + 7)}, $${String(base + 8)}::halfvec, $${String(base + 9)})`,
-      );
-      params.push(
-        row.qid,
-        row.metadata.museumQid ?? null,
-        row.museumId ?? null,
-        row.metadata.title,
-        row.metadata.imageUrl,
-        row.license,
-        row.imageSource,
-        serialiseVector(row.vector),
-        row.embeddingModelVersion,
-      );
-    }
-
+    const { values, params } = rowValues(rows);
     const sql = `
-      INSERT INTO artwork_embeddings
-        (qid, museum_qid, museum_id, title, image_url, license, image_source, embedding, embedding_model_version)
-      VALUES ${valuesClauses.join(', ')}
+      INSERT INTO artwork_embeddings (${ROW_COLUMNS})
+      VALUES ${values}
       ON CONFLICT (qid) DO UPDATE SET
         museum_qid              = EXCLUDED.museum_qid,
         museum_id               = EXCLUDED.museum_id,
         title                   = EXCLUDED.title,
+        artist                  = EXCLUDED.artist,
         image_url               = EXCLUDED.image_url,
         license                 = EXCLUDED.license,
         image_source            = EXCLUDED.image_source,
@@ -274,7 +277,7 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
 
   async findByQid(qid: string): Promise<ArtworkEmbedding | null> {
     const rows: ArtworkEmbeddingSqlRow[] = await this.dataSource.query(
-      `SELECT qid, museum_qid, museum_id, title, image_url, license, image_source,
+      `SELECT qid, museum_qid, museum_id, title, artist, image_url, license, image_source,
               embedding, embedding_model_version, created_at, updated_at
        FROM artwork_embeddings
        WHERE qid = $1

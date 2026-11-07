@@ -35,7 +35,6 @@ interface ResolvedSummary {
   text: string;
   metadata: ChatAssistantMetadata;
   degraded: boolean;
-  fallbackApplied: boolean;
 }
 
 export function resolveSummary(
@@ -53,7 +52,6 @@ export function resolveSummary(
       text: text || EMPTY_RESPONSE_FALLBACK,
       metadata,
       degraded: false,
-      fallbackApplied: false,
     };
   }
 
@@ -76,14 +74,13 @@ export function resolveSummary(
     text: text || EMPTY_RESPONSE_FALLBACK,
     metadata: {},
     degraded: true,
-    fallbackApplied: true,
   };
 }
 
 export function buildDiagnosticsSections(
   sectionPlan: SectionPlan,
   bySection: Map<LlmSectionName, SectionRunResult<MainAssistantOutput>>,
-  fallbackApplied: boolean,
+  degraded: boolean,
 ): ChatAssistantDiagnostics['sections'] {
   return sectionPlan.map((section) => {
     const result = bySection.get(section.name);
@@ -91,7 +88,7 @@ export function buildDiagnosticsSections(
     if (!result) {
       return {
         name: section.name,
-        status: fallbackApplied ? 'fallback' : 'error',
+        status: degraded ? 'fallback' : 'error',
         attempts: 0,
         latencyMs: 0,
         timeoutMs: section.timeoutMs,
@@ -102,7 +99,7 @@ export function buildDiagnosticsSections(
 
     return {
       name: section.name,
-      status: fallbackApplied ? 'fallback' : result.status,
+      status: degraded ? 'fallback' : result.status,
       attempts: result.attempts,
       latencyMs: result.latencyMs,
       timeoutMs: result.timeoutMs,
@@ -118,12 +115,11 @@ export function assembleResponse(params: AssembleResponseInput): OrchestratorOut
     text,
     metadata: baseMeta,
     degraded,
-    fallbackApplied,
   } = resolveSummary(bySection, input, recentHistory, normalizedText);
 
   const totalLatencyMs = Date.now() - startedAt;
   const profile: ChatAssistantDiagnostics['profile'] = 'single_section';
-  const diagnosticsSections = buildDiagnosticsSections(sectionPlan, bySection, fallbackApplied);
+  const diagnosticsSections = buildDiagnosticsSections(sectionPlan, bySection, degraded);
 
   logger.info('llm_orchestration_complete', {
     requestId: input.requestId,

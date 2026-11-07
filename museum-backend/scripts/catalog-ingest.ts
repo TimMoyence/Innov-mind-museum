@@ -38,7 +38,9 @@ import { logger } from '@shared/logger/logger';
 import {
   downloadThumbnail as politeDownloadThumbnail,
   fetchArtworksOfMuseum as defaultFetchArtworksOfMuseum,
+  fetchThumbnail,
   normalizeMetadata,
+  readCsvCatalog,
   validateWikidataQid,
   type ArtworkSeed,
 } from './catalog-ingest.helpers';
@@ -78,11 +80,7 @@ export type DownloadThumbnailFn = (url: string, maxBytes: number) => Promise<Buf
 /**
  * Test-injectable SPARQL fetcher. Defaults to {@link defaultFetchArtworksOfMuseum}.
  */
-export type FetchArtworksOfMuseumFn = (
-  qid: string,
-  license: ArtworkImageLicense[],
-  lang: string,
-) => AsyncIterable<ArtworkSeed>;
+export type FetchArtworksOfMuseumFn = (qid: string, lang: string) => AsyncIterable<ArtworkSeed>;
 
 /** Options accepted by {@link runIngest}. Mirrors the integration test interface. */
 export interface RunIngestOptions {
@@ -133,43 +131,6 @@ export interface RunIngestResult {
   /** Rows seen in the SPARQL response (post-fetch, pre-license-filter). */
   totalSeen: number;
 }
-
-/**
- * Default downloader used when no `download` dep is injected. Raw `fetch`
- * with `Content-Length` + body-size enforcement against `maxBytes`. Does
- * NOT rate-limit — the production CLI entry-point opts into the polite
- * helper explicitly. Keeping the default un-rate-limited keeps the
- * integration test fast (≪ 5s) without giving up production politeness.
- */
-const rawDownloadThumbnail: DownloadThumbnailFn = async (
-  url: string,
-  maxBytes: number,
-): Promise<Buffer> => {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Musaium/1.0 (https://musaium.fr; contact@musaium.fr)',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`catalog_ingest_thumbnail_non_ok: ${String(response.status)} for ${url}`);
-  }
-  const declared = response.headers.get('content-length');
-  if (declared !== null) {
-    const declaredNum = Number(declared);
-    if (Number.isFinite(declaredNum) && declaredNum > maxBytes) {
-      throw new Error(
-        `catalog_ingest_thumbnail_oversize: ${declared} > ${String(maxBytes)} for ${url}`,
-      );
-    }
-  }
-  const body = Buffer.from(await response.arrayBuffer());
-  if (body.byteLength > maxBytes) {
-    throw new Error(
-      `catalog_ingest_thumbnail_body_oversize: ${String(body.byteLength)} > ${String(maxBytes)} for ${url}`,
-    );
-  }
-  return body;
-};
 
 /**
  * Provenance source written next to each ingested row. Wikimedia is the
@@ -241,16 +202,8 @@ export async function runIngest(opts: RunIngestOptions): Promise<RunIngestResult
   const concurrency = opts.concurrency ?? DEFAULT_CONCURRENCY;
   const lang = opts.lang ?? 'en';
   const dryRun = opts.dryRun ?? false;
-  const download = opts.download ?? rawDownloadThumbnail;
+  const download = opts.download ?? fetchThumbnail;
   const fetchArtworks = opts.fetchArtworks ?? defaultFetchArtworksOfMuseum;
-
-  // Translate the public license filter (`AllowedLicense[]`) into the
-  // narrower `ArtworkImageLicense[]` accepted by the SPARQL helper. The
-  // helper currently passes the list through (reserved for SPARQL-side
-  // prefiltering), so this is a future-proofing widening.
-  const sparqlLicenseHint = opts.licenseFilter.filter(
-    (l): l is ArtworkImageLicense => l === 'public-domain' || l === 'cc-0' || l === 'cc-by-sa',
-  );
 
   let inserted = 0;
   let updated = 0;
@@ -278,7 +231,7 @@ export async function runIngest(opts: RunIngestOptions): Promise<RunIngestResult
   };
 
   for (const museumQid of opts.museumQids) {
-    const seedSource = fetchArtworks(museumQid, sparqlLicenseHint, lang);
+    const seedSource = fetchArtworks(museumQid, lang);
 
     await drainWithPool<ArtworkSeed, ArtworkEmbeddingRow>(
       seedSource,
@@ -430,12 +383,10 @@ function parseCliArgs(argv: string[]): {
       const value = arg.slice('--license-filter='.length);
       out.licenseFilter = value
         .split(',')
-        .map((s) => s.trim())
+        .map((s) => (s.trim() === 'pd' ? 'public-domain' : s.trim()))
         .filter(
-          (s): s is AllowedLicense =>
-            s === 'public-domain' || s === 'pd' || s === 'cc-0' || s === 'cc-by-sa',
-        )
-        .map((s) => (s === 'pd' ? 'public-domain' : s));
+          (s): s is AllowedLicense => s === 'public-domain' || s === 'cc-0' || s === 'cc-by-sa',
+        );
       continue;
     }
     if (arg === '--dry-run') {
@@ -461,6 +412,19 @@ function parseCliArgs(argv: string[]): {
   return out;
 }
 
+export async function ingestSourceOf(cli: {
+  museumQids: string[];
+  fromCsv?: string;
+}): Promise<Pick<RunIngestOptions, 'museumQids' | 'download' | 'fetchArtworks'>> {
+  if (cli.fromCsv === undefined) {
+    return { museumQids: cli.museumQids, download: politeDownloadThumbnail };
+  }
+  if (cli.museumQids.length > 0) {
+    throw new Error('catalog_ingest_conflicting_input: pass --from-csv or --museum, not both');
+  }
+  return readCsvCatalog(cli.fromCsv);
+}
+
 /**
  * Bootstraps the production dependencies (DataSource → repository, ONNX
  * encoder via the embeddings factory) and runs {@link runIngest}. Enables
@@ -474,6 +438,7 @@ async function main(): Promise<void> {
     logger.error('catalog_ingest_no_input', { hint: 'pass --museum=Qxxx or --from-csv=<path>' });
     process.exit(1);
   }
+  const source = await ingestSourceOf(cli);
 
   const { AppDataSource } = (await import('@data/db/data-source')) as {
     AppDataSource: import('typeorm').DataSource;
@@ -490,9 +455,8 @@ async function main(): Promise<void> {
     };
   const repository = new ArtworkEmbeddingRepositoryPg(AppDataSource);
 
-  const { createEmbeddingsAdapter } = await import(
-    '@modules/chat/adapters/secondary/embeddings/embeddings.factory'
-  );
+  const { createEmbeddingsAdapter } =
+    await import('@modules/chat/adapters/secondary/embeddings/embeddings.factory');
   // createEmbeddingsAdapter requires the validated AppEnv — it reads
   // env.visualSimilarity for the provider + ONNX model path. The prior no-arg
   // call passed `undefined`, so the encoder could not resolve its provider
@@ -535,7 +499,6 @@ async function main(): Promise<void> {
   }
 
   const result = await runIngest({
-    museumQids: cli.museumQids,
     licenseFilter: cli.licenseFilter,
     dryRun: cli.dryRun,
     batchSize: cli.batchSize,
@@ -543,8 +506,7 @@ async function main(): Promise<void> {
     encoder,
     repository,
     museumId: resolvedMuseumId,
-    // Production opts in to the polite 1 req/s/hostname helper.
-    download: politeDownloadThumbnail,
+    ...source,
   });
 
   logger.info('catalog_ingest_done', { ...result });

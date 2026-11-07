@@ -100,6 +100,7 @@ describe('AddArtworkEmbeddings migration — schema shape [integration, real PG 
       const names = columns.map((c) => c.column_name).sort();
       expect(names).toEqual(
         [
+          'artist',
           'created_at',
           'embedding',
           'embedding_model_version',

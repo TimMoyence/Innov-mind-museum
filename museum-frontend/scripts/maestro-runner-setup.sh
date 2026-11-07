@@ -45,45 +45,12 @@ echo "[setup] seeding demo museums…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   pnpm seed:museums
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Visual-similarity (/chat/compare) provisioning — REQUIRED for the chat-compare
-# Maestro flow to reach a REAL match. Without these two steps the carousel
-# renders header-only (empty-state) and the strengthened Phase-5 per-card assert
-# in .maestro/chat-compare.yaml fails RED — which is the intended contract: a
-# dead encoder or empty catalog MUST fail the nightly end-to-end, not pass
-# vacuously on the header text that renders in both the empty and populated
-# branches of ImageCompareCarousel.tsx.
-#
-# Step A: pull the SigLIP-2 ONNX encoder into museum-backend/models/ (default
-#   path ./models/siglip2-base-patch16-224.onnx, matching env.ts
-#   visualSimilarity.siglipOnnxModelPath). Without it every /chat/compare returns
-#   HTTP 503 encoder_unavailable. Requires docker logged in to ghcr.io for the
-#   pinned base image; gated on CHAT_COMPARE_PROVISION=1 so non-chat shards
-#   (which do not need the ~354MB model) skip the pull.
-# Step B: ingest ≥1 public-domain artwork embedding for a seeded museum
-#   (Musée d'Aquitaine, wikidata_qid Q3329534 — present in seed-museums.ts,
-#   backfilled onto museums.wikidata_qid above) so a real CompareMatch card is
-#   reachable. catalog:ingest resolves --museum=<Qid> against museums.wikidata_qid
-#   (catalog-ingest.ts), so seed:museums MUST run first (it does, above).
-# BEST-EFFORT (must NOT break the backend boot for the whole chat shard): the
-# original version ran both steps under `set -e`, so a provisioning failure
-# killed the API boot and took down EVERY chat-shard flow, not just chat-compare.
-# In practice the pull ALWAYS failed — `pull-siglip-model.sh` does `docker pull
-# ghcr.io/...siglip-v1` but this step never runs `docker login ghcr.io`, so it
-# 401s `unauthorized`. We now run provisioning in an `if` (which `set -e` does not
-# treat as a fatal failure): on success chat-compare can reach a real match; on
-# failure we WARN and continue, leaving /chat/compare at HTTP 503 so
-# chat-compare.yaml fails-loud on the missing carousel (the encoder-dead contract
-# is preserved) WITHOUT crashing the shard. Reliable provisioning is a tracked
-# follow-up and needs: (a) a `docker login ghcr.io` before the pull, (b) the
-# catalog-ingest env-arg fix (createEmbeddingsAdapter called with no env).
-# ──────────────────────────────────────────────────────────────────────────────
 if [ "${CHAT_COMPARE_PROVISION:-}" = "1" ]; then
-  echo "[setup] CHAT_COMPARE_PROVISION=1 — provisioning SigLIP encoder + 1 PD embedding (best-effort)…"
+  echo "[setup] CHAT_COMPARE_PROVISION=1 — provisioning SigLIP encoder + fixture embedding (best-effort)…"
   if bash scripts/pull-siglip-model.sh \
     && DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
       EMBEDDINGS_PROVIDER=siglip-onnx \
-      pnpm catalog:ingest -- --museum=Q3329534 --license-filter=public-domain,cc-0; then
+      pnpm catalog:ingest -- --from-csv="$REPO_ROOT/museum-frontend/.maestro/fixtures/catalog.csv"; then
     echo "[setup] SigLIP provisioning OK — chat-compare can reach a real match"
   else
     echo "[setup] WARN: SigLIP provisioning failed (ghcr.io login / catalog ingest) — /chat/compare will 503 and chat-compare.yaml fails-loud; backend boot continues"
@@ -92,10 +59,15 @@ else
   echo "[setup] CHAT_COMPARE_PROVISION not set — skipping SigLIP model + embedding ingest (non-chat shard)"
 fi
 
+echo "[setup] starting SearXNG stub…"
+node "$SCRIPT_DIR/maestro-searxng-stub.mjs" > /tmp/searxng-stub.log 2>&1 &
+
 # Start the backend API in the background, log to /tmp/backend.log
 echo "[setup] starting backend API…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   PORT=3000 \
+  SEARXNG_INSTANCES=http://127.0.0.1:8890 \
+  KNOWLEDGE_ROUTER_KB_TIMEOUT_MS=1 WEBSEARCH_FALLBACK_THRESHOLD=2 \
   JWT_ACCESS_SECRET=phase2-e2e-access JWT_REFRESH_SECRET=phase2-e2e-refresh \
   CORS_ORIGINS=http://localhost:8081 \
   pnpm dev > /tmp/backend.log 2>&1 &

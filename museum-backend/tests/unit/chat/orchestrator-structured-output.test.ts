@@ -211,7 +211,7 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
   // model lacking `withStructuredOutput` now throws inside `invokeSection`;
   // the section runner catches the throw and surfaces a `status:'error'`
   // result, which `resolveSummary` degrades to the canned
-  // `createSummaryFallback` text (degraded=true, fallbackApplied=true).
+  // `createSummaryFallback` text (degraded=true).
   it('fails closed when section has outputSchema but model lacks withStructuredOutput', async () => {
     const invokeSpy = jest.fn(async () => {
       throw new Error('legacy invoke should not be called');

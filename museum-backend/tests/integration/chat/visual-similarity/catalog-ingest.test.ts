@@ -21,7 +21,7 @@
 
 import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
-import { EMBEDDING_DIM } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
+import { makeStubEncoder } from '../../../helpers/chat/visual-similarity/catalog-ingest.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkEmbeddingRepository } from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
@@ -64,31 +64,6 @@ const { runIngest } = require('../../../../scripts/catalog-ingest') as {
 
 const NUM_FIXTURE_ROWS = 100;
 const originalFetch = global.fetch;
-
-/**
- * Build a deterministic mocked encoder. The vector for index `i` has its
- * `i`-th component set to 1, every other to 0 — orthogonal across rows so
- * future findNearest assertions stay well-defined.
- */
-const makeMockEncoder = (): EmbeddingsPort & { calls: number } => {
-  let calls = 0;
-  const encoder = {
-    encode: async () => {
-      const idx = calls;
-      calls += 1;
-      const vector = new Float32Array(EMBEDDING_DIM);
-      vector[idx % EMBEDDING_DIM] = 1;
-      return {
-        vector,
-        modelVersion: 'siglip2-base-patch16-224@v1',
-      };
-    },
-    get calls() {
-      return calls;
-    },
-  } as unknown as EmbeddingsPort & { calls: number };
-  return encoder;
-};
 
 /**
  * Build a SPARQL JSON binding. Optional fields are omitted from the binding
@@ -182,7 +157,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       makeBinding(`Q${500_000 + i}`, `Fixture ${i}`, 'public-domain'),
     );
     wireFetchMock(bindings);
-    const encoder = makeMockEncoder();
+    const encoder = makeStubEncoder();
 
     const result = await runIngest({
       museumQids: ['Q19675'],
@@ -211,7 +186,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       licenseFilter: ['public-domain', 'cc-0'],
       batchSize: 100,
       concurrency: 4,
-      encoder: makeMockEncoder(),
+      encoder: makeStubEncoder(),
       repository: repo,
     });
     expect(await repo.count()).toBe(NUM_FIXTURE_ROWS);
@@ -223,7 +198,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       licenseFilter: ['public-domain', 'cc-0'],
       batchSize: 100,
       concurrency: 4,
-      encoder: makeMockEncoder(),
+      encoder: makeStubEncoder(),
       repository: repo,
     });
 
@@ -249,7 +224,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       licenseFilter: ['public-domain', 'cc-0'],
       batchSize: 100,
       concurrency: 4,
-      encoder: makeMockEncoder(),
+      encoder: makeStubEncoder(),
       repository: repo,
     });
 
@@ -270,7 +245,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       dryRun: true,
       batchSize: 100,
       concurrency: 4,
-      encoder: makeMockEncoder(),
+      encoder: makeStubEncoder(),
       repository: repo,
     });
 
@@ -291,7 +266,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       licenseFilter: ['public-domain', 'cc-0'],
       batchSize: 20,
       concurrency: 2,
-      encoder: makeMockEncoder(),
+      encoder: makeStubEncoder(),
       repository: repo,
     });
 

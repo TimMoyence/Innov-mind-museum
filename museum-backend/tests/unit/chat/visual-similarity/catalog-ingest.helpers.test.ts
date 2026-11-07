@@ -2,7 +2,7 @@
  * RED — T7.2 — `catalog-ingest.helpers` (unit, mocked HTTP via global.fetch).
  *
  * Locks down tasks.md T7.2 + design.md §3 / §9 D8:
- *   - `fetchArtworksOfMuseum(qid, license, lang)` issues a SPARQL query against
+ *   - `fetchArtworksOfMuseum(qid, lang)` issues a SPARQL query against
  *     Wikidata (`https://query.wikidata.org/sparql`), parses the JSON binding
  *     format, and yields one `ArtworkSeed` per result row. Optional bindings
  *     (artist, inception, …) collapse to `undefined` cleanly.
@@ -18,7 +18,6 @@
 import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
 
 import type { ArtworkMetadata } from '@modules/chat/domain/visual-similarity/compare-result.types';
-import type { ArtworkImageLicense } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 
 // Silence logger noise from the SUT during these tests.
 jest.mock('@shared/logger/logger', () => ({
@@ -62,11 +61,7 @@ interface ArtworkSeed {
 // file because `scripts/` lives outside the `src/` tree (no path alias).
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load to surface a useful Jest failure when the module is missing
 const helpers = require('../../../../scripts/catalog-ingest.helpers') as {
-  fetchArtworksOfMuseum: (
-    qid: string,
-    license: ArtworkImageLicense[],
-    lang: string,
-  ) => AsyncIterable<ArtworkSeed>;
+  fetchArtworksOfMuseum: (qid: string, lang: string) => AsyncIterable<ArtworkSeed>;
   downloadThumbnail: (url: string, maxBytes: number) => Promise<Buffer>;
   normalizeMetadata: (seed: ArtworkSeed) => ArtworkMetadata;
   // T-A1 (RED) — SUT not yet implemented. The mapper resolves a Wikidata P275
@@ -147,11 +142,7 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
       global.fetch = fetchSpy;
 
       const seeds: ArtworkSeed[] = [];
-      for await (const seed of helpers.fetchArtworksOfMuseum(
-        'Q19675',
-        ['public-domain', 'cc-0'],
-        'en',
-      )) {
+      for await (const seed of helpers.fetchArtworksOfMuseum('Q19675', 'en')) {
         seeds.push(seed);
       }
 
@@ -199,7 +190,7 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
       global.fetch = fetchSpy;
 
       const seeds: ArtworkSeed[] = [];
-      for await (const seed of helpers.fetchArtworksOfMuseum('Q19675', ['public-domain'], 'en')) {
+      for await (const seed of helpers.fetchArtworksOfMuseum('Q19675', 'en')) {
         seeds.push(seed);
       }
 
@@ -219,7 +210,7 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
       global.fetch = fetchSpy;
 
       const seeds: ArtworkSeed[] = [];
-      for await (const seed of helpers.fetchArtworksOfMuseum('Q99999', ['public-domain'], 'en')) {
+      for await (const seed of helpers.fetchArtworksOfMuseum('Q99999', 'en')) {
         seeds.push(seed);
       }
       expect(seeds).toHaveLength(0);
