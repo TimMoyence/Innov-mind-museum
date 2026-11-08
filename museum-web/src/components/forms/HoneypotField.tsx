@@ -74,6 +74,11 @@ export function HoneypotField({
         tabIndex={-1}
         autoComplete="off"
         aria-hidden="true"
+        data-1p-ignore="true"
+        data-lpignore="true"
+        data-bwignore="true"
+        data-form-type="other"
+        data-protonpass-ignore="true"
       />
     </div>
   );

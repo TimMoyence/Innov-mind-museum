@@ -19,6 +19,7 @@ describe('SubmitSupportContactUseCase', () => {
       name: 'Ada Lovelace',
       email: 'Ada@example.com',
       message: 'I cannot access my saved tickets from the web support page.',
+      fillMs: 30_000,
       ip: '127.0.0.1',
       requestId: 'req-123',
       userAgent: 'Mozilla/5.0',
@@ -29,6 +30,7 @@ describe('SubmitSupportContactUseCase', () => {
       name: 'Ada Lovelace',
       email: 'ada@example.com',
       message: 'I cannot access my saved tickets from the web support page.',
+      suspect: false,
       ip: '127.0.0.1',
       requestId: 'req-123',
       userAgent: 'Mozilla/5.0',
@@ -49,6 +51,30 @@ describe('SubmitSupportContactUseCase', () => {
         message: 'Please contact me regarding payment support issue.',
       }),
     );
+  });
+
+  it('BOT-CONTACT-2026-11-08 · un champ website fait d’espaces envoie quand même l’e-mail de support', async () => {
+    await useCase.execute({
+      name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      message: 'I cannot access my saved tickets from the web support page.',
+      website: '   ',
+    });
+
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('BOT-CONTACT-2026-11-08 · un champ website rempli répond comme un envoi normal sans envoyer d’e-mail', async () => {
+    await expect(
+      useCase.execute({
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        message: 'I cannot access my saved tickets from the web support page.',
+        website: 'https://spam.example',
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it('rejects invalid email', async () => {

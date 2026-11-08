@@ -1,14 +1,17 @@
+import { TEXT_LIMITS } from '@musaium/shared';
 import { z } from 'zod';
 
 import { CONTENT_PREFERENCES } from '@modules/auth/domain/consent/content-preference';
 import { TTS_VOICES } from '@modules/chat/domain/voice-catalog';
 import { SUPPORTED_LOCALES } from '@shared/i18n/locale';
+import { emailField } from '@shared/validation/email-field';
+import { textField } from '@shared/validation/text-field';
 
 export const registerSchema = z.object({
-  email: z.email(),
-  password: z.string().min(8).max(128),
-  firstname: z.string().max(100).optional(),
-  lastname: z.string().max(100).optional(),
+  email: emailField,
+  password: textField(TEXT_LIMITS.password),
+  firstname: textField(TEXT_LIMITS.personName).optional(),
+  lastname: textField(TEXT_LIMITS.personName).optional(),
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
   // CNIL Délibération 2021-018 — digital majority 15y. REQUIRED (A2): a missing or
   // malformed DOB is rejected with 400 so the age gate cannot be bypassed. Below 15
@@ -18,7 +21,7 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.email(),
+  email: emailField,
   password: z.string().min(1),
 });
 
@@ -49,17 +52,17 @@ export const socialRedeemSchema = z.object({
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8).max(128),
+  newPassword: textField(TEXT_LIMITS.password),
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.email(),
+  email: emailField,
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
 });
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  newPassword: z.string().min(8).max(128),
+  newPassword: textField(TEXT_LIMITS.password),
 });
 
 export const verifyEmailSchema = z.object({
@@ -67,7 +70,7 @@ export const verifyEmailSchema = z.object({
 });
 
 export const changeEmailSchema = z.object({
-  newEmail: z.email(),
+  newEmail: emailField,
   currentPassword: z.string().min(1),
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
 });

@@ -1,3 +1,5 @@
+import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+
 import { invalidInput, unauthorized } from '@shared/errors/app.error';
 
 import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
@@ -57,8 +59,8 @@ export class CreateReviewUseCase {
     }
 
     const comment = input.comment.trim();
-    if (!comment || comment.length < 10 || comment.length > 2000) {
-      throw invalidInput('comment must be between 10 and 2000 characters');
+    if (!isWithinLimit(comment, TEXT_LIMITS.reviewComment)) {
+      throw invalidInput(describeLimit('comment', TEXT_LIMITS.reviewComment));
     }
 
     const derivedName = buildReviewDisplayName(input.user).slice(0, 128);

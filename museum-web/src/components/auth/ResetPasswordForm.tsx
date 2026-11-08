@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { charCount, clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { apiPost } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import type { Dictionary, Locale } from '@/lib/i18n';
@@ -61,8 +62,8 @@ function ResetPasswordFormInner({ dict, locale }: ResetPasswordFormProps) {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 8) {
-      setError(dict.passwordTooShort);
+    if (charCount(newPassword) < TEXT_LIMITS.password.min) {
+      setError(dict.passwordTooShort.replace('{min}', String(TEXT_LIMITS.password.min)));
       return;
     }
 
@@ -108,7 +109,7 @@ function ResetPasswordFormInner({ dict, locale }: ResetPasswordFormProps) {
               placeholder={dict.newPassword}
               value={newPassword}
               onChange={(e) => {
-                setNewPassword(e.target.value);
+                setNewPassword(clampChars(e.target.value, TEXT_LIMITS.password.max));
               }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />
@@ -125,7 +126,7 @@ function ResetPasswordFormInner({ dict, locale }: ResetPasswordFormProps) {
               placeholder={dict.confirmPassword}
               value={confirmPassword}
               onChange={(e) => {
-                setConfirmPassword(e.target.value);
+                setConfirmPassword(clampChars(e.target.value, TEXT_LIMITS.password.max));
               }}
               className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             />

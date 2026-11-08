@@ -184,7 +184,10 @@
       "submit": "Send",
       "sending": "Sending...",
       "success": "Thank you! Your message has been sent. We'll get back to you as soon as possible.",
-      "error": "Unable to send your message right now. Please try again in a few minutes."
+      "error": "Unable to send your message right now. Please try again in a few minutes.",
+      "errorEmail": "Invalid email address.",
+      "errorName": "Please enter your name.",
+      "errorMessage": "Your message must be at least {min} characters."
     }
   },
   "privacy": {
@@ -213,7 +216,7 @@
     "successHint": "You can now sign in with your new password.",
     "backToLogin": "Back to login",
     "passwordMismatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooShort": "Password must be at least {min} characters",
     "invalidToken": "Invalid or expired reset link",
     "error": "Error resetting password"
   },
@@ -330,7 +333,8 @@
         "sending": "Sending…",
         "success": "Thanks — we will reply within two business days.",
         "error": "Unable to send right now. Please retry.",
-        "errorValidation": "Please complete every required field."
+        "errorValidation": "Please complete every required field.",
+        "errorEmail": "Invalid email address."
       }
     },
     "beta": {
@@ -343,7 +347,8 @@
       "sending": "Sending…",
       "success": "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
       "error": "Something went wrong. Please retry in a moment.",
-      "errorValidation": "Required field."
+      "errorValidation": "Required field.",
+      "errorEmail": "Invalid email address."
     }
   },
   "admin": {

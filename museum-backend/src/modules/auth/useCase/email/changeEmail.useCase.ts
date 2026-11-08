@@ -1,10 +1,11 @@
+import { isEmail } from '@musaium/shared';
+
 import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildChangeEmailEmail } from '@shared/email/templates';
 import { badRequest } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { issueEmailToken } from '@shared/security/single-use-email-token';
-import { validateEmail } from '@shared/validation/email';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { EmailService } from '@shared/email/email.port';
@@ -27,7 +28,7 @@ export class ChangeEmailUseCase {
 
     const normalizedEmail = newEmail.trim().toLowerCase();
 
-    if (!validateEmail(normalizedEmail)) {
+    if (!isEmail(normalizedEmail)) {
       throw badRequest('Invalid email format');
     }
 

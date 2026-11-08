@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { apiPatch } from '@/lib/api';
 import { useAdminDict } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
@@ -260,9 +261,8 @@ export default function ReportsPage() {
           <textarea
             value={reviewerNotes}
             onChange={(e) => {
-              setReviewerNotes(e.target.value);
+              setReviewerNotes(clampChars(e.target.value, TEXT_LIMITS.reviewerNotes.max));
             }}
-            maxLength={2000}
             rows={3}
             placeholder={adminDict.reportsPage.reviewerNotesPlaceholder}
             className="mt-3 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"

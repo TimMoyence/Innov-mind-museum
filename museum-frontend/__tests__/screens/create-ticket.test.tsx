@@ -47,6 +47,22 @@ describe('CreateTicketScreen', () => {
     expect(submitButton.props.accessibilityState?.disabled).toBeTruthy();
   });
 
+  it('L3 · le sujet garde 200 emoji sur 201 saisis, la description 5 000 sur 5 001', () => {
+    render(<CreateTicketScreen />);
+    const subject = screen.getByPlaceholderText('tickets.subjectPlaceholder');
+    const description = screen.getByPlaceholderText('tickets.descriptionPlaceholder');
+
+    fireEvent.changeText(subject, '🏛'.repeat(201));
+    fireEvent.changeText(description, '🏛'.repeat(5001));
+
+    expect(screen.getByPlaceholderText('tickets.subjectPlaceholder').props.value).toBe(
+      '🏛'.repeat(200),
+    );
+    expect(screen.getByPlaceholderText('tickets.descriptionPlaceholder').props.value).toBe(
+      '🏛'.repeat(5000),
+    );
+  });
+
   it('calls createTicket on valid submit', async () => {
     mockCreateTicket.mockResolvedValue({
       ticket: { id: '123' },

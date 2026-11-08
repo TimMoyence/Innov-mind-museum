@@ -7,7 +7,13 @@ import { tmpdir } from 'node:os';
 // Root sentinel under test (deploy gate). museum-web vitest runs with cwd =
 // museum-web (locally and in ci-cd-web.yml quality job working-directory), so
 // the repo root is one level up.
-const SENTINEL = resolve(process.cwd(), '..', 'scripts', 'sentinels', 'wellknown-placeholder-free.mjs');
+const SENTINEL = resolve(
+  process.cwd(),
+  '..',
+  'scripts',
+  'sentinels',
+  'wellknown-placeholder-free.mjs',
+);
 
 function runAgainst(dir: string): { code: number; stderr: string } {
   try {

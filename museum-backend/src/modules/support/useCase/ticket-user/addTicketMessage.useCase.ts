@@ -1,3 +1,5 @@
+import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+
 import { forbidden, invalidInput, notFound } from '@shared/errors/app.error';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
@@ -16,8 +18,8 @@ export class AddTicketMessageUseCase {
 
   async execute(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
     const text = input.text.trim();
-    if (!text || text.length < 1 || text.length > 5000) {
-      throw invalidInput('text must be between 1 and 5000 characters');
+    if (!isWithinLimit(text, TEXT_LIMITS.ticketMessage)) {
+      throw invalidInput(describeLimit('text', TEXT_LIMITS.ticketMessage));
     }
 
     const isAdminOrMod = input.senderRole === 'admin' || input.senderRole === 'moderator';

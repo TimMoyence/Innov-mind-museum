@@ -152,6 +152,33 @@ describe('ReviewsScreen', () => {
     expect(screen.queryByTestId('star-rating')).toBeNull();
   });
 
+  it('TIM-2026-11-08-AVIS-2000 · le commentaire garde 2 000 caractères sur 2 001 saisis', () => {
+    render(<ReviewsScreen />);
+    fireEvent.press(screen.getByLabelText('reviews.writeReview'));
+
+    fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'c'.repeat(2001));
+
+    expect(screen.getByLabelText('a11y.reviews.comment_input').props.value).toBe('c'.repeat(2000));
+    expect(screen.getByLabelText('a11y.reviews.comment_input').props.maxLength).toBeUndefined();
+  });
+
+  it('L1 · un commentaire de 9 caractères ne part pas, 10 caractères partent', () => {
+    const submitReview = jest.fn().mockResolvedValue(true);
+    mockUseReviews.mockReturnValue({ ...defaultHookReturn, submitReview });
+    render(<ReviewsScreen />);
+    fireEvent.press(screen.getByLabelText('reviews.writeReview'));
+    fireEvent.press(screen.getByTestId('nps-scale'));
+
+    fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'Too short');
+    fireEvent.press(screen.getByLabelText('reviews.submit'));
+    expect(submitReview).not.toHaveBeenCalled();
+
+    fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'Just right');
+    fireEvent.press(screen.getByLabelText('reviews.submit'));
+    expect(submitReview).toHaveBeenCalledTimes(1);
+    expect((submitReview.mock.calls[0] as unknown[])[1]).toBe('Just right');
+  });
+
   it('submits with (rating, comment, sessionId) and NO userName arg when a recent session exists', () => {
     const submitReview = jest.fn().mockResolvedValue(true);
     mockUseReviews.mockReturnValue({ ...defaultHookReturn, submitReview });

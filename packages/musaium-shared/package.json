@@ -21,6 +21,14 @@
     "./map": {
       "types": "./dist/map/index.d.ts",
       "default": "./dist/map/index.js"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "default": "./dist/validation/index.js"
+    },
+    "./museum": {
+      "types": "./dist/museum/branding.d.ts",
+      "default": "./dist/museum/branding.js"
     }
   },
   "scripts": {

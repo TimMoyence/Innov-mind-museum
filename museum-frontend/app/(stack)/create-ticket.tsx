@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { clampChars, isWithinLimit, TEXT_LIMITS } from '@musaium/shared/validation';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,7 +51,9 @@ export default function CreateTicketScreen() {
     return map[p];
   };
 
-  const isValid = subject.trim().length >= 3 && description.trim().length >= 10;
+  const isValid =
+    isWithinLimit(subject.trim(), TEXT_LIMITS.ticketSubject) &&
+    isWithinLimit(description.trim(), TEXT_LIMITS.ticketDescription);
 
   const handleSubmit = async () => {
     if (!isValid || isSubmitting) return;
@@ -99,11 +102,13 @@ export default function CreateTicketScreen() {
               },
             ]}
             value={subject}
-            onChangeText={setSubject}
+            onChangeText={(text) => {
+              setSubject(clampChars(text, TEXT_LIMITS.ticketSubject.max));
+            }}
             placeholder={t('tickets.subjectPlaceholder')}
             placeholderTextColor={theme.placeholderText}
-            maxLength={200}
             editable={!isSubmitting}
+            testID="ticket-subject-input"
           />
 
           <Text style={[styles.label, { color: theme.textSecondary }]}>
@@ -120,12 +125,14 @@ export default function CreateTicketScreen() {
               },
             ]}
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(text) => {
+              setDescription(clampChars(text, TEXT_LIMITS.ticketDescription.max));
+            }}
             placeholder={t('tickets.descriptionPlaceholder')}
             placeholderTextColor={theme.placeholderText}
             multiline
-            maxLength={5000}
             editable={!isSubmitting}
+            testID="ticket-description-input"
           />
 
           <Text style={[styles.label, { color: theme.textSecondary }]}>

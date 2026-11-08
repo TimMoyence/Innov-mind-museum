@@ -247,7 +247,7 @@
     "submit": "パスワードを更新",
     "success": "パスワードが正常に更新されました",
     "error_mismatch": "パスワードが一致しません",
-    "error_short": "パスワードは8文字以上にしてください"
+    "error_short": "パスワードは{{min}}文字以上にしてください"
   },
   "verify_email": {
     "title": "Verify your email",
@@ -273,7 +273,7 @@
     "success": "Your password has been reset.",
     "invalidToken": "This reset link is invalid or has expired.",
     "error": "We could not reset your password. Please try again.",
-    "error_short": "Password must be at least 8 characters",
+    "error_short": "パスワードは{{min}}文字以上にしてください",
     "error_mismatch": "Passwords do not match",
     "cta_login": "Continue to sign in"
   },

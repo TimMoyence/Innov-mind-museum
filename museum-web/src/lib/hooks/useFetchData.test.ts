@@ -100,7 +100,9 @@ function installFetchHarness(): FetchHarness {
       if (sig) {
         if (sig.aborted) {
           entry.aborted = true;
-          queueMicrotask(() => { entry.reject(makeAbortError()); });
+          queueMicrotask(() => {
+            entry.reject(makeAbortError());
+          });
         } else {
           sig.addEventListener(
             'abort',

@@ -184,7 +184,10 @@
       "submit": "Envoyer",
       "sending": "Envoi...",
       "success": "Merci ! Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.",
-      "error": "Impossible d'envoyer votre message pour le moment. Veuillez réessayer dans quelques minutes."
+      "error": "Impossible d'envoyer votre message pour le moment. Veuillez réessayer dans quelques minutes.",
+      "errorEmail": "Adresse e-mail invalide.",
+      "errorName": "Indiquez votre nom.",
+      "errorMessage": "Votre message doit contenir au moins {min} caractères."
     }
   },
   "privacy": {
@@ -213,7 +216,7 @@
     "successHint": "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
     "backToLogin": "Retour à la connexion",
     "passwordMismatch": "Les mots de passe ne correspondent pas",
-    "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordTooShort": "Le mot de passe doit contenir au moins {min} caractères",
     "invalidToken": "Lien de réinitialisation invalide ou expiré",
     "error": "Erreur lors de la réinitialisation"
   },
@@ -330,7 +333,8 @@
         "sending": "Envoi…",
         "success": "Merci — nous revenons vers vous sous deux jours ouvrés.",
         "error": "Impossible d'envoyer pour le moment. Veuillez réessayer.",
-        "errorValidation": "Merci de compléter tous les champs obligatoires."
+        "errorValidation": "Merci de compléter tous les champs obligatoires.",
+        "errorEmail": "Adresse e-mail invalide."
       }
     },
     "beta": {
@@ -343,7 +347,8 @@
       "sending": "Envoi en cours…",
       "success": "Merci ! On t'a envoyé un e-mail de confirmation — clique le lien pour valider ton inscription.",
       "error": "Une erreur est survenue. Réessaie dans un instant.",
-      "errorValidation": "Champ requis."
+      "errorValidation": "Champ requis.",
+      "errorEmail": "Adresse e-mail invalide."
     }
   },
   "admin": {

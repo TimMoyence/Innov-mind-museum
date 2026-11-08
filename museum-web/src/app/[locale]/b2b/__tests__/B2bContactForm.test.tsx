@@ -9,7 +9,7 @@
  * - empty submit → 5 validation errors visible (one per required field)
  * - happy path : POST `/api/leads/b2b` w/ correct JSON, then success screen
  * - 5xx response : error message displayed, form values preserved (not cleared)
- * - honeypot filled → submission still shows success (silent accept, R10)
+ * - honeypot filled → value sent, the server decides (TIM-2026-11-08-DEUX-SIGNAUX)
  *
  * R19 Sentry breadcrumb deferred V1.1 (not covered by tests at this layer).
  *
@@ -19,6 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import B2bContactForm from '../B2bContactForm';
+import { acceptedResponse, serverErrorResponse } from '@/__tests__/helpers/http-responses.fixture';
 
 // ── i18n fixture (mirrors R4.md §3.5) ────────────────────────────────────────
 
@@ -43,6 +44,7 @@ const dictEN = {
   success: 'Thanks — we will reply within two business days.',
   error: 'Unable to send right now. Please retry.',
   errorValidation: 'Please complete every required field.',
+  errorEmail: 'Invalid email address.',
 };
 
 // Helper — fill all visible required fields with valid values.
@@ -109,7 +111,7 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
   });
 
   it('POSTs to /api/leads/b2b with the correct JSON body on happy path (R7)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 202 });
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
     vi.stubGlobal('fetch', mockFetch);
 
     render(<B2bContactForm dict={dictEN} locale="en" />);
@@ -136,7 +138,7 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
   });
 
   it('shows the success message after a 2xx response (R7 + AC3.e)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 202 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<B2bContactForm dict={dictEN} locale="en" />);
     fillAllRequired();
@@ -170,7 +172,7 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
   });
 
   it('keeps form values intact and shows error on 5xx (R8 + AC3.f)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(serverErrorResponse()));
 
     render(<B2bContactForm dict={dictEN} locale="en" />);
     fillAllRequired();
@@ -199,8 +201,8 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
     expect(screen.getByLabelText(/Your name/i)).toHaveValue('Alice Curator');
   });
 
-  it('honeypot filled → still UX-success but body.website is the honeypot (R10)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 202 });
+  it('honeypot filled → body.website carries the value, the server decides', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
     vi.stubGlobal('fetch', mockFetch);
 
     render(<B2bContactForm dict={dictEN} locale="en" />);
@@ -221,7 +223,7 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
   });
 
   it('exposes the success/error region with aria-live="polite" (R17)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 202 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
     render(<B2bContactForm dict={dictEN} locale="en" />);
     fillAllRequired();
     submitForm();

@@ -1,3 +1,5 @@
+import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
 import { invalidInput } from '@shared/errors/app.error';
 
@@ -26,13 +28,18 @@ export class CreateTicketUseCase {
 
   async execute(input: CreateTicketUseCaseInput): Promise<TicketDTO> {
     const subject = input.subject.trim();
-    if (!subject || subject.length < 1 || subject.length > 256) {
-      throw invalidInput('subject must be between 1 and 256 characters');
+    if (!isWithinLimit(subject, TEXT_LIMITS.ticketSubject)) {
+      throw invalidInput(describeLimit('subject', TEXT_LIMITS.ticketSubject));
     }
 
     const description = input.description.trim();
-    if (!description || description.length < 1 || description.length > 5000) {
-      throw invalidInput('description must be between 1 and 5000 characters');
+    if (!isWithinLimit(description, TEXT_LIMITS.ticketDescription)) {
+      throw invalidInput(describeLimit('description', TEXT_LIMITS.ticketDescription));
+    }
+
+    const category = input.category?.trim() ?? '';
+    if (!isWithinLimit(category, TEXT_LIMITS.ticketCategory)) {
+      throw invalidInput(describeLimit('category', TEXT_LIMITS.ticketCategory));
     }
 
     const validPriorities: string[] = ['low', 'medium', 'high'];
@@ -45,8 +52,7 @@ export class CreateTicketUseCase {
       subject,
       description,
       priority: (input.priority as CreateTicketInput['priority']) ?? undefined,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      category: input.category?.trim().slice(0, 64) || undefined,
+      category: category === '' ? undefined : category,
       // Wave B C7 / R-C7c — TD-COR-WAVEB-02. Thread tenant scope down to the
       // repository so `support_tickets.museum_id` is populated from the JWT
       // claim. `undefined` collapses to `null` in `SupportRepositoryPg.createTicket`

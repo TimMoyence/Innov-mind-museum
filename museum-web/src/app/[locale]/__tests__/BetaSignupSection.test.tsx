@@ -9,7 +9,7 @@
  * - happy path : POST `/api/leads/beta` JSON `{ email, consent: true, website }`
  *   → 202 → success message visible (in role="status" aria-live="polite")
  * - 5xx response : error message displayed, form values preserved
- * - honeypot filled → success-UX (silent), body still POSTed with the honeypot
+ * - honeypot filled → value POSTed, the server decides (TIM-2026-11-08-DEUX-SIGNAUX)
  * - sending label visible while pending
  * - aria-live="polite" region exposed
  * - idempotent path : duplicate signups → same 202 success UX (no leak)
@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import BetaSignupSection from '../BetaSignupSection';
+import { acceptedResponse, serverErrorResponse } from '@/__tests__/helpers/http-responses.fixture';
 
 // ── i18n fixtures (mirror R3.md §3.5) ────────────────────────────────────────
 
@@ -34,6 +35,7 @@ const dictEN = {
   success: "Thanks! We've sent you a confirmation email — click the link to finalize your signup.",
   error: 'Something went wrong. Please retry in a moment.',
   errorValidation: 'Required field.',
+  errorEmail: 'Invalid email address.',
 };
 
 function fillValidForm() {
@@ -94,7 +96,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   });
 
   it('POSTs to /api/leads/beta with {email, consent:true, website:""} on happy path (R6)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 202 });
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
     vi.stubGlobal('fetch', mockFetch);
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
@@ -119,7 +121,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   });
 
   it('shows the success message after a 202 response (R7 + AC3.e)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 202 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
     fillValidForm();
@@ -135,7 +137,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
     // BE returns 202 for both first signup and duplicate — FE must show the
     // SAME success copy in both cases so an attacker cannot enumerate the
     // waitlist via the response shape.
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 202 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
     fillValidForm();
@@ -170,7 +172,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   });
 
   it('shows error on 5xx and preserves form values (R8 + AC3.f)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(serverErrorResponse()));
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
     fillValidForm();
@@ -195,8 +197,8 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
     });
   });
 
-  it('honeypot filled → still UX-success and body.website carries the value (R10)', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 202 });
+  it('honeypot filled → body.website carries the value, the server decides', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
     vi.stubGlobal('fetch', mockFetch);
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
@@ -217,7 +219,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   });
 
   it('exposes the success/error region with aria-live="polite" (R20)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 202 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
     render(<BetaSignupSection dict={dictEN} locale="en" />);
     fillValidForm();
     submitForm();

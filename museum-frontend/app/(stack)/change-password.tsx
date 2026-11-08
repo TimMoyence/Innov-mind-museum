@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { charCount, clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -28,8 +29,8 @@ export default function ChangePasswordScreen() {
   const onSubmit = async () => {
     setError(null);
 
-    if (newPassword.length < 8) {
-      setError(t('change_password.error_short'));
+    if (charCount(newPassword) < TEXT_LIMITS.password.min) {
+      setError(t('change_password.error_short', { min: TEXT_LIMITS.password.min }));
       return;
     }
 
@@ -108,7 +109,9 @@ export default function ChangePasswordScreen() {
               },
             ]}
             value={newPassword}
-            onChangeText={setNewPassword}
+            onChangeText={(text) => {
+              setNewPassword(clampChars(text, TEXT_LIMITS.password.max));
+            }}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"
@@ -129,7 +132,9 @@ export default function ChangePasswordScreen() {
               },
             ]}
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(clampChars(text, TEXT_LIMITS.password.max));
+            }}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { charCount, clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,8 +126,8 @@ export default function ResetPasswordScreen() {
   const onSubmit = async () => {
     setError(null);
 
-    if (newPassword.length < 8) {
-      setError(t('reset_password.error_short'));
+    if (charCount(newPassword) < TEXT_LIMITS.password.min) {
+      setError(t('reset_password.error_short', { min: TEXT_LIMITS.password.min }));
       return;
     }
 
@@ -183,7 +184,9 @@ export default function ResetPasswordScreen() {
               },
             ]}
             value={newPassword}
-            onChangeText={setNewPassword}
+            onChangeText={(text) => {
+              setNewPassword(clampChars(text, TEXT_LIMITS.password.max));
+            }}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"
@@ -204,7 +207,9 @@ export default function ResetPasswordScreen() {
               },
             ]}
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(clampChars(text, TEXT_LIMITS.password.max));
+            }}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"

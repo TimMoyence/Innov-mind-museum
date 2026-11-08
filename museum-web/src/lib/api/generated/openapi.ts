@@ -2807,9 +2807,11 @@ export interface paths {
             slug: string;
             address?: string;
             description?: string;
-            config?: {
-              [key: string]: unknown;
-            };
+            latitude?: number | null;
+            longitude?: number | null;
+            /** @enum {string} */
+            museumType?: 'art' | 'history' | 'science' | 'specialized' | 'general';
+            config?: components['schemas']['MuseumConfigInput'];
           };
         };
       };
@@ -2907,10 +2909,10 @@ export interface paths {
             description?: string | null;
             latitude?: number | null;
             longitude?: number | null;
-            config?: {
-              [key: string]: unknown;
-            };
+            config?: components['schemas']['MuseumConfigInput'];
             isActive?: boolean;
+            /** @enum {string} */
+            museumType?: 'art' | 'history' | 'science' | 'specialized' | 'general';
           };
         };
       };
@@ -2971,8 +2973,10 @@ export interface paths {
             message: string;
             /** @enum {boolean} */
             consent: true;
-            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            /** @description Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect. */
             website?: string;
+            /** @description Milliseconds between form display and submit; absent counts as under 5 s. */
+            fillMs?: number;
           };
         };
       };
@@ -3027,8 +3031,10 @@ export interface paths {
             email: string;
             /** @enum {boolean} */
             consent: true;
-            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            /** @description Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect. */
             website?: string;
+            /** @description Milliseconds between form display and submit; absent counts as under 5 s. */
+            fillMs?: number;
           };
         };
       };
@@ -3083,8 +3089,10 @@ export interface paths {
             email: string;
             /** @enum {boolean} */
             consent: true;
-            /** @description Honeypot — must be empty; a non-empty value is silently dropped. */
+            /** @description Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect. */
             website?: string;
+            /** @description Milliseconds between form display and submit; absent counts as under 5 s. */
+            fillMs?: number;
           };
         };
       };
@@ -3136,6 +3144,10 @@ export interface paths {
             /** Format: email */
             email: string;
             message: string;
+            /** @description Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect. */
+            website?: string;
+            /** @description Milliseconds between form display and submit; absent counts as under 5 s. */
+            fillMs?: number;
           };
         };
       };
@@ -4351,6 +4363,14 @@ export interface components {
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    MuseumConfigInput: {
+      branding?: {
+        primaryColor?: string;
+        logoUrl?: string;
+      };
+    } & {
+      [key: string]: unknown;
     };
     MuseumDirectoryDTO: {
       id: number;

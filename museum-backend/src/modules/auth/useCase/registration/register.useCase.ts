@@ -1,10 +1,11 @@
+import { isEmail } from '@musaium/shared';
+
 import { DEFAULT_EMAIL_LOCALE, type EmailLocale } from '@shared/email/email-locale';
 import { buildVerifyEmail } from '@shared/email/templates';
 import { AppError, invalidInput } from '@shared/errors/app.error';
 import { POLICY_VERSION } from '@shared/legal/policy-version';
 import { logger } from '@shared/logger/logger';
 import { issueEmailToken } from '@shared/security/single-use-email-token';
-import { validateEmail } from '@shared/validation/email';
 import { validateNameField } from '@shared/validation/input';
 import { validatePassword } from '@shared/validation/password';
 import { assertPasswordNotBreached } from '@shared/validation/password-breach-check';
@@ -51,7 +52,7 @@ export class RegisterUseCase {
   async execute(input: RegisterInput): Promise<User> {
     const normalizedEmail = input.email.trim().toLowerCase();
 
-    if (!validateEmail(normalizedEmail)) {
+    if (!isEmail(normalizedEmail)) {
       throw invalidInput('Invalid email format');
     }
 

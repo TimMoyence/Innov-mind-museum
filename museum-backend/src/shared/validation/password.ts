@@ -4,6 +4,8 @@
 // k-anonymity) in sibling `password-breach-check.ts`; chain:
 // sync `validatePassword` then async `assertPasswordNotBreached`.
 
+import { charCount, TEXT_LIMITS } from '@musaium/shared';
+
 interface PasswordValidationResult {
   valid: boolean;
   /** Set when `valid` false. */
@@ -15,12 +17,15 @@ export const validatePassword = (password: string): PasswordValidationResult => 
     return { valid: false, reason: 'Password is required' };
   }
 
-  if (password.length < 8) {
-    return { valid: false, reason: 'Password must be at least 8 characters' };
+  const { min, max } = TEXT_LIMITS.password;
+  const length = charCount(password);
+
+  if (length < min) {
+    return { valid: false, reason: `Password must be at least ${String(min)} characters` };
   }
 
-  if (password.length > 128) {
-    return { valid: false, reason: 'Password must be at most 128 characters' };
+  if (length > max) {
+    return { valid: false, reason: `Password must be at most ${String(max)} characters` };
   }
 
   return { valid: true };

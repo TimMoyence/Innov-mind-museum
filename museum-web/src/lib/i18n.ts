@@ -90,6 +90,9 @@ export interface Dictionary {
       sending: string;
       success: string;
       error: string;
+      errorEmail: string;
+      errorName: string;
+      errorMessage: string;
     };
   };
   privacy: {
@@ -181,6 +184,7 @@ export interface Dictionary {
         success: string;
         error: string;
         errorValidation: string;
+        errorEmail: string;
       };
     };
     beta: {
@@ -194,6 +198,7 @@ export interface Dictionary {
       success: string;
       error: string;
       errorValidation: string;
+      errorEmail: string;
     };
   };
   admin: {

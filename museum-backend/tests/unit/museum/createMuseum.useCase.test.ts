@@ -48,18 +48,6 @@ describe('CreateMuseumUseCase', () => {
     expect(result.config).toEqual({});
   });
 
-  it('rejects empty name', async () => {
-    await expect(useCase.execute({ name: '', slug: 'test' })).rejects.toMatchObject({
-      statusCode: 400,
-    });
-  });
-
-  it('rejects whitespace-only name', async () => {
-    await expect(useCase.execute({ name: '   ', slug: 'test' })).rejects.toMatchObject({
-      statusCode: 400,
-    });
-  });
-
   it('rejects empty slug', async () => {
     await expect(useCase.execute({ name: 'Test Museum', slug: '' })).rejects.toMatchObject({
       statusCode: 400,

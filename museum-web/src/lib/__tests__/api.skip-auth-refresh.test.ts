@@ -64,5 +64,4 @@ describe('api client — skipAuthRefresh + ApiError.body', () => {
     // The 2nd call is the refresh endpoint.
     expect(fetchMock.mock.calls[1]?.[0]).toContain('/api/auth/refresh');
   });
-
 });

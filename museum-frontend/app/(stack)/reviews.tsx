@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clampChars, isWithinLimit, TEXT_LIMITS } from '@musaium/shared/validation';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -64,8 +65,10 @@ export default function ReviewsScreen() {
     };
   }, []);
 
+  const canSubmit = rating !== null && isWithinLimit(comment.trim(), TEXT_LIMITS.reviewComment);
+
   const onSubmit = useCallback(async () => {
-    if (rating === null || comment.trim().length === 0) return;
+    if (!canSubmit) return;
     // Best-effort attribution (design D-C2-5): the most-recently-visited chat
     // session's id, read at submit time from the in-memory store. Empty store
     // → undefined → BE attributes the review to global (Q1, honest fallback).
@@ -87,7 +90,7 @@ export default function ReviewsScreen() {
         }, 1500);
       }
     }
-  }, [rating, comment, submitReview]);
+  }, [canSubmit, rating, comment, submitReview]);
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
@@ -154,11 +157,10 @@ export default function ReviewsScreen() {
             placeholderTextColor={theme.placeholderText}
             value={comment}
             onChangeText={(text) => {
-              setComment(text);
+              setComment(clampChars(text, TEXT_LIMITS.reviewComment.max));
               clearSubmitError();
             }}
             multiline
-            maxLength={500}
             testID="reviews-comment-input"
             accessibilityLabel={t('a11y.reviews.comment_input')}
           />
@@ -173,12 +175,11 @@ export default function ReviewsScreen() {
             style={[
               styles.submitButton,
               {
-                backgroundColor:
-                  rating !== null && comment.trim() ? theme.primary : theme.separator,
+                backgroundColor: canSubmit ? theme.primary : theme.separator,
               },
             ]}
             onPress={() => void onSubmit()}
-            disabled={submitLoading || rating === null || !comment.trim()}
+            disabled={submitLoading || !canSubmit}
             accessibilityRole="button"
             accessibilityLabel={t('reviews.submit')}
           >

@@ -323,6 +323,26 @@ describe('AdminSupportPage', () => {
       });
     });
 
+    it('L3 · une réponse de 2 001 emoji garde 2 000 caractères, comme le serveur', async () => {
+      mockApiGet.mockResolvedValueOnce({ ticket: mockTicketDetail });
+
+      render(
+        <Providers>
+          <AdminSupportPage />
+        </Providers>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Cannot upload photo')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('Type your reply...'), {
+        target: { value: '🏛'.repeat(2001) },
+      });
+
+      expect(screen.getByPlaceholderText('Type your reply...')).toHaveValue('🏛'.repeat(2000));
+    });
+
     it('clears reply text after successful send', async () => {
       mockApiGet.mockResolvedValueOnce({ ticket: mockTicketDetail });
 

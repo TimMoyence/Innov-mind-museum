@@ -1,8 +1,10 @@
+import { isEmail } from '@musaium/shared';
+
 import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
 import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
-import { validateEmail } from '@shared/validation/email';
+import { judgeSubmission } from '@shared/validation/honeypot';
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 import type {
@@ -22,6 +24,7 @@ interface SubmitPaywallInterestInput {
   email: string;
   consent: boolean;
   website?: string;
+  fillMs?: number;
   ip?: string;
   requestId?: string;
   userAgent?: string;
@@ -39,12 +42,11 @@ export class SubmitPaywallInterestUseCase {
     }
 
     const email = input.email.trim().toLowerCase();
-    if (!validateEmail(email)) {
+    if (!isEmail(email)) {
       throw invalidInput('email must be valid');
     }
 
-    // R7/R23 — honeypot silent drop BEFORE any persistence. Whitespace-only NOT a hit.
-    if (typeof input.website === 'string' && input.website.trim().length > 0) {
+    if (judgeSubmission(input) === 'bot') {
       logger.warn('paywall_interest_honeypot_triggered', {
         requestId: input.requestId,
         hasIp: Boolean(input.ip),

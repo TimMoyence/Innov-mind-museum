@@ -17,13 +17,11 @@ describe('createCachedNominatimClient — une panne de Nominatim ne se garde qu�
   });
 
   it('PANNE-CACHE · un 503 de Nominatim ne se garde que 60 s, comme une panne d’Overpass', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 503,
-        statusText: 'Service Unavailable',
-      }) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+    }) as unknown as typeof fetch;
     const cache = makeCache();
 
     await expect(createCachedNominatimClient(cache)(48.8606, 2.3376)).resolves.toBeNull();

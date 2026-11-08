@@ -314,7 +314,9 @@ describe('api.ts — apiGet with abort signal', () => {
     const pending = apiGet<unknown>('/api/abortable', { signal: controller.signal });
 
     // Abort in the next microtask so the listener is registered.
-    queueMicrotask(() => { controller.abort(); });
+    queueMicrotask(() => {
+      controller.abort();
+    });
 
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });

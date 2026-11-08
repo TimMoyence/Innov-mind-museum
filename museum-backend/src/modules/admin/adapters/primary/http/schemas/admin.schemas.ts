@@ -1,8 +1,10 @@
+import { TEXT_LIMITS } from '@musaium/shared';
 import { z } from 'zod';
 
 import { UserRole } from '@modules/auth/domain/user/user-role';
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/ticket/support.types';
+import { textField } from '@shared/validation/text-field';
 
 const validRoles = Object.values(UserRole) as [string, ...string[]];
 
@@ -17,7 +19,7 @@ export const changeUserTierSchema = z.object({
 
 export const resolveReportSchema = z.object({
   status: z.enum(['pending', 'reviewed', 'dismissed']),
-  reviewerNotes: z.string().max(2000).optional(),
+  reviewerNotes: textField(TEXT_LIMITS.reviewerNotes).optional(),
 });
 
 export const updateTicketSchema = z.object({

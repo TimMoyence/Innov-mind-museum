@@ -1,3 +1,4 @@
+import { tagSuspect } from '@shared/email/suspect-subject';
 import { buildB2bLeadEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
 
@@ -15,10 +16,10 @@ export class EmailB2bLeadNotifier implements B2bLeadNotifier {
   ) {}
 
   async notify(payload: B2bLeadPayload): Promise<void> {
-    const subject = `[Musaium B2B] ${payload.museum} — ${payload.role} ${payload.name}`.slice(
-      0,
-      200,
-    );
+    const subject = tagSuspect(
+      `[Musaium B2B] ${payload.museum} — ${payload.role} ${payload.name}`,
+      payload.suspect,
+    ).slice(0, 200);
     const html = buildB2bLeadEmail({
       name: payload.name,
       email: payload.email,

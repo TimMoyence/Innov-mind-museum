@@ -50,7 +50,11 @@ export default async function SupportPage({ params }: SupportPageProps) {
                   strokeWidth={2}
                   stroke="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                  />
                 </svg>
               </summary>
               <div className="px-6 pb-5 text-text-secondary">{item.answer}</div>

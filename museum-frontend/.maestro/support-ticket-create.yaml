@@ -5,10 +5,10 @@ appId: com.musaium.mobile.preview
 #
 # Path (verified in source): Home → Settings (gear) → "Support" FloatingContextMenu
 # entry → /(stack)/support → "Créer un ticket" (tickets.createTicket) →
-# /(stack)/create-ticket (CreateTicketScreen). The form has NO field testIDs, so
-# the fields are tapped by their placeholder text. Validation: subject + description
-# required. Success = native Alert "Ticket créé avec succès". App is FRENCH;
-# selectors use FR|EN alternation.
+# /(stack)/create-ticket (CreateTicketScreen). The fields are tapped by their
+# testIDs (ticket-subject-input, ticket-description-input). Validation: subject
+# (3..200 characters) + description (10..5000) required. Success = native Alert
+# "Ticket créé avec succès". App is FRENCH; selectors use FR|EN alternation.
 
 # ──────────────────────────────────────────────
 # Phase 0: Fresh launch + login → home
@@ -83,10 +83,10 @@ appId: com.musaium.mobile.preview
     timeout: 40000
 
 # ──────────────────────────────────────────────
-# Phase 3: Fill subject + description (tap by placeholder)
+# Phase 3: Fill subject + description (tap by testID)
 # ──────────────────────────────────────────────
 - tapOn:
-    text: "Résumé bref de votre problème|Brief summary of your issue"
+    id: "ticket-subject-input"
 - inputText: "Maestro e2e smoke ticket"
 # hideKeyboard hard-FAILS on iOS for these inputs (no standard dismiss
 # accessory); tap the static "Sujet|Subject" label instead to blur the field.
@@ -94,7 +94,7 @@ appId: com.musaium.mobile.preview
     text: "Sujet|Subject"
 
 - tapOn:
-    text: "Décrivez votre problème en détail...|Describe your issue in detail..."
+    id: "ticket-description-input"
 - inputText: "This ticket was submitted by the automated Maestro e2e flow. Please ignore and close."
 - tapOn:
     text: "Description"

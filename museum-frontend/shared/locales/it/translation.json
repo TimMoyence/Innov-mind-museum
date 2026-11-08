@@ -247,7 +247,7 @@
     "submit": "Aggiorna password",
     "success": "Password aggiornata con successo",
     "error_mismatch": "Le password non corrispondono",
-    "error_short": "La password deve contenere almeno 8 caratteri"
+    "error_short": "La password deve contenere almeno {{min}} caratteri"
   },
   "verify_email": {
     "title": "Verify your email",
@@ -273,7 +273,7 @@
     "success": "Your password has been reset.",
     "invalidToken": "This reset link is invalid or has expired.",
     "error": "We could not reset your password. Please try again.",
-    "error_short": "Password must be at least 8 characters",
+    "error_short": "La password deve contenere almeno {{min}} caratteri",
     "error_mismatch": "Passwords do not match",
     "cta_login": "Continue to sign in"
   },

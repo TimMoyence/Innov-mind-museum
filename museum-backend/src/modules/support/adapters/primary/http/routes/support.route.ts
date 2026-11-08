@@ -20,6 +20,8 @@ import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.m
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
 
+import type { z } from 'zod';
+
 const supportRouter: Router = Router();
 
 const supportContactLimiter = createRateLimitMiddleware({
@@ -33,16 +35,8 @@ supportRouter.post(
   validateBody(submitSupportContactSchema),
   supportContactLimiter,
   async (req: Request, res: Response) => {
-    const { name, email, message } = req.body as {
-      name: string;
-      email: string;
-      message: string;
-    };
-
     await submitSupportContactUseCase.execute({
-      name,
-      email,
-      message,
+      ...(req.body as z.infer<typeof submitSupportContactSchema>),
       ip: req.ip,
       requestId: req.requestId,
       userAgent: req.get('user-agent'),
@@ -57,12 +51,9 @@ supportRouter.post(
   isAuthenticated,
   validateBody(createTicketSchema),
   async (req: Request, res: Response) => {
-    const { subject, description, priority, category } = req.body as {
-      subject: string;
-      description: string;
-      priority?: string;
-      category?: string;
-    };
+    const { subject, description, priority, category } = req.body as z.infer<
+      typeof createTicketSchema
+    >;
 
     const ticket = await createTicketUseCase.execute({
       userId: req.user?.id ?? 0,
@@ -123,7 +114,7 @@ supportRouter.post(
   isAuthenticated,
   validateBody(addTicketMessageSchema),
   async (req: Request, res: Response) => {
-    const { text } = req.body as { text: string };
+    const { text } = req.body as z.infer<typeof addTicketMessageSchema>;
     const ticketId = parseStringParam(req, 'id');
     if (!ticketId) throw invalidInput('ticket id param is required');
 

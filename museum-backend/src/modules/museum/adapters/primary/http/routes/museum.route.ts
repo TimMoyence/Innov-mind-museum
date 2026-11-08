@@ -31,6 +31,7 @@ import type {
 import type { DetectMuseumUseCase } from '@modules/museum/useCase/detect/detect-museum.useCase';
 import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enrichMuseum.useCase';
 import type { CacheService } from '@shared/cache/cache.port';
+import type { z } from 'zod';
 
 /** Shared 400 message — keeps sonarjs/no-duplicate-string happy. */
 const INVALID_MUSEUM_ID = 'Invalid museum ID';
@@ -77,24 +78,9 @@ const buildHandleSearch = (searchMuseumsUseCase: ReturnType<typeof buildSearchMu
 };
 
 const handleCreateMuseum = async (req: Request, res: Response) => {
-  const { name, slug, address, description, config, museumType } = req.body as {
-    name: string;
-    slug: string;
-    address?: string;
-    description?: string;
-    config?: Record<string, unknown>;
-    museumType?: string;
-  };
-  const museum = await createMuseumUseCase.execute({
-    name,
-    slug,
-    address,
-    description,
-    config,
-    ...(museumType
-      ? { museumType: museumType as 'art' | 'history' | 'science' | 'specialized' | 'general' }
-      : {}),
-  });
+  const input = req.body as z.infer<typeof createMuseumSchema>;
+  const { name, slug } = input;
+  const museum = await createMuseumUseCase.execute(input);
   await auditService.log({
     action: 'MUSEUM_CREATED',
     actorType: 'user',

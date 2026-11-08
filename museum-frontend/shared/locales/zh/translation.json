@@ -247,7 +247,7 @@
     "submit": "更新密码",
     "success": "密码更新成功",
     "error_mismatch": "两次输入的密码不一致",
-    "error_short": "密码长度至少为8个字符"
+    "error_short": "密码长度至少为{{min}}个字符"
   },
   "verify_email": {
     "title": "Verify your email",
@@ -273,7 +273,7 @@
     "success": "Your password has been reset.",
     "invalidToken": "This reset link is invalid or has expired.",
     "error": "We could not reset your password. Please try again.",
-    "error_short": "Password must be at least 8 characters",
+    "error_short": "密码长度至少为{{min}}个字符",
     "error_mismatch": "Passwords do not match",
     "cta_login": "Continue to sign in"
   },

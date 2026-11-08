@@ -1694,6 +1694,26 @@
           }
         }
       },
+      "MuseumConfigInput": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "branding": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "primaryColor": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "logoUrl": {
+                "type": "string",
+                "pattern": "^[hH][tT][tT][pP][sS]://[^\\s]+$"
+              }
+            }
+          }
+        }
+      },
       "MuseumDirectoryDTO": {
         "type": "object",
         "required": ["id", "name", "slug", "museumType"],
@@ -2441,16 +2461,21 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "maxLength": 254
                   },
                   "password": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
                   },
                   "firstname": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                   },
                   "lastname": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                   },
                   "dateOfBirth": {
                     "type": "string",
@@ -2509,10 +2534,12 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "maxLength": 254
                   },
                   "password": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                   }
                 }
               }
@@ -2829,7 +2856,8 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "maxLength": 254
                   }
                 }
               }
@@ -2869,10 +2897,13 @@
                 "required": ["token", "newPassword"],
                 "properties": {
                   "token": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                   },
                   "newPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
                   }
                 }
               }
@@ -2919,10 +2950,13 @@
                 "required": ["currentPassword", "newPassword"],
                 "properties": {
                   "currentPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                   },
                   "newPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
                   }
                 }
               }
@@ -2973,7 +3007,8 @@
                 "properties": {
                   "newEmail": {
                     "type": "string",
-                    "format": "email"
+                    "format": "email",
+                    "maxLength": 254
                   },
                   "currentPassword": {
                     "type": "string",
@@ -5062,7 +5097,8 @@
                     "enum": ["pending", "reviewed", "dismissed"]
                   },
                   "reviewerNotes": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 2000
                   }
                 }
               }
@@ -5856,20 +5892,40 @@
                 "required": ["name", "slug"],
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "slug": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[a-z0-9-]+$"
                   },
                   "address": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 500
                   },
                   "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "latitude": {
+                    "type": ["number", "null"],
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": ["number", "null"],
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "museumType": {
+                    "type": "string",
+                    "enum": ["art", "history", "science", "specialized", "general"]
                   },
                   "config": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/MuseumConfigInput"
                   }
                 }
               }
@@ -6015,29 +6071,43 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "slug": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[a-z0-9-]+$"
                   },
                   "address": {
-                    "type": ["string", "null"]
+                    "type": ["string", "null"],
+                    "maxLength": 500
                   },
                   "description": {
-                    "type": ["string", "null"]
+                    "type": ["string", "null"],
+                    "maxLength": 2000
                   },
                   "latitude": {
-                    "type": ["number", "null"]
+                    "type": ["number", "null"],
+                    "minimum": -90,
+                    "maximum": 90
                   },
                   "longitude": {
-                    "type": ["number", "null"]
+                    "type": ["number", "null"],
+                    "minimum": -180,
+                    "maximum": 180
                   },
                   "config": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/MuseumConfigInput"
                   },
                   "isActive": {
                     "type": "boolean"
+                  },
+                  "museumType": {
+                    "type": "string",
+                    "enum": ["art", "history", "science", "specialized", "general"]
                   }
                 }
               }
@@ -6121,7 +6191,12 @@
                   "website": {
                     "type": "string",
                     "maxLength": 500,
-                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                    "description": "Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect."
+                  },
+                  "fillMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Milliseconds between form display and submit; absent counts as under 5 s."
                   }
                 }
               }
@@ -6184,7 +6259,12 @@
                   "website": {
                     "type": "string",
                     "maxLength": 500,
-                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                    "description": "Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect."
+                  },
+                  "fillMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Milliseconds between form display and submit; absent counts as under 5 s."
                   }
                 }
               }
@@ -6247,7 +6327,12 @@
                   "website": {
                     "type": "string",
                     "maxLength": 500,
-                    "description": "Honeypot — must be empty; a non-empty value is silently dropped."
+                    "description": "Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect."
+                  },
+                  "fillMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Milliseconds between form display and submit; absent counts as under 5 s."
                   }
                 }
               }
@@ -6311,6 +6396,16 @@
                     "type": "string",
                     "minLength": 10,
                     "maxLength": 5000
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Honeypot — must be empty. Filled and sent in under 5 s (fillMs) the submission is silently dropped; a single signal flags it as suspect."
+                  },
+                  "fillMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Milliseconds between form display and submit; absent counts as under 5 s."
                   }
                 }
               }
@@ -6363,10 +6458,12 @@
                 "properties": {
                   "subject": {
                     "type": "string",
-                    "maxLength": 256
+                    "minLength": 3,
+                    "maxLength": 200
                   },
                   "description": {
                     "type": "string",
+                    "minLength": 10,
                     "maxLength": 5000
                   },
                   "priority": {
@@ -6576,7 +6673,8 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "maxLength": 5000
+                    "minLength": 1,
+                    "maxLength": 2000
                   }
                 }
               }

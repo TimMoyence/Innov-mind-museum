@@ -12,6 +12,7 @@ export interface B2bLeadPayload {
   consent: true;
   /** Honeypot — must be empty for non-spam (R4 §1 R10). */
   website?: string;
+  suspect?: boolean;
   ip?: string;
   requestId?: string;
   userAgent?: string;
