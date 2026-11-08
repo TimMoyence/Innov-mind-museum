@@ -288,7 +288,7 @@ jobs:
         # 4-ABI cold build at 25% config exhausted runner resources with no
         # graceful Gradle error). `--info` dropped — it produced 23k lines that
         # buried the real failure; `--stacktrace` alone surfaces a clean error.
-        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace --init-script ../scripts/ci/maven-central-mirror.init.gradle -PreactNativeArchitectures=x86_64
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
@@ -706,7 +706,7 @@ jobs:
 
       - name: Gradle assembleRelease (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
-        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace --init-script ../scripts/ci/maven-central-mirror.init.gradle -PreactNativeArchitectures=x86_64
 
       - name: Upload weak-net APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
