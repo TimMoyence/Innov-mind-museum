@@ -98,6 +98,17 @@ describe('ResetPasswordScreen (R7/R8/R9/R6/R10/R13)', () => {
     expect(mockResetPassword).not.toHaveBeenCalled();
   });
 
+  it('L3 · un nouveau mot de passe garde 128 caractères sur 129 saisis, comme le serveur', async () => {
+    mockResetPassword.mockResolvedValue(undefined);
+
+    render(<ResetPasswordScreen />);
+    fillAndSubmit('p'.repeat(129), 'p'.repeat(129));
+
+    await waitFor(() => {
+      expect(mockResetPassword).toHaveBeenCalledWith(TOKEN, 'p'.repeat(128));
+    });
+  });
+
   it('R9 — a mismatch shows error_mismatch and does NOT call the API', async () => {
     render(<ResetPasswordScreen />);
     fillAndSubmit('newpass123', 'newpass999');

@@ -76,4 +76,18 @@ describe('ChangePasswordScreen', () => {
       expect(mockChangePassword).toHaveBeenCalledWith('oldpass123', 'newpass123');
     });
   });
+
+  it('L3 · un nouveau mot de passe garde 128 caractères sur 129 saisis, comme le serveur', async () => {
+    mockChangePassword.mockResolvedValue(undefined);
+    render(<ChangePasswordScreen />);
+
+    fireEvent.changeText(screen.getByLabelText('change_password.current'), 'oldpass123');
+    fireEvent.changeText(screen.getByLabelText('change_password.new'), 'p'.repeat(129));
+    fireEvent.changeText(screen.getByLabelText('change_password.confirm'), 'p'.repeat(129));
+    fireEvent.press(screen.getByLabelText('change_password.submit'));
+
+    await waitFor(() => {
+      expect(mockChangePassword).toHaveBeenCalledWith('oldpass123', 'p'.repeat(128));
+    });
+  });
 });

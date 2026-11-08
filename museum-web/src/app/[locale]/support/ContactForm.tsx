@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { clampChars, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared/validation';
 import Button from '@/components/ui/Button';
 import { AlertBanner } from '@/components/ui/AlertBanner';
+import { FormFieldError } from '@/components/forms/FormFieldError';
+import { HoneypotField } from '@/components/forms/HoneypotField';
+import { usePublicSubmit } from '@/components/forms/usePublicSubmit';
 import type { Dictionary } from '@/lib/i18n';
 
 interface ContactFormProps {
@@ -13,45 +17,26 @@ export default function ContactForm({ dict }: ContactFormProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<'name' | 'email' | 'message', string>>>({});
+  const { website, setWebsite, submitting, submitted, failed, send } =
+    usePublicSubmit('/api/support/contact');
 
-  async function submitContact(): Promise<void> {
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      const response = await fetch('/api/support/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          message: message.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Support contact failed (${String(response.status)})`);
-      }
-
-      setSubmitted(true);
-      setName('');
-      setEmail('');
-      setMessage('');
-    } catch {
-      setError(dict.error);
-    } finally {
-      setSubmitting(false);
+  function validate(): typeof errors {
+    const next: typeof errors = {};
+    if (!isWithinLimit(name.trim(), TEXT_LIMITS.contactName)) next.name = dict.errorName;
+    if (!isEmail(email.trim())) next.email = dict.errorEmail;
+    if (!isWithinLimit(message.trim(), TEXT_LIMITS.contactMessage)) {
+      next.message = dict.errorMessage.replace('{min}', String(TEXT_LIMITS.contactMessage.min));
     }
+    return next;
   }
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    void submitContact();
+    const found = validate();
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+    void send({ name: name.trim(), email: email.trim(), message: message.trim() });
   }
 
   if (submitted) {
@@ -63,7 +48,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div>
         <label htmlFor="contact-name" className="sr-only">
           {dict.namePlaceholder}
@@ -72,13 +57,16 @@ export default function ContactForm({ dict }: ContactFormProps) {
           id="contact-name"
           type="text"
           required
+          aria-invalid={errors.name ? true : undefined}
+          aria-describedby={errors.name ? 'contact-name-error' : undefined}
           placeholder={dict.namePlaceholder}
           value={name}
           onChange={(e) => {
-            setName(e.target.value);
+            setName(clampChars(e.target.value, TEXT_LIMITS.contactName.max));
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
+        <FormFieldError id="contact-name-error" error={errors.name} />
       </div>
       <div>
         <label htmlFor="contact-email" className="sr-only">
@@ -88,6 +76,8 @@ export default function ContactForm({ dict }: ContactFormProps) {
           id="contact-email"
           type="email"
           required
+          aria-invalid={errors.email ? true : undefined}
+          aria-describedby={errors.email ? 'contact-email-error' : undefined}
           placeholder={dict.emailPlaceholder}
           value={email}
           onChange={(e) => {
@@ -95,6 +85,7 @@ export default function ContactForm({ dict }: ContactFormProps) {
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
+        <FormFieldError id="contact-email-error" error={errors.email} />
       </div>
       <div>
         <label htmlFor="contact-message" className="sr-only">
@@ -104,15 +95,19 @@ export default function ContactForm({ dict }: ContactFormProps) {
           id="contact-message"
           required
           rows={5}
+          aria-invalid={errors.message ? true : undefined}
+          aria-describedby={errors.message ? 'contact-message-error' : undefined}
           placeholder={dict.messagePlaceholder}
           value={message}
           onChange={(e) => {
-            setMessage(e.target.value);
+            setMessage(clampChars(e.target.value, TEXT_LIMITS.contactMessage.max));
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
+        <FormFieldError id="contact-message-error" error={errors.message} />
       </div>
-      {error ? <AlertBanner variant="error" message={error} /> : null}
+      <HoneypotField value={website} onChange={setWebsite} />
+      {failed ? <AlertBanner variant="error" message={dict.error} /> : null}
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting ? dict.sending : dict.submit}
       </Button>

@@ -1,20 +1,27 @@
+import { TEXT_LIMITS } from '@musaium/shared';
 import { z } from 'zod';
 
+import { emailField } from '@shared/validation/email-field';
+import { fillMsField, honeypotField } from '@shared/validation/honeypot';
+import { textField } from '@shared/validation/text-field';
+
 export const createTicketSchema = z.object({
-  subject: z.string().min(3).max(500),
-  description: z.string().min(10).max(5000),
+  subject: textField(TEXT_LIMITS.ticketSubject),
+  description: textField(TEXT_LIMITS.ticketDescription),
   priority: z.enum(['low', 'medium', 'high']).optional(),
-  category: z.string().max(100).optional(),
+  category: textField(TEXT_LIMITS.ticketCategory).optional(),
 });
 
 export const submitSupportContactSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  email: z.email().trim().max(254),
-  message: z.string().trim().min(10).max(5000),
+  name: textField(TEXT_LIMITS.contactName, { trim: true }),
+  email: emailField,
+  message: textField(TEXT_LIMITS.contactMessage, { trim: true }),
+  website: honeypotField,
+  fillMs: fillMsField,
 });
 
 export const addTicketMessageSchema = z.object({
-  text: z.string().min(1).max(5000),
+  text: textField(TEXT_LIMITS.ticketMessage),
 });
 
 export const listTicketsQuerySchema = z.object({

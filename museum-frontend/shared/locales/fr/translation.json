@@ -247,7 +247,7 @@
     "submit": "Mettre à jour le mot de passe",
     "success": "Mot de passe mis à jour avec succès",
     "error_mismatch": "Les mots de passe ne correspondent pas",
-    "error_short": "Le mot de passe doit contenir au moins 8 caractères"
+    "error_short": "Le mot de passe doit contenir au moins {{min}} caractères"
   },
   "verify_email": {
     "title": "Vérifiez votre e-mail",
@@ -273,7 +273,7 @@
     "success": "Votre mot de passe a été réinitialisé.",
     "invalidToken": "Ce lien de réinitialisation est invalide ou a expiré.",
     "error": "Nous n'avons pas pu réinitialiser votre mot de passe. Veuillez réessayer.",
-    "error_short": "Le mot de passe doit contenir au moins 8 caractères",
+    "error_short": "Le mot de passe doit contenir au moins {{min}} caractères",
     "error_mismatch": "Les mots de passe ne correspondent pas",
     "cta_login": "Continuer vers la connexion"
   },

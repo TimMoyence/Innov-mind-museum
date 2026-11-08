@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -243,11 +244,12 @@ export default function TicketDetailScreen() {
                   },
                 ]}
                 value={replyText}
-                onChangeText={setReplyText}
+                onChangeText={(text) => {
+                  setReplyText(clampChars(text, TEXT_LIMITS.ticketMessage.max));
+                }}
                 placeholder={t('tickets.replyPlaceholder')}
                 placeholderTextColor={theme.placeholderText}
                 multiline
-                maxLength={2000}
                 editable={!isSending}
               />
               <Pressable

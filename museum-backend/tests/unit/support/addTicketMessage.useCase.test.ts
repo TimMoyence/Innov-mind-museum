@@ -133,13 +133,13 @@ describe('AddTicketMessageUseCase', () => {
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('rejects text exceeding 5000 characters', async () => {
+  it('rejects text exceeding 2000 characters', async () => {
     await expect(
       useCase.execute({
         ticketId,
         senderId: 10,
         senderRole: 'user',
-        text: 'x'.repeat(5001),
+        text: 'x'.repeat(2001),
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });

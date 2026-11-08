@@ -1,3 +1,4 @@
+import { describeLimit, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared/validation';
 import { z } from 'zod';
 
 import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
@@ -10,9 +11,9 @@ import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
  * the locale-friendly formats `parseDateOfBirth` supports — server re-validates
  * and computes age against CNIL Délibération 2021-018 (15 yrs).
  */
-export const authSchema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
+export const loginFormSchema = z.object({
+  email: z.string().trim().refine(isEmail, { message: 'Invalid email address' }),
+  password: z.string().min(1),
   firstname: z.string().optional(),
   lastname: z.string().optional(),
   gdprAccepted: z.boolean().optional(),
@@ -24,7 +25,13 @@ export const authSchema = z.object({
     .optional(),
 });
 
-export type AuthFormValues = z.infer<typeof authSchema>;
+export const registerFormSchema = loginFormSchema.extend({
+  password: z.string().refine((value) => isWithinLimit(value, TEXT_LIMITS.password), {
+    message: describeLimit('Password', TEXT_LIMITS.password),
+  }),
+});
+
+export type AuthFormValues = z.infer<typeof loginFormSchema>;
 
 /** Stable empty-defaults object — usable as `defaultValues` and as the shape passed to `reset()`. */
 export const AUTH_FORM_DEFAULTS: AuthFormValues = {

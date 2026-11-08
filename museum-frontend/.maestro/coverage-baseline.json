@@ -6,7 +6,6 @@
     "museum-frontend/app/(stack)/carnet.tsx",
     "museum-frontend/app/(stack)/carnet/[sessionId].tsx",
     "museum-frontend/app/(stack)/chat/[sessionId].tsx",
-    "museum-frontend/app/(stack)/create-ticket.tsx",
     "museum-frontend/app/(stack)/discover.tsx",
     "museum-frontend/app/(stack)/guided-museum-mode.tsx",
     "museum-frontend/app/(stack)/offline-maps.tsx",

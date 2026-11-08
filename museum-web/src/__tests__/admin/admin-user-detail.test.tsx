@@ -328,10 +328,7 @@ describe('UserDetailPage', () => {
     fireEvent.click(requireIndex(confirmBtns, 0, 'suspend confirm buttons'));
 
     await waitFor(() => {
-      expect(mockApiPost).toHaveBeenLastCalledWith(
-        '/api/admin/users/42/suspend',
-        undefined,
-      );
+      expect(mockApiPost).toHaveBeenLastCalledWith('/api/admin/users/42/suspend', undefined);
     });
     // New "Suspended" badge appears
     await waitFor(() => {
@@ -389,9 +386,7 @@ describe('UserDetailPage', () => {
   it('surfaces the last-admin error verbatim through the dict mapping', async () => {
     mockLoginAs(SUPER_ADMIN_LOGIN);
     mockApiGet.mockResolvedValueOnce({ user: makeUser({ role: 'admin' }) });
-    mockApiDelete.mockRejectedValueOnce(
-      new ApiError(409, 'Conflict', 'CANNOT_DELETE_LAST_ADMIN'),
-    );
+    mockApiDelete.mockRejectedValueOnce(new ApiError(409, 'Conflict', 'CANNOT_DELETE_LAST_ADMIN'));
 
     render(
       <Providers>

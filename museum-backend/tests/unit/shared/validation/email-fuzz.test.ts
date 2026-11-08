@@ -1,11 +1,10 @@
 /**
  * P3.4 — Email validation fuzz tests.
  *
- * `validateEmail` is the only regex on the user signup / login / password
- * reset paths. Even though the pattern is anchored and uses a negated
- * character class (no nested quantifier), this suite proves the claim
- * empirically against the full adversarial deck — and also serves as a
- * regression net if the regex is ever rewritten.
+ * `isEmail` (@musaium/shared, the Zod email rule) is the only email regex of
+ * the back and the web. This suite proves empirically that it stays linear
+ * against the full adversarial deck — and also serves as a regression net if
+ * the regex is ever rewritten.
  *
  * Threshold: 50ms per input (a real ReDoS would blow past seconds).
  *
@@ -13,7 +12,8 @@
  * UFR-002).
  */
 
-import { validateEmail } from '@src/shared/validation/email';
+import { isEmail } from '@musaium/shared';
+
 import {
   assertCompletesWithin,
   buildAdversarialDeck,
@@ -22,17 +22,16 @@ import {
 
 const MAX_MS = 50;
 
-describe('validateEmail — fuzz (P3.4)', () => {
+describe('isEmail — fuzz (P3.4)', () => {
   describe('positive cases', () => {
     it.each([
       'user@example.com',
       'first.last@example.co.uk',
       'with+tag@example.com',
-      'unicode-éàç@example.com',
       'numeric123@example.io',
       'with-dash@sub.example.org',
     ])('accepts %s', (email) => {
-      const { result } = assertCompletesWithin(() => validateEmail(email), MAX_MS, 'positive');
+      const { result } = assertCompletesWithin(() => isEmail(email), MAX_MS, 'positive');
       expect(result).toBe(true);
     });
   });
@@ -51,8 +50,9 @@ describe('validateEmail — fuzz (P3.4)', () => {
       // Trailing chars after a valid-looking email — kills the mutant that
       // drops the `$` end-anchor on the email regex.
       ['trailing junk after valid email', 'user@example.com extra'],
+      ['non-ASCII local part (TIM-2026-11-08-EMAIL-STRICT)', 'unicode-éàç@example.com'],
     ])('rejects %s', (_label, email) => {
-      const { result } = assertCompletesWithin(() => validateEmail(email), MAX_MS, 'negative');
+      const { result } = assertCompletesWithin(() => isEmail(email), MAX_MS, 'negative');
       expect(result).toBe(false);
     });
   });
@@ -61,11 +61,7 @@ describe('validateEmail — fuzz (P3.4)', () => {
     const deck = buildAdversarialDeck('a');
     it.each(deck.map((s) => [s.name, s.input]))('completes within budget for %s', (name, input) => {
       // Don't assert truth value — only that it terminates fast.
-      const { durationMs } = assertCompletesWithin(
-        () => validateEmail(input),
-        MAX_MS,
-        `email:${name}`,
-      );
+      const { durationMs } = assertCompletesWithin(() => isEmail(input), MAX_MS, `email:${name}`);
       expect(durationMs).toBeLessThan(MAX_MS);
     });
   });
@@ -74,39 +70,30 @@ describe('validateEmail — fuzz (P3.4)', () => {
     it('terminates fast on catastrophic-backtrack-style local part', () => {
       const input = `${catastrophicBacktrack('a', 50)}@example.com`;
       const { durationMs, result } = assertCompletesWithin(
-        () => validateEmail(input),
+        () => isEmail(input),
         MAX_MS,
         'redos:local',
       );
-      // Tail '!' is allowed in local part, so it actually validates.
-      expect(result).toBe(true);
+      expect(result).toBe(false);
       expect(durationMs).toBeLessThan(MAX_MS);
     });
 
     it('terminates fast on catastrophic-backtrack-style domain', () => {
       const input = `user@${catastrophicBacktrack('a', 50)}.com`;
-      const { durationMs } = assertCompletesWithin(
-        () => validateEmail(input),
-        MAX_MS,
-        'redos:domain',
-      );
+      const { durationMs } = assertCompletesWithin(() => isEmail(input), MAX_MS, 'redos:domain');
       expect(durationMs).toBeLessThan(MAX_MS);
     });
 
     it('terminates fast on extremely long input (10k @ + dots)', () => {
       const input = `${'a'.repeat(5_000)}@${'b'.repeat(5_000)}.com`;
-      const { durationMs } = assertCompletesWithin(
-        () => validateEmail(input),
-        MAX_MS,
-        'redos:long',
-      );
+      const { durationMs } = assertCompletesWithin(() => isEmail(input), MAX_MS, 'redos:long');
       expect(durationMs).toBeLessThan(MAX_MS);
     });
 
     it('rejects input where local part contains @ even after long prefix', () => {
       const input = `${'a'.repeat(1_000)}@${'b'.repeat(1_000)}@example.com`;
       const { result, durationMs } = assertCompletesWithin(
-        () => validateEmail(input),
+        () => isEmail(input),
         MAX_MS,
         'redos:double-at',
       );
@@ -142,11 +129,7 @@ describe('validateEmail — fuzz (P3.4)', () => {
         for (let j = 0; j < len; j++) {
           s += charset[Math.floor(rng() * charset.length)];
         }
-        const { durationMs } = assertCompletesWithin(
-          () => validateEmail(s),
-          MAX_MS,
-          `random[${i}]`,
-        );
+        const { durationMs } = assertCompletesWithin(() => isEmail(s), MAX_MS, `random[${i}]`);
         if (durationMs > worstMs) worstMs = durationMs;
       }
       expect(worstMs).toBeLessThan(MAX_MS);

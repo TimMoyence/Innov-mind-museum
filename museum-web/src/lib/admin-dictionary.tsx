@@ -32,9 +32,7 @@ interface AdminDictProviderProps {
 }
 
 export function AdminDictProvider({ dict, locale, children }: AdminDictProviderProps) {
-  return (
-    <AdminDictContext.Provider value={{ dict, locale }}>{children}</AdminDictContext.Provider>
-  );
+  return <AdminDictContext.Provider value={{ dict, locale }}>{children}</AdminDictContext.Provider>;
 }
 
 /** Returns the admin dictionary slice. Throws when used outside `<AdminDictProvider>`. */

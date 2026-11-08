@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { clampChars, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared/validation';
 
 import Button from '@/components/ui/Button';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import { HoneypotField } from '@/components/forms/HoneypotField';
-import { EMAIL_RE } from '@/lib/validation';
+import { usePublicSubmit } from '@/components/forms/usePublicSubmit';
 import type { Dictionary, Locale } from '@/lib/i18n';
 
 interface B2bContactFormProps {
@@ -15,6 +16,7 @@ interface B2bContactFormProps {
 }
 
 type ValidationKey = 'email' | 'name' | 'museum' | 'role' | 'message' | 'consent';
+type B2bRole = keyof Dictionary['landing']['b2b']['contact']['roleOptions'];
 
 /**
  * B2B contact form (R4 §1 R6-R11). Uses native required + a per-field error
@@ -25,64 +27,42 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [museum, setMuseum] = useState('');
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState<B2bRole | ''>('');
   const [message, setMessage] = useState('');
   const [consent, setConsent] = useState(false);
-  // Honeypot — bots auto-fill; humans never see it (aria-hidden + tabIndex=-1).
-  const [website, setWebsite] = useState('');
-
   const [errors, setErrors] = useState<Partial<Record<ValidationKey, string>>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { website, setWebsite, submitting, submitted, failed, send } =
+    usePublicSubmit('/api/leads/b2b');
 
   function validate(): Partial<Record<ValidationKey, string>> {
     const next: Partial<Record<ValidationKey, string>> = {};
-    if (!email.trim() || !EMAIL_RE.test(email.trim())) next.email = dict.errorValidation;
-    if (!name.trim()) next.name = dict.errorValidation;
-    if (!museum.trim()) next.museum = dict.errorValidation;
+    if (!email.trim()) next.email = dict.errorValidation;
+    else if (!isEmail(email.trim())) next.email = dict.errorEmail;
+    if (!isWithinLimit(name.trim(), TEXT_LIMITS.contactName)) next.name = dict.errorValidation;
+    if (!isWithinLimit(museum.trim(), TEXT_LIMITS.leadMuseum)) next.museum = dict.errorValidation;
     if (!role) next.role = dict.errorValidation;
-    if (message.trim().length < 10) next.message = dict.errorValidation;
+    if (!isWithinLimit(message.trim(), TEXT_LIMITS.contactMessage)) {
+      next.message = dict.errorValidation;
+    }
     if (!consent) next.consent = dict.errorValidation;
     return next;
-  }
-
-  async function postLead(): Promise<void> {
-    setErrorMessage(null);
-    setSubmitting(true);
-    try {
-      const response = await fetch('/api/leads/b2b', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          name: name.trim(),
-          museum: museum.trim(),
-          role,
-          message: message.trim(),
-          consent: true,
-          website,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(`B2B lead submit failed (${String(response.status)})`);
-      }
-      setSubmitted(true);
-    } catch {
-      setErrorMessage(dict.error);
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     const found = validate();
     setErrors(found);
-    if (Object.keys(found).length > 0) {
+    if (Object.keys(found).length > 0 || !role) {
       return;
     }
-    void postLead();
+    void send({
+      email: email.trim(),
+      name: name.trim(),
+      museum: museum.trim(),
+      role,
+      message: message.trim(),
+      consent: true,
+    });
   }
 
   if (submitted) {
@@ -133,13 +113,12 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           type="text"
           required
           aria-required="true"
-          maxLength={120}
           aria-invalid={errors.name ? true : undefined}
           aria-describedby={errors.name ? 'b2b-name-error' : undefined}
           autoComplete="name"
           value={name}
           onChange={(e) => {
-            setName(e.target.value);
+            setName(clampChars(e.target.value, TEXT_LIMITS.contactName.max));
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
@@ -157,13 +136,12 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           type="text"
           required
           aria-required="true"
-          maxLength={200}
           aria-invalid={errors.museum ? true : undefined}
           aria-describedby={errors.museum ? 'b2b-museum-error' : undefined}
           autoComplete="organization"
           value={museum}
           onChange={(e) => {
-            setMuseum(e.target.value);
+            setMuseum(clampChars(e.target.value, TEXT_LIMITS.leadMuseum.max));
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
@@ -184,7 +162,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           aria-describedby={errors.role ? 'b2b-role-error' : undefined}
           value={role}
           onChange={(e) => {
-            setRole(e.target.value);
+            setRole(e.target.value as B2bRole);
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
@@ -211,13 +189,11 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
           required
           aria-required="true"
           rows={5}
-          minLength={10}
-          maxLength={5000}
           aria-invalid={errors.message ? true : undefined}
           aria-describedby={errors.message ? 'b2b-message-error' : undefined}
           value={message}
           onChange={(e) => {
-            setMessage(e.target.value);
+            setMessage(clampChars(e.target.value, TEXT_LIMITS.contactMessage.max));
           }}
           className="w-full rounded-lg border border-primary-200 bg-white px-4 py-3 text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         />
@@ -258,7 +234,7 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
 
       {/* Live region for error message (success has its own block above) */}
       <div aria-live="polite" className="min-h-[1.5rem]">
-        {errorMessage ? <AlertBanner variant="error" message={errorMessage} /> : null}
+        {failed ? <AlertBanner variant="error" message={dict.error} /> : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={submitting}>

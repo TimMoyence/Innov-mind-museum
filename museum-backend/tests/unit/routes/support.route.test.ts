@@ -97,6 +97,34 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
 
+    it('BOT-CONTACT-2026-11-08 · un champ website de 500 caractères répond 202 et parvient au cas d’usage', async () => {
+      const website = 'x'.repeat(500);
+      const res = await request(app).post('/api/support/contact').send({
+        name: 'Visitor',
+        email: 'visitor@example.com',
+        message: 'Hello, I need help with the mobile app support flow.',
+        website,
+      });
+
+      expect(res.status).toBe(202);
+      expect(res.body).toEqual({ accepted: true });
+      expect(mockSubmitSupportContact).toHaveBeenCalledWith(expect.objectContaining({ website }));
+    });
+
+    it('BOT-CONTACT-2026-11-08 · un champ website de 501 caractères est refusé en 400', async () => {
+      const res = await request(app)
+        .post('/api/support/contact')
+        .send({
+          name: 'Visitor',
+          email: 'visitor@example.com',
+          message: 'Hello, I need help with the mobile app support flow.',
+          website: 'x'.repeat(501),
+        });
+
+      expect(res.status).toBe(400);
+      expect(mockSubmitSupportContact).not.toHaveBeenCalled();
+    });
+
     it('returns 400 for too-short message', async () => {
       const res = await request(app).post('/api/support/contact').send({
         name: 'Visitor',

@@ -1,5 +1,8 @@
+import { describeLimit, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+
 import { invalidInput } from '@shared/errors/app.error';
-import { validateEmail } from '@shared/validation/email';
+import { logger } from '@shared/logger/logger';
+import { judgeSubmission } from '@shared/validation/honeypot';
 
 import type {
   SupportContactNotifier,
@@ -10,6 +13,8 @@ interface SubmitSupportContactInput {
   name: string;
   email: string;
   message: string;
+  website?: string;
+  fillMs?: number;
   ip?: string;
   requestId?: string;
   userAgent?: string;
@@ -20,24 +25,34 @@ export class SubmitSupportContactUseCase {
 
   async execute(input: SubmitSupportContactInput): Promise<void> {
     const name = input.name.trim();
-    if (!name || name.length > 120) {
-      throw invalidInput('name must be between 1 and 120 characters');
+    if (!isWithinLimit(name, TEXT_LIMITS.contactName)) {
+      throw invalidInput(describeLimit('name', TEXT_LIMITS.contactName));
     }
 
     const email = input.email.trim().toLowerCase();
-    if (!validateEmail(email)) {
+    if (!isEmail(email)) {
       throw invalidInput('email must be valid');
     }
 
     const message = input.message.trim();
-    if (!message || message.length < 10 || message.length > 5000) {
-      throw invalidInput('message must be between 10 and 5000 characters');
+    if (!isWithinLimit(message, TEXT_LIMITS.contactMessage)) {
+      throw invalidInput(describeLimit('message', TEXT_LIMITS.contactMessage));
+    }
+
+    const verdict = judgeSubmission(input);
+    if (verdict === 'bot') {
+      logger.warn('support_contact_honeypot_triggered', {
+        requestId: input.requestId,
+        hasIp: Boolean(input.ip),
+      });
+      return;
     }
 
     const payload: SupportContactPayload = {
       name,
       email,
       message,
+      suspect: verdict === 'suspect',
       ip: input.ip,
       requestId: input.requestId,
       userAgent: input.userAgent,

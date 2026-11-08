@@ -247,3 +247,39 @@ describe('AuthScreen', () => {
     alertSpy.mockRestore();
   });
 });
+
+describe('L2 · la connexion applique la règle e-mail partagée', () => {
+  const DOMAIN = '@museum.fr';
+  const emailOfLength = (length: number): string => 'a'.repeat(length - DOMAIN.length) + DOMAIN;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('une adresse de 254 caractères part à la connexion', async () => {
+    mockLogin.mockResolvedValueOnce({ accessToken: 'tok', refreshToken: 'ref' });
+    render(<AuthScreen />);
+
+    fireEvent.changeText(screen.getByTestId('email-input'), emailOfLength(254));
+    fireEvent.changeText(screen.getByTestId('password-input'), 'secret1234');
+    fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
+
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith(emailOfLength(254), 'secret1234');
+    });
+    expect(screen.queryByTestId('auth-email-error')).toBeNull();
+  });
+
+  it('une adresse de 255 caractères est signalée sur le champ, la connexion ne part pas', async () => {
+    render(<AuthScreen />);
+
+    fireEvent.changeText(screen.getByTestId('email-input'), emailOfLength(255));
+    fireEvent.changeText(screen.getByTestId('password-input'), 'secret1234');
+    fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-email-error')).toBeTruthy();
+    });
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+});

@@ -35,13 +35,13 @@ const BREVO_API_KEY_RE = /xkeysib-[a-z0-9._-]+/g;
 
 /**
  * Email matcher (good enough to catch a leaked recipient in an error string —
- * we are scrubbing, not validating). Mirrors the project's `validateEmail`
- * pattern (`shared/validation/email.ts`): three quantified non-overlapping char
- * classes separated by the literal `@` and `.`, no alternation → linear time
+ * we are scrubbing, not validating — deliberately looser than `isEmail`): three
+ * quantified non-overlapping char classes separated by the literal `@` and `.`,
+ * no alternation → linear time
  * (no catastrophic backtracking). Global so every address in the message is
  * reduced; un-anchored since we scrub inside a larger string.
  */
-// eslint-disable-next-line sonarjs/slow-regex -- three quantified non-overlapping char classes separated by literal `@` and `.`, no alternation: linear time (mirror shared/validation/email.ts)
+// eslint-disable-next-line sonarjs/slow-regex -- three quantified non-overlapping char classes separated by literal `@` and `.`, no alternation: linear time
 const EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
 
 const REDACTED_KEY = '[redacted-key]';

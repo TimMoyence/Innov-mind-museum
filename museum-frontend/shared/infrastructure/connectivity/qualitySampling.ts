@@ -71,9 +71,10 @@ export function recordHttpQualitySample(
       retryCount: typeof config._retryCount === 'number' ? config._retryCount : 0,
       skip: config.skipQualitySample === true,
     });
-    if (!eligible) return;
+    const rttMs = Date.now() - startedAt;
+    if (!eligible || rttMs < 0) return;
     recordQualitySample({
-      rttMs: Date.now() - startedAt,
+      rttMs,
       ok: outcome.ok,
       timedOut: outcome.timedOut,
     });

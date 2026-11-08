@@ -1,4 +1,7 @@
+import { TEXT_LIMITS } from '@musaium/shared';
 import { z } from 'zod';
+
+import { textField } from '@shared/validation/text-field';
 
 /**
  * Wave B C7 / R-C7b — rating widened 1-5 → 0-10 (NPS scale).
@@ -17,7 +20,7 @@ import { z } from 'zod';
  */
 export const createReviewSchema = z.object({
   rating: z.number().int().min(0).max(10),
-  comment: z.string().min(10).max(2000),
+  comment: textField(TEXT_LIMITS.reviewComment, { trim: true }),
   /**
    * NPS attribution link (C2 / R1 / R23). UUID of the chat session the review
    * was authored from. Optional — absent / foreign / not-owned sessions are

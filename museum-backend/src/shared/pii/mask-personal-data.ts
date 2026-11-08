@@ -59,7 +59,7 @@ function continues(words: readonly Word[], end: number): boolean {
   return end < words.length && words[end - 1].tail === '' && words[end].head === '';
 }
 
-function isEmail(candidate: string): boolean {
+function looksLikeEmail(candidate: string): boolean {
   const at = candidate.indexOf('@');
   if (at <= 0 || candidate.includes('@', at + 1)) return false;
   const labels = candidate.slice(at + 1).split('.');
@@ -82,7 +82,7 @@ function maskEmails(core: string): MaskedText {
     let end = at + 1;
     while (end < text.length && EMAIL_DOMAIN_CHAR.test(text[end])) end += 1;
     while (end > at + 1 && text[end - 1] === '.') end -= 1;
-    if (isEmail(text.slice(start, end))) {
+    if (looksLikeEmail(text.slice(start, end))) {
       text = `${text.slice(0, start)}[EMAIL]${text.slice(end)}`;
       count += 1;
       from = start + '[EMAIL]'.length;

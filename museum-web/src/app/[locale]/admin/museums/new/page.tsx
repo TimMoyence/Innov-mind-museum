@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { apiPost } from '@/lib/api';
 import type { MuseumDTO, MuseumType } from '@/lib/admin-types';
 import { MUSEUM_TYPES } from '@/lib/admin-types';
-import { SLUG_RE, KB_LOCALE_RE } from '@/lib/validation';
+import { isLatitude, isLongitude, isSlug } from '@musaium/shared/museum';
+import { clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
@@ -14,12 +15,12 @@ import Button from '@/components/ui/Button';
 // W4 W2.1 — Admin museum onboarding form. Posts to POST /api/museums
 // (BE route: museum-backend/src/modules/museum/adapters/primary/http/routes/museum.route.ts).
 // Admin role required. Validation mirrors the BE Zod createMuseumSchema
-// (name 1..200, slug 1..200, lat/lng nullable, description ≤2000).
+// (name 1..200, slug 1..128, lat/lng nullable, description ≤2000).
 
 const STRINGS = {
   title: 'Onboard a new museum',
   subtitle:
-    'Create a B2B-pilot tenant. The museum becomes addressable by its slug and may receive branding + KB locale config in a follow-up step.',
+    'Create a B2B-pilot tenant. The museum becomes addressable by its slug and may receive branding in a follow-up step.',
   back: '← Back to museums',
   fields: {
     name: 'Name',
@@ -35,8 +36,6 @@ const STRINGS = {
     longitude: 'Longitude (optional)',
     geoHint:
       'Geographic centre of the museum, used for proximity search. Leave blank for now if you do not have it.',
-    kbLocale: 'KB locale (config.kbLocale)',
-    kbLocaleHelp: 'Primary locale for the knowledge base. Defaults to fr if blank.',
   },
   submit: {
     idle: 'Create museum',
@@ -60,7 +59,6 @@ interface FormState {
   museumType: MuseumType;
   latitude: string;
   longitude: string;
-  kbLocale: string;
 }
 
 const INITIAL: FormState = {
@@ -71,7 +69,6 @@ const INITIAL: FormState = {
   museumType: 'art',
   latitude: '',
   longitude: '',
-  kbLocale: '',
 };
 
 interface CreateMuseumResponse {
@@ -89,16 +86,13 @@ export default function NewMuseumPage() {
     const next: typeof errors = {};
     if (!form.name.trim()) next.name = STRINGS.errors.nameRequired;
     if (!form.slug.trim()) next.slug = STRINGS.errors.slugRequired;
-    else if (!SLUG_RE.test(form.slug.trim())) next.slug = STRINGS.errors.slugFormat;
+    else if (!isSlug(form.slug.trim())) next.slug = STRINGS.errors.slugFormat;
 
-    if (form.latitude !== '') {
-      const lat = Number(form.latitude);
-      if (!Number.isFinite(lat) || lat < -90 || lat > 90) next.latitude = STRINGS.errors.latRange;
+    if (form.latitude !== '' && !isLatitude(Number(form.latitude))) {
+      next.latitude = STRINGS.errors.latRange;
     }
-    if (form.longitude !== '') {
-      const lng = Number(form.longitude);
-      if (!Number.isFinite(lng) || lng < -180 || lng > 180)
-        next.longitude = STRINGS.errors.lngRange;
+    if (form.longitude !== '' && !isLongitude(Number(form.longitude))) {
+      next.longitude = STRINGS.errors.lngRange;
     }
     return next;
   }
@@ -112,11 +106,6 @@ export default function NewMuseumPage() {
 
     setSubmitting(true);
     try {
-      const trimmedKb = form.kbLocale.trim();
-      const kbLocaleValid = trimmedKb === '' || KB_LOCALE_RE.test(trimmedKb);
-      const config: Record<string, unknown> = {};
-      if (kbLocaleValid && trimmedKb) config.kbLocale = trimmedKb;
-
       const body: Record<string, unknown> = {
         name: form.name.trim(),
         slug: form.slug.trim(),
@@ -126,7 +115,6 @@ export default function NewMuseumPage() {
       if (form.description.trim()) body.description = form.description.trim();
       if (form.latitude !== '') body.latitude = Number(form.latitude);
       if (form.longitude !== '') body.longitude = Number(form.longitude);
-      if (Object.keys(config).length > 0) body.config = config;
 
       const result = await apiPost<CreateMuseumResponse>('/api/museums', body);
       router.push(`${result.museum.id}/branding`);
@@ -169,9 +157,8 @@ export default function NewMuseumPage() {
             type="text"
             value={form.name}
             onChange={(e) => {
-              update('name', e.target.value);
+              update('name', clampChars(e.target.value, TEXT_LIMITS.museumName.max));
             }}
-            maxLength={200}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.nameHelp}</p>
@@ -187,9 +174,8 @@ export default function NewMuseumPage() {
             type="text"
             value={form.slug}
             onChange={(e) => {
-              update('slug', e.target.value);
+              update('slug', clampChars(e.target.value, TEXT_LIMITS.museumSlug.max));
             }}
-            maxLength={200}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="louvre"
           />
@@ -226,9 +212,8 @@ export default function NewMuseumPage() {
             type="text"
             value={form.address}
             onChange={(e) => {
-              update('address', e.target.value);
+              update('address', clampChars(e.target.value, TEXT_LIMITS.museumAddress.max));
             }}
-            maxLength={500}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -241,9 +226,8 @@ export default function NewMuseumPage() {
             id="m-description"
             value={form.description}
             onChange={(e) => {
-              update('description', e.target.value);
+              update('description', clampChars(e.target.value, TEXT_LIMITS.museumDescription.max));
             }}
-            maxLength={2000}
             rows={4}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -285,24 +269,6 @@ export default function NewMuseumPage() {
           </div>
         </div>
         <p className="text-xs text-gray-500">{STRINGS.fields.geoHint}</p>
-
-        <div>
-          <label htmlFor="m-kb-locale" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.kbLocale}
-          </label>
-          <input
-            id="m-kb-locale"
-            type="text"
-            value={form.kbLocale}
-            onChange={(e) => {
-              update('kbLocale', e.target.value);
-            }}
-            maxLength={10}
-            placeholder="fr"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.kbLocaleHelp}</p>
-        </div>
 
         <div className="flex justify-end gap-3 pt-4">
           <Link

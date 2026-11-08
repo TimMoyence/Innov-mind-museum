@@ -1,31 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ContactForm from '../ContactForm';
+import { acceptedResponse, serverErrorResponse } from '@/__tests__/helpers/http-responses.fixture';
+import en from '@/dictionaries/en.json';
+import fr from '@/dictionaries/fr.json';
 import type { Dictionary } from '@/lib/i18n';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-const dictEN: Dictionary['support']['contact'] = {
-  title: 'Contact us',
-  namePlaceholder: 'Your name',
-  emailPlaceholder: 'Your email',
-  messagePlaceholder: 'Describe your question or issue...',
-  submit: 'Send',
-  sending: 'Sending...',
-  success: 'Thank you! Your message has been sent. We\'ll get back to you as soon as possible.',
-  error: 'Unable to send your message right now. Please try again in a few minutes.',
-};
-
-const dictFR: Dictionary['support']['contact'] = {
-  title: 'Nous contacter',
-  namePlaceholder: 'Votre nom',
-  emailPlaceholder: 'Votre email',
-  messagePlaceholder: 'Décrivez votre question ou problème...',
-  submit: 'Envoyer',
-  sending: 'Envoi...',
-  success: 'Merci ! Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.',
-  error: "Impossible d'envoyer votre message pour le moment. Veuillez réessayer dans quelques minutes.",
-};
+const dictEN: Dictionary['support']['contact'] = en.support.contact;
+const dictFR: Dictionary['support']['contact'] = fr.support.contact;
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -60,23 +44,69 @@ describe('ContactForm', () => {
   });
 
   it('calls /api/support/contact with correct JSON body on submit', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
     vi.stubGlobal('fetch', mockFetch);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(1_000_000);
 
     render(<ContactForm dict={dictEN} />);
+    vi.setSystemTime(1_042_000);
     fillAndSubmit(dictEN);
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith('/api/support/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Alice', email: 'alice@test.com', message: 'Help me please' }),
+        credentials: 'include',
+        body: JSON.stringify({
+          name: 'Alice',
+          email: 'alice@test.com',
+          message: 'Help me please',
+          website: '',
+          fillMs: 42_000,
+        }),
       });
     });
+    vi.useRealTimers();
+  });
+
+  it('BOT-CONTACT-2026-11-08 · le champ caché website est hors de portée d’un humain', () => {
+    render(<ContactForm dict={dictEN} />);
+
+    const honeypot = document.querySelector<HTMLInputElement>('input[name="website"]');
+    expect(screen.getByPlaceholderText('Your name')).toBeInTheDocument();
+    expect(honeypot).not.toBeNull();
+    expect(honeypot?.getAttribute('aria-hidden')).toBe('true');
+    expect(honeypot?.tabIndex).toBe(-1);
+  });
+
+  it('BOT-CONTACT-2026-11-08 · un robot qui remplit le champ caché l’envoie au serveur', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(acceptedResponse());
+    vi.stubGlobal('fetch', mockFetch);
+
+    render(<ContactForm dict={dictEN} />);
+    const honeypot = document.querySelector<HTMLInputElement>('input[name="website"]');
+    expect(honeypot).not.toBeNull();
+    fireEvent.change(honeypot as HTMLInputElement, { target: { value: 'https://spam.example' } });
+    fillAndSubmit(dictEN);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+    const [, init] = mockFetch.mock.calls[0] as [string, { body: string }];
+    expect(JSON.parse(init.body)).toMatchObject({ website: 'https://spam.example' });
   });
 
   it('shows sending label on button while submitting', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => { /* pending */ })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(
+        () =>
+          new Promise(() => {
+            /* pending */
+          }),
+      ),
+    );
 
     render(<ContactForm dict={dictEN} />);
     fillAndSubmit(dictEN);
@@ -87,15 +117,13 @@ describe('ContactForm', () => {
   });
 
   it('shows success message after successful submission', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<ContactForm dict={dictEN} />);
     fillAndSubmit(dictEN);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Thank you! Your message has been sent/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Thank you! Your message has been sent/)).toBeInTheDocument();
     });
 
     // Form fields should be gone (success state replaces form)
@@ -117,7 +145,7 @@ describe('ContactForm', () => {
   });
 
   it('shows error message when response is not ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(serverErrorResponse()));
 
     render(<ContactForm dict={dictEN} />);
     fillAndSubmit(dictEN);
@@ -132,12 +160,14 @@ describe('ContactForm', () => {
 
     expect(screen.getByPlaceholderText('Votre nom')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Votre email')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Décrivez votre question ou problème...')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Décrivez votre question ou problème...'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Envoyer' })).toBeInTheDocument();
   });
 
   it('shows French success message after FR submission', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<ContactForm dict={dictFR} />);
     fillAndSubmit(dictFR);

@@ -24,7 +24,8 @@ import { RegisterForm } from '@/features/auth/ui/RegisterForm';
 import { SocialLoginButtons } from '@/features/auth/ui/SocialLoginButtons';
 import {
   AUTH_FORM_DEFAULTS,
-  authSchema,
+  loginFormSchema,
+  registerFormSchema,
   type AuthFormValues,
 } from '@/features/auth/ui/authFormSchema';
 import { authStyles as styles } from '@/features/auth/ui/authStyles';
@@ -54,7 +55,7 @@ export default function AuthScreen() {
   const [showBiometricSheet, setShowBiometricSheet] = useState(false);
 
   const { control, handleSubmit, getValues, reset } = useForm<AuthFormValues>({
-    resolver: zodResolver(authSchema),
+    resolver: zodResolver(isLogin ? loginFormSchema : registerFormSchema),
     mode: 'onBlur',
     defaultValues: AUTH_FORM_DEFAULTS,
   });

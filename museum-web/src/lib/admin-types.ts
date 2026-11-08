@@ -123,18 +123,10 @@ export const MODERATION_STATUSES: Extract<ReviewStatus, 'approved' | 'rejected'>
 // BE z.enum(['art','history','science','specialized','general']) — keep in sync.
 export const MUSEUM_TYPES: MuseumType[] = ['art', 'history', 'science', 'specialized', 'general'];
 
-/**
- * Branding sub-tree persisted under MuseumDTO.config.branding (JSONB). Schema
- * is hand-rolled here because the BE accepts config as `Record<string, unknown>`
- * with light shape validation; the FE exposes the typed slice it actually edits.
- * Color values are HEX (#RRGGBB) — validated client-side, mirrored to BE on save.
- */
-export interface MuseumBranding {
-  primaryColor?: string;
-  secondaryColor?: string;
-  logoUrl?: string;
-  accentColor?: string;
-}
+export type MuseumBranding = Pick<
+  NonNullable<Schemas['MuseumConfigInput']['branding']>,
+  'primaryColor' | 'logoUrl'
+>;
 
 // ---------------------------------------------------------------------------
 // Path B — intentionally hand-rolled: generic meta-shape or query-param helper

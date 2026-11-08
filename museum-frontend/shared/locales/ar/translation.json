@@ -247,7 +247,7 @@
     "submit": "تحديث كلمة المرور",
     "success": "تم تحديث كلمة المرور بنجاح",
     "error_mismatch": "كلمات المرور غير متطابقة",
-    "error_short": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
+    "error_short": "يجب أن تتكون كلمة المرور من {{min}} أحرف على الأقل"
   },
   "verify_email": {
     "title": "Verify your email",
@@ -273,7 +273,7 @@
     "success": "Your password has been reset.",
     "invalidToken": "This reset link is invalid or has expired.",
     "error": "We could not reset your password. Please try again.",
-    "error_short": "Password must be at least 8 characters",
+    "error_short": "يجب أن تتكون كلمة المرور من {{min}} أحرف على الأقل",
     "error_mismatch": "Passwords do not match",
     "cta_login": "Continue to sign in"
   },

@@ -61,6 +61,22 @@ describe('TicketDetailScreen', () => {
     });
   });
 
+  it('L3 · la réponse garde 2 000 emoji sur 2 001 saisis', async () => {
+    render(<TicketDetailScreen />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('tickets.replyPlaceholder')).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('tickets.replyPlaceholder'),
+      '🏛'.repeat(2001),
+    );
+
+    expect(screen.getByPlaceholderText('tickets.replyPlaceholder').props.value).toBe(
+      '🏛'.repeat(2000),
+    );
+  });
+
   it('renders the ticket subject after loading', async () => {
     render(<TicketDetailScreen />);
     await waitFor(() => {

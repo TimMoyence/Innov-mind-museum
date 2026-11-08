@@ -60,22 +60,22 @@ describe('CreateTicketUseCase', () => {
 
   it('rejects empty subject', async () => {
     await expect(
-      useCase.execute({ userId: 1, subject: '', description: 'desc' }),
+      useCase.execute({ userId: 1, subject: '', description: 'Description long enough' }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('rejects whitespace-only subject', async () => {
     await expect(
-      useCase.execute({ userId: 1, subject: '   ', description: 'desc' }),
+      useCase.execute({ userId: 1, subject: '   ', description: 'Description long enough' }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('rejects subject exceeding 256 characters', async () => {
+  it('rejects subject exceeding 200 characters', async () => {
     await expect(
       useCase.execute({
         userId: 1,
-        subject: 'a'.repeat(257),
-        description: 'desc',
+        subject: 'a'.repeat(201),
+        description: 'Description long enough',
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
@@ -107,7 +107,7 @@ describe('CreateTicketUseCase', () => {
       useCase.execute({
         userId: 1,
         subject: 'Test',
-        description: 'desc',
+        description: 'Description long enough',
         priority: 'urgent',
       }),
     ).rejects.toMatchObject({ statusCode: 400 });
@@ -118,22 +118,30 @@ describe('CreateTicketUseCase', () => {
       const result = await useCase.execute({
         userId: 1,
         subject: 'Test',
-        description: 'desc',
+        description: 'Description long enough',
         priority,
       });
       expect(result.priority).toBe(priority);
     }
   });
 
-  it('truncates category to 64 characters', async () => {
+  it('keeps a 64-character category and rejects a longer one', async () => {
     const result = await useCase.execute({
       userId: 1,
       subject: 'Test',
-      description: 'desc',
-      category: 'c'.repeat(100),
+      description: 'Description long enough',
+      category: 'c'.repeat(64),
     });
 
     expect(result.category).toBe('c'.repeat(64));
+    await expect(
+      useCase.execute({
+        userId: 1,
+        subject: 'Test',
+        description: 'Description long enough',
+        category: 'c'.repeat(100),
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('logs an audit event on creation', async () => {

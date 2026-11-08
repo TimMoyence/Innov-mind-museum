@@ -3,12 +3,12 @@
  *
  * Targets 3 Stryker survivors in
  * `src/modules/support/useCase/ticket-user/addTicketMessage.useCase.ts`:
- *  - L21:37 EqualityOperator `text.length > 5000` → `text.length >= 5000`
+ *  - L21:37 EqualityOperator `text.length > 2000` → `text.length >= 2000`
  *  - L22 StringLiteral (badRequest message body) → ""
  *  - L30 StringLiteral (notFound message body)   → ""
  *
  * Strategy:
- *  - Exercise the exact boundary length (5000) so the `>=` mutant flips
+ *  - Exercise the exact boundary length (2000) so the `>=` mutant flips
  *    behaviour at the edge (rejects what the original accepts).
  *  - Assert the *exact* error message text on both the badRequest and
  *    notFound paths to kill the StringLiteral → "" mutants.
@@ -40,9 +40,9 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
   });
 
   describe('text length boundary (L21 EqualityOperator)', () => {
-    it('ACCEPTS text of exactly 5000 characters (boundary, `> 5000` not `>= 5000`)', async () => {
-      const text = 'x'.repeat(5000);
-      expect(text).toHaveLength(5000);
+    it('ACCEPTS text of exactly 2000 characters (boundary, `> 2000` not `>= 2000`)', async () => {
+      const text = 'x'.repeat(2000);
+      expect(text).toHaveLength(2000);
 
       const result = await useCase.execute({
         ticketId,
@@ -52,17 +52,17 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
       });
 
       expect(result.text).toBe(text);
-      expect(result.text).toHaveLength(5000);
+      expect(result.text).toHaveLength(2000);
       expect(result.ticketId).toBe(ticketId);
     });
 
-    it('REJECTS text of 5001 characters with statusCode 400 (keeps upper-bound discipline)', async () => {
+    it('REJECTS text of 2001 characters with statusCode 400 (keeps upper-bound discipline)', async () => {
       await expect(
         useCase.execute({
           ticketId,
           senderId: 10,
           senderRole: 'user',
-          text: 'x'.repeat(5001),
+          text: 'x'.repeat(2001),
         }),
       ).rejects.toMatchObject({
         statusCode: 400,
@@ -71,7 +71,7 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
   });
 
   describe('error message text (L22, L30 StringLiteral)', () => {
-    it('uses the exact "text must be between 1 and 5000 characters" message for empty input', async () => {
+    it('uses the exact "text must be between 1 and 2000 characters" message for empty input', async () => {
       await expect(
         useCase.execute({
           ticketId,
@@ -81,11 +81,11 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
         }),
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'text must be between 1 and 5000 characters',
+        message: 'text must be between 1 and 2000 characters',
       });
     });
 
-    it('uses the exact "text must be between 1 and 5000 characters" message for whitespace-only input', async () => {
+    it('uses the exact "text must be between 1 and 2000 characters" message for whitespace-only input', async () => {
       await expect(
         useCase.execute({
           ticketId,
@@ -95,21 +95,21 @@ describe('AddTicketMessageUseCase — mutation coverage', () => {
         }),
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'text must be between 1 and 5000 characters',
+        message: 'text must be between 1 and 2000 characters',
       });
     });
 
-    it('uses the exact "text must be between 1 and 5000 characters" message for 5001-char input', async () => {
+    it('uses the exact "text must be between 1 and 2000 characters" message for 2001-char input', async () => {
       await expect(
         useCase.execute({
           ticketId,
           senderId: 10,
           senderRole: 'user',
-          text: 'x'.repeat(5001),
+          text: 'x'.repeat(2001),
         }),
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: 'text must be between 1 and 5000 characters',
+        message: 'text must be between 1 and 2000 characters',
       });
     });
 

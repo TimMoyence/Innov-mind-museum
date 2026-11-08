@@ -132,21 +132,4 @@ describe('NewMuseumPage', () => {
     expect(screen.getByLabelText(/^name$/i)).toHaveValue('Louvre');
     expect(pushSpy).not.toHaveBeenCalled();
   });
-
-  it('includes optional config.kbLocale when provided', async () => {
-    mockApiPost.mockResolvedValueOnce({
-      museum: { id: 1, name: 'X', slug: 'x', museumType: 'art', config: {}, isActive: true },
-    });
-    render(<NewMuseumPage />);
-    typeInto(screen.getByLabelText(/^name$/i), 'X');
-    typeInto(screen.getByLabelText(/^slug$/i), 'x');
-    typeInto(screen.getByLabelText(/kb locale/i), 'fr');
-    fireEvent.click(screen.getByRole('button', { name: /create museum/i }));
-
-    await waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalled();
-    });
-    const body = mockApiPost.mock.calls[0]?.[1] as { config?: { kbLocale?: string } };
-    expect(body.config?.kbLocale).toBe('fr');
-  });
 });

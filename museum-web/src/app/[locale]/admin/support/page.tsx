@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { apiPost } from '@/lib/api';
 import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
 import { useFetchData } from '@/lib/hooks/useFetchData';
@@ -242,7 +243,7 @@ export default function AdminSupportPage() {
         <textarea
           value={replyText}
           onChange={(e) => {
-            setReplyText(e.target.value);
+            setReplyText(clampChars(e.target.value, TEXT_LIMITS.ticketMessage.max));
           }}
           rows={4}
           placeholder={adminDict.supportPage.replyPlaceholder}

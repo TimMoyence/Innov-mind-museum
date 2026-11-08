@@ -1,26 +1,58 @@
+import {
+  isHexColor,
+  isHttpsUrl,
+  LATITUDE_RANGE,
+  LONGITUDE_RANGE,
+  TEXT_LIMITS,
+} from '@musaium/shared';
 import { z } from 'zod';
+
+import { textField } from '@shared/validation/text-field';
 
 const museumTypeSchema = z.enum(['art', 'history', 'science', 'specialized', 'general']);
 
+const latitudeSchema = z.number().min(LATITUDE_RANGE.min).max(LATITUDE_RANGE.max).nullable();
+const longitudeSchema = z.number().min(LONGITUDE_RANGE.min).max(LONGITUDE_RANGE.max).nullable();
+
+const museumConfigSchema = z.looseObject({
+  branding: z
+    .strictObject({
+      primaryColor: z
+        .string()
+        .refine(isHexColor, { message: 'primaryColor must be a #RRGGBB color' })
+        .optional(),
+      logoUrl: z
+        .string()
+        .refine(isHttpsUrl, { message: 'logoUrl must be an https URL' })
+        .optional(),
+    })
+    .optional(),
+});
+
+const museumNameSchema = textField(TEXT_LIMITS.museumName, { trim: true });
+const museumSlugSchema = textField(TEXT_LIMITS.museumSlug);
+const museumAddressSchema = textField(TEXT_LIMITS.museumAddress);
+const museumDescriptionSchema = textField(TEXT_LIMITS.museumDescription);
+
 export const createMuseumSchema = z.object({
-  name: z.string().min(1).max(200),
-  slug: z.string().min(1).max(200),
-  address: z.string().max(500).optional(),
-  description: z.string().max(2000).optional(),
-  latitude: z.number().nullable().optional(),
-  longitude: z.number().nullable().optional(),
-  config: z.record(z.string(), z.unknown()).optional(),
+  name: museumNameSchema,
+  slug: museumSlugSchema,
+  address: museumAddressSchema.optional(),
+  description: museumDescriptionSchema.optional(),
+  latitude: latitudeSchema.optional(),
+  longitude: longitudeSchema.optional(),
+  config: museumConfigSchema.optional(),
   museumType: museumTypeSchema.optional(),
 });
 
 export const updateMuseumSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  slug: z.string().min(1).max(200).optional(),
-  address: z.string().max(500).nullable().optional(),
-  description: z.string().max(2000).nullable().optional(),
-  latitude: z.number().nullable().optional(),
-  longitude: z.number().nullable().optional(),
-  config: z.record(z.string(), z.unknown()).optional(),
+  name: museumNameSchema.optional(),
+  slug: museumSlugSchema.optional(),
+  address: museumAddressSchema.nullable().optional(),
+  description: museumDescriptionSchema.nullable().optional(),
+  latitude: latitudeSchema.optional(),
+  longitude: longitudeSchema.optional(),
+  config: museumConfigSchema.optional(),
   isActive: z.boolean().optional(),
   museumType: museumTypeSchema.optional(),
 });

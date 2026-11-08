@@ -38,6 +38,9 @@ const supportEN: Dictionary['support'] = {
     sending: 'Sending...',
     success: 'Thank you! Message sent.',
     error: 'Unable to send right now.',
+    errorEmail: 'Invalid email address.',
+    errorName: 'Please enter your name.',
+    errorMessage: 'Your message must be at least {min} characters.',
   },
 };
 
@@ -59,6 +62,9 @@ const supportFR: Dictionary['support'] = {
     sending: 'Envoi...',
     success: 'Merci ! Message envoyé.',
     error: "Impossible d'envoyer.",
+    errorEmail: 'Adresse e-mail invalide.',
+    errorName: 'Indiquez votre nom.',
+    errorMessage: 'Votre message doit contenir au moins {min} caractères.',
   },
 };
 

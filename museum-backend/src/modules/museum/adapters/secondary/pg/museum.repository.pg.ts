@@ -40,6 +40,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         config: input.config ?? {},
+        ...(input.museumType ? { museumType: input.museumType } : {}),
       });
       return await this.repo.save(entity);
     } catch (err: unknown) {
@@ -87,6 +88,7 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     if (input.longitude !== undefined) entity.longitude = input.longitude;
     if (input.config !== undefined) entity.config = input.config;
     if (input.isActive !== undefined) entity.isActive = input.isActive;
+    if (input.museumType !== undefined) entity.museumType = input.museumType;
   }
 
   async findById(id: number): Promise<Museum | null> {

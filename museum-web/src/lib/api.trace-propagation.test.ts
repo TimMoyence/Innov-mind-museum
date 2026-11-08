@@ -59,9 +59,7 @@ describe('api.ts — Sentry trace propagation (TD-47)', () => {
     await apiGet('/api/items');
 
     const headers = headersOf(spy);
-    expect(headers['sentry-trace']).toBe(
-      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-1',
-    );
+    expect(headers['sentry-trace']).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-1');
     expect(headers.baggage).toBe('sentry-environment=production,sentry-release=1.0.0');
   });
 
@@ -75,9 +73,7 @@ describe('api.ts — Sentry trace propagation (TD-47)', () => {
     await apiPost('/api/items', { name: 'x' });
 
     const headers = headersOf(spy);
-    expect(headers['sentry-trace']).toBe(
-      'cccccccccccccccccccccccccccccccc-dddddddddddddddd-1',
-    );
+    expect(headers['sentry-trace']).toBe('cccccccccccccccccccccccccccccccc-dddddddddddddddd-1');
     expect(headers.baggage).toBe('sentry-environment=production');
   });
 

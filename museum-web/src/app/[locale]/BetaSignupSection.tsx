@@ -1,40 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { isEmail } from '@musaium/shared/validation';
 
 import Button from '@/components/ui/Button';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import { HoneypotField } from '@/components/forms/HoneypotField';
-import { EMAIL_RE } from '@/lib/validation';
-import type { Locale } from '@/lib/i18n';
-
-/**
- * Strict subset of `Dictionary['landing']['beta']` consumed by this component.
- * Mirrors the canonical `Dictionary['landing']['beta']` shape at
- * `museum-web/src/lib/i18n.ts:177-188`.
- */
-interface BetaCopyDict {
-  heading: string;
-  subheading: string;
-  fieldEmail: string;
-  fieldConsent: string;
-  consentPrivacyLink: string;
-  submit: string;
-  sending: string;
-  success: string;
-  error: string;
-  errorValidation: string;
-}
+import { usePublicSubmit } from '@/components/forms/usePublicSubmit';
+import type { Dictionary, Locale } from '@/lib/i18n';
 
 interface BetaSignupSectionProps {
-  dict: BetaCopyDict;
+  dict: Dictionary['landing']['beta'];
   locale: Locale;
 }
 
 type ValidationKey = 'email' | 'consent';
-
-const ENDPOINT = '/api/leads/beta';
 
 /**
  * Public beta-signup section (R3 §1 R2-R11 + D7 a11y).
@@ -43,73 +24,35 @@ const ENDPOINT = '/api/leads/beta';
  * - Posts JSON to `/api/leads/beta` on submit (R6); 202 toggles to the
  *   success copy in a `role="status" aria-live="polite"` region (R7 +
  *   R20).
- * - Honeypot non-empty → silent-success UX (still posts so BE drops via R10
- *   server-side, preserving response timing parity).
  * - Idempotent duplicates surface the SAME success copy as a first signup —
  *   no enumeration leak (R16).
  */
 export default function BetaSignupSection({ dict, locale }: BetaSignupSectionProps) {
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
-  // Honeypot — bots auto-fill; humans never see it (aria-hidden + tabIndex=-1).
-  const [website, setWebsite] = useState('');
-
   const [errors, setErrors] = useState<Partial<Record<ValidationKey, string>>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { website, setWebsite, submitting, submitted, failed, send } =
+    usePublicSubmit('/api/leads/beta');
 
   const requiredMark = dict.errorValidation;
   const pendingLabel = dict.sending;
 
   function validate(): Partial<Record<ValidationKey, string>> {
     const next: Partial<Record<ValidationKey, string>> = {};
-    if (!email.trim() || !EMAIL_RE.test(email.trim())) next.email = requiredMark;
+    if (!email.trim()) next.email = requiredMark;
+    else if (!isEmail(email.trim())) next.email = dict.errorEmail;
     if (!consent) next.consent = requiredMark;
     return next;
   }
 
-  async function postSignup(): Promise<void> {
-    setErrorMessage(null);
-    setSubmitting(true);
-    try {
-      const response = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          consent: true,
-          website,
-        }),
-      });
-      // R10 anti-enumeration : honeypot is non-empty but we still display the
-      // canonical success state to mask the bot detection. The body has been
-      // posted (BE silent-drop via R10 use-case-level).
-      if (!response.ok && website.trim().length === 0) {
-        throw new Error(`Beta signup failed (${String(response.status)})`);
-      }
-      setSubmitted(true);
-    } catch {
-      setErrorMessage(dict.error);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    // Honeypot-filled forms always succeed UX-side regardless of validation —
-    // matches the BE silent-drop policy (R10).
-    if (website.trim().length > 0) {
-      void postSignup();
-      return;
-    }
     const found = validate();
     setErrors(found);
     if (Object.keys(found).length > 0) {
       return;
     }
-    void postSignup();
+    void send({ email: email.trim(), consent: true });
   }
 
   return (
@@ -155,7 +98,6 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
               aria-invalid={errors.email ? true : undefined}
               aria-describedby={errors.email ? 'beta-email-error' : undefined}
               autoComplete="email"
-              maxLength={254}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -199,7 +141,7 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
 
           {/* Polite live region for the error message (success has its own block above) */}
           <div aria-live="polite" className="min-h-[1.5rem]">
-            {errorMessage ? <AlertBanner variant="error" message={errorMessage} /> : null}
+            {failed ? <AlertBanner variant="error" message={dict.error} /> : null}
           </div>
 
           <Button type="submit" className="w-full" disabled={submitting}>

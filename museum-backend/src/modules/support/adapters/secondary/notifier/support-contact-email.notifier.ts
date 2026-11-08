@@ -1,3 +1,4 @@
+import { tagSuspect } from '@shared/email/suspect-subject';
 import { buildSupportContactEmail } from '@shared/email/templates';
 import { logger } from '@shared/logger/logger';
 
@@ -14,7 +15,10 @@ export class EmailSupportContactNotifier implements SupportContactNotifier {
   ) {}
 
   async notify(payload: SupportContactPayload): Promise<void> {
-    const subject = `[Musaium Support] ${payload.name} <${payload.email}>`.slice(0, 200);
+    const subject = tagSuspect(
+      `[Musaium Support] ${payload.name} <${payload.email}>`,
+      payload.suspect,
+    ).slice(0, 200);
     const html = buildSupportContactEmail({
       name: payload.name,
       email: payload.email,

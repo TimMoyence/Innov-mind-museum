@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { apiPut } from '@/lib/api';
 import { useFetchData } from '@/lib/hooks/useFetchData';
 import type { MuseumBranding, MuseumDTO } from '@/lib/admin-types';
-import { HEX_RE, HTTPS_RE } from '@/lib/validation';
+import { isHexColor, isHttpsUrl, pickContrastingTextColor } from '@musaium/shared/museum';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
@@ -29,8 +29,6 @@ const STRINGS = {
   notFound: 'Museum not found.',
   fields: {
     primary: 'Primary color',
-    secondary: 'Secondary color',
-    accent: 'Accent color',
     logoUrl: 'Logo URL',
     logoHint:
       'Public HTTPS URL for the museum logo (PNG, SVG, or WebP). True file upload is planned for V1.1.',
@@ -78,6 +76,8 @@ export default function MuseumBrandingPage() {
   });
   const museum = museumResponse?.museum ?? null;
   const combinedError = error ?? mutationError;
+  const previewColor =
+    branding.primaryColor && isHexColor(branding.primaryColor) ? branding.primaryColor : '#ffffff';
 
   // `branding` is locally-edited form state, but it must (re)sync from the
   // server-loaded museum the FIRST render the museum becomes available AND
@@ -99,11 +99,10 @@ export default function MuseumBrandingPage() {
 
   function validate(): typeof fieldErrors {
     const next: typeof fieldErrors = {};
-    (['primaryColor', 'secondaryColor', 'accentColor'] as const).forEach((k) => {
-      const v = branding[k];
-      if (v && !HEX_RE.test(v)) next[k] = 'Must be a #RRGGBB hex color.';
-    });
-    if (branding.logoUrl && !HTTPS_RE.test(branding.logoUrl)) {
+    if (branding.primaryColor && !isHexColor(branding.primaryColor)) {
+      next.primaryColor = 'Must be a #RRGGBB hex color.';
+    }
+    if (branding.logoUrl && !isHttpsUrl(branding.logoUrl)) {
       next.logoUrl = 'Must be an HTTPS URL.';
     }
     return next;
@@ -120,7 +119,7 @@ export default function MuseumBrandingPage() {
     setMutationError(null);
     setSuccess(null);
     try {
-      // Merge — preserve any other config keys (e.g. kbLocale) the BE has.
+      // Merge — preserve any other config keys the BE has.
       const nextConfig: Record<string, unknown> = {
         ...museum.config,
         branding: pruneEmpty(branding),
@@ -172,40 +171,32 @@ export default function MuseumBrandingPage() {
         className="space-y-5"
         noValidate
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {(['primaryColor', 'secondaryColor', 'accentColor'] as const).map((k) => (
-            <div key={k}>
-              <label htmlFor={`b-${k}`} className="block text-sm font-medium text-gray-700">
-                {k === 'primaryColor'
-                  ? STRINGS.fields.primary
-                  : k === 'secondaryColor'
-                    ? STRINGS.fields.secondary
-                    : STRINGS.fields.accent}
-              </label>
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  id={`b-${k}`}
-                  type="color"
-                  value={branding[k] ?? '#000000'}
-                  onChange={(e) => {
-                    update(k, e.target.value);
-                  }}
-                  className="h-9 w-12 cursor-pointer rounded border border-gray-300"
-                />
-                <input
-                  type="text"
-                  value={branding[k] ?? ''}
-                  onChange={(e) => {
-                    update(k, e.target.value);
-                  }}
-                  placeholder="#000000"
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  aria-label={`${k} hex value`}
-                />
-              </div>
-              <FormFieldError error={fieldErrors[k]} />
-            </div>
-          ))}
+        <div>
+          <label htmlFor="b-primaryColor" className="block text-sm font-medium text-gray-700">
+            {STRINGS.fields.primary}
+          </label>
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              id="b-primaryColor"
+              type="color"
+              value={branding.primaryColor ?? '#000000'}
+              onChange={(e) => {
+                update('primaryColor', e.target.value);
+              }}
+              className="h-9 w-12 cursor-pointer rounded border border-gray-300"
+            />
+            <input
+              type="text"
+              value={branding.primaryColor ?? ''}
+              onChange={(e) => {
+                update('primaryColor', e.target.value);
+              }}
+              placeholder="#000000"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              aria-label="primaryColor hex value"
+            />
+          </div>
+          <FormFieldError error={fieldErrors.primaryColor} />
         </div>
 
         <div>
@@ -237,8 +228,8 @@ export default function MuseumBrandingPage() {
             <div
               className="flex items-center gap-3 rounded p-3"
               style={{
-                backgroundColor: branding.primaryColor ?? '#ffffff',
-                color: contrast(branding.primaryColor),
+                backgroundColor: previewColor,
+                color: pickContrastingTextColor(previewColor),
               }}
             >
               {branding.logoUrl && (
@@ -284,18 +275,6 @@ export default function MuseumBrandingPage() {
 function pruneEmpty(b: MuseumBranding): MuseumBranding {
   const out: MuseumBranding = {};
   if (b.primaryColor) out.primaryColor = b.primaryColor;
-  if (b.secondaryColor) out.secondaryColor = b.secondaryColor;
-  if (b.accentColor) out.accentColor = b.accentColor;
   if (b.logoUrl) out.logoUrl = b.logoUrl;
   return out;
-}
-
-/** Cheap WCAG-ish contrast picker for the preview header text. */
-function contrast(hex: string | undefined): string {
-  if (!hex || !HEX_RE.test(hex)) return '#111111';
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 128 ? '#111111' : '#ffffff';
 }

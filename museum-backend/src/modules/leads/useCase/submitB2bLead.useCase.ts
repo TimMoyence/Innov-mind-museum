@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { describeLimit, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+
 import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
 import {
   B2B_LEAD_ROLES,
@@ -10,7 +12,7 @@ import {
 import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
-import { validateEmail } from '@shared/validation/email';
+import { judgeSubmission } from '@shared/validation/honeypot';
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 
@@ -26,6 +28,7 @@ interface SubmitB2bLeadInput {
   message: string;
   consent: boolean;
   website?: string;
+  fillMs?: number;
   ip?: string;
   requestId?: string;
   userAgent?: string;
@@ -57,18 +60,18 @@ function validateB2bLead(input: SubmitB2bLeadInput): B2bLeadPayload {
   }
 
   const email = input.email.trim().toLowerCase();
-  if (!validateEmail(email)) {
+  if (!isEmail(email)) {
     throw invalidInput('email must be valid');
   }
 
   const name = input.name.trim();
-  if (!name || name.length > 120) {
-    throw invalidInput('name must be between 1 and 120 characters');
+  if (!isWithinLimit(name, TEXT_LIMITS.contactName)) {
+    throw invalidInput(describeLimit('name', TEXT_LIMITS.contactName));
   }
 
   const museum = input.museum.trim();
-  if (!museum || museum.length > 200) {
-    throw invalidInput('museum must be between 1 and 200 characters');
+  if (!isWithinLimit(museum, TEXT_LIMITS.leadMuseum)) {
+    throw invalidInput(describeLimit('museum', TEXT_LIMITS.leadMuseum));
   }
 
   if (!ROLE_SET.has(input.role)) {
@@ -76,8 +79,8 @@ function validateB2bLead(input: SubmitB2bLeadInput): B2bLeadPayload {
   }
 
   const message = input.message.trim();
-  if (message.length < 10 || message.length > 5000) {
-    throw invalidInput('message must be between 10 and 5000 characters');
+  if (!isWithinLimit(message, TEXT_LIMITS.contactMessage)) {
+    throw invalidInput(describeLimit('message', TEXT_LIMITS.contactMessage));
   }
 
   return {
@@ -114,10 +117,10 @@ export class SubmitB2bLeadUseCase {
   ) {}
 
   async execute(input: SubmitB2bLeadInput): Promise<void> {
-    const payload = validateB2bLead(input);
+    const verdict = judgeSubmission(input);
+    const payload = { ...validateB2bLead(input), suspect: verdict === 'suspect' };
 
-    // R7 — honeypot silent drop BEFORE any persistence. Whitespace-only NOT a hit.
-    if (typeof input.website === 'string' && input.website.trim().length > 0) {
+    if (verdict === 'bot') {
       logger.warn('b2b_lead_honeypot_triggered', {
         requestId: input.requestId,
         hasIp: Boolean(input.ip),
