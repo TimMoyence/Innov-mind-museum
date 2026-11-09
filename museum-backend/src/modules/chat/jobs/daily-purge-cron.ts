@@ -2,6 +2,7 @@ import { Queue, Worker } from 'bullmq';
 
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 import { safeClose } from '@shared/queue/scheduled-jobs';
 
 import type { ConnectionOptions } from 'bullmq';
@@ -50,9 +51,7 @@ function spawnWorker(cfg: DailyPurgeCronConfig): Worker {
     logger.warn(`${cfg.logPrefix}_tick_failed`, { jobId: job?.id, error: err.message });
     captureExceptionWithContext(err, { queue: cfg.queueName, jobId: job?.id });
   });
-  worker.on('error', (err) => {
-    captureExceptionWithContext(err, { queue: cfg.queueName, kind: 'worker_error' });
-  });
+  reportBullmqErrors(worker, 'worker_error');
   return worker;
 }
 
@@ -63,6 +62,7 @@ export async function registerDailyPurgeCron(
     connection: cfg.connection,
     defaultJobOptions: { removeOnComplete: 50, removeOnFail: 100 },
   });
+  reportBullmqErrors(queue, 'queue_error');
 
   if (!(await registerScheduler(queue, cfg))) return { stop: () => Promise.resolve() };
 

@@ -32,14 +32,16 @@ jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => ({
     upsertJobScheduler: mockUpsertJobScheduler,
     removeJobScheduler: mockRemoveJobScheduler,
+    on: jest.fn(),
     close: mockQueueClose,
   })),
   Worker: jest
     .fn()
     .mockImplementation(
-      (_name: string, processor: (job: { id: string }) => Promise<ScheduledJobResult>) => {
+      (name: string, processor: (job: { id: string }) => Promise<ScheduledJobResult>) => {
         capturedProcessor = processor;
         return {
+          name,
           on: mockWorkerOn,
           close: mockWorkerClose,
         };

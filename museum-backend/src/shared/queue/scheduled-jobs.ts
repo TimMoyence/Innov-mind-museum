@@ -4,6 +4,7 @@ import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
+import { reportBullmqErrors } from './bullmq-errors';
 import { handleJobFailure, type JobFailureSinks } from './job-failure.handler';
 
 import type { ConnectionOptions } from 'bullmq';
@@ -105,9 +106,7 @@ function spawnWorker(cfg: ScheduledJobConfig): Worker {
     );
   });
 
-  worker.on('error', (err) => {
-    captureExceptionWithContext(err, { queue: cfg.name, kind: 'worker_error' });
-  });
+  reportBullmqErrors(worker, 'worker_error');
 
   return worker;
 }
@@ -121,6 +120,7 @@ export function registerScheduledJob(cfg: ScheduledJobConfig): ScheduledJobHandl
       attempts: cfg.attempts ?? DEFAULT_ATTEMPTS,
     },
   });
+  reportBullmqErrors(queue, 'queue_error');
 
   let worker: Worker | undefined;
 

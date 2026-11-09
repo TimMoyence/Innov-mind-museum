@@ -57,6 +57,7 @@ import {
 } from '@shared/middleware/rate-limit.middleware';
 import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 import { safeClose, type ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
 import { nonEmpty } from '@shared/utils/defaults';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
@@ -190,6 +191,7 @@ async function startAuditCron(): Promise<{
       connection,
       defaultJobOptions: { removeOnComplete: 50, removeOnFail: 100 },
     });
+    reportBullmqErrors(queue, 'queue_error');
     const handle = await registerAuditCron(queue, AppDataSource, { connection });
     return { handle, queue };
   } catch (err) {

@@ -160,6 +160,18 @@ describe('RAZ-M11b-VPS-CRON', () => {
     },
   );
 
+  it('RAZ-M11b-VPS-CRON · un backup.env qui ne déclare pas le heartbeat laisse check-certs réussir et nomme la variable', () => {
+    writeFileSync(join(work, 'backup.env'), 'BACKUP_GPG_RECIPIENT=ops@musaium.com\n');
+
+    const { code, calls, stderr } = run('check-certs.sh', {
+      STUB_DOCKER_OUT: '    Expiry Date: 2027-01-04 (VALID: 61 days)\\n',
+    });
+
+    expect(code).toBe(0);
+    expect(calls.some((call) => call.startsWith('curl'))).toBe(false);
+    expect(stderr).toContain('heartbeat non configuré : CERT_HEARTBEAT_URL est vide');
+  });
+
   it('RAZ-M11b-VPS-CRON · sans heartbeat configuré, un dump en échec échoue quand même', () => {
     writeFileSync(
       join(work, 'backup.env'),

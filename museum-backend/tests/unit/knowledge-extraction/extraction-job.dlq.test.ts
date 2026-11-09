@@ -1,6 +1,7 @@
 jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => ({
     addBulk: jest.fn().mockResolvedValue([]),
+    on: jest.fn(),
     close: jest.fn().mockResolvedValue(undefined),
   })),
   Worker: jest.fn().mockImplementation(() => ({
@@ -118,11 +119,11 @@ describe('handleJobFailure — DLQ semantics', () => {
 });
 
 describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
-  let queueInstance: { addBulk: jest.Mock; close: jest.Mock };
+  let queueInstance: { addBulk: jest.Mock; on: jest.Mock; close: jest.Mock };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    queueInstance = { addBulk: jest.fn().mockResolvedValue([]), close: jest.fn() };
+    queueInstance = { addBulk: jest.fn().mockResolvedValue([]), on: jest.fn(), close: jest.fn() };
     const mockQueueInstance = queueInstance as unknown as InstanceType<typeof Queue>;
     jest.mocked(Queue).mockReturnValue(mockQueueInstance);
   });

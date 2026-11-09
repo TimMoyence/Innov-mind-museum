@@ -4,6 +4,7 @@ import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/extracted-
 import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 import {
   handleJobFailure,
   type FailedJobSnapshot,
@@ -50,6 +51,7 @@ export class ExtractionWorker implements ExtractionQueuePort {
         backoff: { type: 'exponential', delay: 30_000 },
       },
     });
+    reportBullmqErrors(this.queue, 'queue_error');
   }
 
   start(): void {
@@ -98,9 +100,7 @@ export class ExtractionWorker implements ExtractionQueuePort {
       );
     });
 
-    this.worker.on('error', (err) => {
-      captureExceptionWithContext(err, { queue: QUEUE_NAME, kind: 'worker_error' });
-    });
+    reportBullmqErrors(this.worker, 'worker_error');
 
     logger.info('extraction_worker_started', {
       concurrency: this.config.concurrency,

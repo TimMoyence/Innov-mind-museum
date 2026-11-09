@@ -35,6 +35,7 @@ jest.mock('bullmq', () => ({
     name,
     upsertJobScheduler: mockUpsertJobScheduler,
     removeJobScheduler: mockRemoveJobScheduler,
+    on: jest.fn(),
     close: mockQueueClose,
   })),
   Worker: jest

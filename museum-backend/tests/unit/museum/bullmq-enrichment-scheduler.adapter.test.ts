@@ -18,6 +18,7 @@ jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => ({
     upsertJobScheduler: jest.fn().mockResolvedValue(undefined),
     removeJobScheduler: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(),
     close: mockQueueClose,
   })),
   Worker: jest.fn().mockImplementation(() => ({

@@ -5,6 +5,7 @@ import { parseOpeningHours } from '@modules/museum/adapters/secondary/parsers/op
 import { queryOverpassOpeningHours } from '@shared/http/overpass.client';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
 import type {
@@ -223,12 +224,7 @@ export class MuseumEnrichmentWorker {
       logger.info('museum_enrichment_job_completed', { jobId: job.id });
     });
     this.worker.on('failed', onMuseumEnrichmentJobFailed);
-    this.worker.on('error', (err) => {
-      captureExceptionWithContext(err, {
-        queue: MUSEUM_ENRICHMENT_QUEUE_NAME,
-        kind: 'worker_error',
-      });
-    });
+    reportBullmqErrors(this.worker, 'worker_error');
   }
 
   async close(): Promise<void> {

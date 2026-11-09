@@ -1,5 +1,5 @@
 heartbeat() {
-  local url="${!1}"
+  local url="${!1:-}"
   if [ -z "${url}" ]; then
     echo "heartbeat non configuré : $1 est vide dans ${MUSAIUM_DIR}/backup.env" >&2
     return 0

@@ -2,6 +2,7 @@ import { Queue } from 'bullmq';
 
 import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 
 import type {
   MuseumEnrichmentJob,
@@ -28,6 +29,7 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
         backoff: { type: 'exponential', delay: 30_000 },
       },
     });
+    reportBullmqErrors(this.queue, 'queue_error');
   }
 
   async enqueue(input: MuseumEnrichmentJob): Promise<string> {
