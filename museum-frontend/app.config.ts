@@ -172,7 +172,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               },
             ]
           : undefined,
-      versionCode: 93,
       permissions: [
         'android.permission.RECORD_AUDIO',
         'android.permission.CAMERA',
