@@ -24,7 +24,7 @@ export interface ScheduledJobConfig {
 }
 
 export interface ScheduledJobHandle {
-  start(): Promise<void>;
+  start(): Promise<boolean>;
   close(): Promise<void>;
 }
 
@@ -128,10 +128,10 @@ export function registerScheduledJob(cfg: ScheduledJobConfig): ScheduledJobHandl
 
   let worker: Worker | undefined;
 
-  const start = async (): Promise<void> => {
+  const start = async (): Promise<boolean> => {
     const registered = await registerScheduler(queue, cfg);
-    if (!registered) return;
-    worker = spawnWorker(cfg);
+    if (registered) worker = spawnWorker(cfg);
+    return registered;
   };
 
   const close = async (): Promise<void> => {

@@ -397,4 +397,25 @@ describe('CRON-UNIQUE', () => {
 
     expect(mockUpsertJobScheduler.mock.calls[0]?.[0]).toBe('chat-purge-daily');
   });
+
+  it.each([
+    ['réussit', true, 1],
+    ['échoue', false, 0],
+  ])(
+    'CRON-UNIQUE · quand l’enregistrement %s, la purge construit son tick dès le démarrage (%s → %i fois), sans attendre le premier passage',
+    async (_label, registered, builds) => {
+      if (registered) mockUpsertJobScheduler.mockResolvedValue(undefined);
+      const createTick = jest.fn(() => () => Promise.resolve());
+
+      await registerDailyPurgeCron({
+        queueName: 'chat-purge-scheduler',
+        schedulerId: 'chat-purge-daily',
+        cron: '0 4 * * *',
+        connection: CONNECTION,
+        createTick,
+      });
+
+      expect(createTick).toHaveBeenCalledTimes(builds);
+    },
+  );
 });

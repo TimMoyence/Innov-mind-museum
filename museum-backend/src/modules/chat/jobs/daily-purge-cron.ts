@@ -28,6 +28,6 @@ export async function registerDailyPurgeCron(
       await tick();
     },
   });
-  await job.start();
+  if (await job.start()) tick ??= cfg.createTick();
   return { stop: () => job.close() };
 }
