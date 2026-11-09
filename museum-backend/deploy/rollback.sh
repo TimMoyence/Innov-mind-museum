@@ -60,7 +60,6 @@ else
   echo "[rollback] no new migrations to revert (code-only rollback)"
 fi
 
-ENV_FILE=/srv/museum/.env
 PREV_TAG_FILE="${STATE_DIR}/previous-image-tag.txt"
 PREV_TAG=""
 if [ -f "${PREV_TAG_FILE}" ]; then
@@ -71,12 +70,8 @@ if [ -z "${PREV_TAG}" ]; then
   exit 43
 fi
 
-echo "[rollback] restoring IMAGE_TAG=${PREV_TAG} in ${ENV_FILE}"
-if sudo grep -qE '^IMAGE_TAG=' "${ENV_FILE}" 2>/dev/null; then
-  sudo sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${PREV_TAG}/" "${ENV_FILE}"
-else
-  echo "IMAGE_TAG=${PREV_TAG}" | sudo tee -a "${ENV_FILE}" >/dev/null
-fi
+echo "[rollback] restoring IMAGE_TAG=${PREV_TAG} in /srv/museum/.env"
+sudo /srv/museum/vps/set-env.sh IMAGE_TAG "${PREV_TAG}" >/dev/null
 
 echo "[rollback] recreating ${SERVICE} on ${PREV_TAG}"
 export IMAGE_TAG="${PREV_TAG}"

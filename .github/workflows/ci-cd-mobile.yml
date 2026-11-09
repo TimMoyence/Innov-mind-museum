@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: Build profile to run
+        description: Android build profile; iOS ships through Xcode Cloud
         required: true
         default: internal
         type: choice
@@ -12,23 +12,7 @@ on:
           - preview
           - internal
           - production
-      platform:
-        description: Platform target
-        required: true
-        default: android
-        type: choice
-        options:
-          - ios
-          - android
-          - all
-      submit:
-        description: Submit to stores (production only)
-        required: true
-        default: 'no'
-        type: choice
-        options:
-          - 'no'
-          - 'yes'
+          - production-submit
   pull_request:
     paths:
       - 'museum-frontend/**'
@@ -45,7 +29,7 @@ on:
     - cron: '17 3 * * *'
 
 concurrency:
-  group: ci-cd-mobile-${{ github.ref }}
+  group: ci-cd-mobile-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -720,16 +704,21 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   maestro-ios-nightly:
-    if: ${{ github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     needs: quality
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 300
     defaults:
       run:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
+      APP_VARIANT: development
+      EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
+      ENTRY_FILE: node_modules/expo-router/entry.js
+      CI_PRIMARY_REPOSITORY_PATH: ${{ github.workspace }}
+      HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       - name: Setup Node
@@ -740,39 +729,58 @@ jobs:
           cache-dependency-path: museum-frontend/package-lock.json
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320  # v5
-      - name: Install npm deps
-        run: npm install --no-audit --no-fund
       - name: Select Xcode 26
         run: |
           sudo xcode-select -s "$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"
           sh ios/ci_scripts/require-xcode.sh
-      - name: Expo prebuild iOS
-        run: npx expo prebuild --platform ios --clean
-      - name: Build iOS Debug app for Simulator
+      - name: Prepare the versioned iOS project like Xcode Cloud
+        run: |
+          sh ios/ci_scripts/ci_post_clone.sh
+          sh ios/ci_scripts/ci_pre_xcodebuild.sh
+      - name: Build iOS Release app for Simulator (bundle embedded)
         run: |
           cd ios
           xcodebuild -workspace Musaium.xcworkspace \
             -scheme Musaium \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphonesimulator \
             -derivedDataPath build \
+            PRODUCT_BUNDLE_IDENTIFIER=com.musaium.mobile.preview \
             CODE_SIGNING_ALLOWED=NO \
             build
       - name: Install Maestro CLI
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-      - name: Boot backend (docker-compose + migrations + API)
+      - name: Start PostgreSQL 16 with pgvector and Redis (no Docker on macOS runners)
+        run: |
+          brew install postgresql@16 redis
+          PG_BIN="$(brew --prefix postgresql@16)/bin"
+          git clone --depth 1 --branch v0.8.0 https://github.com/pgvector/pgvector.git "$RUNNER_TEMP/pgvector"
+          make -C "$RUNNER_TEMP/pgvector" PG_CONFIG="$PG_BIN/pg_config"
+          make -C "$RUNNER_TEMP/pgvector" PG_CONFIG="$PG_BIN/pg_config" install
+          "$PG_BIN"/initdb -D "$RUNNER_TEMP/pgdata" -U museum_dev --auth=trust
+          "$PG_BIN"/pg_ctl -D "$RUNNER_TEMP/pgdata" -l "$RUNNER_TEMP/postgres.log" -o "-p 5432" -w start
+          "$PG_BIN"/createdb -h localhost -p 5432 -U museum_dev museum_dev
+          redis-server --port 6379 --daemonize yes
+      - name: Boot backend (local services + migrations + API)
+        env:
+          SKIP_DOCKER_COMPOSE: '1'
+          DB_PORT: '5432'
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          EXTRACTION_WORKER_ENABLED: 'false'
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: ./scripts/maestro-runner-setup.sh
-      - name: Seed e2e Maestro login accounts (iOS nightly runs the `all` union)
-        run: DB_PORT=5433 ./scripts/maestro-seed-accounts.sh
+      - name: Seed e2e Maestro login accounts (iOS runs the `all` union)
+        run: DB_PORT=5432 ./scripts/maestro-seed-accounts.sh
       - name: Boot iOS Simulator
         run: |
-          xcrun simctl create maestro-sim "iPhone 15" "iOS17.5" || true
-          xcrun simctl boot "maestro-sim" || true
+          xcrun simctl create maestro-sim "iPhone SE (3rd generation)"
+          xcrun simctl boot maestro-sim
       - name: Install app on simulator
         run: |
-          APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
+          APP_PATH="$(find ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' -type d | head -1)"
           xcrun simctl install booted "$APP_PATH"
       - name: Seed Maestro fixtures into simulator photo library
         run: |
@@ -789,42 +797,8 @@ jobs:
           path: museum-frontend/.maestro/logs/
           retention-days: 7
 
-  build-preview-ios:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
-    needs: quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    defaults:
-      run:
-        working-directory: museum-frontend
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6.5.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: museum-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Validate Expo auth
-        run: test -n "$EXPO_TOKEN"
-
-      - name: Install EAS CLI
-        run: npm install -g eas-cli@18.5.0
-
-      - name: Verify EAS CLI
-        run: eas --version
-
-      - name: Build iOS preview
-        run: eas build --platform ios --profile preview --non-interactive --no-wait
-
   build-preview-android:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'preview' }}
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -858,7 +832,7 @@ jobs:
         run: eas build --platform android --profile preview --non-interactive --no-wait
 
   build-internal-android:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' }}
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -902,7 +876,7 @@ jobs:
         run: eas build --platform android --profile internal --auto-submit-with-profile internal --non-interactive --no-wait
 
   build-production-android:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && (github.event.inputs.profile == 'production' || github.event.inputs.profile == 'production-submit')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -913,7 +887,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-      SUBMIT: ${{ github.event.inputs.submit == 'yes' || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
+      SUBMIT: ${{ github.event.inputs.profile == 'production-submit' ||(startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       - name: Setup Node
