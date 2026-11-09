@@ -72,7 +72,7 @@ jobs:
     # ECONNREFUSED 6379. CLAUDE.md § Pièges connus documents this dependency.
     services:
       redis:
-        image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+        image: redis:7-alpine@sha256:c5d34a98396a4775e223c74e929162c35c5a2182901ba26b50ade939941ce14b
         ports:
           - 6379:6379
         options: >-
@@ -99,7 +99,7 @@ jobs:
       # script extracts it via `docker cp` (no external object store). GHCR may be
       # private → log in first. The script no-ops if the file already matches.
       - name: Login to GHCR
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USER }}
