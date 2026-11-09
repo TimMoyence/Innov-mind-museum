@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -23,5 +24,14 @@ describe('IOS-CODEGEN-OUTPUT', () => {
     expect(`${outputPath}/${CODEGEN_SUFFIX}`).toBe(
       `$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/${CODEGEN_SUFFIX}`,
     );
+  });
+});
+
+describe('IOS-CODEGEN-UNVERSIONED', () => {
+  it('IOS-CODEGEN-UNVERSIONED · aucun artefact généré, propre à une machine, n’est versionné sous ios/build', () => {
+    const tracked = spawnSync('git', ['ls-files', 'build'], { cwd: IOS, encoding: 'utf8' });
+
+    expect(tracked.status).toBe(0);
+    expect(tracked.stdout.split('\n').filter(Boolean)).toEqual([]);
   });
 });
