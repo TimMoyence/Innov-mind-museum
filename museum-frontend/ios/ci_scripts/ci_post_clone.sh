@@ -68,7 +68,7 @@ echo "Regenerating React Native codegen files..."
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 node node_modules/react-native/scripts/generate-codegen-artifacts.js \
   --path "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend" \
-  --outputPath "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/build/generated" \
+  --outputPath "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios" \
   --targetPlatform ios
 echo "Codegen generation complete"
 
