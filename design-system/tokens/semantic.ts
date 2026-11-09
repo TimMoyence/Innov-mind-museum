@@ -1,5 +1,5 @@
-import { spacing, radii } from './spacing';
-import { typography } from './typography';
+import { spacing, radii } from './spacing.ts';
+import { typography } from './typography.ts';
 
 export const semantic = {
   screen: {

@@ -9,8 +9,8 @@ function safeDecode(value: string): string {
 }
 
 export function parseCookieHeader(header: string | undefined): Record<string, string> {
-  const out: Record<string, string> = Object.create(null) as Record<string, string>;
-  if (!header) return out;
+  const out = new Map<string, string>();
+  if (!header) return Object.setPrototypeOf({}, null) as Record<string, string>;
 
   for (const pair of header.split(';')) {
     const eq = pair.indexOf('=');
@@ -22,11 +22,9 @@ export function parseCookieHeader(header: string | undefined): Record<string, st
       value = value.slice(1, -1);
     }
     if (name === '__proto__' || name === 'constructor' || name === 'prototype') continue;
-    if (!(name in out)) {
-      out[name] = safeDecode(value);
-    }
+    if (!out.has(name)) out.set(name, safeDecode(value));
   }
-  return out;
+  return Object.setPrototypeOf(Object.fromEntries(out), null) as Record<string, string>;
 }
 
 export function cookieParserMiddleware(req: Request, _res: Response, next: NextFunction): void {

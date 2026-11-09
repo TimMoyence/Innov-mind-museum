@@ -1,5 +1,5 @@
-import { colors } from '../colors';
-import { spacing } from '../spacing';
+import { colors } from '../colors.ts';
+import { spacing } from '../spacing.ts';
 
 export const buttonTokens = {
   variants: {

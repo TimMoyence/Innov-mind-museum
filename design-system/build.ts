@@ -3,14 +3,14 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { colors } from './tokens/colors';
-import { typography } from './tokens/typography';
-import { spacing, radii } from './tokens/spacing';
-import { functional } from './tokens/functional';
-import { semantic } from './tokens/semantic';
-import { buttonTokens } from './tokens/components/button';
-import { emptyStateTokens } from './tokens/components/empty-state';
-import { errorStateTokens } from './tokens/components/error-state';
+import { colors } from './tokens/colors.ts';
+import { typography } from './tokens/typography.ts';
+import { spacing, radii } from './tokens/spacing.ts';
+import { functional } from './tokens/functional.ts';
+import { semantic } from './tokens/semantic.ts';
+import { buttonTokens } from './tokens/components/button.ts';
+import { emptyStateTokens } from './tokens/components/empty-state.ts';
+import { errorStateTokens } from './tokens/components/error-state.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');

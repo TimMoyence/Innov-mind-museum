@@ -4,7 +4,7 @@
   "description": "",
   "packageManager": "pnpm@10.8.0",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.18.0"
   },
   "main": "index.ts",
   "scripts": {

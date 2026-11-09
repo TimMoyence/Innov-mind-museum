@@ -37,13 +37,15 @@ type PropsBag = Record<string, string | number | boolean>;
 
 const stripPropsPii = (props: PropsBag | undefined): PropsBag | undefined => {
   if (!props) return undefined;
-  const cleaned: PropsBag = {};
-  for (const [key, value] of Object.entries(props)) {
-    if (PII_CANARY_KEYS.has(key)) continue;
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-    cleaned[key] = value;
-  }
-  return cleaned;
+  return Object.fromEntries(
+    Object.entries(props).filter(
+      ([key]) =>
+        !PII_CANARY_KEYS.has(key) &&
+        key !== '__proto__' &&
+        key !== 'constructor' &&
+        key !== 'prototype',
+    ),
+  );
 };
 
 const requireAnalyticsConsentHeader = (req: Request, res: Response, next: NextFunction): void => {

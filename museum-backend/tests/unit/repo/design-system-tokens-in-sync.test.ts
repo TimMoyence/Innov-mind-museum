@@ -5,7 +5,7 @@ import { REPO_ROOT } from 'tests/helpers/repo/source-comments';
 
 describe('DESIGN-SYSTEM-SYNC', () => {
   it('DESIGN-SYSTEM-SYNC · le générateur reproduit chaque fichier de tokens suivi, composants compris', () => {
-    const run = spawnSync('node', ['--import', 'tsx', 'build.ts', '--check'], {
+    const run = spawnSync('node', ['--no-warnings', 'build.ts', '--check'], {
       cwd: resolve(REPO_ROOT, 'design-system'),
       encoding: 'utf8',
     });

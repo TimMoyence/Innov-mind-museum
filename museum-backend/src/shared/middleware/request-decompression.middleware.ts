@@ -17,14 +17,14 @@ type SupportedEncoding = 'gzip' | 'deflate' | 'br';
 type Decompressor = Gunzip | Inflate | BrotliDecompress;
 type DecompressorFactory = () => Decompressor;
 
-const DECOMPRESSORS: Record<SupportedEncoding, DecompressorFactory> = {
-  gzip: createGunzip,
-  deflate: createInflate,
-  br: createBrotliDecompress,
-};
+const DECOMPRESSORS = new Map<SupportedEncoding, DecompressorFactory>([
+  ['gzip', createGunzip],
+  ['deflate', createInflate],
+  ['br', createBrotliDecompress],
+]);
 
 const isSupportedEncoding = (value: string): value is SupportedEncoding =>
-  value === 'gzip' || value === 'deflate' || value === 'br';
+  DECOMPRESSORS.has(value as SupportedEncoding);
 
 export function parseByteLimit(limit: string): number {
   const match = /^([0-9.]+)(b|kb|mb|gb)?$/i.exec(limit.trim().toLowerCase());
@@ -72,8 +72,8 @@ export function requestDecompressionMiddleware(
     next(unsupportedEncoding(encoding));
     return;
   }
-  const factory: DecompressorFactory | undefined = DECOMPRESSORS[encoding];
-  if (typeof factory !== 'function') {
+  const factory = DECOMPRESSORS.get(encoding);
+  if (factory === undefined) {
     next(unsupportedEncoding(encoding));
     return;
   }
