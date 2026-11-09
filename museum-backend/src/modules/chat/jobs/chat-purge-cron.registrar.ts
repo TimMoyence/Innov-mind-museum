@@ -26,7 +26,6 @@ export function registerChatPurgeCron(
   config: ChatPurgeCronConfig,
 ): Promise<ChatPurgeCronHandle> {
   return registerDailyPurgeCron({
-    logPrefix: 'chat_purge',
     queueName: CHAT_PURGE_QUEUE_NAME,
     schedulerId: CHAT_PURGE_SCHEDULER_ID,
     cron: config.cron ?? DEFAULT_CHAT_PURGE_CRON,

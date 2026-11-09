@@ -4,6 +4,7 @@ import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { handleJobFailure } from '@shared/queue/job-failure.handler';
 import { registerScheduledJob } from '@shared/queue/scheduled-jobs';
+import { registerDailyPurgeCron } from '@modules/chat/jobs/daily-purge-cron';
 
 import type { ScheduledJobConfig, ScheduledJobResult } from '@shared/queue/scheduled-jobs';
 
@@ -351,5 +352,49 @@ describe('registerScheduledJob', () => {
       'prune-noworker_worker_close_failed',
       expect.any(Object),
     );
+  });
+});
+
+describe('CRON-UNIQUE', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedProcessor = undefined;
+    mockUpsertJobScheduler.mockRejectedValue(new Error('redis down'));
+  });
+
+  afterEach(() => {
+    mockUpsertJobScheduler.mockResolvedValue(undefined);
+  });
+
+  it('CRON-UNIQUE · un cron de purge qui ne s’enregistre pas rapporte la même panne que tout cron planifié', async () => {
+    await registerScheduledJob(makeConfig({ name: 'review-retention' })).start();
+    await registerDailyPurgeCron({
+      queueName: 'chat-purge-scheduler',
+      schedulerId: 'chat-purge-daily',
+      cron: '0 4 * * *',
+      connection: CONNECTION,
+      createTick: () => () => Promise.resolve(),
+    });
+
+    expect(
+      jest.mocked(captureExceptionWithContext).mock.calls.map(([, context]) => context),
+    ).toEqual([
+      { queue: 'review-retention', kind: 'scheduler_register_failed' },
+      { queue: 'chat-purge-scheduler', kind: 'scheduler_register_failed' },
+    ]);
+  });
+
+  it('CRON-UNIQUE · un cron de purge garde son identifiant de scheduler', async () => {
+    mockUpsertJobScheduler.mockResolvedValue(undefined);
+
+    await registerDailyPurgeCron({
+      queueName: 'chat-purge-scheduler',
+      schedulerId: 'chat-purge-daily',
+      cron: '0 4 * * *',
+      connection: CONNECTION,
+      createTick: () => () => Promise.resolve(),
+    });
+
+    expect(mockUpsertJobScheduler.mock.calls[0]?.[0]).toBe('chat-purge-daily');
   });
 });

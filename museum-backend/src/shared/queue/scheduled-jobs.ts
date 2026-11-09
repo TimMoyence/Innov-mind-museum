@@ -16,8 +16,9 @@ export interface ScheduledJobResult {
 
 export interface ScheduledJobConfig {
   name: string;
+  schedulerId?: string;
   cronPattern: string;
-  handler: () => Promise<ScheduledJobResult>;
+  handler: () => Promise<ScheduledJobResult | void>;
   connection: ConnectionOptions;
   attempts?: number;
 }
@@ -28,6 +29,9 @@ export interface ScheduledJobHandle {
 }
 
 const DEFAULT_ATTEMPTS = 1;
+
+const schedulerIdOf = (cfg: ScheduledJobConfig): string =>
+  cfg.schedulerId ?? `${cfg.name}-scheduler`;
 
 export async function safeClose(label: string, step: () => unknown): Promise<void> {
   try {
@@ -40,7 +44,7 @@ export async function safeClose(label: string, step: () => unknown): Promise<voi
 async function registerScheduler(queue: Queue, cfg: ScheduledJobConfig): Promise<boolean> {
   try {
     await queue.upsertJobScheduler(
-      `${cfg.name}-scheduler`,
+      schedulerIdOf(cfg),
       { pattern: cfg.cronPattern },
       { name: cfg.name, data: {}, opts: { removeOnComplete: 100, removeOnFail: 500 } },
     );
@@ -78,8 +82,8 @@ function spawnWorker(cfg: ScheduledJobConfig): Worker {
       logger.info('scheduled_job_completed', {
         job: cfg.name,
         jobId: job.id,
-        rowsAffected: result.rowsAffected,
-        details: result.details,
+        rowsAffected: result?.rowsAffected,
+        details: result?.details,
       });
       return result;
     },
@@ -132,7 +136,7 @@ export function registerScheduledJob(cfg: ScheduledJobConfig): ScheduledJobHandl
 
   const close = async (): Promise<void> => {
     await safeClose(`${cfg.name}_scheduler_remove_failed`, () =>
-      queue.removeJobScheduler(`${cfg.name}-scheduler`),
+      queue.removeJobScheduler(schedulerIdOf(cfg)),
     );
     if (worker !== undefined) {
       const w = worker;

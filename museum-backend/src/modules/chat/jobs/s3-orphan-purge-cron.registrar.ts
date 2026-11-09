@@ -80,7 +80,6 @@ export function registerS3OrphanPurgeCron(
   config: S3OrphanPurgeCronConfig,
 ): Promise<S3OrphanPurgeCronHandle> {
   return registerDailyPurgeCron({
-    logPrefix: 's3_orphan_purge',
     queueName: S3_ORPHAN_PURGE_QUEUE_NAME,
     schedulerId: S3_ORPHAN_PURGE_SCHEDULER_ID,
     cron: config.cron ?? DEFAULT_S3_ORPHAN_PURGE_CRON,
