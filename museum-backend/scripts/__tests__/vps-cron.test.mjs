@@ -198,4 +198,21 @@ describe('RAZ-M11b-VPS-CRON', () => {
       '30 3 * * * root /srv/museum/vps/check-certs.sh >> /var/log/musaium-cert.log 2>&1',
     ]);
   });
+
+  it('RAZ-M11b-VPS-CRON · aucun script suivi n’appelle un heartbeat sans passer par heartbeat()', () => {
+    const repoRoot = resolve(process.cwd(), '..');
+    const scripts = spawnSync(
+      'git',
+      ['ls-files', '--cached', '--others', '--exclude-standard', '*.sh'],
+      { cwd: repoRoot, encoding: 'utf8' },
+    )
+      .stdout.split('\n')
+      .filter((file) => file && existsSync(join(repoRoot, file)));
+    const direct = scripts.filter((file) => {
+      const text = readFileSync(join(repoRoot, file), 'utf8');
+      return /HEARTBEAT_URL/.test(text) && /\bcurl\b/.test(text);
+    });
+
+    expect(direct).toEqual([]);
+  });
 });
