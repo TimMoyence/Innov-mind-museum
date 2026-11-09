@@ -11,9 +11,12 @@ import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
 import { CitationChips } from '@/features/chat/ui/CitationChips';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
+import { compareMatchCredit } from '@/features/chat/ui/ImageCompareCard';
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
+import type { FullscreenImage } from '@/features/chat/ui/ImageFullscreenModal';
 import { SourceCitation } from '@/features/chat/ui/SourceCitation';
+import type { components } from '@/shared/api/generated/openapi';
 import { forceOpaque } from '@/shared/ui/colorUtils';
 import { useReducedTransparency } from '@/shared/ui/hooks/useReducedTransparency';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -53,15 +56,20 @@ interface ChatMessageBubbleProps {
    * accessible via `message.metadata`.
    */
   onArtworkPress?: (message: ChatUiMessage) => void;
-  /**
-   * D-06 (cycle D, 2026-05-26) — fired when the user taps a C3 compare match
-   * card. Parent owns the navigation target (Wikidata sheet/browser for the
-   * `qid`). Mirrors the `onArtworkPress` plumbing: the bubble only forwards a
-   * real handler to `<ImageCompareCarousel>`. When omitted, a graceful no-op is
-   * forwarded so the carousel stays callable and the tap never throws.
-   */
-  onMatchPress?: (qid: string) => void;
 }
+
+type CompareMatch = components['schemas']['CompareMatch'];
+
+interface FullscreenView {
+  images: readonly FullscreenImage[];
+  index: number;
+}
+
+const compareMatchImage = (match: CompareMatch): FullscreenImage => ({
+  url: match.imageUrl,
+  caption: compareMatchCredit(match),
+  attribution: match.attribution,
+});
 
 /**
  * Facade that composes the four NL-4.2 bubble sections — StreamingBody, ImageSection,
@@ -92,13 +100,12 @@ export const ChatMessageBubble = React.memo(
     feedbackValue,
     onFeedback,
     onArtworkPress,
-    onMatchPress,
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
     const reduceTransparency = useReducedTransparency();
     const isAssistant = message.role === 'assistant';
-    const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+    const [fullscreen, setFullscreen] = useState<FullscreenView | null>(null);
 
     // C2 v2 (2026-05) — Q1 RESOLVED option (b): show a skeleton placeholder
     // above the streaming body while we wait for image enrichment to land,
@@ -134,7 +141,7 @@ export const ChatMessageBubble = React.memo(
               <ImageCarousel
                 images={message.metadata.images}
                 onImagePress={(index) => {
-                  setFullscreenIndex(index);
+                  setFullscreen({ images: message.metadata?.images ?? [], index });
                 }}
               />
             ) : null}
@@ -287,18 +294,20 @@ export const ChatMessageBubble = React.memo(
             matches={message.metadata.compareResults.matches}
             locale={locale.toLowerCase().startsWith('fr') ? 'fr' : 'en'}
             onMatchPress={(qid) => {
-              onMatchPress?.(qid);
+              const matches = message.metadata?.compareResults?.matches ?? [];
+              const index = matches.findIndex((match) => match.qid === qid);
+              if (index >= 0) setFullscreen({ images: matches.map(compareMatchImage), index });
             }}
           />
         ) : null}
 
-        {fullscreenIndex !== null && message.metadata?.images ? (
+        {fullscreen ? (
           <ImageFullscreenModal
-            images={message.metadata.images}
-            initialIndex={fullscreenIndex}
+            images={fullscreen.images}
+            initialIndex={fullscreen.index}
             visible
             onClose={() => {
-              setFullscreenIndex(null);
+              setFullscreen(null);
             }}
           />
         ) : null}

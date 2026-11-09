@@ -106,10 +106,13 @@ appId: com.musaium.mobile.preview
 # ──────────────────────────────────────────────
 - assertVisible:
     text: "Similar artwork:.*|Œuvre similaire :.*"
-# Tap the first match card to exercise the press affordance, then re-assert a
-# stable affordance to prove no crash.
 - tapOn:
     text: "Similar artwork:.*|Œuvre similaire :.*"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "Similar artworks|Œuvres similaires|Fermer|Close|Retour|Back"
+    id: "image-fullscreen-modal-close"
+- tapOn:
+    id: "image-fullscreen-modal-close"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "Similar artwork:.*|Œuvre similaire :.*"

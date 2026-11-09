@@ -19,8 +19,10 @@ import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessio
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
+export type FullscreenImage = Pick<ChatUiEnrichedImage, 'url' | 'caption' | 'attribution'>;
+
 interface ImageFullscreenModalProps {
-  images: ChatUiEnrichedImage[];
+  images: readonly FullscreenImage[];
   initialIndex: number;
   visible: boolean;
   onClose: () => void;

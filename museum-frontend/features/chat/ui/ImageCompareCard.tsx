@@ -10,6 +10,9 @@ import { fontSize, radius, semantic, space } from '@/shared/ui/tokens';
 
 type CompareMatch = components['schemas']['CompareMatch'];
 
+export const compareMatchCredit = (match: CompareMatch): string =>
+  match.facts.artist ? `${match.title}, ${match.facts.artist}` : match.title;
+
 interface ImageCompareCardProps {
   match: CompareMatch;
   locale: 'fr' | 'en';
@@ -28,19 +31,18 @@ const THUMB_HEIGHT = 140;
  *
  * Accessibility (D5 / UFR-008):
  *   - `accessibilityLabel` follows the localized template
- *     "Œuvre similaire : {title}, {artist}, {rationale}" (FR) /
- *     "Similar artwork: {title}, {artist}, {rationale}" (EN).
+ *     "Œuvre similaire : {compareMatchCredit}, {rationale}" (FR) /
+ *     "Similar artwork: {compareMatchCredit}, {rationale}" (EN).
  *   - Pressable touch target ≥ 44×44pt (WCAG 2.5.5).
  */
 export const ImageCompareCard = React.memo(({ match, locale, onPress }: ImageCompareCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
-  const artist = match.facts.artist ?? '';
   const a11yLabel =
     locale === 'fr'
-      ? `Œuvre similaire : ${match.title}, ${artist}, ${match.rationale}`
-      : `Similar artwork: ${match.title}, ${artist}, ${match.rationale}`;
+      ? `Œuvre similaire : ${compareMatchCredit(match)}, ${match.rationale}`
+      : `Similar artwork: ${compareMatchCredit(match)}, ${match.rationale}`;
 
   const handlePress = () => {
     onPress(match.qid);
@@ -70,9 +72,9 @@ export const ImageCompareCard = React.memo(({ match, locale, onPress }: ImageCom
           <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
             {match.title}
           </Text>
-          {artist.length > 0 ? (
+          {match.facts.artist ? (
             <Text style={[styles.artist, { color: theme.textTertiary }]} numberOfLines={1}>
-              {artist}
+              {match.facts.artist}
             </Text>
           ) : null}
           <Text style={[styles.rationale, { color: theme.textSecondary }]} numberOfLines={3}>
