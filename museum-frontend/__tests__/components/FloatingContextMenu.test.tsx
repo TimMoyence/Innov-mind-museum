@@ -1,12 +1,3 @@
-/**
- * Tests for the `active` prop on FloatingContextMenu action items.
- *
- * We do NOT import the shared test-utils because it stubs FloatingContextMenu
- * itself. Instead we set up only the mocks this component needs.
- */
-
-// ── Mocks (hoisted by Jest) ─────────────────────────────────────────────────
-
 jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
@@ -43,8 +34,6 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
-// ── Imports ─────────────────────────────────────────────────────────────────
-
 import type React from 'react';
 import { Alert } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
@@ -52,12 +41,9 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import type { ContextMenuAction } from '@/shared/ui/FloatingContextMenu';
 
-// Theme values matching the mock above
 const THEME_PRIMARY = '#1D4ED8';
 const THEME_TEXT_PRIMARY = '#0F172A';
 const THEME_CARD_BORDER = 'rgba(148,163,184,0.42)';
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 const makeAction = (overrides: Partial<ContextMenuAction> = {}): ContextMenuAction => ({
   id: 'test-action',
@@ -67,7 +53,6 @@ const makeAction = (overrides: Partial<ContextMenuAction> = {}): ContextMenuActi
   ...overrides,
 });
 
-/** Flatten a style prop (array or object) into a single record. */
 const flatStyle = (element: { props: { style?: unknown } }): Record<string, unknown> => {
   const raw = element.props.style;
   if (Array.isArray(raw)) {
@@ -75,8 +60,6 @@ const flatStyle = (element: { props: { style?: unknown } }): Record<string, unkn
   }
   return (raw ?? {}) as Record<string, unknown>;
 };
-
-// ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('FloatingContextMenu — active prop', () => {
   beforeEach(() => {
@@ -87,7 +70,6 @@ describe('FloatingContextMenu — active prop', () => {
     const actions = [makeAction({ id: 'a1', label: 'Active Item', icon: 'star', active: true })];
     render(<FloatingContextMenu actions={actions} />);
 
-    // Ionicons mock renders icon name as <Text color={...}>{name}</Text>
     const icon = screen.getByText('star');
     expect(icon.props.color).toBe(THEME_PRIMARY);
 
@@ -156,12 +138,10 @@ describe('FloatingContextMenu — active prop', () => {
     ];
     render(<FloatingContextMenu actions={actions} />);
 
-    // Active button
     const activeButton = screen.getByLabelText('Active');
     expect(flatStyle(activeButton).borderColor).toBe(THEME_PRIMARY);
     expect(screen.getByText('star').props.color).toBe(THEME_PRIMARY);
 
-    // Inactive button
     const inactiveButton = screen.getByLabelText('Inactive');
     expect(flatStyle(inactiveButton).borderColor).toBe(THEME_CARD_BORDER);
     expect(screen.getByText('moon').props.color).toBe(THEME_TEXT_PRIMARY);

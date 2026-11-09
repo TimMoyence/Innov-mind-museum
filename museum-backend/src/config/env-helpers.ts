@@ -1,9 +1,12 @@
-// Pure env-var parsers. No I/O, no logging, referentially transparent.
-
 export const toNumber = (value: string | undefined, fallback: number): number => {
   if (!value) return fallback;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+export const toPositiveInt = (value: string | undefined, fallback: number): number => {
+  const parsed = value ? Number.parseInt(value, 10) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
 export const toBoolean = (value: string | undefined, fallback: boolean): boolean => {
@@ -36,14 +39,6 @@ export const required = (name: string, value: string | undefined): string => {
   return value;
 };
 
-/**
- * Parses an ISO-8601 timestamp env var, returning a normalised UTC ISO string.
- * Invalid / unparseable values fall back to `fallbackIso` (and emit a structured
- * stderr warning) so a typo'd `NPS_SCALE_EPOCH` never silently disables the NPS
- * cutoff — it degrades to the documented default instead of `Invalid Date`.
- * The output is always a valid ISO string safe to bind as a SQL `timestamptz`
- * parameter.
- */
 export const toIsoTimestamp = (value: string | undefined, fallbackIso: string): string => {
   const raw = value?.trim();
   if (!raw) return fallbackIso;

@@ -2,7 +2,6 @@ import { ResolveReportUseCase } from '@modules/admin/useCase/reports/resolveRepo
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
-// Silence audit logging
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_REPORT_RESOLVED: 'ADMIN_REPORT_RESOLVED',

@@ -1,11 +1,3 @@
-/**
- * F11-mobile (2026-05) — RedeemSocialOtcUseCase unit tests.
- *
- * Asserts the contract that the mobile redeem endpoint relies on:
- * - First redemption inside TTL returns the session payload.
- * - Replay (already consumed) throws AppError 401 INVALID_OTC.
- * - Unknown / malformed codes throw AppError 401 INVALID_OTC.
- */
 import { AppError } from '@shared/errors/app.error';
 
 import { InMemorySocialOtcStore } from '@modules/auth/adapters/secondary/social/social-otc-store';
@@ -41,7 +33,7 @@ describe('RedeemSocialOtcUseCase', () => {
     const code = await otcStore.issue(fakeSession());
 
     const useCase = new RedeemSocialOtcUseCase(otcStore);
-    await useCase.execute(code); // first redemption succeeds
+    await useCase.execute(code);
 
     await expect(useCase.execute(code)).rejects.toMatchObject({
       statusCode: 401,

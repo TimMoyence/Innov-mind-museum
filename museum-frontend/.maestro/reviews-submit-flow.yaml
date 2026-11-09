@@ -1,161 +1,87 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: ReviewsScreen
-# Reviews submit flow (UFR-021 happy path for app/(stack)/reviews.tsx, route /reviews).
-#
-# Real path: Home → Settings (gear) → "Noter Musaium" (settings.rate_musaium) →
-# ReviewsScreen ("Avis"/"Reviews") → "Écrire un avis" (reviews.writeReview) →
-# tap NPS value (testID nps-value-9) → fill comment (testID reviews-comment-input,
-# >= 10 chars) → "Envoyer l'avis" (reviews.submit) → success
-# "Merci pour votre avis !" (reviews.success). There is NO name field (userName is
-# derived server-side, design D-C2-6). App is FRENCH; selectors use FR|EN alternation.
-#
-# The flow asserts SUCCESS ONLY (reviews.success, or the idempotent
-# reviews.alreadyReviewed on a re-run of the shared seeded account) — a submit
-# failure (reviews.submitFailed / POST 400) FAILS the flow.
-#
-# NOTE: the old flow navigated via a non-existent "Open reviews" row; the real entry
-# is the "Noter Musaium" button on the Settings screen.
-#
-# Prerequisites: backend on localhost:3000 with the e2e account seeded.
-# testIDs: nps-value-9 (NpsScale), nps-scale (scale container),
-#          reviews-comment-input (comment TextInput).
-
-# ──────────────────────────────────────────────
-# Phase 1: Fresh launch + login → home
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
-# hideKeyboard dismisses the keyboard so auth-submit is tappable; the explicit tap
-# is the real login trigger on both platforms (no onSubmitEditing is wired — see
-# LoginForm.tsx). optional:true tolerates the button already being gone.
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
     optional: true
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Home → Settings → Reviews
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 40000
-# The "Noter Musaium" row is a Pressable with accessibilityLabel
-# a11y.settings.rate_musaium ("Ouvrir les avis" / "Open reviews"). On ANDROID the
-# label COLLAPSES the subtree so only the label is queryable; on iOS the label is
-# NOT exposed as a `text` element but the child Text (settings.rate_musaium =
-# "Noter Musaium" / "Rate Musaium") IS — so match EITHER (label on Android, visible
-# title on iOS). Blind `swipe UP ×2` overshot the row into the Third-party-AI
-# consent section; scrollUntilVisible stops AS SOON as the row is on screen.
 - scrollUntilVisible:
     element:
-      text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
+      text: 'Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium'
     direction: DOWN
     visibilityPercentage: 1
     timeout: 20000
 - tapOn:
-    text: "Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium"
+    text: 'Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium'
 - extendedWaitUntil:
     visible:
-      text: "Avis|Reviews"
+      text: 'Avis|Reviews'
     timeout: 40000
-# UFR-021 anchor for app/(stack)/reviews.tsx — Settings → "Ouvrir les avis"
-# opened the /(stack)/reviews route (the sentinel matches the "/reviews" route
-# literal). The "Avis|Reviews" title is the runtime proof we reached it; the
-# deep-link re-resolves the same route.
 - openLink:
-    link: "musaium:///(stack)/reviews"
+    link: 'musaium:///(stack)/reviews'
 - extendedWaitUntil:
     visible:
-      text: "Avis|Reviews"
+      text: 'Avis|Reviews'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 3: Open the write-review form
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Écrire un avis|Write a Review"
+    text: 'Écrire un avis|Write a Review'
 - extendedWaitUntil:
     visible:
-      id: "nps-scale"
+      id: 'nps-scale'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 4: Tap an NPS value (0-10, no stars), fill comment, submit
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "nps-value-9"
-# The comment is REQUIRED and must be >= 10 chars (backend z.string().min(10),
-# review.schemas.ts:20). Target the field by its stable testID
-# (reviews-comment-input) — the SAME approach the chat composer (testID
-# chat-input, also a multiline TextInput that re-renders on each keystroke)
-# uses to type a full multi-word message that reaches the backend. The earlier
-# placeholder-regex tap left the field weakly targeted; an id tap focuses it
-# deterministically. The comment is typed as TWO sequential inputText calls that
-# the field concatenates at the cursor (Maestro inputText appends) — the same
-# chunking chat-input-very-long.yaml relies on — which avoids the single-fast-
-# inputText truncation race on the re-rendering multiline field. The full text
-# is 77 chars, well over the backend's 10-char minimum (review.schemas.ts:20).
+    id: 'nps-value-9'
 - tapOn:
-    id: "reviews-comment-input"
+    id: 'reviews-comment-input'
 - waitForAnimationToEnd
-- inputText: "An unforgettable visit to this museum, "
-- inputText: "highly recommend the whole experience."
+- inputText: 'An unforgettable visit to this museum, '
+- inputText: 'highly recommend the whole experience.'
 - waitForAnimationToEnd
 - hideKeyboard
 - tapOn:
     text: "Envoyer l'avis|Submit Review"
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 5: Assert the submit SUCCEEDED.
-#
-# SUCCESS-ONLY (M-MAESTRO invariant): the terminal assertion must require the
-# happy-path outcome, never accept a failure copy. A POST /api/reviews 400 now
-# renders reviews.submitFailed ("Échec de l'envoi") which is NOT in this matcher
-# → the flow FAILS, as it must. Accepted terminal states:
-#   - reviews.success ("Merci pour votre avis !" / "Thank you for your review!")
-#     — the genuine happy path (submitReview returned ok → `submitted` true,
-#     reviews.tsx:124).
-#   - reviews.alreadyReviewed ("Vous avez déjà soumis un avis" / "You have
-#     already submitted a review", reviews.tsx:129) — the e2e account is shared
-#     and may already hold one review; the backend rejects a 2nd with an
-#     already_reviewed signal, which is an EXPECTED idempotent success state for
-#     a re-run, NOT a submit failure. It still proves the POST round-tripped to
-#     the backend and the form interpreted the domain response (no generic 400).
 - extendedWaitUntil:
     visible:
-      text: ".*(Merci pour votre avis|Thank you for your review|Vous avez déjà soumis un avis|You have already submitted a review).*"
+      text: '.*(Merci pour votre avis|Thank you for your review|Vous avez déjà soumis un avis|You have already submitted a review).*'
     timeout: 40000

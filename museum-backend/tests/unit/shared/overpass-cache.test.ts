@@ -2,6 +2,7 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+import { randomSource } from '@shared/utils/random';
 import { logger } from '@shared/logger/logger';
 
 import {
@@ -34,8 +35,6 @@ describe('overpass-cache', () => {
       expect(buildOverpassCacheKey({})).toBeNull();
     });
 
-    // Partial-params kill: any single coord absent must return null, never crash.
-    // Targets ConditionalExpression L50:7,29,51 + LogicalOperator L50:7 in overpass-cache.ts.
     it.each([
       ['radiusMeters only', { radiusMeters: 1000 }],
       ['lat only', { lat: 48 }],
@@ -55,7 +54,7 @@ describe('overpass-cache', () => {
 
     it('returns false before the 90% threshold', () => {
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 1_000, ttlSeconds: 60 };
-      const now = 1_000 + 30_000; // 50% elapsed
+      const now = 1_000 + 30_000;
       expect(shouldOverpassEarlyRefresh(entry, now)).toBe(false);
     });
 
@@ -66,45 +65,31 @@ describe('overpass-cache', () => {
 
     it('returns a boolean past the threshold (probabilistic)', () => {
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 1_000, ttlSeconds: 60 };
-      const now = 1_000 + 60_000; // 100% elapsed → always true (Math.random < 1)
+      const now = 1_000 + 60_000;
       expect(typeof shouldOverpassEarlyRefresh(entry, now)).toBe('boolean');
     });
 
-    // Deterministic kills of L115:10/26/27/70 mutations (ConditionalExpression,
-    // EqualityOperator, ArithmeticOperator on the probabilistic adjustment).
-    // ratio=0.95 → adjustment=(0.95-0.9)/(1-0.9)=0.5. Math.random=0.04 < 0.5 → true.
     it('returns true when Math.random rolls below the elapsed-ratio adjustment', () => {
-      jest.spyOn(Math, 'random').mockReturnValue(0.04);
+      jest.spyOn(randomSource, 'unit').mockReturnValue(0.04);
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 0, ttlSeconds: 100 };
       expect(shouldOverpassEarlyRefresh(entry, 95_000)).toBe(true);
     });
 
-    // ratio=0.91 → adjustment=0.1. Math.random=0.99 < 0.1 → false.
     it('returns false when Math.random rolls above the elapsed-ratio adjustment', () => {
-      jest.spyOn(Math, 'random').mockReturnValue(0.99);
+      jest.spyOn(randomSource, 'unit').mockReturnValue(0.99);
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 0, ttlSeconds: 100 };
       expect(shouldOverpassEarlyRefresh(entry, 91_000)).toBe(false);
     });
 
-    // Hits ArithmeticOperator L115:26 (/ → *): mutation makes adjustment huge,
-    // letting Math.random=0.04 < big_number stay true; original requires the
-    // ratio gap. Distinguishes via a Math.random value exactly at the divisor.
     it('returns true only when adjustment denominator divides correctly', () => {
-      jest.spyOn(Math, 'random').mockReturnValue(0.45);
+      jest.spyOn(randomSource, 'unit').mockReturnValue(0.45);
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 0, ttlSeconds: 100 };
-      // ratio=0.95 → adjustment=0.5; 0.45 < 0.5 → true (original). With * mutator
-      // adjustment becomes 0.005 → 0.45 < 0.005 → false. Different outcome.
       expect(shouldOverpassEarlyRefresh(entry, 95_000)).toBe(true);
     });
 
-    // Kills L115:10 EqualityOperator (< → <=): at the exact adjustment boundary
-    // Math.random=adjustment, the strict comparison is the only distinguishable
-    // behaviour.
     it('returns false when Math.random equals the adjustment boundary exactly', () => {
-      jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      jest.spyOn(randomSource, 'unit').mockReturnValue(0.5);
       const entry: OverpassCacheEntry = { value: [], storedAtMs: 0, ttlSeconds: 100 };
-      // ratio=0.95 → adjustment=0.5; original 0.5 < 0.5 → false. With <= mutator
-      // it would flip to true.
       expect(shouldOverpassEarlyRefresh(entry, 95_000)).toBe(false);
     });
   });
@@ -131,7 +116,6 @@ describe('overpass-cache', () => {
         negativeTtlSeconds: 3_600,
         refresh,
       });
-      // Wait one microtask cycle for the void IIFE to flush
       await new Promise((resolve) => setImmediate(resolve));
       expect(refresh).toHaveBeenCalledTimes(1);
       expect(set).toHaveBeenCalledWith(
@@ -179,8 +163,6 @@ describe('overpass-cache', () => {
       expect(set).not.toHaveBeenCalled();
     });
 
-    // Kills L90:21 BlockStatement (empty catch), L91:19 StringLiteral, and
-    // L91:57 ObjectLiteral mutations on fireOverpassBackgroundRefresh's error path.
     it('logs cacheKey + error message when refresh fails', async () => {
       (logger.warn as jest.Mock).mockClear();
       const set = jest.fn();

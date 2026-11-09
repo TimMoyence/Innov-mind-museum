@@ -8,7 +8,6 @@ import type {
   UpdateMuseumInput,
 } from '@modules/museum/domain/museum/museum.types';
 
-/** In-memory implementation of IMuseumRepository for unit tests. */
 export class InMemoryMuseumRepository implements IMuseumRepository {
   private museums: Museum[] = [];
   private nextId = 1;
@@ -76,11 +75,6 @@ export class InMemoryMuseumRepository implements IMuseumRepository {
     );
   }
 
-  /**
-   * In-memory geofence-containment test stub. Mirrors the JSONB-bbox branch
-   * of the PG adapter (rectangle check). PostGIS polygon containment is NOT
-   * simulated — tests that need it must mock the repo directly.
-   */
   async findByCoords(lat: number, lng: number): Promise<Museum | null> {
     for (const m of this.museums) {
       if (!m.isActive) continue;
@@ -96,13 +90,11 @@ export class InMemoryMuseumRepository implements IMuseumRepository {
     this.museums = this.museums.filter((m) => m.id !== id);
   }
 
-  /** Test helper: reset all stored museums. */
   clear(): void {
     this.museums = [];
     this.nextId = 1;
   }
 
-  /** Test helper: get raw internal state. */
   getAll(): Museum[] {
     return [...this.museums];
   }

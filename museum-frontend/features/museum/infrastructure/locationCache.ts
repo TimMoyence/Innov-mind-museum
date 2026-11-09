@@ -1,7 +1,6 @@
 import { storage } from '@/shared/infrastructure/storage';
 
 const STORAGE_KEY = 'museum.lastKnownPosition.v1';
-/** Cached positions older than 7 days are considered too stale to use as a hint. */
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface StoredPosition {
@@ -25,9 +24,7 @@ export const locationCache = {
     };
     try {
       await storage.setJSON(STORAGE_KEY, payload);
-    } catch {
-      // AsyncStorage failure is non-fatal — the next session will fall back to live GPS.
-    }
+    } catch {}
   },
 
   async load(): Promise<CachedPosition | null> {
@@ -52,8 +49,6 @@ export const locationCache = {
   async clear(): Promise<void> {
     try {
       await storage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    } catch {}
   },
 };

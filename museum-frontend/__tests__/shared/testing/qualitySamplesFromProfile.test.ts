@@ -1,26 +1,3 @@
-/**
- * B-R2 (RED) — helper `qualitySamplesFromProfile` (NEW, design §2.8).
- *
- * The single point of truth that turns a ratified profile's `latencyMs` /
- * `lossPct` into a DETERMINISTIC synthetic sample stream for the INV-17(b)
- * self-test volet (replaying the registry through the REAL quality engine).
- * Deriving samples inside each test would re-implement this mapping N times —
- * one named helper + its own mini-test instead (design §2.8 rationale).
- *
- * Pinned derivation contract (deterministic — zero Math.random/Date.now):
- *   - defaults: count=10, startAtMs=0, spacingMs=1000
- *   - failCount = Math.round(profile.lossPct × count); the FIRST failCount
- *     samples are failures {ok:false, timedOut:true}; the remaining samples
- *     are {ok:true, rttMs: profile.latencyMs}
- *   - atMs = startAtMs + i × spacingMs (monotone, engine-compatible)
- *
- * RED: the module `@/shared/testing/qualitySamplesFromProfile` does not exist
- * yet — the import fails, the suite is red until B-G1.
- *
- * lib-docs: none (pure test-only helper).
- * No inline test entities — profiles from the registry, samples from the
- * helper under test; assertions are property-wise (no shape literals).
- */
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';
 import { qualitySamplesFromProfile } from '@/shared/testing/qualitySamplesFromProfile';
 
@@ -49,12 +26,10 @@ describe('qualitySamplesFromProfile (B-R2, INV-17 b)', () => {
     expect(failures).toHaveLength(Math.round(profile.lossPct * 10));
     expect(failures).toHaveLength(3);
 
-    // The failures are the FIRST samples, flagged as timeouts.
     samples.slice(0, 3).forEach((sample) => {
       expect(sample.ok).toBe(false);
       expect(sample.timedOut).toBe(true);
     });
-    // The rest succeed at the profile's latency.
     samples.slice(3).forEach((sample) => {
       expect(sample.ok).toBe(true);
       expect(sample.timedOut).toBe(false);
@@ -76,7 +51,6 @@ describe('qualitySamplesFromProfile (B-R2, INV-17 b)', () => {
   });
 
   it('emits zero failures for lossless profiles (2g rounds to 0; 4g/5g/normal are 0)', () => {
-    // 2g: round(0.02 × 10) = 0 — every sample ok at 350 ms.
     const twoG = qualitySamplesFromProfile(NETWORK_PROFILES['2g']);
     expect(twoG.every((s) => s.ok && !s.timedOut)).toBe(true);
     expect(twoG.every((s) => s.rttMs === NETWORK_PROFILES['2g'].latencyMs)).toBe(true);
@@ -107,7 +81,6 @@ describe('qualitySamplesFromProfile (B-R2, INV-17 b)', () => {
     samples.forEach((sample, i) => {
       expect(sample.atMs).toBe(500 + i * 200);
     });
-    // round(0.3 × 5) = 2 leading failures.
     expect(samples.filter((s) => !s.ok)).toHaveLength(2);
     expect(samples[0]?.ok).toBe(false);
     expect(samples[1]?.ok).toBe(false);

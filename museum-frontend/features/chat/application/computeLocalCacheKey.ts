@@ -1,26 +1,7 @@
 import { sha256 } from 'js-sha256';
 
-/**
- * Cache-key contract — frontend mirror of
- * `museum-backend/src/modules/chat/useCase/chat-cache-key.util.ts`.
- *
- * Why: STRIDE I1 / GDPR Art 32 — V1 key shape leaked LLM responses across
- * users in the same museum (audit 2026-04-26 R1). Implements the agreed
- * Option C — *hybrid classifier-based scoping*:
- *
- *   - generic   → `chat:llm:global:{museumId}:{hash(...)}`
- *   - scoped    → `chat:llm:user:{userId}:{museumId}:{hash(...)}`
- *   - anonymous → `chat:llm:anon:{anonId}:{museumId}:{hash(...)}`
- *
- * IMPORTANT: this function MUST produce the same key string as the
- * backend `buildCacheKey()`. Any change here requires updating the
- * backend AND re-running the parity tests.
- */
-
-/** Maximum text length (in chars) for a query to qualify as generic. */
 export const GENERIC_TEXT_MAX_LEN = 280;
 
-/** Maximum allowed cache-key string length (Redis key safety guard). */
 export const MAX_CACHE_KEY_BYTES = 256;
 
 export interface LocalCacheKeyInput {
@@ -29,49 +10,19 @@ export interface LocalCacheKeyInput {
   locale: string;
   guideLevel?: string;
   audioDescriptionMode?: boolean;
-  /**
-   * C9.10 (2026-05-17) — voiceMode produces a 60-80w prose answer vs ~250-400w
-   * default. MUST be in the cache key to prevent cross-mode leakage.
-   */
   voiceMode?: boolean;
-  /** Authenticated user id; mutually exclusive with `anonId`. */
   userId?: number | string | null;
-  /** Anonymous device id from secure-store; mutually exclusive with `userId`. */
   anonId?: string | null;
-  /** True when the request carries any prior conversation turns. */
   hasHistory?: boolean;
-  /** True when the request carries an image or audio reference. */
   hasAttachment?: boolean;
-  /** True when geo coordinates were resolved AND consented to leak to LLM. */
   hasGeo?: boolean;
-  /** Coarse geo bucket (city + country). MUST already be coarse. */
   geoBucket?: string | null;
 }
 
-/**
- * Normalizes a question for cache key computation.
- * Lowercases, trims, and collapses consecutive whitespace to a single space.
- *
- * MUST stay byte-identical to backend `normalizeQuestion()`.
- */
 export function normalizeQuestion(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-/**
- * Returns true when the request matches the "generic / FAQ-like" profile
- * and is therefore safe to serve from the global cross-user cache.
- *
- * Default-safe: any undefined flag is treated as TRUE (i.e. as if context
- * were present), so the function falls through to user/anon scoping.
- *
- * F2 doctrine amendment (2026-05-19 run) — mirrors backend
- * `chat-cache-key.util.ts`: when the caller explicitly passes a truthy
- * `userId` or `anonId`, treat the request as scoped (NOT generic). This
- * preserves the feedback-driven invalidation path on the user-scoped
- * variant of generic questions. Generic global keys are reached by NOT
- * passing userId/anonId at all.
- */
 export function isGenericQuery(input: LocalCacheKeyInput): boolean {
   const uid = input.userId;
   if (uid !== undefined && uid !== null && String(uid).length > 0) return false;
@@ -106,12 +57,6 @@ function shortDigest(components: readonly string[]): string {
   return sha256(components.join('|')).slice(0, 16);
 }
 
-/**
- * Computes a deterministic local cache key for an LLM response.
- *
- * @see isGenericQuery for the global-vs-scoped decision.
- * @throws when scoping is required but no requester id is provided.
- */
 export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
   const normalized = normalizeQuestion(input.text);
   const baseComponents = [
@@ -128,11 +73,6 @@ export function computeLocalCacheKey(input: LocalCacheKeyInput): string {
   } else {
     const { namespace, id } = resolveRequester(input);
     const components = [...baseComponents];
-    // F2 (2026-05-19) — when scoped via explicit userId/anonId, hasHistory and
-    // hasAttachment still influence the LLM response, so factor them into the
-    // hash; previously they only flipped the global-vs-scoped branch (which
-    // pre-amendment also produced different keys via prefix change). MUST stay
-    // byte-identical to backend `chat-cache-key.util.ts`.
     if (input.hasHistory) components.push('h:1');
     if (input.hasAttachment) components.push('a:1');
     if (input.hasGeo && input.geoBucket && input.geoBucket.length > 0) {

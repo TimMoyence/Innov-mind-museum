@@ -17,23 +17,6 @@ import type { ScraperPort } from '@modules/knowledge-extraction/domain/ports/scr
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
-/**
- * Golden Path 9 — Knowledge Extraction pipeline (full DB round-trip).
- *
- * Covers the P1 audit gap (2026-04-24 enterprise audit): unit tests exercised
- * the extraction service with mocked repos; no test wired real TypeORM repos
- * against Postgres. This test:
- *   1. Boots the E2E harness (Postgres testcontainer + all migrations).
- *   2. Builds the ExtractionJobService with real TypeORM repos.
- *   3. Stubs only the external I/O ports (scraper + classifier) — everything
- *      downstream from the classifier is real.
- *   4. Invokes the pipeline and asserts: extracted_content row + artwork_knowledge
- *      row persisted with the correct shape.
- *
- * BullMQ + Redis are NOT part of the pipeline business logic; they are a
- * delivery mechanism. Exercising ExtractionJobService.processUrl() directly
- * covers every data path the worker would exercise.
- */
 describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
   let harness: E2EHarness;
 
@@ -118,9 +101,6 @@ describeE2E('golden path 9 — knowledge extraction full pipeline', () => {
   });
 
   it('dedups repeat URL within refetchAfterDays and skips scraping', async () => {
-    // Self-contained: seed an extracted_content row directly via the repo
-    // instead of relying on the previous test's side effect. Avoids
-    // order-dependent failures (Fix #5 from 2026-04-25 code review).
     const dedupUrl = 'https://example.com/dedup-test';
     const contentRepo = new TypeOrmExtractedContentRepo(
       harness.dataSource.getRepository(ExtractedContent),

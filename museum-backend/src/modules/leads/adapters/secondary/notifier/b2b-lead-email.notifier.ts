@@ -8,7 +8,6 @@ import type {
 } from '@modules/leads/domain/ports/b2b-lead-notifier.port';
 import type { EmailService } from '@shared/email/email.port';
 
-/** R4 §3.4 — emails B2B leads to the configured inbox. */
 export class EmailB2bLeadNotifier implements B2bLeadNotifier {
   constructor(
     private readonly emailService: EmailService,
@@ -34,7 +33,6 @@ export class EmailB2bLeadNotifier implements B2bLeadNotifier {
   }
 }
 
-/** R14 — local/dev fallback when email delivery is not configured. */
 export class NoopB2bLeadNotifier implements B2bLeadNotifier {
   notify(payload: B2bLeadPayload): Promise<void> {
     logger.warn('b2b_lead_notifier_noop', {

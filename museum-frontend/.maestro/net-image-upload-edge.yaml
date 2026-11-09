@@ -1,83 +1,55 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: ChatScreen
-# runtime: NIGHTLY weak-net (device→Toxiproxy, not validated in unit CI)
-#
-# W3-06 — Image upload under EDGE / low-data (Layer 3 device track).
-#
-# Proves the image-describe round-trip survives a shaped (EDGE) uplink: under the
-# forced low-data mode the client compresses the upload (~16× per W1 GZIP track),
-# so a vision-LLM describe still completes within a bounded wait instead of
-# timing out. The nightly job records the upload wall-clock for the compression
-# metric (maestro-summary). An offline blip mid-upload must surface the i18n
-# offline banner, NOT a raw error token.
-#
-# DEVICE→PROXY (runtime-deferred): Android nightly only; API base → Toxiproxy
-# shaped listener (10.0.2.2:3100) seeded from
-# `node scripts/net-shaping/profile-to-toxics.mjs edge`. iOS sim cannot be forced
-# offline (best-effort) → offline assertions are optional.
-#
-# Prereqs: seeded account; the fixture in the sim photo library
-# (xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg); backend
-# reachable through the shaped proxy with a working vision LLM provider.
-
-# ── Reach the chat composer, then turn data saving on (compression path) ──
 - runFlow:
     file: helpers/chat-entry.yaml
 - runFlow:
     file: helpers/data-saving-mode.yaml
     env:
-      MODE: "Économie activée|Saving enabled"
+      MODE: 'Économie activée|Saving enabled'
 
-# Low-data badge lights (compression active under low-data).
 - extendedWaitUntil:
     visible:
-      id: "low-data-badge"
+      id: 'low-data-badge'
     timeout: 15000
 
-# ── Attach a gallery photo (system picker) ──
 - tapOn:
-    id: "composer-attach-button"
+    id: 'composer-attach-button'
 - waitForAnimationToEnd
 - tapOn:
-    id: "attachment-picker-gallery"
+    id: 'attachment-picker-gallery'
 - waitForAnimationToEnd
 - tapOn:
-    text: "Allow|Allow Access to All Photos|Autoriser|Tout autoriser|Select Photos|Sélectionner des photos"
+    text: 'Allow|Allow Access to All Photos|Autoriser|Tout autoriser|Select Photos|Sélectionner des photos'
     optional: true
 - waitForAnimationToEnd
 - tapOn:
-    text: "test-artwork.jpg"
+    text: 'test-artwork.jpg'
     optional: true
 - tapOn:
-    point: "15%,30%"
+    point: '15%,30%'
     optional: true
 - waitForAnimationToEnd
 - tapOn:
-    text: "Add|Choose|Ajouter|Choisir|Done|OK"
+    text: 'Add|Choose|Ajouter|Choisir|Done|OK'
     optional: true
 - waitForAnimationToEnd
 
-# ── Question + send (compressed upload over EDGE) ──
 - tapOn:
-    id: "chat-input"
-- inputText: "Que peux-tu me dire sur cette oeuvre ?"
+    id: 'chat-input'
+- inputText: 'Que peux-tu me dire sur cette oeuvre ?'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
+    id: 'send-button'
 
-# ── Bounded wait for the assistant message (compression keeps it under budget) ──
 - extendedWaitUntil:
     visible:
-      id: "chat-bubble-assistant"
+      id: 'chat-bubble-assistant'
     timeout: 90000
     optional: true
 
-# Never a raw token if the shaped upload struggles.
 - assertNotVisible:
-    text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
+    text: 'NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError'
 
-# ── Offline blip → i18n offline banner → restore → resync ──
 - setAirplaneMode: enabled
 - waitForAnimationToEnd
 - extendedWaitUntil:
@@ -89,12 +61,11 @@ appId: com.musaium.mobile.preview
 - waitForAnimationToEnd
 - extendedWaitUntil:
     notVisible:
-      id: "offline-banner"
+      id: 'offline-banner'
     timeout: 20000
     optional: true
 
-# ── Cleanup: back to "Automatic" so the preference never leaks ──
 - runFlow:
     file: helpers/data-saving-mode.yaml
     env:
-      MODE: "Automatique|Automatic"
+      MODE: 'Automatique|Automatic'

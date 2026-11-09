@@ -1,43 +1,9 @@
-/**
- * Red tests for B5 — `<SottoVoceToggle>` component + `<ChatHeader>` integration.
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B5.md` :
- *
- *   §1.2 (R9-R17) — toggle component shape + a11y + icon swap.
- *   §1.3 (R18-R21) — <ChatHeader> renders <SottoVoceToggle> when handler provided.
- *   §4 (AC7-AC15) — testID + role + state + i18n hints + collapsed survival.
- *
- * Key invariants :
- *   - testID="sotto-voce-toggle".
- *   - `accessibilityRole="button"` (NOT "switch" — convention RN Pressable bascule).
- *   - `accessibilityState={{ selected: enabled }}` reflects the prop.
- *   - Icon `mic-off-outline` (off) / `mic-off` (on).
- *   - Tap → onToggle called exactly once.
- *   - Backward-compat : ChatHeader WITHOUT onToggleSottoVoce does NOT render the toggle.
- *   - A4 collapsed mode preserves the toggle (R21).
- *
- * At baseline (B5 not yet implemented) :
- *   - `@/features/chat/ui/SottoVoceToggle` does not exist.
- *     → Jest fails with "Cannot find module" at module load time.
- */
-
 import '../helpers/test-utils';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
-// Mock ExpertiseBadge to a predictable testID node so ChatHeader renders cleanly.
-jest.mock('@/features/chat/ui/ExpertiseBadge', () => {
-  const { Text } = require('react-native');
-  return {
-    ExpertiseBadge: ({ level }: { level: string }) => <Text testID="expertise-badge">{level}</Text>,
-  };
-});
-
-// RED ASSERTION 1 : SottoVoceToggle module does not exist yet.
 import { SottoVoceToggle } from '@/features/chat/ui/SottoVoceToggle';
 
-// ChatHeader already exists ; the integration assertions probe the new optional
-// props which the baseline ChatHeader does NOT consume → red.
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
 
 describe('<SottoVoceToggle> (B5 atomic toggle)', () => {
@@ -54,7 +20,6 @@ describe('<SottoVoceToggle> (B5 atomic toggle)', () => {
 
   describe('icon swap (R12, AC7-AC8)', () => {
     it('renders Ionicons name="mic-off-outline" when enabled=false', () => {
-      // Ionicons is mocked in test-utils to render its name as text content.
       const { getByText } = render(<SottoVoceToggle enabled={false} onToggle={jest.fn()} />);
       expect(getByText('mic-off-outline')).toBeTruthy();
     });
@@ -95,7 +60,6 @@ describe('<SottoVoceToggle> (B5 atomic toggle)', () => {
     it('uses i18n key "chat.sottoVoce.a11y_label" for accessibilityLabel', () => {
       const { getByTestId } = render(<SottoVoceToggle enabled={false} onToggle={jest.fn()} />);
       const node = getByTestId('sotto-voce-toggle');
-      // test-utils i18n mock returns the key verbatim.
       expect(node.props.accessibilityLabel).toBe('chat.sottoVoce.a11y_label');
     });
 
@@ -213,7 +177,6 @@ describe('<ChatHeader> — B5 sotto-voce integration (R18-R21, AC12-AC15)', () =
         collapsed
       />,
     );
-    // Both must coexist : sotto-voce toggle AND legal AI badge.
     expect(getByTestId('sotto-voce-toggle')).toBeTruthy();
     expect(getByTestId('ai-disclosure-badge')).toBeTruthy();
   });

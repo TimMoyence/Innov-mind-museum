@@ -4,8 +4,6 @@ import { Alert, Share } from 'react-native';
 import { useMessageActions } from '@/features/chat/application/useMessageActions';
 import { makeChatUiMessage } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -30,11 +28,8 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
-// Spy on Alert.alert and Share.share
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useMessageActions', () => {
   const mockOnReport = jest.fn();

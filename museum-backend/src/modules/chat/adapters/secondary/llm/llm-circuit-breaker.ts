@@ -9,9 +9,7 @@ interface CircuitBreakerOptions {
   failureThreshold?: number;
   windowMs?: number;
   openDurationMs?: number;
-  /** Additive (PR-13) — composition root can wire metrics gauges. */
   onStateChange?: (next: CircuitState, prev: CircuitState) => void;
-  /** Test seam — defaults to `Date.now`. */
   now?: () => number;
 }
 
@@ -25,9 +23,6 @@ export class LLMCircuitBreaker {
   private readonly circuit: ThreeStateCircuit<SlidingWindowFailureStrategy>;
 
   constructor(options?: CircuitBreakerOptions) {
-    // Env-var overrides let chaos e2e tune short windows (LLM_CB_FAILURE_THRESHOLD=3,
-    // LLM_CB_WINDOW_MS=1000, LLM_CB_OPEN_DURATION_MS=500). Prod leaves unset → defaults
-    // 5 / 60000 / 30000.
     const failureThreshold =
       options?.failureThreshold ??
       Number(process.env.LLM_CB_FAILURE_THRESHOLD ?? DEFAULT_FAILURE_THRESHOLD);
@@ -63,12 +58,10 @@ export class LLMCircuitBreaker {
     });
   }
 
-  /** Transitions OPEN → HALF_OPEN when cooldown expires (side-effecting getter). */
   get state(): CircuitState {
     return this.circuit.state;
   }
 
-  /** Throws CircuitOpenError if OPEN; records success/failure otherwise. */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.circuit.state === 'OPEN') {
       throw new CircuitOpenError();
@@ -84,12 +77,10 @@ export class LLMCircuitBreaker {
     }
   }
 
-  /** HALF_OPEN → CLOSED on success. */
   recordSuccess(): void {
     this.circuit.recordOutcome('success');
   }
 
-  /** Trips to OPEN if threshold exceeded in the sliding window. */
   recordFailure(): void {
     this.strategy.recordFailure();
     this.circuit.recordOutcome('failure');
@@ -98,7 +89,7 @@ export class LLMCircuitBreaker {
   getState(): { state: CircuitState; failureCount: number; lastFailureAt: Date | null } {
     const last = this.strategy.getLastFailureAt();
     return {
-      state: this.circuit.state, // triggers OPEN → HALF_OPEN transition if cooldown expired
+      state: this.circuit.state,
       failureCount: this.strategy.getFailureCount(),
       lastFailureAt: last !== null ? new Date(last) : null,
     };

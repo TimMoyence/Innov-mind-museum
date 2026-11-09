@@ -15,16 +15,13 @@ interface ThemeContextValue {
 }
 
 const THEME_KEY = 'musaium.theme.mode';
-/** Pre-namespacing key migrated forward once on mount (TD-AS-01). */
 const LEGACY_THEME_KEY = 'app.themeMode';
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: lightTheme,
   mode: 'system',
   isDark: false,
-  setMode: () => {
-    /* noop */
-  },
+  setMode: () => undefined,
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -41,16 +38,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           setModeState(stored);
         }
       })
-      .catch(() => {
-        /* noop */
-      });
+      .catch(() => undefined);
   }, []);
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
-    AsyncStorage.setItem(THEME_KEY, newMode).catch(() => {
-      /* noop */
-    });
+    AsyncStorage.setItem(THEME_KEY, newMode).catch(() => undefined);
   }, []);
 
   const isDark = mode === 'dark' || (mode === 'system' && systemScheme === 'dark');

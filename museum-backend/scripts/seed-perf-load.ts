@@ -1,4 +1,3 @@
-// museum-backend/scripts/seed-perf-load.ts
 import 'dotenv/config';
 import 'reflect-metadata';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -56,7 +55,6 @@ const seedUsers = async (cp: Checkpoint): Promise<void> => {
   }
 };
 
-// Sessions: 90% attached to a user, 10% anonymous. Mean 2 sessions per attached user.
 const seedSessions = async (cp: Checkpoint): Promise<void> => {
   const ds = AppDataSource;
   while (cp.sessions < TARGET.sessions) {
@@ -80,7 +78,6 @@ const seedSessions = async (cp: Checkpoint): Promise<void> => {
 
 const seedMessages = async (cp: Checkpoint): Promise<void> => {
   const ds = AppDataSource;
-  // Get session id range — fetched once.
   const sessionIds = (await ds.query(`SELECT id FROM chat_sessions ORDER BY "createdAt" LIMIT $1`, [
     TARGET.sessions,
   ])) as { id: string }[];
@@ -105,7 +102,6 @@ const seedMessages = async (cp: Checkpoint): Promise<void> => {
 
 const seedArtworkMatches = async (cp: Checkpoint): Promise<void> => {
   const ds = AppDataSource;
-  // Source from assistant messages only, sample as we go.
   while (cp.artworkMatches < TARGET.artworkMatches) {
     const start = cp.artworkMatches + 1;
     const end = Math.min(start + BATCH - 1, TARGET.artworkMatches);

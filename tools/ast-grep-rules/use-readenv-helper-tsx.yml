@@ -1,7 +1,3 @@
-# Forbid direct `process.env.X` reads in museum-frontend code (.tsx files).
-# Sibling of `use-readenv-helper.yml` — see that file for full rationale.
-# Split into two rules because ast-grep treats `typescript` and `tsx` as
-# distinct grammars and each rule has a single `language:` directive.
 
 id: use-readenv-helper-tsx
 language: tsx

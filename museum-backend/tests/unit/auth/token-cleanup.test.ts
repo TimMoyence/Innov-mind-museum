@@ -31,8 +31,6 @@ describe('TokenCleanupService', () => {
     jest.clearAllMocks();
   });
 
-  // ── runCleanup ──────────────────────────────────────────────────
-
   it('runs cleanup when lock is acquired (setNx returns true)', async () => {
     const repo = makeRefreshTokenRepo(42);
     const cache = makeCacheService(true);
@@ -97,8 +95,6 @@ describe('TokenCleanupService', () => {
     expect(logger.info).not.toHaveBeenCalledWith('token_cleanup_completed', expect.anything());
   });
 
-  // ── Scheduler ───────────────────────────────────────────────────
-
   describe('startScheduler / stopScheduler', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -117,9 +113,7 @@ describe('TokenCleanupService', () => {
         intervalMs: 1000,
       });
 
-      // Advance past one interval
       jest.advanceTimersByTime(1000);
-      // Allow the async runCleanup to settle
       await Promise.resolve();
 
       expect(repo.deleteExpiredTokens).toHaveBeenCalledTimes(1);
@@ -147,7 +141,6 @@ describe('TokenCleanupService', () => {
       service.startScheduler(1000);
       service.startScheduler(1000);
 
-      // Logger should only be called once for scheduler_started
       const schedulerStartCalls = logger.info.mock.calls.filter(
         (call: unknown[]) => call[0] === 'token_cleanup_scheduler_started',
       );
@@ -160,7 +153,6 @@ describe('TokenCleanupService', () => {
       const repo = makeRefreshTokenRepo();
       const service = new TokenCleanupService(repo, undefined);
 
-      // Should not throw
       expect(() => {
         service.stopScheduler();
       }).not.toThrow();

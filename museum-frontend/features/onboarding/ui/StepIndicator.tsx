@@ -8,7 +8,6 @@ interface StepIndicatorProps {
   currentStep: number;
 }
 
-/** Dot indicator showing progress through onboarding steps. */
 export const StepIndicator = ({ totalSteps, currentStep }: StepIndicatorProps) => {
   const { theme } = useTheme();
 

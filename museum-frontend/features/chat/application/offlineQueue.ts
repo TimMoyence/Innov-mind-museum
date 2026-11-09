@@ -1,3 +1,4 @@
+import { generateRequestId } from '../../../shared/infrastructure/requestId';
 export interface QueuedMessage {
   id: string;
   sessionId: string;
@@ -18,12 +19,11 @@ interface OfflineQueueOptions {
   storage?: QueueStorage;
   maxQueueSize?: number;
   maxAgeMs?: number;
-  /** Called with messages that were evicted during hydrate or prune. */
   onEvict?: (messages: QueuedMessage[]) => void;
 }
 
 const DEFAULT_MAX_QUEUE_SIZE = 50;
-const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export class OfflineQueue {
   private queue: QueuedMessage[] = [];
@@ -36,7 +36,6 @@ export class OfflineQueue {
 
   constructor(options?: QueueStorage | OfflineQueueOptions) {
     if (options && typeof options === 'object' && 'getItem' in options) {
-      // Legacy: constructor(storage?: QueueStorage)
       this.storage = options;
       this.maxQueueSize = DEFAULT_MAX_QUEUE_SIZE;
       this.maxAgeMs = DEFAULT_MAX_AGE_MS;
@@ -50,10 +49,6 @@ export class OfflineQueue {
     }
   }
 
-  /**
-   * Loads persisted queue entries from storage.
-   * Call once after construction to rehydrate the queue.
-   */
   async hydrate(): Promise<void> {
     if (!this.storage) return;
     try {
@@ -80,9 +75,7 @@ export class OfflineQueue {
           }
         }
       }
-    } catch {
-      // Corrupted data — start fresh
-    }
+    } catch {}
   }
 
   enqueue(message: Omit<QueuedMessage, 'id' | 'createdAt' | 'retryCount'>): QueuedMessage | null {
@@ -92,7 +85,7 @@ export class OfflineQueue {
 
     const entry: QueuedMessage = {
       ...message,
-      id: `offline-${String(Date.now())}-${Math.random().toString(36).slice(2)}`,
+      id: `offline-${generateRequestId()}`,
       createdAt: Date.now(),
       retryCount: 0,
     };
@@ -137,9 +130,6 @@ export class OfflineQueue {
     void this.persist();
   }
 
-  /**
-   * Removes messages older than maxAgeMs from the queue.
-   */
   prune(): void {
     const now = Date.now();
     const kept: QueuedMessage[] = [];
@@ -179,8 +169,6 @@ export class OfflineQueue {
     if (!this.storage) return;
     try {
       await this.storage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
-    } catch {
-      // Storage write failed — queue remains in memory
-    }
+    } catch {}
   }
 }

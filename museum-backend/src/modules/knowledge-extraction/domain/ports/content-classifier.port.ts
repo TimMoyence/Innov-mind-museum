@@ -25,6 +25,5 @@ export type ClassificationResult =
   | { type: 'irrelevant'; confidence: number; data: null };
 
 export interface ContentClassifierPort {
-  /** Returns null on any LLM error. */
   classify(textContent: string, locale: string): Promise<ClassificationResult | null>;
 }

@@ -1,39 +1,9 @@
-/**
- * QA-06 RED — rich JSONB fields exposure in MuseumEnrichmentView.
- *
- * Phase RED of the UFR-022 fresh-context 5-phase workflow. These tests
- * PROVE the bug/absence: the cache adapter's `toView` projection currently
- * OMITS the four rich JSONB columns (`admissionFees`, `collections`,
- * `currentExhibitions`, `accessibility`) that already exist on the
- * `MuseumEnrichment` entity. The detail screen therefore can never surface
- * them.
- *
- * Source-of-truth: audit-state/2026-05-30-qa-manual/QA-NOTES.md § QA-06
- * + team-runs/qa-06/spec.md R1/R2/R4.
- *
- * Discrimination:
- *  - `findFresh` → `toView(row)`. Today `toView` builds the view from only
- *    summary/wikidataQid/website/phone/imageUrl/openingHours/fetchedAt. The
- *    four rich keys are therefore `undefined` on the returned view → the
- *    assertions `.toEqual(<record>)` / `.toBeNull()` FAIL.
- *  - The UPDATE path (`applyViewToEntity`) test proves a worker refresh that
- *    carries `null` rich fields must NOT overwrite a pre-existing seeded rich
- *    value (R4). Today the view type has no such fields, so the green impl
- *    must add them AND preserve them on update.
- *
- * These tests do NOT touch the existing
- * `typeorm-museum-enrichment-cache.adapter.test.ts` (parsedToJsonb coverage)
- * — they live in a separate file so the existing green suite stays untouched.
- */
-
 import { TypeOrmMuseumEnrichmentCacheAdapter } from '@modules/museum/adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter';
 
 import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 import type { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type { DataSource } from 'typeorm';
 
-// Minimal entity-row stand-in: a row as TypeORM would hydrate it, carrying
-// the four rich JSONB columns the entity already declares (entity l.53-82).
 interface FakeEnrichmentRow {
   id: string;
   museumId: number | null;
@@ -134,7 +104,6 @@ describe('QA-06 — TypeOrmMuseumEnrichmentCacheAdapter exposes rich JSONB field
 
     expect(view).not.toBeNull();
     const v = view as MuseumEnrichmentView;
-    // The four rich fields MUST round-trip from the entity to the view.
     expect(v.admissionFees).toEqual({ adult: '6 €', under18: 'gratuit' });
     expect(v.collections).toEqual({ highlights: ['Préhistoire', 'Bordeaux au XVIIIe siècle'] });
     expect(v.currentExhibitions).toBeNull();
@@ -169,7 +138,6 @@ describe('QA-06 — TypeOrmMuseumEnrichmentCacheAdapter exposes rich JSONB field
 
   it('upsert UPDATE path: a worker refresh carrying null rich fields does NOT overwrite a pre-existing seeded rich value (R4)', async () => {
     const { adapter, enrichmentRepo } = makeAdapter();
-    // A previously seeded row already holds rich data.
     const existing = makeRichRow({
       summary: 'stale',
       admissionFees: { adult: '6 €' },
@@ -178,7 +146,6 @@ describe('QA-06 — TypeOrmMuseumEnrichmentCacheAdapter exposes rich JSONB field
     });
     enrichmentRepo.setExisting(existing);
 
-    // The worker P3 builds a view WITHOUT the rich fields (they are null).
     const workerView: MuseumEnrichmentView = {
       museumId: 42,
       locale: 'fr',
@@ -200,18 +167,11 @@ describe('QA-06 — TypeOrmMuseumEnrichmentCacheAdapter exposes rich JSONB field
     expect(enrichmentRepo.saved).toHaveLength(1);
     const persisted = enrichmentRepo.saved[0];
     expect(persisted).toBeDefined();
-    // Legacy/base columns updated by the worker.
     expect(persisted.summary).toBe('fresh summary from worker');
-    // Rich seeded fields PRESERVED on the entity — the worker null view must
-    // not wipe them.
     expect(persisted.admissionFees).toEqual({ adult: '6 €' });
     expect(persisted.collections).toEqual({ highlights: ['Préhistoire'] });
     expect(persisted.accessibility).toEqual({ wheelchairAccess: true });
 
-    // And the preserved values MUST be observable through the view projection
-    // (`findFresh` → `toView`). This is the discriminator: today `toView`
-    // omits the four rich fields → the read-back view exposes `undefined`,
-    // failing the assertions below. After GREEN the view carries them.
     enrichmentRepo.setExisting(persisted);
     const readBack = await adapter.findFresh({
       museumId: 42,

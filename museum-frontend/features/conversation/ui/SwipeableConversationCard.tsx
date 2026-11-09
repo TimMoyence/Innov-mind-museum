@@ -1,8 +1,5 @@
 import { useCallback, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-// TD-RNGH-04 — migrated from deprecated `Swipeable` (RN Animated v1) to
-// `ReanimatedSwipeable` (Reanimated v3 worklets, Fabric/New Arch safe).
-// lib-docs/react-native-gesture-handler/PATTERNS.md.
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -20,11 +17,8 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
 interface SwipeableConversationCardProps {
-  /** The conversation card content to render. */
   children: React.ReactNode;
-  /** Called when the user confirms deletion via the swipe action. */
   onDelete: () => void;
-  /** Whether the card is in edit/selection mode (disables swipe). */
   editMode?: boolean;
 }
 
@@ -36,12 +30,6 @@ interface DeleteActionProps {
   onPress: () => void;
 }
 
-/**
- * Renders the right-swipe-revealed delete button. Owns the `useAnimatedStyle`
- * hook so we can read the `translation` SharedValue inside a worklet
- * (ReanimatedSwipeable contract — the parent `renderRightActions` is called
- * inside the swipeable's render phase and CANNOT host hooks itself).
- */
 function DeleteAction({
   translation,
   backgroundColor,
@@ -68,7 +56,6 @@ function DeleteAction({
   );
 }
 
-/** Wraps a conversation card with swipe-left-to-reveal-delete functionality. */
 export const SwipeableConversationCard = ({
   children,
   onDelete,

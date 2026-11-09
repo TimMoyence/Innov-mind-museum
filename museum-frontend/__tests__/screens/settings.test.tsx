@@ -2,8 +2,6 @@ import '../helpers/test-utils';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Share } from 'react-native';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
 jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   useRuntimeSettings: () => ({
     locale: 'en-US',
@@ -184,13 +182,9 @@ describe('SettingsScreen', () => {
     expect(screen.getByTestId('floating-context-menu')).toBeTruthy();
   });
 
-  // ── Behavioral tests ────────────────────────────────────────────────────────
-
   it('wires setMode to theme card and pressing dark button invokes it', () => {
     render(<SettingsScreen />);
-    // Verify the settings screen passes setMode from useTheme to the theme card
     expect(typeof capturedOnSetMode).toBe('function');
-    // Pressing the button calls props.onSetMode('dark') without throwing
     fireEvent.press(screen.getByTestId('theme-dark-button'));
   });
 
@@ -217,8 +211,6 @@ describe('SettingsScreen', () => {
     fireEvent.press(screen.getByLabelText('a11y.settings.back_home'));
     expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/home');
   });
-
-  // ── Invite a friend (QA-10) ──────────────────────────────────────────────────
 
   it('renders the invite-a-friend row', () => {
     render(<SettingsScreen />);

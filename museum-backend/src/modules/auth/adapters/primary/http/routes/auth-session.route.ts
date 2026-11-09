@@ -46,13 +46,6 @@ import { logger } from '@shared/logger/logger';
 import { resolveCredential } from '@shared/middleware/authenticated.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 
-/**
- * TEMP DIAG (2026-05-12) — TestFlight 1.2.2/88: /social-redeem 400 with no
- * insight. Emits PII-safe fingerprint (first 8 chars + length + char-class
- * booleans) before validateBody to pinpoint cause if FE parseCallbackUrl
- * fragment-strip fix doesn't resolve. OTC single-use 60s — leakage risk
- * acceptable for diag window. REVERT once TestFlight reports clean.
- */
 const diagSocialRedeemCode = (req: Request, _res: Response, next: NextFunction): void => {
   const body = req.body as { code?: unknown };
   const code = body.code;
@@ -100,7 +93,6 @@ authSessionRouter.post(
   '/login',
   validateBody(loginSchema),
   loginLimiter,
-  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   loginByAccountLimiter,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -119,12 +111,10 @@ authSessionRouter.post(
   '/refresh',
   refreshTokenFromCookie,
   validateBody(refreshSchema),
-  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   refreshLimiter,
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
     const session = await authSessionService.refresh(refreshToken);
-    // F7 — refresh cookies in lockstep with rotated tokens. JSON envelope unchanged.
     setAuthCookies(res, session);
     res.status(200).json(session);
   },
@@ -137,16 +127,11 @@ authSessionRouter.post(
   logoutLimiter,
   async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
-    // R7 — the access token (Bearer or access_token cookie, best-effort) feeds
-    // the access-token denylist. Absent / invalid / expired → undefined ctx →
-    // logout still idempotent, no leak of token validation details.
     let ctx: { accessJti: string; accessExpSec: number } | undefined;
     try {
       const claims = authSessionService.verifyAccessTokenWithClaims(resolveCredential(req) ?? '');
       ctx = { accessJti: claims.jti, accessExpSec: claims.expSec };
-    } catch {
-      // Access token absent/invalid/expired — silent, no leak.
-    }
+    } catch {}
     await authSessionService.logout(refreshToken, ctx);
     await auditService.log({
       action: AUDIT_AUTH_LOGOUT,
@@ -154,7 +139,6 @@ authSessionRouter.post(
       ip: req.ip,
       requestId: req.requestId,
     });
-    // F7 — no-op on mobile.
     clearAuthCookies(res);
     res.status(200).json({ success: true });
   },
@@ -163,20 +147,16 @@ authSessionRouter.post(
 authSessionRouter.post(
   '/social-login',
   validateBody(socialLoginSchema),
-  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   socialLoginLimiter,
   async (req: Request, res: Response) => {
     const { provider, idToken, nonce } = req.body;
     const session = await socialLoginUseCase.execute(provider, idToken, nonce);
     await auditOwnAccount(req, session.user.id, AUDIT_AUTH_SOCIAL_LOGIN, { provider });
-    // F7 — dual-mode (same as /login).
     setAuthCookies(res, session);
     res.status(200).json(session);
   },
 );
 
-// F3 — issue server-bound nonce for next /social-login. Rate-limited so
-// attacker cannot burn entropy pool / hammer Redis. No body required.
 authSessionRouter.post(
   '/social-nonce',
   socialLoginLimiter,
@@ -186,13 +166,10 @@ authSessionRouter.post(
   },
 );
 
-// F11-mobile — OTC handoff. Auth audit row already emitted in /google/callback;
-// only needs rate-limit guard against OTC entropy-pool bruteforce.
 authSessionRouter.post(
   '/social-redeem',
   diagSocialRedeemCode,
   validateBody(socialRedeemSchema),
-  // per lib-docs/zod/PATTERNS.md §3 L202-206 (safeParse short-circuit before counter mutation)
   socialLoginLimiter,
   async (req: Request, res: Response) => {
     const { code } = req.body;

@@ -1,42 +1,15 @@
-/**
- * RED — T7.1 — `catalog-ingest` CLI (integration, real PG + mocked SPARQL/HTTP).
- *
- * Locks down tasks.md T7.1 + spec.md R15 (idempotency) + design.md §9 D8:
- *   - 100 fixtures happy path → 100 rows inserted in `artwork_embeddings`,
- *   - second run on the same DB → 0 inserts (skipped because qid + modelVersion
- *     already present — R15 idempotency),
- *   - `--license-filter=pd,cc-0` rejects rows whose license falls outside the
- *     allow-list and surfaces a `license_rejected` count,
- *   - `--dry-run` performs no DB write,
- *   - `--batch-size=20 --concurrency=2` works (no race / no double-insert).
- *
- * SPARQL + Wikimedia downloads are mocked via `global.fetch`; the encoder is
- * mocked to return a deterministic 768-d vector so the test remains
- * hermetic (no ONNX / no network).
- *
- * SUT does not yet exist (Phase 7). Tests are RED until the editor lands the
- * `museum-backend/scripts/catalog-ingest.ts` file with a `runIngest(opts)`
- * test-friendly entry point.
- */
-
 import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 import { makeStubEncoder } from '../../../helpers/chat/visual-similarity/catalog-ingest.fixtures';
+import { countArtworkEmbeddings } from '../../../helpers/chat/visual-similarity/embedding.fixtures';
 
 import type { EmbeddingsPort } from '@modules/chat/domain/ports/embeddings.port';
 import type { ArtworkEmbeddingRepository } from '@modules/chat/domain/visual-similarity/artworkEmbedding.repository.interface';
 
-// Silence logger noise from the SUT during these tests.
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-/**
- * Runtime options for the test-friendly SUT entry. The CLI real binary parses
- * `process.argv`; tests bypass argv parsing and call `runIngest(opts)`
- * directly so we can inject mocked dependencies (encoder + repository) and
- * mocked HTTP for SPARQL / Wikimedia.
- */
 interface RunIngestOptions {
   museumQids: string[];
   licenseFilter: ('public-domain' | 'cc-0' | 'cc-by-sa')[];
@@ -55,9 +28,6 @@ interface RunIngestResult {
   totalSeen: number;
 }
 
-// SUT — Phase 7 file, must not yet exist. Path is relative to the test
-// file because `scripts/` lives outside the `src/` tree (no path alias).
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load to surface a useful Jest failure when the module is missing
 const { runIngest } = require('../../../../scripts/catalog-ingest') as {
   runIngest: (opts: RunIngestOptions) => Promise<RunIngestResult>;
 };
@@ -65,10 +35,6 @@ const { runIngest } = require('../../../../scripts/catalog-ingest') as {
 const NUM_FIXTURE_ROWS = 100;
 const originalFetch = global.fetch;
 
-/**
- * Build a SPARQL JSON binding. Optional fields are omitted from the binding
- * dictionary so the SUT defensively handles missing keys.
- */
 const makeBinding = (
   qid: string,
   title: string,
@@ -84,13 +50,6 @@ const makeBinding = (
   museum: { value: `http://www.wikidata.org/entity/${museumQid}` },
 });
 
-/**
- * Wire `global.fetch` so:
- *  - any URL containing `query.wikidata.org/sparql` returns the supplied
- *    bindings array,
- *  - any other URL (i.e. Wikimedia thumbnail) returns a tiny deterministic
- *    JPEG-shaped buffer.
- */
 const wireFetchMock = (
   bindings: Record<string, { value: string }>[],
 ): jest.MockedFunction<typeof fetch> => {
@@ -106,8 +65,6 @@ const wireFetchMock = (
         }),
       );
     }
-    // Mock Wikimedia thumbnail download — ~1KB random buffer is enough; the
-    // SUT preprocesses + encodes via the injected mocked encoder.
     const fakeJpeg = Buffer.alloc(1024, 0x42);
     return Promise.resolve({
       ok: true,
@@ -131,9 +88,6 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
   beforeAll(async () => {
     harness = await createIntegrationHarness();
     harness.scheduleStop();
-    // Repository wiring uses the real Phase 4 adapter — same module the
-    // CLI itself uses in production.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT-coupled adapter load
     const { ArtworkEmbeddingRepositoryPg } =
       require('@modules/chat/adapters/secondary/persistence/artwork-embedding.repository.pg') as {
         ArtworkEmbeddingRepositoryPg: new (
@@ -171,7 +125,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
     expect(result.inserted).toBe(NUM_FIXTURE_ROWS);
     expect(result.skipped).toBe(0);
     expect(result.licenseRejected).toBe(0);
-    expect(await repo.count()).toBe(NUM_FIXTURE_ROWS);
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(NUM_FIXTURE_ROWS);
   });
 
   it('R15 idempotency: rerun over the same DB state produces 0 inserts (skipped=100)', async () => {
@@ -179,7 +133,6 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       makeBinding(`Q${500_000 + i}`, `Fixture ${i}`, 'public-domain'),
     );
 
-    // First run — populates the catalog.
     wireFetchMock(bindings);
     await runIngest({
       museumQids: ['Q19675'],
@@ -189,9 +142,8 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
       encoder: makeStubEncoder(),
       repository: repo,
     });
-    expect(await repo.count()).toBe(NUM_FIXTURE_ROWS);
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(NUM_FIXTURE_ROWS);
 
-    // Second run — same SPARQL response, same encoder seeds, same model version.
     wireFetchMock(bindings);
     const second = await runIngest({
       museumQids: ['Q19675'],
@@ -204,7 +156,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
 
     expect(second.inserted).toBe(0);
     expect(second.skipped).toBe(NUM_FIXTURE_ROWS);
-    expect(await repo.count()).toBe(NUM_FIXTURE_ROWS);
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(NUM_FIXTURE_ROWS);
   });
 
   it('license-filter=pd,cc-0 rejects cc-by-sa rows (60 PD + 30 CC-0 + 10 CC-BY-SA → 90 inserted, 10 rejected)', async () => {
@@ -230,7 +182,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
 
     expect(result.inserted).toBe(90);
     expect(result.licenseRejected).toBe(10);
-    expect(await repo.count()).toBe(90);
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(90);
   });
 
   it('--dry-run performs zero DB writes (preview-only)', async () => {
@@ -250,8 +202,7 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
     });
 
     expect(result.inserted).toBe(0);
-    expect(await repo.count()).toBe(0);
-    // The CLI still reports what *would* have been inserted in dry-run.
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(0);
     expect(result.totalSeen).toBe(NUM_FIXTURE_ROWS);
   });
 
@@ -271,6 +222,6 @@ describe('catalog-ingest CLI (T7.1 — integration)', () => {
     });
 
     expect(result.inserted).toBe(NUM_FIXTURE_ROWS);
-    expect(await repo.count()).toBe(NUM_FIXTURE_ROWS);
+    expect(await countArtworkEmbeddings(harness.dataSource)).toBe(NUM_FIXTURE_ROWS);
   });
 });

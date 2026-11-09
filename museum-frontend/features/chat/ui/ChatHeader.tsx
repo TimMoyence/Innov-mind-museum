@@ -2,7 +2,6 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { ExpertiseBadge } from '@/features/chat/ui/ExpertiseBadge';
 import { SottoVoceToggle } from '@/features/chat/ui/SottoVoceToggle';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -10,42 +9,19 @@ import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 export interface ChatHeaderProps {
   sessionTitle: string | null;
-  expertiseLevel?: 'beginner' | 'intermediate' | 'expert';
   isClosing: boolean;
   onClose: () => void;
   onSummary?: () => void;
   audioDescriptionEnabled?: boolean;
   onToggleAudioDescription?: () => void;
-  /**
-   * B5 — Sotto-voce mode (silent room, audio muted). When `onToggleSottoVoce`
-   * is provided the `<SottoVoceToggle>` is rendered inside `headerActions`
-   * (between audio-description toggle and summary). Both props are optional
-   * and backward-compatible — omitting `onToggleSottoVoce` hides the toggle
-   * entirely (R20, AC13).
-   * Spec : `docs/chat-ux-refonte/specs/B5.md` §1.3 (R18-R21).
-   */
   sottoVoceEnabled?: boolean;
   onToggleSottoVoce?: () => void;
-  /**
-   * Tap handler for the persistent "AI" badge that opens the on-demand
-   * disclosure recap modal. Required by EU AI Act Article 50 — see
-   * `docs/legal/AI_DISCLOSURE.md`. Omit only in non-chat contexts.
-   */
   onOpenAiDisclosure?: () => void;
-  /**
-   * A4 — Collapsed mini-bar mode driven by scroll. When `true`, the title
-   * uses `fontSize.base` (16sp) instead of `fontSize['2xl']` (24sp) and the
-   * `<ExpertiseBadge>` is hidden. The AI disclosure badge and action buttons
-   * remain visible and tappable in both modes (EU AI Act Art.50 R10/R19).
-   * Defaults to `false` (expanded) — backward-compatible.
-   */
   collapsed?: boolean;
 }
 
-/** Chat session header with title, museum name, expertise badge, and close button. */
 export function ChatHeader({
   sessionTitle,
-  expertiseLevel,
   isClosing,
   onClose,
   onSummary,
@@ -92,7 +68,6 @@ export function ChatHeader({
               </Pressable>
             ) : null}
           </View>
-          {!collapsed && expertiseLevel ? <ExpertiseBadge level={expertiseLevel} /> : null}
         </View>
         <View style={styles.headerActions}>
           {onToggleAudioDescription ? (

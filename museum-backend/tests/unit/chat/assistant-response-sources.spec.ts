@@ -1,28 +1,3 @@
-/**
- * T2.2 — `extractMetadata` coercer for Citations v2 (sources[]).
- *
- * Spec: `team-state/2026-05-11-c4-anti-hallucination/spec.md#R2` (+ NFR8 backward-compat).
- * Design: `team-state/2026-05-11-c4-anti-hallucination/design.md#4`.
- *
- * History — these tests originally exercised the legacy plain-text + JSON-tail
- * parser, which was retired by C9.17 (2026-05-18). The canonical coercer is
- * now `extractMetadata`, invoked by the orchestrator on the parsed
- * `MainAssistantOutput` object emitted by
- * `model.withStructuredOutput(...).invoke()`. Tests below were rewritten to
- * drive `extractMetadata` directly on the equivalent payload, preserving the
- * exact same contract:
- *
- * - `metadata.sources` (v2) is parsed via `CitationSourceSchema.safeParse`
- *   per entry. Valid entries are retained; malformed entries are SILENTLY
- *   dropped (no throw).
- * - `metadata.citations` (legacy v1, NFR8) keeps its existing string[]
- *   parsing unchanged for one release cycle.
- * - When the LLM emits both `sources` AND `citations`, BOTH are preserved
- *   (FE may render either; backward-compat 1 cycle).
- * - When `sources` is a non-array (malformed total — e.g. "not-an-array"),
- *   `metadata.sources` is `undefined` (graceful, no throw).
- */
-
 import { extractMetadata } from '@modules/chat/useCase/orchestration/assistant-response';
 
 const VALID_SOURCE_A = {
@@ -70,7 +45,6 @@ describe('extractMetadata — Citations v2 (sources[]) — T2.2', () => {
     expect(meta.sources?.[0]?.url).toBe(VALID_SOURCE_A.url);
     expect(meta.sources?.[1]?.type).toBe('commons');
     expect(meta.sources?.[2]?.title).toBe(VALID_SOURCE_C.title);
-    // legacy citations untouched when absent
     expect(meta.citations).toBeUndefined();
   });
 

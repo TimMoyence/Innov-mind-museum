@@ -1,25 +1,3 @@
-/**
- * RED — T6.1 — Zod schemas for `POST /chat/compare` body + 200 response.
- *
- * Locks down tasks.md T6.1 + spec R6 (image input rejection), R17 (`topK ∈
- * [1,10]`, default 5), R18 (image size cap mirrors `LLM_MAX_IMAGE_BYTES`)
- * and the design.md §5 wire shape:
- *   - `sessionId` is a UUID,
- *   - `topK` is an integer in `[1, 10]`, default 5 (R17),
- *   - `museumQids` is an optional array of `^Q[1-9][0-9]*$` items, max 20,
- *   - `locale` is the `'fr' | 'en'` enum used by the use-case,
- *   - the response carries the {@link CompareResult} envelope (matches +
- *     durationMs + modelVersion + optional fallbackReason).
- *
- * Image bytes themselves arrive via `multer.single('image')` (multipart
- * file field), NOT via the request body — mirrors `chat-message.route.ts`.
- * The body schema therefore validates everything BUT the image payload.
- *
- * SUT does not yet exist (Phase 6 wiring). The dynamic require() below
- * yields a "Cannot find module …" RED until the editor lands
- * `compare.schemas.ts`.
- */
-
 import {
   DEFAULT_MODEL_VERSION,
   makeCompareMatch,
@@ -27,10 +5,6 @@ import {
 } from '../../../helpers/chat/visual-similarity/compare.fixtures';
 
 import type { z } from 'zod';
-
-// ---------------------------------------------------------------------------
-// SUT — Phase 6 module, must not yet exist.
-// ---------------------------------------------------------------------------
 
 interface CompareSchemasModule {
   compareRequestSchema: z.ZodType<{
@@ -42,36 +16,19 @@ interface CompareSchemasModule {
   compareResponseSchema: z.ZodType<unknown>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load (Phase 6 RED)
-const sut = require(
-  '@modules/chat/adapters/primary/http/schemas/compare.schemas',
-) as CompareSchemasModule;
+const sut =
+  require('@modules/chat/adapters/primary/http/schemas/compare.schemas') as CompareSchemasModule;
 
 const { compareRequestSchema, compareResponseSchema } = sut;
 
-// ---------------------------------------------------------------------------
-// Defaults
-// ---------------------------------------------------------------------------
-
 const VALID_SESSION_ID = '8c7b1e0a-3f4d-4e21-9b6a-1c2d3e4f5a6b';
 
-/**
- * Builds a known-good body payload that the schema MUST accept.
- * @param overrides - Partial overrides merged on top of the canonical defaults.
- * @returns A plain object suitable for `compareRequestSchema.safeParse(...)`.
- */
-const validBody = (
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> => ({
+const validBody = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   sessionId: VALID_SESSION_ID,
   topK: 5,
   locale: 'fr',
   ...overrides,
 });
-
-// ---------------------------------------------------------------------------
-// Request schema — happy paths
-// ---------------------------------------------------------------------------
 
 describe('compareRequestSchema (T6.1 — body validation)', () => {
   it('accepts a fully valid body', () => {
@@ -108,8 +65,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     }
   });
 
-  // ── sessionId ───────────────────────────────────────────────────────
-
   it('rejects a missing sessionId', () => {
     const body = validBody();
     delete body.sessionId;
@@ -121,8 +76,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     const result = compareRequestSchema.safeParse(validBody({ sessionId: 'not-a-uuid' }));
     expect(result.success).toBe(false);
   });
-
-  // ── topK (R17) ──────────────────────────────────────────────────────
 
   it('R17 — rejects topK below the lower bound (0)', () => {
     const result = compareRequestSchema.safeParse(validBody({ topK: 0 }));
@@ -159,8 +112,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     expect(result.success).toBe(true);
   });
 
-  // ── museumQids regex ────────────────────────────────────────────────
-
   it('accepts a single well-formed Wikidata QID', () => {
     const result = compareRequestSchema.safeParse(validBody({ museumQids: ['Q19675'] }));
     expect(result.success).toBe(true);
@@ -187,8 +138,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     expect(result.success).toBe(false);
   });
 
-  // ── locale enum ─────────────────────────────────────────────────────
-
   it('accepts locale "fr"', () => {
     const result = compareRequestSchema.safeParse(validBody({ locale: 'fr' }));
     expect(result.success).toBe(true);
@@ -211,15 +160,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     expect(result.success).toBe(true);
   });
 
-  // ── R6 image input — note ──────────────────────────────────────────
-  //
-  // The image bytes themselves are uploaded via multer (multipart `image`
-  // field), NOT through the body schema — mirrors chat-message.route.ts.
-  // The body schema therefore intentionally does not declare an `image`
-  // field; image rejection (mime, magic, oversize) is enforced at the
-  // multer layer + the existing ImageProcessingService (R12). The route
-  // integration test (T6.2) covers the wire-level image checks.
-
   it('strips unknown fields rather than failing validation', () => {
     const result = compareRequestSchema.safeParse(validBody({ unknown: 'ignored' }));
     expect(result.success).toBe(true);
@@ -228,10 +168,6 @@ describe('compareRequestSchema (T6.1 — body validation)', () => {
     }
   });
 });
-
-// ---------------------------------------------------------------------------
-// Response schema
-// ---------------------------------------------------------------------------
 
 describe('compareResponseSchema (T6.1 — 200 response shape)', () => {
   it('accepts a populated CompareResult fixture', () => {

@@ -1,23 +1,7 @@
-/**
- * Phase 5 sentinel: production env MUST reject AUTH_EMAIL_SERVICE_KIND='test'.
- *
- * The auth composition root has a test-only branch that swaps in
- * TestEmailService when this env var is 'test'. Production must never
- * accept that value or the in-memory email service would silently
- * eat real verification emails.
- *
- * Strategy: call validateProductionEnv() directly with a minimal AppEnv stub
- * where emailServiceKind='test'. This avoids Jest module-cache issues with
- * re-importing env.ts (which only runs its top-level code once per worker).
- */
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import { createIntegrationHarness } from 'tests/helpers/integration/integration-harness';
 
-/**
- * Minimal valid production AppEnv stub — only fields inspected by validateProductionEnv.
- * @param overrides
- */
 function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv {
   const auth: AppEnv['auth'] = {
     jwtSecret: 'a'.repeat(32),
@@ -43,7 +27,6 @@ function makeProductionEnvStub(overrides: Partial<AppEnv['auth']> = {}): AppEnv 
     port: 3000,
     appVersion: '1.0.0',
     trustProxy: true,
-    // D3 (W2) — fault injector is always OFF in this prod env fixture.
     netFaultInjectionEnabled: false,
     corsOrigins: [],
     jsonBodyLimit: '1mb',
@@ -214,7 +197,6 @@ describe('auth: AUTH_EMAIL_SERVICE_KIND=test rejected in production', () => {
   it('validateProductionEnv throws when emailServiceKind=test', () => {
     const stub = makeProductionEnvStub({ emailServiceKind: 'test' });
 
-    // Provide the required production env vars so JWT secret checks pass
     const saved = {
       JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
       JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
@@ -233,7 +215,6 @@ describe('auth: AUTH_EMAIL_SERVICE_KIND=test rejected in production', () => {
       const msg = (err as Error).message.toLowerCase();
       threwExpected = msg.includes('test') && msg.includes('production');
     } finally {
-      // Restore
       for (const [key, val] of Object.entries(saved)) {
         if (val === undefined) {
           delete process.env[key];
@@ -247,7 +228,6 @@ describe('auth: AUTH_EMAIL_SERVICE_KIND=test rejected in production', () => {
   });
 
   it('createIntegrationHarness boots fine with default kind', async () => {
-    // Smoke that the integration harness does not regress under default env.
     const harness = await createIntegrationHarness();
     harness.scheduleStop();
     const result = await harness.dataSource.query<{ ok: number }[]>('SELECT 1 as ok');

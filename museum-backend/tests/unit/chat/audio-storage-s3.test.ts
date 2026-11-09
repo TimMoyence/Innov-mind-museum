@@ -1,12 +1,3 @@
-/**
- * Phase 9 Sprint 9.4 Group I — pin the S3CompatibleAudioStorage adapter.
- *
- * The pure helpers (parseS3AudioRef + buildS3AudioRef) are covered by
- * audio-storage-s3-pure.test.ts. This file exercises the class methods
- * (save / getSignedReadUrl / deleteByRef) with the HTTP layer + signing
- * helpers fully mocked, lifting the file from 43% → 100% line coverage.
- */
-
 const mockRandomUUID = jest.fn<string, []>();
 
 jest.mock('node:crypto', () => {
@@ -62,8 +53,6 @@ describe('S3CompatibleAudioStorage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // The default identity behaviour mirrors normalizeObjectKey for happy paths
-    // (no prefix configured) — tests overriding the prefix can re-spy.
     normalizeKeyMock.mockImplementation(({ key, objectKeyPrefix }) =>
       objectKeyPrefix ? `${objectKeyPrefix}/${key}` : key,
     );

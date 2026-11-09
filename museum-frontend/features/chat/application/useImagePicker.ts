@@ -37,10 +37,6 @@ export const useImagePicker = () => {
 
   const setOptimizedImage = useCallback(
     async (uri: string) => {
-      // WebP is the preferred weak-network codec; the optimizer retries JPEG at
-      // runtime if a platform rejects the encode, so we request it optimistically.
-      // D-06: aggressive iff quality is low OR (pref 'auto' AND metered) —
-      // upload volume is a COST decision (INV-02, US-02.3).
       const decision = decideCompression(
         resolveCompressionMode({ resolved, preference, metered }),
         true,
@@ -49,7 +45,6 @@ export const useImagePicker = () => {
         const { uploadUri } = await optimizeImageAdaptive(uri, decision);
         setSelectedImage(uploadUri);
       } catch {
-        // Keep upload flow functional even if local optimization fails.
         setSelectedImage(uri);
       }
     },

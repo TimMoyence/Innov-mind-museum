@@ -1,8 +1,6 @@
 import '../helpers/test-utils';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
 const mockSetHasSeenOnboarding = jest.fn();
 jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
   useUserProfileStore: (selector: (s: { setHasSeenOnboarding: jest.Mock }) => unknown) =>

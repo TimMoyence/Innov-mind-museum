@@ -1,7 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockUpdateContentPreferences = jest.fn();
 jest.mock('@/features/settings/infrastructure/userProfileApi', () => ({
   userProfileApi: {
@@ -23,8 +21,6 @@ import { useContentPreferences } from '@/features/settings/application/useConten
 import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 import type { ContentPreference } from '@/shared/types/content-preference';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const resetStore = (initial: ContentPreference[] = []) => {
   useUserProfileStore.setState({ contentPreferences: initial });
 };
@@ -34,8 +30,6 @@ describe('useContentPreferences', () => {
     jest.clearAllMocks();
     resetStore([]);
   });
-
-  // ── Initial state ─────────────────────────────────────────────────────────
 
   it('exposes the empty preferences array, no-error, not-saving as defaults', () => {
     const { result } = renderHook(() => useContentPreferences());
@@ -50,8 +44,6 @@ describe('useContentPreferences', () => {
     expect(result.current.preferences).toEqual(['history', 'artist']);
   });
 
-  // ── isSelected ────────────────────────────────────────────────────────────
-
   it('isSelected returns true only for preferences currently in the array', () => {
     resetStore(['history']);
     const { result } = renderHook(() => useContentPreferences());
@@ -59,8 +51,6 @@ describe('useContentPreferences', () => {
     expect(result.current.isSelected('technique')).toBe(false);
     expect(result.current.isSelected('artist')).toBe(false);
   });
-
-  // ── toggle: optimistic happy path ─────────────────────────────────────────
 
   it('optimistically adds the preference, calls the API with the toggled set, and aligns with the persisted response', async () => {
     mockUpdateContentPreferences.mockResolvedValueOnce(['technique', 'history']);
@@ -70,10 +60,8 @@ describe('useContentPreferences', () => {
       await result.current.toggle('history');
     });
 
-    // PATCH was sent with the optimistic ['history'] set.
     expect(mockUpdateContentPreferences).toHaveBeenCalledTimes(1);
     expect(mockUpdateContentPreferences).toHaveBeenCalledWith(['history']);
-    // After resolution, the store is aligned to the canonical server order.
     expect(result.current.preferences).toEqual(['technique', 'history']);
     expect(result.current.error).toBeNull();
     expect(result.current.isSaving).toBe(false);
@@ -92,8 +80,6 @@ describe('useContentPreferences', () => {
     expect(result.current.preferences).toEqual(['artist']);
   });
 
-  // ── toggle: failure → rollback ────────────────────────────────────────────
-
   it('on PATCH failure restores the previous preferences and surfaces the error message', async () => {
     resetStore(['history']);
     mockUpdateContentPreferences.mockRejectedValueOnce(new Error('boom'));
@@ -103,11 +89,9 @@ describe('useContentPreferences', () => {
       await result.current.toggle('artist');
     });
 
-    // Previous (pre-toggle) value is restored.
     expect(result.current.preferences).toEqual(['history']);
     expect(result.current.error).toBe('boom');
     expect(result.current.isSaving).toBe(false);
-    // Sentry capture was invoked with the toggle flow tag.
     expect(mockCaptureException).toHaveBeenCalledTimes(1);
     expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error), {
       tags: { flow: 'contentPreferences.toggle' },
@@ -131,8 +115,6 @@ describe('useContentPreferences', () => {
     });
   });
 
-  // ── toggle: mutex ─────────────────────────────────────────────────────────
-
   it('refuses concurrent toggles while a PATCH is in flight (single inflight request)', async () => {
     let resolveFirst: (value: ContentPreference[]) => void = () => undefined;
     mockUpdateContentPreferences.mockImplementationOnce(
@@ -144,25 +126,21 @@ describe('useContentPreferences', () => {
 
     const { result } = renderHook(() => useContentPreferences());
 
-    // Fire the first toggle without awaiting — it stays in flight.
     let firstToggle: Promise<void> = Promise.resolve();
     act(() => {
       firstToggle = result.current.toggle('history');
     });
 
-    // Second toggle should bail out immediately (mutex) — no extra API call.
     await act(async () => {
       await result.current.toggle('artist');
     });
     expect(mockUpdateContentPreferences).toHaveBeenCalledTimes(1);
 
-    // Now resolve the first call and let the hook settle.
     await act(async () => {
       resolveFirst(['history']);
       await firstToggle;
     });
 
-    // After settle the mutex is released — a third toggle is allowed.
     mockUpdateContentPreferences.mockResolvedValueOnce(['history', 'technique']);
     await act(async () => {
       await result.current.toggle('technique');

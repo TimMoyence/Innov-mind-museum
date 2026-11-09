@@ -12,9 +12,6 @@ import type {
   UseMuseumEnrichmentStatus,
 } from '@/features/museum/application/useMuseumEnrichment';
 
-// ── Enrichment hook mock ─────────────────────────────────────────────────────
-// Declared BEFORE the SUT import so jest hoisting wires the mock correctly.
-
 const mockUseMuseumEnrichment = jest.fn<UseMuseumEnrichmentResult, [number | null, string]>();
 
 jest.mock('@/features/museum/application/useMuseumEnrichment', () => ({
@@ -26,11 +23,7 @@ import { MuseumSheet } from '@/features/museum/ui/MuseumSheet';
 import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
 import { renderWithQueryClient } from '../helpers/data/renderWithQueryClient';
 
-// MuseumSheet still needs a QueryClient in scope for any descendants relying
-// on react-query context (the hook itself is mocked at this layer).
 const render = (ui: ReactElement) => renderWithQueryClient(ui);
-
-// ── Enrichment fixture + helpers ─────────────────────────────────────────────
 
 const makeEnrichment = (overrides?: Partial<MuseumEnrichmentView>): MuseumEnrichmentView => ({
   museumId: 42,
@@ -45,7 +38,6 @@ const makeEnrichment = (overrides?: Partial<MuseumEnrichmentView>): MuseumEnrich
   ...overrides,
 });
 
-/** Weekly schedule with deterministic Mon–Fri 10-18, weekend closed. */
 const makeOpeningHours = (): ParsedOpeningHours => ({
   raw: 'Mo-Fr 10:00-18:00',
   status: 'open',
@@ -63,7 +55,6 @@ const makeOpeningHours = (): ParsedOpeningHours => ({
   ],
 });
 
-/** Installs a default "ready with no enrichment" return on the hook mock. */
 const setEnrichmentResult = (
   status: UseMuseumEnrichmentStatus,
   data: MuseumEnrichmentView | null,
@@ -75,8 +66,6 @@ const setEnrichmentResult = (
   });
 };
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('MuseumSheet', () => {
   const baseProps = {
     onClose: jest.fn(),
@@ -87,7 +76,6 @@ describe('MuseumSheet', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default state: ready + no enrichment data (legacy behavior).
     setEnrichmentResult('ready', null);
   });
 
@@ -150,7 +138,6 @@ describe('MuseumSheet', () => {
       );
       const museum = makeMuseum({ name: 'Louvre' });
       render(<MuseumSheet museum={museum} {...baseProps} />);
-      // Image surfaces via its a11y label (museum.name).
       expect(screen.getByLabelText('Louvre')).toBeTruthy();
     });
 
@@ -190,9 +177,6 @@ describe('MuseumSheet', () => {
       render(<MuseumSheet museum={makeMuseum()} {...baseProps} />);
 
       expect(screen.getByText('museumDirectory.enrichment.hours_heading')).toBeTruthy();
-      // At least one weekly line surfaces the translator interpolation keys —
-      // we don't pin the exact translated string here (covered by the
-      // formatter unit tests) but we confirm the section rendered at all.
       expect(screen.queryAllByText(/museumDirectory\.enrichment\.weekly_/).length).toBeGreaterThan(
         0,
       );
@@ -202,16 +186,13 @@ describe('MuseumSheet', () => {
       setEnrichmentResult('loading', null);
       render(<MuseumSheet museum={makeMuseum()} {...baseProps} />);
       expect(screen.getByText('museumDirectory.enrichment.loading')).toBeTruthy();
-      // No unavailable placeholder while we are actively loading.
       expect(screen.queryByText('museumDirectory.enrichment.unavailable')).toBeNull();
     });
 
     it('shows the error banner with retry when enrichment fails and there is no rich content', () => {
       setEnrichmentResult('error', null);
       render(<MuseumSheet museum={makeMuseum()} {...baseProps} />);
-      // Failed title surfaces as the banner message.
       expect(screen.getByText('museumDirectory.enrichment.failed_title')).toBeTruthy();
-      // ErrorNotice retry button uses the shared errorNotice.retry a11y label.
       expect(screen.getByLabelText('errorNotice.retry')).toBeTruthy();
     });
 
@@ -231,9 +212,7 @@ describe('MuseumSheet', () => {
       setEnrichmentResult('ready', null);
       const museum = makeMuseum({ name: 'Stub Museum', description: null });
       render(<MuseumSheet museum={museum} {...baseProps} />);
-      // Base info (name) still visible.
       expect(screen.getByText('Stub Museum')).toBeTruthy();
-      // New placeholder specific to the ready-but-empty case.
       expect(
         screen.getByText('museumDirectory.enrichment.additional_info_unavailable'),
       ).toBeTruthy();

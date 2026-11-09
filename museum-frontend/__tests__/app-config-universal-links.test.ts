@@ -1,19 +1,3 @@
-/**
- * TD-RNAV-01 — Universal Links (iOS) + App Links (Android) config-eval tests.
- *
- * Asserts that the Expo config produced by `app.config.ts`:
- *   - production : declares `ios.associatedDomains = ['applinks:musaium.com']`
- *                  and an Android `VIEW` intent filter (autoVerify) for
- *                  https://musaium.com with BROWSABLE + DEFAULT categories.
- *   - preview / development : carry NEITHER the associatedDomain NOR the
- *                  https/musaium.com VIEW intent filter (association is
- *                  prod-only, spec R3 / design D3).
- *   - all variants : keep `scheme: 'musaium'` unchanged (spec R4 regression).
- *
- * Runner: Jest (`test:rn`, preset `jest-expo`). Mirrors the helper shape of
- * `app-config-transport-security.test.ts` (env save/restore in `finally`).
- */
-
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 import appConfig from '../app.config';
 

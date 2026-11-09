@@ -1,15 +1,3 @@
-/**
- * R2 RED — `<ExportCsvButton kind="tickets" />` on /admin/tickets.
- *
- * Pins R2 §1 R21 + Q1 BLOCKER down BEFORE implementation. The tickets page
- * and the support page render the SAME `kind=tickets` (both surfaces point
- * at `support_tickets`, per spec Appendix A note).
- *
- *  - Button visible for super_admin only.
- *  - Click → fetch /api/admin/export/tickets.csv.
- *
- * MUST FAIL at baseline `a77e48aa`.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';

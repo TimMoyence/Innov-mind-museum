@@ -10,6 +10,7 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { AdminAuditLogDTO } from '@/lib/admin-types';
+import { adminListUrl } from '@/lib/admin-list-url';
 
 export default function AuditLogsPage() {
   const adminDict = useAdminDict();
@@ -18,18 +19,11 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
 
-  // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [actionFilter]);
 
-  const logsUrl = (() => {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '20');
-    if (actionFilter) params.set('action', actionFilter);
-    return `/api/admin/audit-logs?${params.toString()}`;
-  })();
+  const logsUrl = adminListUrl('/api/admin/audit-logs', page, 20, { action: actionFilter });
 
   const {
     data: logsPayload,
@@ -50,7 +44,6 @@ export default function AuditLogsPage() {
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.auditLogs}</h1>
       <p className="mt-1 text-text-secondary">{adminDict.auditLogsPage.subtitle}</p>
 
-      {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           type="text"
@@ -63,28 +56,18 @@ export default function AuditLogsPage() {
         />
       </div>
 
-      {/* Error */}
       {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
-          {/* WCAG 2.1 AA: scrollable region must be keyboard-reachable (axe-core
-              `scrollable-region-focusable` rule). tabIndex={0} + role=region +
-              aria-label make this table-container focusable via Tab key.
-              Justification: axe-core REQUIRES tabIndex on scrollable containers;
-              jsx-a11y's no-noninteractive-tabindex doesn't know it's scrollable.
-              Approved-by: pre-launch CI green audit 2026-05-17. */}
           <div
             className="overflow-x-auto"
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- axe-core scrollable-region-focusable WCAG 2.1 AA
             tabIndex={0}
             role="region"
             aria-label={adminDict.auditLogsPage.tableAriaLabel}
@@ -144,7 +127,6 @@ export default function AuditLogsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <AdminPagination
             page={page}
             totalPages={totalPages}

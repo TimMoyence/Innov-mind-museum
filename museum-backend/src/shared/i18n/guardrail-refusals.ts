@@ -3,17 +3,7 @@ import type { SupportedLocale } from './locale';
 interface RefusalMessages {
   insult: string;
   default: string;
-  /**
-   * ADR-047 (2026-05-12) — surface when the LLM Guard sidecar is unreachable /
-   * saturated. Tells the user the service is temporarily unavailable rather
-   * than the misleading "your content was flagged" framing.
-   */
   serviceUnavailable: string;
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — friendly cool-down / refocus copy
-   * shown when repeated off-topic crosses the session/user friction threshold.
-   * Warmer than `default` (an escalation, not a flat refusal). No emoji.
-   */
   refocus: string;
 }
 

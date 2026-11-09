@@ -1,3 +1,5 @@
+import { isRecord } from '@shared/utils/is-record';
+
 import type {
   CreateSessionResponse,
   DeleteSessionResponse,
@@ -8,11 +10,6 @@ import type {
   PostMessageResponse,
   ReportMessageResponse,
 } from './chat.contracts';
-
-type RecordValue = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is RecordValue =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');

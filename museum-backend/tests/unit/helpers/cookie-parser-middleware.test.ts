@@ -1,11 +1,3 @@
-/**
- * Phase 8 — pin the named contracts of the F7 cookie-parser shim.
- *
- * The shim is the substrate under cookie-auth fallback + CSRF double-submit;
- * a regression here silently breaks every CSRF token check. Each test pins
- * one specific contract from the JSDoc spec.
- */
-
 import {
   cookieParserMiddleware,
   parseCookieHeader,
@@ -54,7 +46,6 @@ describe('parseCookieHeader', () => {
   });
 
   it('falls back to raw value when decodeURIComponent throws on malformed %', () => {
-    // %ZZ is invalid percent-encoding; safeDecode catches and returns raw.
     expect(parseCookieHeader('a=%ZZ; b=ok')).toEqual({ a: '%ZZ', b: 'ok' });
   });
 });

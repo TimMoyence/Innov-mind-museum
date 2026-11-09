@@ -1,4 +1,5 @@
 import { AppError } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { startSpan } from '@shared/observability/sentry';
 import { env } from '@src/config/env';
@@ -6,10 +7,8 @@ import { env } from '@src/config/env';
 import type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 import type { Scheduler } from 'tesseract.js';
 
-// Re-export for back-compat
 export type { OcrResult, OcrService } from '@modules/chat/domain/ports/ocr.port';
 
-/** Pooled Scheduler (2 workers). */
 export class TesseractOcrService implements OcrService {
   private schedulerPromise: Promise<Scheduler> | null = null;
 
@@ -45,20 +44,17 @@ export class TesseractOcrService implements OcrService {
           if (timeoutId !== undefined) clearTimeout(timeoutId);
         });
 
-        // tesseract.js runtime returns undefined when buffer is blank despite `string` type.
-        // Test `returns null when text is undefined` pins this contract.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime types diverge from declared types
-        const text = data.text?.trim();
+        const text = (data.text as string | undefined)?.trim();
         if (!text) return null;
 
         return { text, confidence: data.confidence / 100 };
       } catch (error) {
         if (error instanceof Error && error.message === 'OCR timed out') {
           logger.warn('ocr_timeout', { timeoutMs: env.llm.timeoutMs });
-          return null; // fail-open: skip OCR guard on timeout
+          return null;
         }
         throw new AppError({
-          message: `OCR extraction failed: ${error instanceof Error ? error.message : String(error)}`,
+          message: `OCR extraction failed: ${errorMessage(error)}`,
           statusCode: 500,
           code: 'OCR_EXTRACTION_ERROR',
         });
@@ -71,17 +67,14 @@ export class TesseractOcrService implements OcrService {
       try {
         const scheduler = await this.schedulerPromise;
         await scheduler.terminate();
-      } catch {
-        // Ignore termination errors during shutdown
-      }
+      } catch {}
       this.schedulerPromise = null;
     }
   }
 }
 
 export class DisabledOcrService implements OcrService {
-  // eslint-disable-next-line @typescript-eslint/require-await -- must match async interface signature
-  async extractText(): Promise<OcrResult | null> {
-    return null;
+  extractText(): Promise<OcrResult | null> {
+    return Promise.resolve(null);
   }
 }

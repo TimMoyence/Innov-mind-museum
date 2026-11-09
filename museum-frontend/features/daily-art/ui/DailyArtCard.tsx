@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated as RNAnimated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-// TD-RNGH-04 — migrated from deprecated `Swipeable` (RN Animated v1) to
-// `ReanimatedSwipeable` (Reanimated v3 worklets, Fabric/New Arch safe).
-// lib-docs/react-native-gesture-handler/PATTERNS.md.
 import ReanimatedSwipeable, {
   SwipeDirection,
   type SwipeableMethods,
@@ -13,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { DailyArtwork } from '../infrastructure/dailyArtApi';
 import { toggleSavedArtwork } from '../application/useDailyArt';
+import { fadeIn } from '@/shared/ui/fadeIn';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -23,11 +21,9 @@ interface DailyArtCardProps {
   isSaved: boolean;
   onSave: () => void;
   onSkip: () => void;
-  /** When false, the swipe-to-save gesture is disabled (e.g. in saved-list view). Defaults to true. */
   swipeToSave?: boolean;
 }
 
-/** Renders a glass card showcasing the daily artwork with save/skip actions and an expandable fun fact. */
 export const DailyArtCard = ({
   artwork,
   isSaved,
@@ -45,16 +41,7 @@ export const DailyArtCard = ({
   const fadeAnim = useMemo(() => new RNAnimated.Value(reduceMotion ? 1 : 0), [reduceMotion]);
 
   useEffect(() => {
-    if (reduceMotion) {
-      // WCAG 2.3.3: skip the entrance fade.
-      fadeAnim.setValue(1);
-      return;
-    }
-    RNAnimated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    fadeIn(fadeAnim, reduceMotion, 400);
   }, [fadeAnim, reduceMotion]);
 
   const handleSwipeSave = useCallback(async () => {
@@ -106,7 +93,7 @@ export const DailyArtCard = ({
 
       <Text style={[styles.title, { color: theme.textPrimary }]}>{artwork.title}</Text>
       <Text style={[styles.artist, { color: theme.textSecondary }]}>
-        {t('dailyArt.by')} {artwork.artist}
+        {t('dailyArt.by', { artist: artwork.artist })}
         {artwork.year ? ` (${artwork.year})` : ''}
       </Text>
 

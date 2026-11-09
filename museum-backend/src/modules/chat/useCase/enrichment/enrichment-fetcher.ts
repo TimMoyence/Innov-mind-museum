@@ -18,9 +18,6 @@ interface EnrichmentDeps {
   dbLookup?: DbLookupService;
 }
 
-/**
- * Last assistant message with detectedArtwork.title, else input text if ≥3 words.
- */
 export function extractSearchTerm(
   history: { role: string; metadata?: Record<string, unknown> | null }[],
   inputText?: string,
@@ -40,7 +37,6 @@ export function extractSearchTerm(
   return null;
 }
 
-/** R1+R15 — capped at 4 entries (defence-in-depth on top of LLM prompt cap). */
 export function extractSuggestedImageEntries(
   history: { role: string; metadata?: Record<string, unknown> | null }[],
 ): SuggestedImage[] | null {
@@ -68,7 +64,6 @@ function isV2SuggestedImage(entry: unknown): entry is SuggestedImage {
   );
 }
 
-/** Fail-open: error → undefined. */
 function failOpen<T>(p: Promise<T>): Promise<T | undefined> {
   return p.catch<undefined>(() => Promise.resolve() as Promise<undefined>);
 }
@@ -101,7 +96,6 @@ function fetchKbFacts(
   return failOpen(deps.knowledgeBase.lookupFacts(searchTerm));
 }
 
-/** Fan-out per suggested entry when present, else legacy single-term (R2). */
 interface FetchImagesArgs {
   searchTerm: string | null;
   suggestedEntries: SuggestedImage[] | null;
@@ -122,14 +116,10 @@ function fetchImages(
       caption: s.caption,
       rationale: s.rationale,
     }));
-    return failOpen(
-      deps.imageEnrichment.enrich(queries, undefined, annotations, museumMode),
-    );
+    return failOpen(deps.imageEnrichment.enrich(queries, undefined, annotations, museumMode));
   }
   if (!searchTerm) return NONE;
-  return failOpen(
-    deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode),
-  );
+  return failOpen(deps.imageEnrichment.enrich(searchTerm, undefined, undefined, museumMode));
 }
 
 function fetchWebSearchRaw(
@@ -158,7 +148,6 @@ export interface FetchEnrichmentArgs {
   museumMode?: boolean;
 }
 
-/** Parallel fan-out: memory, KB, local knowledge, web search, images. All fail-open. */
 export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
   userMemoryBlock: string;
   knowledgeBaseBlock: string;
@@ -187,7 +176,6 @@ export async function fetchEnrichmentData(args: FetchEnrichmentArgs): Promise<{
 
   const safeWebResults = webResults ?? [];
 
-  // Build web search prompt block from raw results
   let webSearchBlock = '';
   if (safeWebResults.length > 0 && deps.webSearch) {
     const { buildWebSearchPromptBlock } =

@@ -2,17 +2,18 @@
 
 @theme {
   --fn-glass-border: rgba(255, 255, 255, 0.58);
-  --fn-glass-background: rgba(255, 255, 255, 0.44);
-  --fn-card-background: rgba(255, 255, 255, 0.66);
+  --fn-glass-background: rgba(234, 242, 255, 0.44);
+  --fn-card-background: rgba(234, 242, 255, 0.66);
   --fn-card-border: rgba(148, 163, 184, 0.42);
-  --fn-input-background: rgba(255, 255, 255, 0.7);
+  --fn-input-background: rgba(234, 242, 255, 0.7);
   --fn-input-border: rgba(148, 163, 184, 0.45);
-  --fn-surface: rgba(255, 255, 255, 0.64);
+  --fn-surface: rgba(234, 242, 255, 0.64);
   --fn-overlay: rgba(255, 255, 255, 0.70);
+  --fn-page-veil: rgba(255, 255, 255, 0.42);
   --fn-separator: rgba(148, 163, 184, 0.35);
   --fn-user-bubble: rgba(30, 64, 175, 0.88);
   --fn-user-bubble-border: rgba(191, 219, 254, 0.6);
-  --fn-assistant-bubble: rgba(255, 255, 255, 0.72);
+  --fn-assistant-bubble: rgba(234, 242, 255, 0.72);
   --fn-assistant-bubble-border: rgba(148, 163, 184, 0.22);
   --fn-primary-tint: rgba(30, 64, 175, 0.06);
   --fn-primary-border-subtle: rgba(30, 64, 175, 0.2);

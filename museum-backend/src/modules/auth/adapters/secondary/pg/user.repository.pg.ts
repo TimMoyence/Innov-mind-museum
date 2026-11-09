@@ -28,7 +28,6 @@ export class UserRepositoryPg implements IUserRepository {
     return await this.repo.findOne({ where: { id } });
   }
 
-  /** @throws {Error} if user with this email already exists. */
   async registerUser(
     email: string,
     password: string,
@@ -70,8 +69,6 @@ export class UserRepositoryPg implements IUserRepository {
 
   async updatePassword(userId: number, newPassword: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-    // `repo.update` → `.set()` silently skips `undefined` — use `() => 'NULL'`
-    // to actually emit `SET reset_token = NULL`. Cf. verifyEmail below.
     await this.repo.update(userId, {
       password: hashedPassword,
       reset_token: () => 'NULL',
@@ -86,7 +83,6 @@ export class UserRepositoryPg implements IUserRepository {
     token: string,
     hashedPassword: string,
   ): Promise<User | null> {
-    // `undefined` silently skipped by `.set()` — `() => 'NULL'` forces clear of consumed token cols.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -103,7 +99,6 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /** SEC (H2): only the hash is persisted — raw token sent to user by email. */
   async setVerificationToken(userId: number, hashedToken: string, expires: Date): Promise<void> {
     await this.repo.update(userId, {
       verification_token: hashedToken,
@@ -111,11 +106,7 @@ export class UserRepositoryPg implements IUserRepository {
     });
   }
 
-  /** SEC (H2): caller MUST SHA-256-hash the raw token before calling. */
   async verifyEmail(hashedToken: string): Promise<User | null> {
-    // TypeORM `.set()` SKIPS `undefined` columns → `verification_token: undefined`
-    // would leave consumed token intact, enabling infinite replays. `() => 'NULL'`
-    // forces clear; without it 200 OK on replay is indistinguishable from first verify.
     const result = await this.repo
       .createQueryBuilder()
       .update(User)
@@ -134,7 +125,6 @@ export class UserRepositoryPg implements IUserRepository {
     return raw?.[0] ?? null;
   }
 
-  /** No password, `email_verified=true`. */
   async registerSocialUser(email: string, firstname?: string, lastname?: string): Promise<User> {
     const entity = this.repo.create({
       email,
@@ -159,7 +149,6 @@ export class UserRepositoryPg implements IUserRepository {
     });
   }
 
-  /** Atomic. Promotes pending_email, clears change-token cols (`() => 'NULL'` — cf. verifyEmail). */
   async consumeEmailChangeToken(hashedToken: string): Promise<User | null> {
     const result = await this.repo
       .createQueryBuilder()
@@ -192,15 +181,8 @@ export class UserRepositoryPg implements IUserRepository {
     await this.repo.update(userId, { ttsVoice: voice });
   }
 
-  /**
-   * TD-2 — Pre-filters `undefined` because `.set()` silently skips them (leaves
-   * unchanged, doesn't write NULL). 5 cols all `NOT NULL DEFAULT` so no clearing
-   * semantics needed. No-op when empty after filter — caller (use case) surfaces
-   * 400 via Zod `.refine(non-empty)`. Cf. `feedback_typeorm_set_undefined_repo_update`.
-   */
   async updateProfilePreferences(userId: number, patch: ProfilePreferencesPatch): Promise<void> {
     const update: Partial<User> = {};
-    if (patch.defaultLocale !== undefined) update.defaultLocale = patch.defaultLocale;
     if (patch.defaultMuseumMode !== undefined) update.defaultMuseumMode = patch.defaultMuseumMode;
     if (patch.guideLevel !== undefined) update.guideLevel = patch.guideLevel;
     if (patch.dataMode !== undefined) update.dataMode = patch.dataMode;
@@ -211,17 +193,14 @@ export class UserRepositoryPg implements IUserRepository {
     await this.repo.update(userId, update);
   }
 
-  /** Transactional. Cascades sessions/tokens/social accounts. */
   async deleteUser(userId: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
-      // Chat sessions -> FK cascade: messages, artwork_matches, message_reports
       await manager
         .createQueryBuilder()
         .delete()
         .from('chat_sessions')
         .where('"userId" = :userId', { userId })
         .execute();
-      // User -> FK cascade: auth_refresh_tokens, social_accounts
       await manager
         .createQueryBuilder()
         .delete()

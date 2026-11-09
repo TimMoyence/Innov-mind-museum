@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-/**
- * Phase 2 sentinel: every Maestro flow file under museum-frontend/.maestro/
- * (excluding config.yaml and helpers/) MUST be listed in exactly one shard
- * of museum-frontend/.maestro/shards.json.
- *
- * Exit codes:
- *   0 — every flow is in exactly one shard, every shard reference exists on disk
- *   1 — at least one flow missing, duplicated, or phantom
- */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

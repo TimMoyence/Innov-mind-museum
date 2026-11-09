@@ -14,7 +14,6 @@ interface SettingsSecurityCardProps {
   onToggleBiometric: (value: boolean) => void;
 }
 
-/** Security card: biometric toggle + change password. */
 export const SettingsSecurityCard = ({
   biometricAvailable,
   biometricEnabled,

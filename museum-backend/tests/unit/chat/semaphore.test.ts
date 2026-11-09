@@ -46,7 +46,6 @@ describe('Semaphore', () => {
       order.push('second');
     });
 
-    // Let microtasks run
     await Promise.resolve();
     expect(order).toEqual(['first-start']);
     expect(sem.queueSize).toBe(1);
@@ -78,13 +77,11 @@ describe('Semaphore', () => {
           concurrent--;
         }),
       );
-      // Let the task start if a slot is available
       await new Promise((r) => setImmediate(r));
     }
 
     expect(sem.inFlightCount).toBe(2);
 
-    // Release tasks one by one, letting each queued task start
     while (resolvers.length > 0) {
       const resolve = resolvers.shift()!;
       resolve();
@@ -105,7 +102,6 @@ describe('Semaphore', () => {
       }),
     ).rejects.toThrow('task failed');
 
-    // Should be able to acquire again
     const result = await sem.use(async () => 'ok');
     expect(result).toBe('ok');
   });
@@ -117,7 +113,6 @@ describe('Semaphore', () => {
       acquireTimeoutMs: 30_000,
     });
 
-    // Fill the slot
     let resolveFirst!: () => void;
     const blocker = new Promise<void>((resolve) => {
       resolveFirst = resolve;
@@ -127,13 +122,11 @@ describe('Semaphore', () => {
       await blocker;
     });
 
-    // Fill the queue (1 item)
     const p2 = sem.use(async () => 'queued');
 
     await Promise.resolve();
     expect(sem.queueSize).toBe(1);
 
-    // This should be rejected
     await expect(sem.use(async () => 'overflow')).rejects.toThrow(SemaphoreQueueFullError);
 
     resolveFirst();
@@ -159,7 +152,6 @@ describe('Semaphore', () => {
 
     const p2 = sem.use(async () => 'should-timeout');
 
-    // Advance past timeout
     jest.advanceTimersByTime(101);
 
     await expect(p2).rejects.toThrow(SemaphoreTimeoutError);
@@ -206,9 +198,6 @@ describe('Semaphore', () => {
   });
 
   it('short-circuits the inner runner when the slot frees AFTER timeout already fired', async () => {
-    // Covers the `if (timedOut) return undefined as never` branch in semaphore.ts:
-    // p2 times out while waiting, then p1 finishes and the slot becomes
-    // available — the deferred runner MUST return without invoking the task.
     jest.useRealTimers();
     const sem = new Semaphore({
       maxConcurrent: 1,
@@ -233,11 +222,8 @@ describe('Semaphore', () => {
 
     await expect(p2).rejects.toThrow(SemaphoreTimeoutError);
 
-    // Now release p1 — p-limit will dequeue the deferred p2 runner, which
-    // must hit the timedOut short-circuit and return without calling task().
     resolveFirst();
     await p1;
-    // Let the deferred runner microtask flush
     await new Promise((r) => setImmediate(r));
 
     expect(p2TaskRan).toBe(false);

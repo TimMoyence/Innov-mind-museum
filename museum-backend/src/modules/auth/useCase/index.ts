@@ -1,4 +1,3 @@
-/** Auth module composition root — wires repos to use-cases, exports singletons. */
 import { AppDataSource } from '@data/db/data-source';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
@@ -32,6 +31,7 @@ import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.use
 import { auditService } from '@shared/audit';
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import { TestEmailService } from '@shared/email/test-email-service';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -71,27 +71,15 @@ const testEmailService = env.auth.emailServiceKind === 'test' ? new TestEmailSer
 const emailService: EmailService | undefined =
   testEmailService ?? (env.brevoApiKey ? new BrevoEmailService(env.brevoApiKey) : undefined);
 
-/** Test-only handle on the in-memory email service. Null in prod. */
 export const __testEmailService = testEmailService;
 
 const frontendUrl = env.frontendUrl;
 
 const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepository, emailService, frontendUrl);
-/** Revokes refresh tokens on reset (OWASP). */
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository, refreshTokenRepository);
 const authSessionService = new AuthSessionService(userRepository, refreshTokenRepository);
-/**
- * F3 — OIDC nonce store. Delegating singleton: `src/index.ts` boot can upgrade
- * to {@link RedisNonceStore} via `setSocialNonceStore` once shared Redis is
- * wired. Initial delegate {@link InMemoryNonceStore} keeps dev/tests working.
- */
 const nonceStore = socialNonceStore;
 
-/**
- * F11-mobile — store for the mobile-redirect OAuth flow. Holds the issued
- * AuthSessionResponse keyed by a single-use opaque code that travels back via
- * the /google/callback deeplink and is exchanged via POST /api/auth/social-redeem.
- */
 const socialOtcStore = new InMemorySocialOtcStore<AuthSessionResponse>();
 
 const socialLoginUseCase = new SocialLoginUseCase(
@@ -103,21 +91,13 @@ const socialLoginUseCase = new SocialLoginUseCase(
 );
 
 const redeemSocialOtcUseCase = new RedeemSocialOtcUseCase(socialOtcStore);
-/** Lazy image cleanup via chat module — late-bind to avoid circular init. */
 const imageCleanupProxy: ImageCleanupPort = {
   async deleteByPrefix(userId, legacyFetcher): Promise<void> {
     const { getImageStorage } = await import('@modules/chat/chat-module');
-    // B4/R8 — forward BOTH args; dropping `legacyFetcher` silently disabled the
-    // DB-sourced cleanup that reaches production-layout keys.
     await getImageStorage().deleteByPrefix(userId, legacyFetcher);
   },
 };
 
-/**
- * R9 — DB-sourced legacy/full image-ref fetcher. Lazy-bound to the chat repo so
- * `DeleteAccountUseCase` can reach production-layout image keys regardless of
- * the native scan prefix.
- */
 const legacyImageRefLookupProxy: LegacyImageRefLookup = {
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
     const { getChatRepository } = await import('@modules/chat/chat-module');
@@ -125,11 +105,6 @@ const legacyImageRefLookupProxy: LegacyImageRefLookup = {
   },
 };
 
-/**
- * B1/R1-R3 — resolves the user's TTS audio refs from the chat repo and deletes
- * each S3 object via `AudioStorage.deleteByRef`. Per-ref try/catch so one bad
- * ref doesn't strand the rest. Lazy-bound to avoid a static auth→chat dep.
- */
 const audioCleanupProxy: AudioCleanupPort = {
   async deleteUserAudio(userId: number): Promise<void> {
     const { getChatRepository, getAudioStorage } = await import('@modules/chat/chat-module');
@@ -142,18 +117,13 @@ const audioCleanupProxy: AudioCleanupPort = {
       } catch (error) {
         logger.warn('delete_account_audio_ref_delete_failed', {
           userId,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         });
       }
     }
   },
 };
 
-/**
- * B2/R4-R6 — removes the user's Brevo marketing contact. Built from env creds;
- * when absent, the Noop notifier no-ops. Lazy-bound to avoid a static auth→leads
- * dep. The use case calls `removeContact(email)` best-effort.
- */
 const brevoRemovalProxy: MarketingContactRemovalPort = {
   async removeContact(email: string): Promise<unknown> {
     const { BrevoBetaSignupNotifier, NoopBetaSignupNotifier } =
@@ -165,12 +135,6 @@ const brevoRemovalProxy: MarketingContactRemovalPort = {
   },
 };
 
-/**
- * R5 (Cycle D) — durable fallback when the inline Brevo `removeContact` fails:
- * persists a `pending` `brevo_erasure` lead so the WS-B redelivery cron retries
- * the contact removal until success/404. Lazy-bound to the leads repo to keep
- * auth free of a static auth→leads dependency. PII: payload is `{ email }` only.
- */
 const marketingErasureFallbackProxy: MarketingErasureFallbackPort = {
   async enqueueBrevoErasure(email: string): Promise<void> {
     const { LeadRepositoryPg } =
@@ -180,10 +144,6 @@ const marketingErasureFallbackProxy: MarketingErasureFallbackPort = {
   },
 };
 
-/**
- * R6 (Cycle D) — purges persisted `leads` rows carrying the account email (GDPR
- * Art.17). Lazy-bound to the leads repo. Returns the rows-deleted count.
- */
 const leadErasureProxy: LeadErasurePort = {
   async deleteByEmail(emailNormalized: string): Promise<number> {
     const { LeadRepositoryPg } =
@@ -203,7 +163,6 @@ const deleteAccountUseCase = new DeleteAccountUseCase({
   leadErasure: leadErasureProxy,
 });
 
-/** Lazy-bound — resolves the chat repository at call time. */
 const chatDataExportProxy: ChatDataExportPort = {
   async getAllUserData(userId: number) {
     const { getChatRepository } = await import('@modules/chat/chat-module');
@@ -211,7 +170,6 @@ const chatDataExportProxy: ChatDataExportPort = {
   },
 };
 
-/** Lazy-bound — resolves the review repository at call time. */
 const reviewDataExportProxy: ReviewDataExportPort = {
   async listForUser(userId: number): Promise<UserReviewExportEntry[]> {
     const { ReviewRepositoryPg } =
@@ -229,7 +187,6 @@ const reviewDataExportProxy: ReviewDataExportPort = {
   },
 };
 
-/** Lazy-bound — resolves the support repository at call time. */
 const supportDataExportProxy: SupportDataExportPort = {
   async listForUser(userId: number): Promise<UserSupportTicketExportEntry[]> {
     const { SupportRepositoryPg } =
@@ -255,9 +212,6 @@ const supportDataExportProxy: SupportDataExportPort = {
   },
 };
 
-// ─── B3 DSAR export proxies (lazy-bound, read-only) ─────────────────────────
-
-/** UserMemory (chat module). Resolves the active memory service at call time. */
 const userMemoryExportProxy: UserMemoryExportPort = {
   async getForUser(userId: number): Promise<UserMemorySource | null> {
     const { getUserMemoryService } = await import('@modules/chat/chat-module');
@@ -267,7 +221,6 @@ const userMemoryExportProxy: UserMemoryExportPort = {
   },
 };
 
-/** The subject's own audit rows (`actor_id = userId`). */
 const auditLogExportProxy: AuditLogExportPort = {
   async listForUser(userId: number): Promise<AuditLogSource[]> {
     const { auditRepository } = await import('@shared/audit');
@@ -275,7 +228,6 @@ const auditLogExportProxy: AuditLogExportPort = {
   },
 };
 
-/** message_feedback rows owned by the user. */
 const messageFeedbackExportProxy: MessageFeedbackExportPort = {
   async listForUser(userId: number): Promise<MessageFeedbackSource[]> {
     const { getChatRepository } = await import('@modules/chat/chat-module');
@@ -283,7 +235,6 @@ const messageFeedbackExportProxy: MessageFeedbackExportPort = {
   },
 };
 
-/** message_reports rows owned by the user (moderator fields excluded, D7). */
 const messageReportExportProxy: MessageReportExportPort = {
   async listForUser(userId: number): Promise<MessageReportSource[]> {
     const { getChatRepository } = await import('@modules/chat/chat-module');
@@ -291,7 +242,6 @@ const messageReportExportProxy: MessageReportExportPort = {
   },
 };
 
-/** social_accounts owned by the user (no secrets on the entity). */
 const socialAccountExportProxy: SocialAccountExportPort = {
   async listForUser(userId: number): Promise<SocialAccountSource[]> {
     const rows = await socialAccountRepository.findByUserId(userId);
@@ -320,7 +270,6 @@ const exportUserDataUseCase = new ExportUserDataUseCase({
 const getProfileUseCase = new GetProfileUseCase(userRepository);
 const changePasswordUseCase = new ChangePasswordUseCase(userRepository, refreshTokenRepository);
 const changeEmailUseCase = new ChangeEmailUseCase(userRepository, emailService, frontendUrl);
-/** Revokes refresh tokens on success (M13). */
 const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(
   userRepository,
   refreshTokenRepository,
@@ -328,15 +277,11 @@ const confirmEmailChangeUseCase = new ConfirmEmailChangeUseCase(
 const verifyEmailUseCase = new VerifyEmailUseCase(userRepository);
 const updateContentPreferencesUseCase = new UpdateContentPreferencesUseCase(userRepository);
 const updateTtsVoiceUseCase = new UpdateTtsVoiceUseCase(userRepository);
-/** TD-2 — batch endpoint. */
 const updateProfilePreferencesUseCase = new UpdateProfilePreferencesUseCase(userRepository);
 
-// GDPR consent — every grant/revoke writes a hash-chained `audit_logs` row
-// (S4-P0-02 — Apple Guideline 5.1.2(i) compliance).
 const grantConsentUseCase = new GrantConsentUseCase(userConsentRepository, auditService);
 const revokeConsentUseCase = new RevokeConsentUseCase(userConsentRepository, auditService);
 
-/** Wired after `grantConsentUseCase` — records ToS/privacy consent server-side. */
 const registerUseCase = new RegisterUseCase(
   userRepository,
   emailService,

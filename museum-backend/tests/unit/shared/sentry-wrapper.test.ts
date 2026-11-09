@@ -1,10 +1,3 @@
-/**
- * Sentry wrapper tests — verifies both disabled (no DSN) and enabled (with DSN) paths.
- *
- * The existing sentry.test.ts covers the disabled/no-op branches.
- * This file complements it by also verifying the enabled path via @sentry/node mocks.
- */
-
 const mockSentryInit = jest.fn();
 const mockSetupExpressErrorHandler = jest.fn();
 const mockCaptureException = jest.fn();
@@ -18,8 +11,6 @@ const mockStartSpan = jest.fn((_ctx: Record<string, unknown>, cb: (span: unknown
 const mockGetDefaultIntegrations = jest.fn(() => []);
 const mockGetDefaultIntegrationsWithoutPerformance = jest.fn(() => []);
 
-// Prevent dotenv.config() (called inside @src/config/env) from re-injecting
-// SENTRY_DSN from the host's .env after the test deletes it.
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 jest.mock('@sentry/node', () => ({
@@ -45,8 +36,6 @@ describe('sentry wrapper', () => {
     jest.restoreAllMocks();
     jest.resetModules();
   });
-
-  // ── Disabled path (no DSN) ────────────────────────────────────
 
   describe('when SENTRY_DSN is not configured', () => {
     it('initSentry does not call Sentry.init', () => {
@@ -92,13 +81,10 @@ describe('sentry wrapper', () => {
         const { startSpan } = require('@shared/observability/sentry');
         const result = startSpan({ name: 'op', op: 'test' }, () => 'value');
         expect(result).toBe('value');
-        // Sentry.startSpan should NOT be called — the wrapper uses the proxy
         expect(mockStartSpan).not.toHaveBeenCalled();
       });
     });
   });
-
-  // ── Enabled path (with DSN) ───────────────────────────────────
 
   describe('when SENTRY_DSN is configured', () => {
     it('initSentry calls Sentry.init with correct config', () => {

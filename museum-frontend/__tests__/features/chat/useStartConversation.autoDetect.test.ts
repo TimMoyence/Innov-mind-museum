@@ -1,18 +1,3 @@
-/**
- * W3 — Auto-detect on session-create.
- *
- * Asserts spec R11/R12/R14 wiring on `useStartConversation`:
- *
- *   - autoDetectMuseum=true + museumId absent + GPS granted →
- *     calls museumApi.detectMuseum.
- *   - confidence > 0.8 → session created with museumId/museumName/museumMode=true (R12).
- *   - confidence <= 0.5 → navigates to the museum picker, no session created (R14).
- *   - confidence ∈ (0.5, 0.8] → navigates to the museum picker (R14 hybrid).
- *   - detectMuseum rejects → navigates to picker (R14).
- *   - status !== 'granted' → navigates to picker (R14).
- *   - autoDetectMuseum=false (default) → NO detect call; legacy behaviour preserved.
- */
-
 import { renderHook, act } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
@@ -33,7 +18,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 
 jest.mock('@/features/settings/infrastructure/runtimeSettingsStore', () => ({
   useRuntimeSettingsStore: {
-    getState: () => ({ defaultLocale: 'en-US', defaultMuseumMode: false }),
+    getState: () => ({ defaultMuseumMode: false }),
   },
 }));
 

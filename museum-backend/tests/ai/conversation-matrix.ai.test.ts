@@ -11,17 +11,6 @@ import {
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
 
-/**
- * Conversation matrix — real LLM, full pipeline.
- *
- * Multi-turn coherence, response-language fidelity (FR↔EN), edge inputs
- * (very long but valid, over-limit rejection, empty/whitespace rejection,
- * emoji/garbage graceful handling).
- *
- * Empty/whitespace-only with no image is REJECTED by validateMessageInput
- * (`badRequest`, verified in prepare-message.pipeline.ts) — asserted as a
- * throw, which IS the graceful contract (no silent empty answer, no crash).
- */
 describeAi('AI conversation matrix (real LLM)', () => {
   jest.setTimeout(90_000);
 
@@ -40,8 +29,6 @@ describeAi('AI conversation matrix (real LLM)', () => {
     });
 
     assertSubstantiveAnswer(result);
-    // A coherent follow-up resolves "them" → Monet/Impressionists and discusses
-    // influences. Tolerant token match (any one signal) for nondeterminism.
     expect(result.message.text.toLowerCase()).toMatch(
       /monet|impressionis|turner|courbet|manet|boudin|delacroix|influence|inspir/,
     );
@@ -100,7 +87,6 @@ describeAi('AI conversation matrix (real LLM)', () => {
 
     const filler =
       'I have been thinking a lot about the history of Western painting and how movements built on each other. ';
-    // Build a long, on-topic prompt that stays under LLM_MAX_TEXT_LENGTH (2000).
     let longText = '';
     while ((longText + filler).length < 1800) longText += filler;
     longText += 'In one paragraph, how did the Renaissance influence later art?';
@@ -118,13 +104,11 @@ describeAi('AI conversation matrix (real LLM)', () => {
     const service = buildAiTestService();
     const session = await service.createSession({ locale: 'en-US' });
 
-    const tooLong = 'art '.repeat(700); // 2800 chars > 2000 limit
+    const tooLong = 'art '.repeat(700);
 
     await expect(
       service.postMessage(session.id, { text: tooLong, context: { locale: 'en-US' } }),
     ).rejects.toMatchObject({
-      // badRequest() → AppError with statusCode 400. Assert the category, not
-      // the exact class, to stay robust to error-mapping refactors.
       statusCode: 400,
     });
   });
@@ -183,8 +167,6 @@ describeAi('AI conversation matrix (real LLM)', () => {
     });
 
     assertSubstantiveAnswer(result);
-    // Should describe its actual mission (art / culture / museum / monuments),
-    // not over-promise unrelated capabilities.
     expect(result.message.text.toLowerCase()).toMatch(
       /art|culture|musée|monument|œuvre|patrimoine|tableau|peinture/,
     );
@@ -195,16 +177,12 @@ describeAi('AI conversation matrix (real LLM)', () => {
     const session = await service.createSession({ locale: 'en-US' });
 
     const result = await service.postMessage(session.id, {
-      // Simulates an STT transcript; voiceMode constrains the LLM to a 60-80
-      // word prose-only answer (no markdown) — see ChatRequestContext.voiceMode.
       text: 'Tell me quickly about the Mona Lisa.',
       context: { locale: 'en-US', voiceMode: true },
     });
 
     assertSubstantiveAnswer(result);
     const text = result.message.text;
-    // Prose-only contract: no markdown list markers, no headers. Best-effort —
-    // a genuine markdown dump here is a real voice-mode regression.
     expect(text).not.toMatch(/^\s*[-*]\s+/m);
     expect(text).not.toMatch(/^#{1,6}\s/m);
   });
@@ -218,8 +196,6 @@ describeAi('AI conversation matrix (real LLM)', () => {
       context: { locale: 'fr-FR' },
     });
 
-    // Several valid cultural topics at once: must not crash; should engage
-    // substantively (handle or prioritize) rather than refuse.
     assertSubstantiveAnswer(result);
   });
 
@@ -244,8 +220,6 @@ describeAi('AI conversation matrix (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    // Garbage but non-empty after trim → pipeline must produce a graceful,
-    // non-empty reply (likely a clarification or art redirect), never throw.
     assertGracefulNonEmpty(result);
   });
 });

@@ -31,6 +31,7 @@ import {
   byUserId,
   createRateLimitMiddleware,
 } from '@shared/middleware/rate-limit.middleware';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
@@ -45,8 +46,7 @@ function createAudioHandler(chatService: ChatService, consentChecker: ThirdParty
     const parsedAudioContext = parseContext(req.body?.context);
     const context = {
       ...parsedAudioContext,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: parsedAudioContext?.locale || req.clientLocale,
+      locale: nonEmpty(parsedAudioContext?.locale) ?? req.clientLocale,
     };
 
     if (!req.file) {
@@ -58,11 +58,6 @@ function createAudioHandler(chatService: ChatService, consentChecker: ThirdParty
       throw invalidInput('session id param is required');
     }
 
-    // B7 (R4/R5/R6) — gate STT on `third_party_ai_audio_<provider>` BEFORE
-    // any external (OpenAI Whisper) call. Runs AFTER isAuthenticated +
-    // rate-limit + costGuard + multer (middleware order preserved); the
-    // check is read-only so the "mutating middleware ordering" gotcha
-    // (CLAUDE.md) does not regress.
     const { scope: audioScope } = resolveActiveProviderForScope('audio');
     const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
     if (!granted) {
@@ -105,7 +100,6 @@ function createImageServeHandler(chatService: ChatService) {
       throw badRequest(verification.reason);
     }
 
-    // Auth delegated to signed token (HMAC+TTL verified above); bypass session ownership check.
     const image = await chatService.getMessageImageRefBySignedToken(messageId);
     if (isS3ImageRef(image.imageRef)) {
       const signed = buildImageReadUrl({
@@ -135,8 +129,9 @@ function createImageServeHandler(chatService: ChatService) {
     const fileStat = await stat(imagePath);
     const ext = image.fileName?.split('.').pop()?.toLowerCase() ?? '';
     const contentType =
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      image.contentType || contentTypeByExtension[ext] || 'application/octet-stream';
+      nonEmpty(image.contentType) ??
+      nonEmpty(contentTypeByExtension[ext]) ??
+      'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', String(fileStat.size));
@@ -207,10 +202,6 @@ function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAi
       throw invalidInput(MESSAGE_ID_REQUIRED);
     }
 
-    // B1 (R1/R2/R3) — gate TTS on `third_party_ai_audio_<provider>` BEFORE the
-    // assistant text is sent to the external OpenAI TTS service. Mirrors the
-    // STT gate (createAudioHandler above): same scope, same 403 refusal shape,
-    // read-only so the "mutating middleware ordering" gotcha does not regress.
     const { scope: audioScope } = resolveActiveProviderForScope('audio');
     const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
     if (!granted) {
@@ -225,7 +216,6 @@ function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAi
     }
     res.set('Content-Type', result.contentType);
     res.set('Content-Length', String(result.audio.length));
-    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write -- binary audio Buffer from TTS service, not user-controlled HTML
     res.send(result.audio);
   };
 }
@@ -243,7 +233,6 @@ export const createMediaRouter = (
     keyGenerator: bySession,
   });
 
-  // SEC-20: per-authenticated-user limiter (see chat-message.route.ts).
   const userLimiter = createRateLimitMiddleware({
     limit: env.rateLimit.userLimit,
     windowMs: env.rateLimit.windowMs,
@@ -256,7 +245,6 @@ export const createMediaRouter = (
     dailyChatLimit,
     userLimiter,
     sessionLimiter,
-    // P0-4 — gates STT+LLM+TTS USD spend; ordering: AFTER rate-limit (cheap fail), BEFORE admission (don't take slot).
     llmCostGuard,
     ...(uploadAdmission ? [uploadAdmission] : []),
     audioUpload.single('audio'),
@@ -285,12 +273,9 @@ export const createMediaRouter = (
     isAuthenticated,
     userLimiter,
     sessionLimiter,
-    // P0-4 — TTS paid call; same chokepoint as audio handler.
     llmCostGuard,
     createTtsHandler(chatService, consentChecker),
   );
-  // P0-CodeQL — image serve was unrate-limited; an attacker could hammer
-  // signed-URL guessing or cause backend egress amplification.
   router.get('/messages/:messageId/image', userLimiter, createImageServeHandler(chatService));
 
   return router;

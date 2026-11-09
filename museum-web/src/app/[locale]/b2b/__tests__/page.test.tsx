@@ -1,16 +1,3 @@
-/**
- * R4 RED tests — B2B landing page (server component).
- *
- * Pins R4 §1 EARS R1/R2/R3/R4 + AC1/AC2 down BEFORE implementation:
- * - page renders 7 sections (Hero / Problem / Solution / Differentiators(5) / Pricing / Contact / Footer-reuse)
- * - hero/problem/solution titles + 5 differentiators in order via i18n keys
- * - pricing tease contains the canonical "Sur devis" / "Custom pricing" copy
- * - contact form is rendered (via the <form> landmark)
- *
- * These tests MUST FAIL at baseline `bc49afee` — the page file doesn't exist
- * yet and the dictionary key `dict.landing.b2b.*` is not declared on the
- * `Dictionary` type. green-code-agent makes them pass in T2.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { Dictionary } from '@/lib/i18n';
@@ -28,8 +15,6 @@ vi.mock('@/lib/seo', () => ({
 
 import { getDictionary } from '@/lib/i18n';
 import B2bPage from '../page';
-
-// ── i18n fixtures (mirror docs/roadmap-night/specs/R4.md §3.5 shape) ─────────
 
 interface B2bDictShape {
   metadata: { title: string; description: string };
@@ -109,8 +94,6 @@ const b2bEN: B2bDictShape = {
 function makeDict(b2b: B2bDictShape): Dictionary {
   return { landing: { b2b } } as unknown as Dictionary;
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('B2bPage (R4 §1 R1-R4)', () => {
   beforeEach(() => {

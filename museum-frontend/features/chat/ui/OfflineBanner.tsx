@@ -10,15 +10,6 @@ interface OfflineBannerProps {
   isOffline: boolean;
 }
 
-/**
- * Global OFFLINE banner — offline-only (INV-13, design §2.6).
- *
- * The former full-width yellow low-data variant was removed (UFR-016, run
- * `undefined-network-detection-reliability`): the low-data state is now
- * surfaced by the chat-scoped `LowDataBadge` (`features/chat/ui/LowDataBadge.tsx`).
- * This banner is INDIFFERENT to the resolved data mode — it renders iff
- * `isOffline` (availability axis only, US-06).
- */
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount, isOffline }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

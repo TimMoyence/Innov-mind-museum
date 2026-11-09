@@ -17,11 +17,6 @@ type MockedMemory = Pick<
   | 'invalidateCache'
 >;
 
-/**
- * Mock {@link KnowledgeBaseService} with jest-spyable methods.
- * Returned type is assignable to `KnowledgeBaseService` via a single localized cast
- * (private constructor fields `provider`/`config` are not exercised in unit tests).
- */
 export function makeMockKnowledgeBase(overrides: Partial<MockedKB> = {}): KnowledgeBaseService {
   const mock: MockedKB = {
     lookup: jest.fn().mockResolvedValue(''),
@@ -31,11 +26,6 @@ export function makeMockKnowledgeBase(overrides: Partial<MockedKB> = {}): Knowle
   return mock as unknown as KnowledgeBaseService;
 }
 
-/**
- * Mock {@link UserMemoryService} with jest-spyable methods.
- * Returned type is assignable to `UserMemoryService` via a single localized cast
- * (private `repository` field is not exercised in unit tests).
- */
 export function makeMockUserMemory(overrides: Partial<MockedMemory> = {}): UserMemoryService {
   const mock: MockedMemory = {
     getMemoryForPrompt: jest.fn().mockResolvedValue(''),

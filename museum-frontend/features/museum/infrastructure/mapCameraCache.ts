@@ -2,13 +2,9 @@ import { storage } from '@/shared/infrastructure/storage';
 import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 
 const STORAGE_KEY = 'musaium.museum.lastCameraView.v1';
-/** Pre-namespacing key migrated forward once before the first read (TD-AS-01). */
 const LEGACY_STORAGE_KEY = 'museum.lastCameraView.v1';
-/** Cached camera views older than 30 days are discarded so a returning user doesn't land
- * on a stale region they'd likely expect to be re-centered. */
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Debounce window for user-interaction writes — avoids thrashing AsyncStorage while panning. */
 const SAVE_DEBOUNCE_MS = 1000;
 
 interface StoredCamera {
@@ -30,19 +26,12 @@ interface CameraView {
   zoom: number;
 }
 
-// Module-level debounce timer: restarts on each call so rapid pans coalesce
-// into a single AsyncStorage write once the user stops moving.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
 export const mapCameraCache = {
-  /**
-   * Persist the camera view. Only user-driven moves are persisted — programmatic
-   * fits (search-in-area, data-driven auto-fit) intentionally skip to keep the
-   * cached view aligned with the user's last explicit intent.
-   */
   save(view: CameraView, isUserInteraction = true): void {
     if (!isUserInteraction) return;
     if (saveTimer) clearTimeout(saveTimer);
@@ -54,9 +43,7 @@ export const mapCameraCache = {
         zoom: view.zoom,
         storedAt: Date.now(),
       };
-      void storage.setJSON(STORAGE_KEY, payload).catch(() => {
-        // AsyncStorage failure is non-fatal — the next session will fall back to GPS/defaults.
-      });
+      void storage.setJSON(STORAGE_KEY, payload).catch(() => undefined);
     }, SAVE_DEBOUNCE_MS);
   },
 
@@ -92,8 +79,6 @@ export const mapCameraCache = {
     }
     try {
       await storage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    } catch {}
   },
 };

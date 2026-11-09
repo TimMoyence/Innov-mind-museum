@@ -4,14 +4,6 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import '../helpers/test-utils';
 import { DailyLimitSheetContent } from '@/features/chat/ui/DailyLimitSheetContent';
 
-/**
- * Coverage for the quota-exhausted sheet (C4 refactor — previously
- * `DailyLimitModal`). Verifies the copy renders and that the dismiss CTA
- * fires both `onDismiss` (optional) and `close` (always).
- *
- * The dismiss button is a LiquidButton; its `onPress` chain awaits a haptic
- * call, so we use `waitFor` to drain the microtask queue.
- */
 describe('DailyLimitSheetContent', () => {
   it('renders the limit title, body, and reset hint', () => {
     const close = jest.fn();

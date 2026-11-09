@@ -1,14 +1,8 @@
-// linkedom is pure-JS and lightweight; use the real implementation so the
-// fallback DOM-extraction path (querySelectorAll, body.textContent) works
-// against a real document. Only Readability is mocked because it needs to be
-// deterministic and is the unit under test.
 jest.mock('@mozilla/readability', () => {
-  // Local minimal shape — Document is a DOM lib type, not available in Node typings.
   type DomLike = { querySelector: (sel: string) => unknown };
   return {
     Readability: jest.fn().mockImplementation((doc: DomLike) => ({
       parse: jest.fn().mockImplementation(() => {
-        // Return article result only when there is an <article> tag in the doc
         if (doc.querySelector('article')) {
           return {
             title: 'Van Gogh at the Louvre',
@@ -45,7 +39,6 @@ import { logger } from '@shared/logger/logger';
 const originalFetch = global.fetch;
 
 beforeEach(() => {
-  // Default: DNS resolves to a public IP so non-SSRF tests keep working.
   mockLookup.mockResolvedValue({ address: '93.184.216.34', family: 4 });
 });
 
@@ -80,8 +73,6 @@ const SIMPLE_HTML = `
 </html>
 `;
 
-// -----------------------------------------------------------------------
-
 describe('HtmlScraper', () => {
   const scraper = new HtmlScraper({ timeoutMs: 5000, maxContentBytes: 10_000 });
 
@@ -104,7 +95,6 @@ describe('HtmlScraper', () => {
 
     expect(result).not.toBeNull();
     expect(result!.textContent).toContain('Welcome to the museum');
-    // nav and footer should be stripped by linkedom fallback
     expect(result!.textContent).not.toContain('Navigation');
     expect(result!.textContent).not.toContain('Footer');
     expect(result!.contentHash).toHaveLength(16);
@@ -143,20 +133,6 @@ describe('HtmlScraper', () => {
     expect(result).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
-
-  // C4 I-SEC10 (2026-05-21) — the legacy 'truncates content exceeding
-  // maxContentBytes' test was removed in this run. Its assertion (`result`
-  // non-null + `textContent.length <= maxContentBytes`) modelled the old
-  // post-extract `.slice(0, maxContentBytes)` semantics. Per spec R8 + R9,
-  // `maxContentBytes` is now an INPUT cap: any payload exceeding it is
-  // rejected pre-extraction (`scrape()` returns `null`). The old test would
-  // require the cap to behave as BOTH an output truncation (return non-null)
-  // AND an input rejection (return null) on the same config — mutually
-  // exclusive. The new input-cap contract is covered exhaustively by the
-  // R8a/R8b/R9a/R9b cases in the two describe() blocks below. The internal
-  // `.slice()` on extracted text in `extractContent` is now redundant
-  // (input ≥ extracted text by construction) but kept as belt-and-braces;
-  // it has no observable effect for tests that reach extraction.
 
   it('returns a 16-char hex contentHash derived from textContent', async () => {
     global.fetch = mockHtmlFetch(ARTICLE_HTML);
@@ -299,7 +275,6 @@ describe('HtmlScraper', () => {
     });
 
     it('rejects hostname resolving to private IP via DNS rebinding', async () => {
-      // Simulates DNS rebinding: legitimate-looking hostname resolves to internal IP
       mockLookup.mockResolvedValue({ address: '192.168.1.100', family: 4 });
 
       const result = await scraper.scrape('https://evil-rebind.attacker.com/steal');
@@ -313,7 +288,6 @@ describe('HtmlScraper', () => {
 
       expect(result).toBeNull();
       expect(fetchSpy).not.toHaveBeenCalled();
-      // Blocked at hostname policy — DNS lookup never fires.
       expect(mockLookup).not.toHaveBeenCalled();
     });
 
@@ -389,7 +363,6 @@ describe('HtmlScraper', () => {
     });
 
     it('blocks a chain exceeding MAX_REDIRECTS (5)', async () => {
-      // Always-redirecting mock; loop must abort after MAX_REDIRECTS + 1 fetches.
       fetchSpy.mockResolvedValue(makeRedirectResponse('https://next-hop.example/step'));
 
       const result = await scraper.scrape('https://too-many.example/start');
@@ -398,18 +371,6 @@ describe('HtmlScraper', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(6);
     });
   });
-
-  // ------------------------------------------------------------------------
-  // C4 I-SEC10 (2026-05-21) — RED phase, spec R8 + R9.
-  //
-  // Scraper response body MUST be bounded by O(maxContentBytes) RAM.
-  //  R8 — pre-guard on Content-Length header (reject pre-download).
-  //  R9 — streamed cap with reader.cancel() once cumulative bytes > cap.
-  //
-  // Today `html-scraper.ts:299` is `await response.text()` — buffers entire
-  // payload before truncate. These tests prove the new contract and are
-  // expected to FAIL on HEAD (green phase implements the guards).
-  // ------------------------------------------------------------------------
 
   describe('I-SEC10 Content-Length pre-guard', () => {
     it('R8a — rejects pre-download when Content-Length > maxContentBytes, logs scraper_payload_too_large, never reads body', async () => {
@@ -425,9 +386,7 @@ describe('HtmlScraper', () => {
       const result = await smallScraper.scrape('https://example.com/giant.html');
 
       expect(result).toBeNull();
-      // Pre-guard contract: body reader is never touched.
       expect(oversizeResponse.readSpy).not.toHaveBeenCalled();
-      // Telemetry contract: dedicated event name (not the generic scraper_exception).
       const warnCalls = (logger.warn as jest.Mock).mock.calls;
       const matched = warnCalls.find((args) => args[0] === 'scraper_payload_too_large');
       expect(matched).toBeDefined();
@@ -465,11 +424,8 @@ describe('HtmlScraper', () => {
       const result = await smallScraper.scrape('https://example.com/streamed-giant');
 
       expect(result).toBeNull();
-      // R9 abort invariant: reader.cancel() called exactly once.
       expect(chunkedResponse.cancelSpy).toHaveBeenCalledTimes(1);
-      // Stream cap math: ceil(256 / 100) + 1 = 4 reads max before abort.
       expect(chunkedResponse.readSpy.mock.calls.length).toBeLessThanOrEqual(4);
-      // Telemetry contract: dedicated overflow event.
       const warnCalls = (logger.warn as jest.Mock).mock.calls;
       const matched = warnCalls.find((args) => args[0] === 'scraper_payload_streamed_overflow');
       expect(matched).toBeDefined();
@@ -489,7 +445,6 @@ describe('HtmlScraper', () => {
 
       expect(result).not.toBeNull();
       expect(result!.textContent).toContain('Van Gogh');
-      // cancel() NEVER called on the happy path.
       expect(happyResponse.cancelSpy).not.toHaveBeenCalled();
     });
   });

@@ -25,16 +25,12 @@ export async function finalizeLoginSuccess(
   session: LoginSuccessSession,
 ): Promise<void> {
   await auditOwnAccount(req, session.user.id, AUDIT_AUTH_LOGIN_SUCCESS);
-  // F7 — dual-mode: JSON envelope (mobile) + httpOnly cookies (web). JSON unchanged.
   setAuthCookies(res, session);
 }
 
-/** Silent for non-AppError — global error handler still logs/forwards. */
 export async function auditLoginError(req: Request, error: unknown): Promise<void> {
   if (!(error instanceof AppError)) return;
   const email = (req.body as { email?: unknown } | undefined)?.email;
-  // A1 / GDPR Art. 5(1)(c): never write the raw email into audit metadata — only
-  // the domain (actorId/targetId/ip/requestId retain forensic identification).
   const emailDomain = typeof email === 'string' ? extractEmailDomain(email) : undefined;
   if (error.code === 'INVALID_CREDENTIALS') {
     await auditService.log({

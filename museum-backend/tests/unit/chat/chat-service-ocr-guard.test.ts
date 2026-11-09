@@ -1,7 +1,6 @@
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import { FakeOcrService } from 'tests/helpers/chat/fakeOcrService';
 
-// Valid JPEG magic bytes (FF D8 FF E0) followed by padding — minimum 12 bytes for magic check
 const JPEG_MAGIC = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ]).toString('base64');
@@ -53,7 +52,7 @@ describe('chat service – OCR image injection guard', () => {
   });
 
   it('passes through when OCR is disabled (no ocr injected)', async () => {
-    const service = buildChatTestService(); // no OCR
+    const service = buildChatTestService();
     const session = await service.createSession({ userId: USER_ID });
 
     const result = await service.postMessage(

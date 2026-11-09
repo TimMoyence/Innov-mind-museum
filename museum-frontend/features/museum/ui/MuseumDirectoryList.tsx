@@ -21,7 +21,6 @@ interface MuseumDirectoryListProps {
   onRefreshAction?: () => void;
 }
 
-/** Scrollable list of MuseumCards with search bar header, pull-to-refresh, and empty state. */
 export const MuseumDirectoryList = ({
   museums,
   isLoading,

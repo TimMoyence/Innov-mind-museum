@@ -93,7 +93,6 @@ describe('GrantConsentUseCase / RevokeConsentUseCase', () => {
       await grant.execute(1, 'location_to_llm', '2026-04-25', 'ui');
       expect(await repo.isGranted(1, 'location_to_llm')).toBe(true);
 
-      // History preserved: 2 rows, first revoked, second active.
       expect(repo.rows).toHaveLength(2);
       expect(repo.rows[0].revokedAt).toBeInstanceOf(Date);
       expect(repo.rows[1].revokedAt).toBeNull();

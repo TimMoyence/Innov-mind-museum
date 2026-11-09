@@ -1,12 +1,3 @@
-/**
- * R2 RED tests — CSV injection contract (focused).
- *
- * Pins R2 §1 R15 + §0.5 N8 + AC7 — Risk4 mitigation. Distinct file from
- * `csv-writer.test.ts` so a green-code-agent regression on injection is
- * traceable to a single quick-fail target.
- *
- * MUST FAIL at baseline `a77e48aa`.
- */
 import { escapeCsvField } from '@shared/csv/csv-writer';
 
 describe('CSV injection contract (R2 N8 / Risk4)', () => {

@@ -1,21 +1,9 @@
-/**
- * Seed script for knowledge extraction data.
- * Populates artwork_knowledge and museum_enrichment tables with real museum data.
- * Idempotent — uses ON CONFLICT DO NOTHING for safe re-runs.
- *
- * Usage: pnpm seed:knowledge
- * Deploy: runs automatically after migrations in CI deploy pipeline.
- */
 import 'dotenv/config';
 import 'reflect-metadata';
 
 import { AppDataSource } from '@data/db/data-source';
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
-
-// ────────────────────────────────────────────────────────────
-// Artwork seed data — real artworks from major world museums
-// ────────────────────────────────────────────────────────────
 
 interface ArtworkSeed {
   title: string;
@@ -32,7 +20,6 @@ interface ArtworkSeed {
 }
 
 const ARTWORKS: ArtworkSeed[] = [
-  // ── Louvre ──
   {
     title: 'Mona Lisa',
     artist: 'Leonardo da Vinci',
@@ -93,7 +80,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.92,
     locale: 'en',
   },
-  // ── Musee d'Orsay ──
   {
     title: 'Starry Night Over the Rhone',
     artist: 'Vincent van Gogh',
@@ -139,7 +125,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.92,
     locale: 'en',
   },
-  // ── Rijksmuseum, Amsterdam ──
   {
     title: 'The Night Watch',
     artist: 'Rembrandt van Rijn',
@@ -170,7 +155,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.94,
     locale: 'en',
   },
-  // ── Mauritshuis, The Hague ──
   {
     title: 'Girl with a Pearl Earring',
     artist: 'Johannes Vermeer',
@@ -186,7 +170,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.95,
     locale: 'en',
   },
-  // ── National Gallery, Oslo ──
   {
     title: 'The Scream',
     artist: 'Edvard Munch',
@@ -202,7 +185,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.95,
     locale: 'en',
   },
-  // ── MoMA, New York ──
   {
     title: 'The Starry Night',
     artist: 'Vincent van Gogh',
@@ -248,7 +230,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.94,
     locale: 'en',
   },
-  // ── Uffizi Gallery, Florence ──
   {
     title: 'The Birth of Venus',
     artist: 'Sandro Botticelli',
@@ -279,7 +260,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.93,
     locale: 'en',
   },
-  // ── Prado, Madrid ──
   {
     title: 'Las Meninas',
     artist: 'Diego Velazquez',
@@ -310,7 +290,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.95,
     locale: 'en',
   },
-  // ── National Gallery, London ──
   {
     title: 'Sunflowers',
     artist: 'Vincent van Gogh',
@@ -326,7 +305,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.93,
     locale: 'en',
   },
-  // ── Vatican Museums ──
   {
     title: 'The Creation of Adam',
     artist: 'Michelangelo',
@@ -342,7 +320,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.95,
     locale: 'en',
   },
-  // ── Art Institute of Chicago ──
   {
     title: 'A Sunday Afternoon on the Island of La Grande Jatte',
     artist: 'Georges Seurat',
@@ -375,7 +352,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.92,
     locale: 'en',
   },
-  // ── Galleria dell'Accademia, Florence ──
   {
     title: 'David',
     artist: 'Michelangelo',
@@ -391,7 +367,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.95,
     locale: 'en',
   },
-  // ── Musee de l'Orangerie ──
   {
     title: 'Water Lilies (Nympheas)',
     artist: 'Claude Monet',
@@ -407,7 +382,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.93,
     locale: 'en',
   },
-  // ── Tate Modern, London ──
   {
     title: 'The Weeping Woman',
     artist: 'Pablo Picasso',
@@ -423,7 +397,6 @@ const ARTWORKS: ArtworkSeed[] = [
     confidence: 0.91,
     locale: 'en',
   },
-  // ── Metropolitan Museum of Art ──
   {
     title: 'Washington Crossing the Delaware',
     artist: 'Emanuel Leutze',
@@ -440,10 +413,6 @@ const ARTWORKS: ArtworkSeed[] = [
     locale: 'en',
   },
 ];
-
-// ────────────────────────────────────────────────────────────
-// Museum enrichment seed data — practical visitor information
-// ────────────────────────────────────────────────────────────
 
 interface MuseumEnrichmentSeed {
   name: string;
@@ -784,15 +753,10 @@ const MUSEUM_ENRICHMENTS: MuseumEnrichmentSeed[] = [
   },
 ];
 
-// ────────────────────────────────────────────────────────────
-// Main script
-// ────────────────────────────────────────────────────────────
-
 async function main(): Promise<void> {
   await AppDataSource.initialize();
   console.log('Database connected.');
 
-  // ── Seed artworks ──
   const artworkRepo = AppDataSource.getRepository(ArtworkKnowledge);
   const artworkResult = await artworkRepo
     .createQueryBuilder()
@@ -814,7 +778,7 @@ async function main(): Promise<void> {
         locale: a.locale,
       })),
     )
-    .orIgnore() // ON CONFLICT DO NOTHING — safe to re-run
+    .orIgnore()
     .execute();
 
   const artworksInserted = artworkResult.identifiers.filter((id) => id?.id != null).length;
@@ -823,15 +787,13 @@ async function main(): Promise<void> {
     `Artworks: seeded ${artworksInserted} new record(s) (${ARTWORKS.length} in seed list, ${artworkTotal} total in DB).`,
   );
 
-  // ── Seed museum enrichments ──
   const enrichmentRepo = AppDataSource.getRepository(MuseumEnrichment);
   const enrichmentResult = await enrichmentRepo
     .createQueryBuilder()
     .insert()
     .into(MuseumEnrichment)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TypeORM _QueryDeepPartialEntity cannot represent nullable JSONB columns; safe in seed script
     .values(MUSEUM_ENRICHMENTS as any)
-    .orIgnore() // ON CONFLICT DO NOTHING — safe to re-run
+    .orIgnore()
     .execute();
 
   const enrichmentsInserted = enrichmentResult.identifiers.filter((id) => id?.id != null).length;

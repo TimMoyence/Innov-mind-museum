@@ -1,16 +1,3 @@
-/**
- * Tests for `parseDateOfBirth()` UX-side parser.
- *
- * Covers ISO + DMY (slash / dot / dash) variants, leap-year edge cases,
- * range validation (year < 1900 || > currentYear, month/day bounds), and
- * defensive fallbacks (non-string / empty / malformed input).
- *
- * Purpose (T4-RED, run 2026-05-19-w2-followup-fixpack): cover lines 59-63
- * (DMY fallback branch) and lines 66-69 (range/leap branches) of
- * `shared/lib/dateOfBirth.ts` so the FE CI branch-coverage gate (78%)
- * is restored. F4 is test-only — production code is already correct.
- */
-
 import { parseDateOfBirth } from '@/shared/lib/dateOfBirth';
 
 describe('parseDateOfBirth', () => {
@@ -115,7 +102,6 @@ describe('parseDateOfBirth', () => {
     });
 
     it('returns null on a numeric value passed through unsafe cast', () => {
-      // Hostile caller (e.g. untyped JS bridge) — must not crash.
       expect(parseDateOfBirth(42 as unknown as string)).toBeNull();
     });
   });
@@ -126,9 +112,6 @@ describe('parseDateOfBirth', () => {
     });
 
     it('returns null on YYYY/MM/DD (ISO regex requires dashes, not slashes)', () => {
-      // The 1990/03/15 pattern matches NEITHER ISO_REGEX (needs `-`) NOR
-      // DMY_REGEX (year of 4 digits must be the LAST group), so it falls
-      // through to null. Pin that contract.
       expect(parseDateOfBirth('1990/03/15')).toBeNull();
     });
 

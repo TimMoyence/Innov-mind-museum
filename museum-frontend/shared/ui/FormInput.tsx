@@ -8,20 +8,6 @@ import { semantic, space } from './tokens';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
-/**
- * Semantic role of the input. Drives password-manager hints on iOS and
- * autofill plumbing on Android so the system keychain can suggest / save
- * credentials correctly:
- *
- *   - text          — generic free-form (default)
- *   - email         — email address, lowercase keyboard
- *   - password      — existing password (sign-in flows)
- *   - password-new  — new password (registration, reset)
- *
- * Note: RN `autoComplete` is Android-focused and `textContentType` is iOS-only;
- * both are derived from the variant so callers opt into the right semantics
- * without thinking about platform quirks.
- */
 export type FormInputVariant = 'text' | 'email' | 'password' | 'password-new';
 
 interface VariantDefaults {
@@ -64,53 +50,23 @@ const VARIANT_DEFAULTS: Record<FormInputVariant, VariantDefaults> = {
 };
 
 interface FormInputProps {
-  /** Ionicons icon name displayed before the input. */
   icon: IoniconsName;
-  /** Placeholder text shown when the input is empty. */
   placeholder: string;
-  /** Current value of the input. */
   value: string;
-  /** Callback fired when the text changes. */
   onChangeText: (text: string) => void;
-  /**
-   * Semantic variant — drives secureTextEntry, autoCapitalize, keyboardType,
-   * autoComplete, and textContentType defaults. Defaults to `'text'`.
-   */
   variant?: FormInputVariant;
-  /**
-   * Overrides the variant-derived `secureTextEntry`. Rarely needed — prefer
-   * `variant="password"` or `variant="password-new"`.
-   */
   secureTextEntry?: boolean;
-  /** Overrides the variant-derived auto-capitalization. */
   autoCapitalize?: TextInputProps['autoCapitalize'];
-  /** Overrides the variant-derived keyboard type. */
   keyboardType?: KeyboardTypeOptions;
-  /** Overrides the variant-derived Android autofill hint. */
   autoComplete?: TextInputProps['autoComplete'];
-  /** Overrides the variant-derived iOS password-manager hint. */
   textContentType?: TextInputProps['textContentType'];
-  /** Test ID for testing frameworks. */
   testID?: string;
-  /** Accessibility label; defaults to placeholder if not provided. */
   accessibilityLabel?: string;
-  /** Called when the input loses focus. Used by react-hook-form Controller for `onBlur` validation mode. */
   onBlur?: TextInputProps['onBlur'];
-  /**
-   * Field-level validation error to surface inline below the input. When set,
-   * the shell border switches to danger color and a `<Text role="alert">` line
-   * renders so VoiceOver / TalkBack announce it on appearance.
-   */
   error?: string;
-  /** Test ID for the inline error line. Defaults to `${testID}-error` when omitted. */
   errorTestID?: string;
 }
 
-/**
- * Themed text input with a leading icon, used for form fields like email,
- * password, and name inputs. Pass `variant` to get password-manager / autofill
- * defaults wired for you; individual props can still override the variant.
- */
 export function FormInput({
   icon,
   placeholder,

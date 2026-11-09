@@ -9,7 +9,6 @@ describe('GetMuseumUseCase', () => {
     repo = new InMemoryMuseumRepository();
     useCase = new GetMuseumUseCase(repo);
 
-    // Seed a museum (id=1)
     await repo.create({ name: 'Louvre', slug: 'louvre', address: 'Paris' });
   });
 
@@ -40,8 +39,6 @@ describe('GetMuseumUseCase', () => {
   });
 
   it('distinguishes numeric id from slug', async () => {
-    // Create a museum with a numeric-looking slug would be invalid,
-    // but we can verify the logic: "123" is treated as id, "abc" as slug
     await repo.create({ name: 'Museum ABC', slug: 'abc' });
 
     const bySlug = await useCase.execute('abc');

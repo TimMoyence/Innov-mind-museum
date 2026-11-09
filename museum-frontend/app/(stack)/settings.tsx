@@ -16,6 +16,7 @@ import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 import { useMe } from '@/features/auth/application/useMe';
 import { useRuntimeSettings } from '@/features/settings/application/useRuntimeSettings';
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
+import { CurrentPreferencesCard } from '@/features/settings/ui/CurrentPreferencesCard';
 import { SettingsThemeCard } from '@/features/settings/ui/SettingsThemeCard';
 import { SettingsSecurityCard } from '@/features/settings/ui/SettingsSecurityCard';
 import { SettingsAiConsentCard } from '@/features/settings/ui/SettingsAiConsentCard';
@@ -30,10 +31,8 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
-import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/** Canonical public app link shared when inviting a friend (QA-10). */
 const APP_SHARE_URL = 'https://musaium.com';
 
 type SettingsRoute =
@@ -47,7 +46,6 @@ type SettingsRoute =
   | '/(stack)/reviews'
   | '/(tabs)/home';
 
-/** Renders the settings hub with preferences summary, compliance links, account deletion, and sign-out actions. */
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -143,47 +141,15 @@ export default function SettingsScreen() {
           onToggleBiometric={(v) => void onToggleBiometric(v, enableBiometric, disableBiometric)}
         />
 
-        <GlassCard style={styles.card} intensity={56}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
-            {t('settings.current_preferences')}
-          </Text>
-          {isLoadingPrefs ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator color={theme.primary} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                {t('settings.loading_preferences')}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
-                {t('settings.locale_label', {
-                  locale: LANGUAGE_OPTIONS.find((o) => o.code === locale)?.nativeLabel ?? locale,
-                })}
-              </Text>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
-                {t('settings.museum_mode_label', {
-                  mode: museumMode ? t('common.on') : t('common.off'),
-                })}
-              </Text>
-              <Text style={[styles.metaLine, { color: theme.textPrimary }]}>
-                {t('settings.guide_level_label', { level: guideLevel })}
-              </Text>
-            </>
-          )}
-          <Pressable
-            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-            onPress={() => {
-              open('/(stack)/preferences');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('a11y.settings.preferences')}
-          >
-            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-              {t('settings.open_preferences')}
-            </Text>
-          </Pressable>
-        </GlassCard>
+        <CurrentPreferencesCard
+          locale={locale}
+          museumMode={museumMode}
+          guideLevel={guideLevel}
+          isLoading={isLoadingPrefs}
+          onOpenPreferences={() => {
+            open('/(stack)/preferences');
+          }}
+        />
 
         <GlassCard style={styles.card} intensity={52}>
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
@@ -368,18 +334,6 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     lineHeight: space['5'],
-    fontSize: semantic.form.labelSize,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: semantic.card.gapSmall,
-  },
-  loadingText: {
-    fontSize: semantic.form.labelSize,
-  },
-  metaLine: {
-    fontWeight: '600',
     fontSize: semantic.form.labelSize,
   },
   primaryButton: {

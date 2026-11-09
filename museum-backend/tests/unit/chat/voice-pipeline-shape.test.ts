@@ -1,18 +1,3 @@
-/**
- * P4 — Voice V1 end-to-end pipeline (STT → LLM → TTS).
- *
- * Existing tests cover each leg of the pipeline in isolation
- * (`chat-service-audio.test.ts`, `chat-service-tts.test.ts`). This suite
- * exercises them as one continuous user flow, so we catch regressions
- * where, e.g., the assistant message produced by postAudioMessage isn't
- * eligible for synthesizeSpeech.
- *
- * Uses `buildChatTestService` factory + `FakeTextToSpeechService` (UFR-002,
- * no inline mock services). Mocks only the external boundaries
- * (OpenAI STT/TTS HTTP calls) — orchestration, persistence, and guardrails
- * are exercised for real.
- */
-
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import { FakeTextToSpeechService } from 'tests/helpers/chat/fakeTextToSpeechService';
 import type {
@@ -63,7 +48,6 @@ describe('voice V1 pipeline — STT → LLM → TTS (P4)', () => {
     );
     const session = await service.createSession({ userId: USER_ID, locale: 'en-US' });
 
-    // Leg 1+2 — STT then LLM reply.
     const audioResult = await service.postAudioMessage(
       session.id,
       { audio: SAMPLE_AUDIO },
@@ -80,14 +64,11 @@ describe('voice V1 pipeline — STT → LLM → TTS (P4)', () => {
       base64: SAMPLE_AUDIO.base64,
     });
 
-    // Leg 3 — TTS over the same assistant message.
     const speech = await service.synthesizeSpeech(audioResult.message.id, USER_ID);
     expect(speech).not.toBeNull();
     expect(speech!.audio).toBeInstanceOf(Buffer);
     expect(speech!.audio.length).toBeGreaterThan(0);
     expect(speech!.contentType).toMatch(/^audio\//);
-    // The assistant text fed to TTS must be the one stored in the chat session,
-    // not a stale copy.
     expect(tts.lastInput?.text).toBe(audioResult.message.text);
   });
 
@@ -106,12 +87,10 @@ describe('voice V1 pipeline — STT → LLM → TTS (P4)', () => {
     const sessionResult = await service.getSession(session.id, { limit: 50 }, USER_ID);
     const history = sessionResult.messages;
 
-    // Visitor turn = transcribed text, role=user.
     const userTurn = history.find((m) => m.role === 'user');
     expect(userTurn).toBeDefined();
     expect(userTurn?.text).toBe('What artist painted this?');
 
-    // Assistant turn = the LLM response that was passed to TTS.
     const assistantTurn = history.find((m) => m.id === audioResult.message.id);
     expect(assistantTurn?.text).toBe(audioResult.message.text);
   });

@@ -6,7 +6,6 @@ import {
   type DistanceTFunction,
 } from '../features/museum/application/formatDistance';
 
-// Minimal TFunction stub that echoes the key + interpolation for assertions.
 const t: DistanceTFunction = (key, opts) => `${key}:${String(opts.distance)}`;
 
 describe('formatDistance', () => {

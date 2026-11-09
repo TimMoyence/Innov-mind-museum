@@ -5,14 +5,6 @@ import {
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
 
-/**
- * CORS integration tests — validates origin handling, preflight OPTIONS,
- * and the fallback behavior when CORS_ORIGINS is empty in non-production.
- *
- * In test/dev mode with no CORS_ORIGINS, cors({ origin: false }) is used,
- * which means CORS is effectively "allow all" (no restriction applied).
- */
-
 const { app } = createRouteTestApp();
 
 describe('CORS configuration', () => {
@@ -25,9 +17,6 @@ describe('CORS configuration', () => {
   });
 
   describe('when CORS_ORIGINS is empty and not in production', () => {
-    // Default test env has no CORS_ORIGINS set and NODE_ENV=test,
-    // so corsOrigins resolves to `false` (cors lib: no restriction).
-
     it('allows requests without Origin header', async () => {
       const res = await request(app).get('/api/health');
 
@@ -88,8 +77,6 @@ describe('CORS configuration', () => {
 
   describe('standard API responses include security headers', () => {
     it('sets default Cache-Control: no-store on non-health routes', async () => {
-      // The /api/health route overrides Cache-Control, so use a different endpoint
-      // that doesn't — a 404 still passes through global middleware.
       const res = await request(app).get('/api/nonexistent-route');
 
       expect(res.headers['cache-control']).toBe('no-store');
@@ -98,7 +85,6 @@ describe('CORS configuration', () => {
     it('sets Helmet security headers', async () => {
       const res = await request(app).get('/api/health');
 
-      // In non-production, helmet sets X-Content-Type-Options
       expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
   });

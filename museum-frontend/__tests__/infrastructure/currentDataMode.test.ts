@@ -49,7 +49,9 @@ describe('currentDataMode', () => {
     subscribeDataMode(bad);
     subscribeDataMode(good);
 
-    expect(() => { setCurrentDataMode('low'); }).not.toThrow();
+    expect(() => {
+      setCurrentDataMode('low');
+    }).not.toThrow();
     expect(good).toHaveBeenCalledWith('low');
   });
 });

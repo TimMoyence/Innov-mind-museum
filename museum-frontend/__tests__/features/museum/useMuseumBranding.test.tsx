@@ -1,24 +1,3 @@
-/**
- * RED-4 — `useMuseumBranding(museumId)` fetch hook (C4 co-branding,
- * run 2026-05-26-kr-product).
- *
- * Phase: RED (UFR-022). MUST FAIL — the hook
- * `features/museum/application/useMuseumBranding` does not exist yet.
- *
- * Asserts (spec-c4 R2/R10/R11):
- *   - active branded museumId>0 → returns the parsed branding;
- *     `museumApi.getMuseum` called EXACTLY ONCE across re-renders/re-mounts
- *     within the same QueryClient (R10 dedup);
- *   - museumId null / <= 0 → `getMuseum` NEVER called, branding `{}`,
- *     status idle (R2 — synthetic/OSM entries don't fetch);
- *   - `getMuseum` rejects → branding `{}`, hook does NOT throw and exposes no
- *     blocking error UI (R11 fail-open).
- *
- * lib-docs consulted: @tanstack/react-query/PATTERNS.md:69,83,101 (queryKey
- * includes every var, `enabled` gating, staleTime), react-native/PATTERNS.md
- * (renderHook). Uses `renderHookWithQueryClient` (retry:false test client).
- */
-
 import { waitFor } from '@testing-library/react-native';
 
 import {
@@ -41,8 +20,6 @@ interface UseMuseumBrandingResult {
   status: string;
 }
 
-// Lazy require so the missing-hook failure surfaces inside each test (RED)
-// rather than crashing the whole suite at import time.
 const useMuseumBranding = (museumId: number | null): UseMuseumBrandingResult => {
   const mod = require('@/features/museum/application/useMuseumBranding') as {
     useMuseumBranding: (museumId: number | null) => UseMuseumBrandingResult;
@@ -120,7 +97,6 @@ describe('useMuseumBranding', () => {
     await waitFor(() => {
       expect(result.current.branding).toEqual({});
     });
-    // Fail-open: the visitor never sees a branding error.
     expect(result.current.status).not.toBe('idle');
   });
 });

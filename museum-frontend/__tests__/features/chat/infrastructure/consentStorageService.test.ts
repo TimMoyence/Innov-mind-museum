@@ -1,34 +1,3 @@
-/**
- * C1 Red — consentStorageService infra service.
- *
- * Cluster C1 (hexagonal violations, 2026-05-23-frontend-dry-audit) — the
- * `features/chat/application/useAiConsent` hook currently imports
- * `AsyncStorage` directly + builds the per-userId namespaced key inline.
- * Plan T2.9 extracts the storage access to
- * `features/chat/infrastructure/consentStorageService.ts` exposing
- * `consentStorageService.{ readAccepted, setAccepted, clearAccepted,
- * __testMemoKey }` plus a back-compat re-export `clearConsentAcceptedFlag`
- * (still consumed by `AuthContext.clearPerUserFeatureStorage`).
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL because
- * `@/features/chat/infrastructure/consentStorageService` does not yet exist.
- *
- * Contract preserved byte-for-byte from `useAiConsent.ts:24-52,112-115`:
- *  - Key derivation: `musaium.consent.aiAccepted.<userId | __anon>`.
- *  - `readAccepted` failure → Sentry capture (tag `flow: 'consent.read'`)
- *    then re-throw so the hook can flip `showAiConsent=true`.
- *  - `setAccepted` failure → silent swallow (modal re-appears next session).
- *  - `clearAccepted` failure → Sentry capture (tag `flow: 'consent.clear'`)
- *    WITHOUT re-throw.
- *  - GDPR Art. 7: anonymous namespace MUST be used when token absent or
- *    `extractUserIdFromToken` throws (defense in depth).
- *
- * Note on AsyncStorage mock — the project's `jest.config.js` uses the
- * upstream `async-storage-mock` via moduleNameMapper. We override it
- * here so we can assert exact key/value byte-for-byte without the upstream
- * mock's in-memory store getting in the way.
- */
-
 const mockGetItem = jest.fn<Promise<string | null>, [string]>();
 const mockSetItem = jest.fn<Promise<void>, [string, string]>();
 const mockRemoveItem = jest.fn<Promise<void>, [string]>();
@@ -56,7 +25,6 @@ jest.mock('@sentry/react-native', () => ({
   captureException: (...args: unknown[]) => mockSentryCapture(...args),
 }));
 
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import {
   consentStorageService,
   clearConsentAcceptedFlag,

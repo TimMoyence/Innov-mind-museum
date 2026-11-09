@@ -10,9 +10,11 @@ import { fontSize, radius, semantic, space } from '@/shared/ui/tokens';
 
 type CompareMatch = components['schemas']['CompareMatch'];
 
+export const compareMatchCredit = (match: CompareMatch): string =>
+  match.facts.artist ? `${match.title}, ${match.facts.artist}` : match.title;
+
 interface ImageCompareCardProps {
   match: CompareMatch;
-  locale: 'fr' | 'en';
   onPress: (qid: string) => void;
 }
 
@@ -20,27 +22,14 @@ const CARD_WIDTH = 220;
 const CARD_MIN_HEIGHT = 260;
 const THUMB_HEIGHT = 140;
 
-/**
- * Renders a single visual-similarity match (C3 / Phase 8) — thumbnail, title,
- * artist, rationale, and an attribution row when the source license requires
- * one (CC-BY-SA per spec.md). Distinct from the C2 `ImageCarousel` thumb
- * (D7 — different surface intent).
- *
- * Accessibility (D5 / UFR-008):
- *   - `accessibilityLabel` follows the localized template
- *     "Œuvre similaire : {title}, {artist}, {rationale}" (FR) /
- *     "Similar artwork: {title}, {artist}, {rationale}" (EN).
- *   - Pressable touch target ≥ 44×44pt (WCAG 2.5.5).
- */
-export const ImageCompareCard = React.memo(({ match, locale, onPress }: ImageCompareCardProps) => {
+export const ImageCompareCard = React.memo(({ match, onPress }: ImageCompareCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
-  const artist = match.facts.artist ?? '';
-  const a11yLabel =
-    locale === 'fr'
-      ? `Œuvre similaire : ${match.title}, ${artist}, ${match.rationale}`
-      : `Similar artwork: ${match.title}, ${artist}, ${match.rationale}`;
+  const a11yLabel = t('chat.compare.card_a11y', {
+    credit: compareMatchCredit(match),
+    rationale: match.rationale,
+  });
 
   const handlePress = () => {
     onPress(match.qid);
@@ -70,9 +59,9 @@ export const ImageCompareCard = React.memo(({ match, locale, onPress }: ImageCom
           <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={2}>
             {match.title}
           </Text>
-          {artist.length > 0 ? (
+          {match.facts.artist ? (
             <Text style={[styles.artist, { color: theme.textTertiary }]} numberOfLines={1}>
-              {artist}
+              {match.facts.artist}
             </Text>
           ) : null}
           <Text style={[styles.rationale, { color: theme.textSecondary }]} numberOfLines={3}>

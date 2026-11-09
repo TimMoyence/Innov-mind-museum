@@ -20,11 +20,6 @@ interface TtsSectionProps {
   onFeedback?: (messageId: string, value: 'positive' | 'negative') => void;
 }
 
-/**
- * Bottom meta row of a non-streaming bubble: timestamp + assistant-only
- * meta actions (TTS playback, feedback thumbs, report). Name reflects the
- * TTS-centric user journey (voice playback is the primary action here).
- */
 export const TtsSection = memo(function TtsSection({
   messageId,
   createdAt,

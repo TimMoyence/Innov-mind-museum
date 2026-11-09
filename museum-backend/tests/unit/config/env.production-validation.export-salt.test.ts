@@ -1,55 +1,23 @@
-/**
- * RED — T1.1 — R1 — `validateProductionEnv` MUST fail-fast when
- * `EXPORT_PSEUDONYM_SALT` is unset or shorter than 32 chars in production.
- *
- * Spec : team-state/2026-05-21-p0-c3-auth-crypto/spec.md §R1.
- * Design : team-state/2026-05-21-p0-c3-auth-crypto/design.md §3.3.
- * Mirror : `validateCsrfSecret` shape (env.production-validation.ts:164-191) —
- * required env var + length-gate + drift detection vs `env.auth.exportPseudonymSalt`.
- *
- * Anchored to PATTERNS / LESSONS :
- *  - I-SEC5 — the committed fallback `'musaium-admin-export-v1'` allows trivial
- *    pseudonym dictionary attack (cf spec.md §1.1). Boot fail-fast removes the
- *    silent default in prod.
- *  - Phase-1 frozen-test contract (UFR-022) : these assertions are the SOLE
- *    source of truth for the validator shape ; green-phase MUST NOT edit them.
- *
- * Failure mode at HEAD `00325d81` :
- *  - `env.production-validation.ts` has 0 references to `EXPORT_PSEUDONYM_SALT`
- *    (verified Read 2026-05-21) → all three `throw` assertions fall through.
- *
- * Run scope :
- *   pnpm jest tests/unit/config/env.production-validation.export-salt.test.ts
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 
 import type { AppEnv } from '@src/config/env.types';
 
-const LONG = 'a'.repeat(64); // jwt access
-const ALT_LONG = 'b'.repeat(64); // jwt refresh
-const SALT_OK = 'x'.repeat(48); // >= 32 chars
-const SALT_SHORT = 'x'.repeat(31); // EXACTLY one short of threshold
+const LONG = 'a'.repeat(64);
+const ALT_LONG = 'b'.repeat(64);
+const SALT_OK = 'x'.repeat(48);
+const SALT_SHORT = 'x'.repeat(31);
 
 interface SaltOverrides {
   exportPseudonymSalt?: string;
 }
 
-/**
- * Minimal AppEnv stub — only the fields validateProductionEnv inspects in this
- * scope. Mirror the existing pattern in
- * `env-production-validation-secret-length.test.ts` to stay consistent with the
- * project's test discipline (no inline entity literal).
- */
 const makeEnv = (overrides: SaltOverrides = {}): AppEnv =>
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'openai', openAiApiKey: 'sk-test' },
+    llm: { costGuard: { userDailyCapUsd: 0 }, provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     cache: undefined,
-    // Field under test — `env.ts` should source from process.env.EXPORT_PSEUDONYM_SALT.
-    // Drift detection (mirror validateCsrfSecret) asserts the two agree.
     exportPseudonymSalt: overrides.exportPseudonymSalt,
     auth: {
       accessTokenSecret: LONG,
@@ -130,7 +98,6 @@ describe('validateProductionEnv — EXPORT_PSEUDONYM_SALT (R1, I-SEC5)', () => {
   });
 
   it('throws on env.exportPseudonymSalt vs EXPORT_PSEUDONYM_SALT wiring drift (mirror validateCsrfSecret)', () => {
-    // process.env carries SALT_OK ; AppEnv has a different salt → drift detected.
     process.env.EXPORT_PSEUDONYM_SALT = SALT_OK;
 
     expect(() => {

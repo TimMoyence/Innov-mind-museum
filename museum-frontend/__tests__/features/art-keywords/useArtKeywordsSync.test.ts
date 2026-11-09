@@ -7,9 +7,6 @@ const mockSyncKeywords = jest.fn<Promise<ArtKeywordListResponse>, [string, strin
 
 jest.mock('@/features/art-keywords/infrastructure/artKeywordsApi', () => ({
   syncKeywords: (...args: [string, string?]) => mockSyncKeywords(...args),
-  // C1 hexagonal (2026-05-23) — `getLocale` now re-exported through the
-  // feature-infra façade (was imported from `@/shared/infrastructure/httpClient`
-  // directly before, which is now forbidden in application/ui layers).
   getLocale: () => 'fr',
 }));
 
@@ -78,7 +75,6 @@ describe('useArtKeywordsSync', () => {
       useArtKeywordsSync();
     });
 
-    // Give the effect time to potentially fire
     await new Promise((r) => setTimeout(r, 50));
 
     expect(mockSyncKeywords).not.toHaveBeenCalled();
@@ -135,9 +131,6 @@ describe('useArtKeywordsSync', () => {
   });
 
   it('treats a rewound device clock as stale and forces a refresh', async () => {
-    // lastSynced is IN THE FUTURE relative to the current clock — simulates
-    // the device rebooting into a rewound time. Naive elapsed > 24h check
-    // would silently skip forever; we must still attempt sync.
     useArtKeywordsStore.setState({
       lastSyncedAt: { fr: '2030-01-01T00:00:00Z' },
     });
@@ -164,7 +157,7 @@ describe('isKeywordCacheStale', () => {
   });
 
   it('is fresh within the 24h window', () => {
-    const recent = new Date(now - 60 * 60 * 1000).toISOString(); // 1h ago
+    const recent = new Date(now - 60 * 60 * 1000).toISOString();
     expect(isKeywordCacheStale(recent, now)).toBe(false);
   });
 
@@ -197,12 +190,12 @@ describe('canRetryAfterFailure', () => {
   });
 
   it('blocks retry when backoff window has not elapsed', () => {
-    const lastFailed = new Date(now - 30 * 1000).toISOString(); // 30s ago
+    const lastFailed = new Date(now - 30 * 1000).toISOString();
     expect(canRetryAfterFailure(1, lastFailed, now)).toBe(false);
   });
 
   it('allows retry once backoff window has elapsed', () => {
-    const lastFailed = new Date(now - 5 * 60 * 1000).toISOString(); // 5min ago
+    const lastFailed = new Date(now - 5 * 60 * 1000).toISOString();
     expect(canRetryAfterFailure(1, lastFailed, now)).toBe(true);
   });
 
@@ -212,8 +205,6 @@ describe('canRetryAfterFailure', () => {
   });
 
   it('blocks after 3 consecutive failures even if a lot of time passed', () => {
-    // Once we hit the cap we wait for the next natural 24h cycle
-    // (which is driven by the staleness check, not this retry gate).
     const lastFailed = new Date(now - 10 * MS_IN_DAY).toISOString();
     expect(canRetryAfterFailure(3, lastFailed, now)).toBe(false);
   });

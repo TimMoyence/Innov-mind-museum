@@ -1,22 +1,3 @@
-/**
- * F10 (2026-04-30) — HIBP Pwned Passwords k-anonymity client.
- *
- * Validates the SHA-1 prefix/suffix protocol, padded-entry filtering, fail-open
- * on transport errors, and the AppError thrown by `assertPasswordNotBreached`.
- *
- * Stryker hardening (2026-05-10) — kills 15 survivors on
- * src/shared/validation/password-breach-check.ts by asserting:
- *   - logger.warn event names + payload shape (hibp_unexpected_status,
- *     hibp_unavailable_failopen)
- *   - captureExceptionWithContext payload contract (component + mode strings)
- *   - exact HIBP error message format ("HIBP returned status N")
- *   - URL prefix + suffix matching ("AAAAA:" not just "AAAAA")
- *   - timeoutMs default (2000) vs explicit override paths
- *   - AbortController fires on synthetic timer expiry
- *   - User-Agent header value
- *   - assertPasswordNotBreached short-circuit when env flag disabled
- *   - AppError(PASSWORD_BREACHED) carries the verbatim user-facing message
- */
 import crypto from 'node:crypto';
 
 jest.mock('@shared/logger/logger', () => ({
@@ -76,7 +57,7 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
     const result = await checkPasswordBreach(password);
 
     expect(result).toEqual({ breached: false, count: 0, failOpen: false });
-    expect(fullHash).toBeTruthy(); // sanity — no test pollution
+    expect(fullHash).toBeTruthy();
   });
 
   it('returns breached:true with the count when the suffix appears in the response', async () => {
@@ -207,13 +188,9 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
   });
 
   it('matches the 35-char suffix (slice(5)) not the full hash — k-anonymity contract', async () => {
-    // A password whose SHA-1 starts with the same 5-char prefix as another
-    // breached suffix entry must NOT match — only the 35-char suffix matters.
     const password = 'suffix-distinguishes';
     const fullHash = sha1Upper(password);
     const ourSuffix = fullHash.slice(5);
-    // Craft a fake "noise" line whose suffix differs from ours in the LAST char
-    // so any mutation collapsing the slice(5) (e.g. slice(0)) would mis-match.
     const noiseSuffix = ourSuffix.slice(0, -1) + (ourSuffix.endsWith('0') ? '1' : '0');
     jest
       .spyOn(globalThis, 'fetch')
@@ -225,10 +202,6 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
   });
 
   it('requires the colon delimiter — a suffix substring without ":" must not match', async () => {
-    // The match uses `startsWith(suffix + ':')`. If the colon is stripped
-    // (Stryker mutation 100:48 → empty string), then a line that merely
-    // STARTS with our suffix-as-substring would falsely match. Body crafted
-    // so that our suffix only appears followed by an alphanumeric, never ":".
     const password = 'colon-required-' + String(Date.now());
     const fullHash = sha1Upper(password);
     const suffix = fullHash.slice(5);
@@ -284,7 +257,6 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
       let capturedSignal: AbortSignal | undefined;
       jest.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
         capturedSignal = init!.signal!;
-        // Resolve only after the timer would have fired so we can observe abort state.
         return new Promise<Response>((resolve) => {
           setTimeout(() => {
             resolve(okResponse(''));
@@ -293,11 +265,8 @@ describe('F10 — checkPasswordBreach (HIBP k-anonymity)', () => {
       });
 
       const pending = checkPasswordBreach('any');
-      // Advance just BEFORE the default 2000ms — must NOT yet be aborted.
       jest.advanceTimersByTime(1999);
       expect(capturedSignal?.aborted).toBe(false);
-      // Crossing the default 2000ms threshold MUST abort (kills LogicalOperator
-      // survivor 69:21 and the BlockStatement 75:34 inside setTimeout).
       jest.advanceTimersByTime(1);
       expect(capturedSignal?.aborted).toBe(true);
 

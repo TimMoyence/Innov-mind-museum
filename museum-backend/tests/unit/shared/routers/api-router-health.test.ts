@@ -1,22 +1,6 @@
-/**
- * Stryker survivor + NoCoverage kill suite for
- * `src/shared/routers/api.router.ts` — focuses on the `/health` handler,
- * route-path string literals, DI fallback logic, and the
- * `resolveEnrichMuseumUseCase` cache path.
- *
- * All sub-routers and external wiring are mocked. The env module is replaced
- * with a mutable object so each test can flip provider / API keys / nodeEnv
- * without rebuilding the module graph (the router reads `env.*` at request
- * time, not import time).
- */
 import express from 'express';
 import request from 'supertest';
 
-// ─── Mutable env mock ─────────────────────────────────────────────────────
-// The router accesses `env.llm.*`, `env.nodeEnv`, `env.commitSha`,
-// `env.appVersion`, `env.extractionWorkerEnabled` lazily inside the
-// `/health` handler / mountDomainRouters. Exposing a mutable object lets a
-// single test file exercise multiple permutations.
 const envMock: {
   nodeEnv: string;
   appVersion: string;
@@ -53,8 +37,6 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-// ─── Sub-router stubs (each mounts a `/__probe` GET so we can verify the
-// mount-path string literals via supertest) ───────────────────────────────
 const makeProbeRouter = (label: string) => {
   const { Router } = jest.requireActual<typeof import('express')>('express');
   const r = Router();
@@ -114,10 +96,6 @@ jest.mock('@modules/auth/adapters/primary/http/routes/me.route', () => ({
     return r;
   })(),
 }));
-// R2 W3.4 — `admin-export.route` imports `authenticated.middleware` which
-// transitively pulls `auth/useCase` → `AppDataSource`. Same env.db.host trap
-// as me.route / mfa.route — stub the router out (mirrors corrective in
-// api-router-resolve.test.ts).
 jest.mock('@modules/admin/adapters/primary/http/routes/admin-export.route', () => ({
   __esModule: true,
   default: (() => {
@@ -129,11 +107,6 @@ jest.mock('@modules/admin/adapters/primary/http/routes/admin-export.route', () =
     return r;
   })(),
 }));
-// R1 C6 + R3/R4 — `leads.route` imports `leads/useCase/index.ts` which
-// eagerly reads `env` at module load (composition root for submitBeta/
-// submitB2bLead/submitPaywallInterest useCases). The test's `get env()`
-// returns `envMock` which isn't initialized yet at module-load time, so we
-// stub the router out (same pattern as me.route / mfa.route / admin-export).
 jest.mock('@modules/leads/adapters/primary/http/routes/leads.route', () => ({
   __esModule: true,
   default: (() => {
@@ -153,30 +126,6 @@ const getLlmCircuitBreakerStateMock = jest.fn<
   { state: 'CLOSED' | 'OPEN' | 'HALF_OPEN' } | undefined,
   []
 >();
-// `getActiveChatModule` is the shallow entry point that wiring.ts delegates
-// every accessor through. Replacing it with a fixed isBuilt=false handle
-// lets the REAL wiring code run unchanged — every accessor flows through
-// `isBuilt() === false` and returns undefined exactly like the production
-// boot-order-tolerant path. Test-controlled overrides:
-//   - `isBuilt` flips per test (default false) for the artwork-knowledge-repo
-//     branch in api.router.ts (`if (artworkKnowledgeRepo) router.use(...)`).
-//   - `getBuilt().artworkKnowledgeRepo` is the only Built field the suite
-//     reads — exposing it keeps the truthy branch reachable without
-//     materialising the rest of the BuiltChatModule.
-//   - `getLlmCircuitBreakerState` is module-private state on the singleton,
-//     mocked here so tests can flip cbState=undefined / 'CLOSED' / 'OPEN'.
-//
-// No catch-all `() => undefined` stubs: future additions to `wiring.ts`
-// (`getXxx` accessors that delegate to `getActiveChatModule()`) work out
-// of the box because the real wiring code runs end-to-end.
-// Default `isBuilt=true` keeps the artwork-knowledge-repo branch active so
-// the suite's happy-path mount of `createAdminKeRouter` triggers without
-// per-test setup; the one test that exercises the falsy branch flips it
-// via `artworkKnowledgeRepoOverride.mockReturnValueOnce(undefined)`. Every
-// other Built field is `undefined` (object literal omits them) so the
-// wiring accessors for compareImageUseCase, compareSessionAccessVerifier,
-// describeService, etc. all return undefined just like the production
-// boot-order-tolerant path.
 const isBuiltMock = jest.fn<boolean, []>(() => true);
 const artworkKnowledgeRepoOverride = jest.fn<unknown, []>(() => ({}) as object);
 
@@ -194,9 +143,6 @@ jest.mock('@modules/chat/chat-module', () => {
     }),
     setActiveChatModule: () => {},
     resetActiveChatModule: () => {},
-    // Runtime accessors previously from chat-module.wiring — these match the
-    // boot-order-tolerant path: undefined when not built, undefined per missing
-    // field on the built shape.
     getImageStorage: () => ({}) as unknown,
     getChatRepository: () => ({}) as unknown,
     getUserMemoryService: () => undefined,
@@ -206,11 +152,7 @@ jest.mock('@modules/chat/chat-module', () => {
     getArtworkKnowledgeRepo: () => (isBuiltMock() ? artworkKnowledgeRepoOverride() : undefined),
     getCompareImageUseCase: () => undefined,
     getCompareSessionAccessVerifier: () => undefined,
-    // Phase 1 (perennial design): GDPR Art. 22 explanation use-case accessor.
-    // Tests don't exercise the /messages/:id/explanation route so a stub is OK.
     getMessageExplanationUseCase: () => undefined,
-    // W3 (T5.3): chat-session context update use-case accessor. Tests don't
-    // exercise the PATCH /sessions/:id/context route so a stub is OK.
     getUpdateSessionContextUseCase: () => undefined,
   };
 });
@@ -260,7 +202,6 @@ jest.mock('@modules/support/adapters/primary/http/routes/support.route', () => (
   })(),
 }));
 
-// ─── Imports (after mocks) ────────────────────────────────────────────────
 import { createApiRouter, buildHealthPayload } from '@shared/routers/api.router';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
@@ -274,7 +215,6 @@ import { BullmqMuseumEnrichmentQueueAdapter } from '@modules/museum/adapters/sec
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
 const resetEnv = () => {
   envMock.nodeEnv = 'test';
   envMock.appVersion = '0.0.0-test';
@@ -303,8 +243,6 @@ const buildApp = (deps: {
   return app;
 };
 
-// Build a fake CacheService that is NOT a NoopCacheService instance (kills
-// the `cacheService instanceof NoopCacheService` mutants on L143).
 const makeRedisLikeCache = (ping: () => Promise<boolean> | Promise<never>): CacheService =>
   ({
     get: jest.fn().mockResolvedValue(null),
@@ -325,7 +263,6 @@ describe('createApiRouter — /health route', () => {
     getLlmCircuitBreakerStateMock.mockReturnValue({ state: 'CLOSED' });
   });
 
-  // ── Route path (L139) + Cache-Control header (L140) ────────────────────
   it('mounts the health route at /health and sets a public Cache-Control', async () => {
     const app = buildApp({});
     const res = await request(app).get('/api/health');
@@ -337,20 +274,16 @@ describe('createApiRouter — /health route', () => {
   });
 
   it('404s on the empty path mutation (no route registered at root)', async () => {
-    // Sanity guard: confirms /api responds 404 when no sub-path is given,
-    // so the `/health` literal mutation (→ "") would shift routing.
     const app = buildApp({});
     const res = await request(app).get('/api');
     expect(res.status).toBe(404);
   });
 
-  // ── isNoop branch (L143) ───────────────────────────────────────────────
   it('skips redis ping when no cacheService is injected (isNoop=true via !cacheService)', async () => {
     const app = buildApp({ cacheService: undefined });
     const res = await request(app).get('/api/health');
 
     expect(res.status).toBe(200);
-    // In non-prod, redis status surfaces in payload.
     expect(res.body.checks.redis).toBe('skipped');
   });
 
@@ -365,7 +298,6 @@ describe('createApiRouter — /health route', () => {
     expect(pingSpy).not.toHaveBeenCalled();
   });
 
-  // ── Ping resolves up / down (L150 arrow, L153 string) ──────────────────
   it('reports redis=up when ping resolves true', async () => {
     const cache = makeRedisLikeCache(() => Promise.resolve(true));
     const res = await request(buildApp({ cacheService: cache })).get('/api/health');
@@ -383,12 +315,7 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.status).toBe('degraded');
   });
 
-  // ── Race timeout (L151 arrow, L152 block, L153 string) ─────────────────
   it('reports redis=down when ping hangs past the race timeout', async () => {
-    // Bypass supertest entirely for this case — supertest's internal HTTP
-    // polling fights fake timers. We invoke the registered /health handler
-    // directly on a mocked req/res pair so fake timers can deterministically
-    // advance past REDIS_PING_TIMEOUT_MS without blocking on real sockets.
     jest.useFakeTimers();
     try {
       const cache = makeRedisLikeCache(() => new Promise<boolean>(() => undefined));
@@ -398,8 +325,6 @@ describe('createApiRouter — /health route', () => {
         cacheService: cache,
       });
 
-      // Pull the /health handler out of the router stack. Express stores
-      // routes on router.stack; the first GET on /health is what we want.
       const layers = (
         router as unknown as {
           stack: {
@@ -433,7 +358,6 @@ describe('createApiRouter — /health route', () => {
 
       const pending = handler({} as express.Request, res as unknown as express.Response, jest.fn());
 
-      // Flush pending microtasks then advance past REDIS_PING_TIMEOUT_MS.
       await Promise.resolve();
       await Promise.resolve();
       jest.advanceTimersByTime(2_001);
@@ -449,7 +373,6 @@ describe('createApiRouter — /health route', () => {
     }
   });
 
-  // ── Ping rejection caught (L156 arrow `.catch(() => 'down')`) ──────────
   it('reports redis=down when ping rejects (catch handler runs)', async () => {
     const cache = makeRedisLikeCache(() => Promise.reject(new Error('connect ECONNREFUSED')));
     const res = await request(buildApp({ cacheService: cache })).get('/api/health');
@@ -459,15 +382,12 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.status).toBe('degraded');
   });
 
-  // ── responseTimeMs arithmetic (L159) ───────────────────────────────────
   it('returns a small non-negative responseTimeMs in non-prod', async () => {
     const res = await request(buildApp({})).get('/api/health');
     expect(res.body.responseTimeMs).toBeGreaterThanOrEqual(0);
-    // Date.now() + start would be ≈ 2 × current epoch (>1e12). Cap at 10s.
     expect(res.body.responseTimeMs).toBeLessThan(10_000);
   });
 
-  // ── llmConfigured triplet (L161-163) ───────────────────────────────────
   it('llmConfigured=true when provider=openai and openAiApiKey is set', async () => {
     envMock.llm.provider = 'openai';
     envMock.llm.openAiApiKey = 'sk-real';
@@ -492,7 +412,7 @@ describe('createApiRouter — /health route', () => {
 
   it('llmConfigured=false when provider=deepseek and deepseekApiKey is missing', async () => {
     envMock.llm.provider = 'deepseek';
-    envMock.llm.openAiApiKey = 'sk-other-provider-key'; // wrong provider's key
+    envMock.llm.openAiApiKey = 'sk-other-provider-key';
     envMock.llm.deepseekApiKey = undefined;
     const res = await request(buildApp({})).get('/api/health');
     expect(res.body.checks.llmConfigured).toBe(false);
@@ -514,7 +434,6 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.checks.llmConfigured).toBe(false);
   });
 
-  // ── ObjectLiteral on buildHealthPayload input (L168) ───────────────────
   it('passes structured checks (database + redis + circuit breaker) into buildHealthPayload', async () => {
     getLlmCircuitBreakerStateMock.mockReturnValue({ state: 'OPEN' });
     const cache = makeRedisLikeCache(() => Promise.resolve(true));
@@ -525,16 +444,13 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.checks.llmCircuitBreaker).toBe('OPEN');
   });
 
-  // ── OptionalChaining on cbState?.state (L171) ──────────────────────────
   it('omits llmCircuitBreaker when getLlmCircuitBreakerState() returns undefined', async () => {
     getLlmCircuitBreakerStateMock.mockReturnValue(undefined);
     const res = await request(buildApp({})).get('/api/health');
-    // Mutant `cbState.state` would throw on undefined → 500.
     expect(res.status).toBe(200);
     expect(res.body.checks.llmCircuitBreaker).toBeUndefined();
   });
 
-  // ── responseTimeMs presence in non-prod vs prod (L177) ─────────────────
   it('includes responseTimeMs in non-production (env.nodeEnv=test)', async () => {
     envMock.nodeEnv = 'test';
     const res = await request(buildApp({})).get('/api/health');
@@ -548,7 +464,6 @@ describe('createApiRouter — /health route', () => {
     expect(res.body.responseTimeMs).toBeUndefined();
   });
 
-  // ── DB-down 503 path (L181) ────────────────────────────────────────────
   it('returns HTTP 503 when database is down', async () => {
     const app = buildApp({
       healthCheck: jest.fn().mockResolvedValue({ database: 'down' as const }),
@@ -569,7 +484,6 @@ describe('createApiRouter — /health route', () => {
   });
 });
 
-// ─── createApiRouter — sub-router mount paths (L235/243/247/248/253/255/261/263/264/269/270) ──
 describe('createApiRouter — sub-router mount path literals', () => {
   beforeEach(() => {
     resetEnv();
@@ -628,7 +542,6 @@ describe('createApiRouter — sub-router mount path literals', () => {
   it('mounts the admin sub-router at /admin (admin route reachable)', async () => {
     const res = await probe(buildApp({}), '/api/admin/__probe');
     expect(res.status).toBe(200);
-    // Either admin or cache-purge probe matches — both mounted under /admin.
     expect(['admin', 'cache-purge', 'admin-ke']).toContain(res.body.label);
   });
 
@@ -645,7 +558,6 @@ describe('createApiRouter — sub-router mount path literals', () => {
   });
 });
 
-// ─── createApiRouter — DI behavior (L256 ObjectLiteral, L259 ??, L266 cond) ─
 describe('createApiRouter — dependency injection wiring', () => {
   beforeEach(() => {
     resetEnv();
@@ -662,7 +574,6 @@ describe('createApiRouter — dependency injection wiring', () => {
       cacheService: unknown;
       enrichMuseumUseCase: unknown;
     };
-    // Mutant `{}` for the ObjectLiteral would have neither key.
     expect(deps).toHaveProperty('cacheService');
     expect(deps).toHaveProperty('enrichMuseumUseCase');
     expect(deps.cacheService).toBe(cache);
@@ -671,8 +582,6 @@ describe('createApiRouter — dependency injection wiring', () => {
   it('falls back to NoopCacheService when no cacheService is provided (?? operator)', () => {
     buildApp({ cacheService: undefined });
 
-    // buildLowDataPackService must receive a non-undefined NoopCacheService.
-    // Mutant `cacheService && new NoopCacheService()` would pass undefined.
     expect(buildLowDataPackService).toHaveBeenCalledTimes(1);
     const firstArg = (buildLowDataPackService as jest.Mock).mock.calls[0]?.[0];
     expect(firstArg).toBeInstanceOf(NoopCacheService);
@@ -701,9 +610,6 @@ describe('createApiRouter — dependency injection wiring', () => {
     const chatService = { sentinel: true } as unknown as ChatService;
     buildApp({ chatService });
     expect(createChatRouter).toHaveBeenCalledTimes(1);
-    // Mutant on the chat path string would prevent any /api/chat/* mounting
-    // even though the factory still ran; behavior is covered by the
-    // mount-path suite. Here we just lock the factory contract.
     expect((createChatRouter as jest.Mock).mock.calls[0]?.[0]).toBe(chatService);
   });
 
@@ -719,12 +625,6 @@ describe('createApiRouter — dependency injection wiring', () => {
   });
 });
 
-// ─── resolveEnrichMuseumUseCase cache path (L204-L226) ────────────────────
-// `cachedEnrichUseCase` is a module-level singleton, so each test in this
-// suite re-isolates the router module via `jest.isolateModules` to get a
-// fresh cache. We re-apply the env + sub-router mocks inside the isolated
-// context — top-level `jest.mock` registrations persist across
-// isolateModules (they're auto-hoisted) so the doubles stay in place.
 describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => {
   beforeEach(() => {
     resetEnv();
@@ -735,7 +635,6 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
   const loadIsolatedRouter = (): typeof createApiRouter => {
     let factory: typeof createApiRouter | undefined;
     jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- isolateModules requires sync require to bind to the freshly evaluated module
       const mod = require('@shared/routers/api.router') as {
         createApiRouter: typeof createApiRouter;
       };
@@ -766,9 +665,6 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
     buildIsolated(factory);
     buildIsolated(factory);
 
-    // L205 conditional: on the 2nd call the cache short-circuits before the
-    // adapter is rebuilt. Mutant `cachedEnrichUseCase === undefined` (true
-    // branch always re-runs) would call the constructor twice.
     expect(BullmqMuseumEnrichmentQueueAdapter).toHaveBeenCalledTimes(1);
     expect(bullmqCtor).toHaveBeenCalledTimes(1);
     expect(buildEnrichMuseumUseCase).toHaveBeenCalledTimes(1);
@@ -793,7 +689,6 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
       }),
     );
 
-    // Restore for any later tests sharing the env mock.
     envMock.redis.host = 'localhost';
     envMock.redis.port = 6379;
     envMock.redis.password = undefined;
@@ -802,7 +697,6 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
   it('catches BullMQ adapter construction errors and falls back to undefined', () => {
     envMock.extractionWorkerEnabled = true;
 
-    // First failure should be cached as null → no second construction attempt.
     (BullmqMuseumEnrichmentQueueAdapter as jest.Mock).mockImplementationOnce(() => {
       throw new Error('connect ECONNREFUSED');
     });
@@ -811,9 +705,7 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
     buildIsolated(factory);
     buildIsolated(factory);
 
-    // Construction attempted once on the failure, then cached as null on retry.
     expect(BullmqMuseumEnrichmentQueueAdapter).toHaveBeenCalledTimes(1);
-    // createMuseumRouter received `enrichMuseumUseCase: undefined` both times.
     const calls = (createMuseumRouter as jest.Mock).mock.calls;
     for (const call of calls) {
       expect((call[0] as { enrichMuseumUseCase: unknown }).enrichMuseumUseCase).toBeUndefined();
@@ -821,14 +713,8 @@ describe('resolveEnrichMuseumUseCase — caching + worker-enabled paths', () => 
   });
 });
 
-// ─── buildHealthPayload — surviving prod-redaction mutants (L105/109/113) ──
 describe('buildHealthPayload — prod-redaction branch coverage', () => {
   it('emits redis even when status is "skipped" (L105 truthiness check covers undefined-only)', () => {
-    // L105 mutates `params.checks.redis !== undefined` to `true` (always
-    // include) and to `false` (never include). The base health-check.test.ts
-    // already covers the undefined-omission path; here we lock in that
-    // "skipped" — a falsy-looking string that is still defined — is preserved
-    // outside production.
     const payload = buildHealthPayload({
       checks: { database: 'up', redis: 'skipped' },
       llmConfigured: true,
@@ -838,9 +724,6 @@ describe('buildHealthPayload — prod-redaction branch coverage', () => {
   });
 
   it('emits llmCircuitBreaker even when state is "OPEN" (L109 defined-check)', () => {
-    // Locks the defined-but-non-CLOSED branch so the mutant flipping
-    // `!== undefined` to `true` / `false` is killed by the omit-undefined
-    // assertion in the base test combined with this assertion.
     const payload = buildHealthPayload({
       checks: { database: 'up', llmCircuitBreaker: 'OPEN' },
       llmConfigured: true,
@@ -850,7 +733,6 @@ describe('buildHealthPayload — prod-redaction branch coverage', () => {
   });
 
   it('includes commitSha in the payload when env.commitSha is defined (L113 NoCov block)', () => {
-    // env.commitSha resolved at import time via the env mock = 'abc1234'.
     const payload = buildHealthPayload({
       checks: { database: 'up' },
       llmConfigured: true,

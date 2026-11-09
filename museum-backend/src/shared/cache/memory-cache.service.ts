@@ -7,11 +7,6 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-/**
- * In-memory TTL cache. Fallback when Redis unavailable. Prevents hammering
- * external APIs (Overpass etc.) with duplicates.
- * NOT for multi-instance — each process has its own cache.
- */
 export class MemoryCacheService implements CacheService {
   private readonly store = new Map<string, CacheEntry>();
   private readonly defaultTtlSeconds: number;
@@ -22,36 +17,31 @@ export class MemoryCacheService implements CacheService {
     this.defaultTtlSeconds = opts?.defaultTtlSeconds ?? 3600;
     this.maxEntries = opts?.maxEntries ?? 5000;
 
-    // Evict expired entries every 60s to prevent unbounded growth.
     this.gcTimer = setInterval(() => {
       this.evictExpired();
     }, 60_000);
     this.gcTimer.unref();
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map lookup must match async CacheService interface
-  async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
+  get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     const entry = this.store.get(key);
-    if (!entry) return null;
+    if (!entry) return Promise.resolve(null);
 
     if (Date.now() > entry.expiresAt) {
       this.store.delete(key);
-      return null;
+      return Promise.resolve(null);
     }
 
     if (schema) {
       const result = schema.safeParse(entry.value);
-      return result.success ? result.data : null;
+      return Promise.resolve(result.success ? result.data : null);
     }
-    return entry.value as T;
+    return Promise.resolve(entry.value as T);
   }
 
-  /** Evicts oldest entry at capacity. */
-  // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unnecessary-type-parameters -- synchronous Map write must match async CacheService interface; T constrains input per interface contract
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+  set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     if (this.store.size >= this.maxEntries && !this.store.has(key)) {
       const firstKey = this.store.keys().next().value;
-      // Stryker disable next-line ConditionalExpression: forcing the branch to always-true would call store.delete(undefined), a silent no-op in JS Map, so the mutation is observationally identical to the original guard.
       if (firstKey !== undefined) this.store.delete(firstKey);
     }
 
@@ -60,24 +50,27 @@ export class MemoryCacheService implements CacheService {
       value,
       expiresAt: Date.now() + ttl * 1000,
     });
+
+    return Promise.resolve();
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map delete must match async CacheService interface
-  async del(key: string): Promise<void> {
+  del(key: string): Promise<void> {
     this.store.delete(key);
+
+    return Promise.resolve();
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- synchronous Map iteration must match async CacheService interface
-  async delByPrefix(prefix: string): Promise<void> {
+  delByPrefix(prefix: string): Promise<void> {
     for (const key of this.store.keys()) {
       if (key.startsWith(prefix)) {
         this.store.delete(key);
       }
     }
+
+    return Promise.resolve();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- T constrains input per interface contract
-  async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
+  async setNx(key: string, value: unknown, ttlSeconds: number): Promise<boolean> {
     const existing = await this.get(key);
     if (existing !== null) return false;
 
@@ -94,9 +87,8 @@ export class MemoryCacheService implements CacheService {
     return next;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- must match async CacheService interface
-  async ping(): Promise<boolean> {
-    return true;
+  ping(): Promise<boolean> {
+    return Promise.resolve(true);
   }
 
   async zadd(key: string, member: string, increment: number): Promise<void> {
@@ -127,13 +119,13 @@ export class MemoryCacheService implements CacheService {
     }
   }
 
-  /** Idempotent. */
-  // eslint-disable-next-line @typescript-eslint/require-await -- matches async CacheService.destroy signature
-  async destroy(): Promise<void> {
+  destroy(): Promise<void> {
     if (this.gcTimer !== null) {
       clearInterval(this.gcTimer);
       this.gcTimer = null;
     }
     this.store.clear();
+
+    return Promise.resolve();
   }
 }

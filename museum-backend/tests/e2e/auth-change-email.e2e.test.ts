@@ -1,12 +1,3 @@
-/**
- * E2E regression — email-change token replay (audit P0 #2, F8 §B2).
- *
- * Verifies the TypeORM `.set()` silent-skip fix:
- * `consumeEmailChangeToken` now writes `() => 'NULL'` for pending_email,
- * email_change_token, and email_change_token_expiry — without the fix
- * those columns survived the consume and the token (or the dangling
- * `pending_email` ghost) could be exploited.
- */
 import { clearRateLimitBuckets } from '@shared/middleware/rate-limit.middleware';
 
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
@@ -23,8 +14,6 @@ describeE2E('auth change-email e2e', () => {
   });
 
   beforeEach(() => {
-    // changeEmailLimiter is per-user (fresh per test) but emailVerificationLimiter
-    // is IP-keyed; clear in-memory buckets to keep tests order-independent.
     clearRateLimitBuckets();
   });
 
@@ -76,7 +65,6 @@ describeE2E('auth change-email e2e', () => {
     const newEmail = `e2e-change-new-${Date.now()}@musaium.test`;
     const { token } = await setupUserAndRequestChange(oldEmail, newEmail);
 
-    // Sanity: pending_email + token populated before consume.
     const pre = await fetchEmailChangeColumns(oldEmail);
     expect(pre.email).toBe(oldEmail);
     expect(pre.pending_email).toBe(newEmail);
@@ -89,9 +77,6 @@ describeE2E('auth change-email e2e', () => {
     });
     expect(consume.status).toBe(200);
 
-    // The fix: email is rotated AND the three nullable columns are cleared.
-    // Without `() => 'NULL'` the columns would remain populated, leaving a
-    // ghost `pending_email` and a still-valid token usable for replay.
     const post = await fetchEmailChangeColumns(newEmail);
     expect(post.email).toBe(newEmail);
     expect(post.pending_email).toBeNull();
@@ -129,7 +114,6 @@ describeE2E('auth change-email e2e', () => {
     });
     expect(res.status).toBe(400);
 
-    // Tampered token doesn't match → email-change row state is untouched.
     const state = await fetchEmailChangeColumns(oldEmail);
     expect(state.email).toBe(oldEmail);
     expect(state.pending_email).toBe(newEmail);

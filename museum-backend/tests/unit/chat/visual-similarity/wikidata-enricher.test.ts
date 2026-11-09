@@ -1,31 +1,9 @@
-/**
- * RED — T4.6 — `WikidataEnricher.enrichBatch`.
- *
- * Locks down tasks.md T4.6 + design.md §3:
- *   - Calls `WikidataClient.lookup` once per unique QID (dedup),
- *   - Honours a max concurrency of 5 (in-flight upper bound),
- *   - Reads from + writes to the cache adapter (Redis) with a 7-day TTL,
- *   - Returns a `Map<qid, ArtworkFacts>` containing only resolved QIDs (null
- *     responses are dropped, not mapped to undefined).
- *
- * The C2 file `wikidata.client.ts` is read-only territory for this phase
- * (cohabitation forbidden zone). We mock the class via `jest.mock` and
- * assert on call shape only.
- *
- * SUT does not yet exist (Phase 4). Tests are RED until Phase 4 lands.
- */
-
 import { makeArtworkFacts } from '../../../helpers/chat/visual-similarity/artwork-facts.fixtures';
 import { makeCache } from '../../../helpers/chat/cache.fixtures';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 import type { CacheService } from '@shared/cache/cache.port';
 
-// ---------------------------------------------------------------------------
-// Mock WikidataClient — its real impl performs HTTPS calls. We capture the
-// `lookup` mock + record the in-flight count so concurrency assertions are
-// possible without a real network round-trip.
-// ---------------------------------------------------------------------------
 const lookupMock = jest.fn<
   Promise<ArtworkFacts | null>,
   [{ searchTerm: string; language?: string }]
@@ -42,12 +20,9 @@ jest.mock('@shared/logger/logger', () => ({
 interface WikidataEnricherCtorArgs {
   client: { lookup: typeof lookupMock };
   cache: CacheService;
-  /** Optional override of the default 7-day TTL — kept for tests. */
   cacheTtlSeconds?: number;
 }
 
-// SUT — Phase 4 file, must not yet exist.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
 const { WikidataEnricher } =
   require('@modules/chat/useCase/visual-similarity/wikidata-enricher') as {
     WikidataEnricher: new (args: WikidataEnricherCtorArgs) => {
@@ -82,11 +57,6 @@ describe('WikidataEnricher.enrichBatch (T4.6)', () => {
   });
 
   it('does NOT reject when a lookup THROWS — drops that qid (gap in Map) and resolves the rest', async () => {
-    // Regression (prod 2026-06-14): WikidataClient.lookup is *meant* to be
-    // fail-soft (return null), but in prod it threw (egress/DNS/SSRF block).
-    // runWithLimit uses Promise.all → the throw propagated out of enrichBatch
-    // and out of /chat/compare → HTTP 500. A per-qid throw must become a gap,
-    // not a batch rejection.
     lookupMock.mockImplementation(async ({ searchTerm }) => {
       if (searchTerm === 'Q2') throw new Error('ENOTFOUND wikidata.org (prod egress block)');
       return makeArtworkFacts({ qid: searchTerm, title: `Title ${searchTerm}` });
@@ -94,11 +64,10 @@ describe('WikidataEnricher.enrichBatch (T4.6)', () => {
     const cache = makeCache();
     const enricher = new WikidataEnricher({ client: { lookup: lookupMock }, cache });
 
-    // MUST resolve (the prod incident was a rejection here).
     const result = await enricher.enrichBatch(['Q1', 'Q2', 'Q3'], 'en');
 
     expect(result.size).toBe(2);
-    expect(result.has('Q2')).toBe(false); // throwing qid → gap
+    expect(result.has('Q2')).toBe(false);
     expect(result.get('Q1')?.qid).toBe('Q1');
     expect(result.get('Q3')?.qid).toBe('Q3');
   });
@@ -109,7 +78,6 @@ describe('WikidataEnricher.enrichBatch (T4.6)', () => {
     lookupMock.mockImplementation(async ({ searchTerm }) => {
       inFlight += 1;
       observedMax = Math.max(observedMax, inFlight);
-      // Yield to the event loop so several callers can pile up before resolve.
       await new Promise((r) => setTimeout(r, 5));
       inFlight -= 1;
       return makeArtworkFacts({ qid: searchTerm });

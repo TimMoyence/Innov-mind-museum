@@ -34,12 +34,6 @@ type MockRedisStore = jest.Mocked<RedisRateLimitStore> & {
   lockoutDel: jest.Mock;
 };
 
-/**
- * Builds a mock RedisRateLimitStore. `getRedisClient` returns a stub exposing
- * `eval` (lockout counter) and `del` (lockout clear) so tests can assert the
- * lockout path independently from the sliding-window path.
- * @param overrides
- */
 const makeMockRedisStore = (overrides: MockRedisStoreOverrides = {}): MockRedisStore => {
   const defaultIncrement = jest
     .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
@@ -67,7 +61,6 @@ const makeMockRedisStore = (overrides: MockRedisStoreOverrides = {}): MockRedisS
   } as unknown as MockRedisStore;
 };
 
-/** Yield to the microtask queue so background `.then()` handlers run. */
 const flushMicrotasks = async (): Promise<void> => {
   await Promise.resolve();
   await Promise.resolve();
@@ -76,10 +69,6 @@ const flushMicrotasks = async (): Promise<void> => {
 
 const hashEmail = (email: string): string => createHash('sha1').update(email).digest('hex');
 
-/**
- * Captures the AppError thrown by `checkLoginRateLimit` without polluting the test.
- * @param fn
- */
 const expectThrowsAppError = (fn: () => void): AppError => {
   try {
     fn();
@@ -144,7 +133,6 @@ describe('login-rate-limiter — sliding window', () => {
       checkLoginRateLimit('expired@test.com');
     }).toThrow();
 
-    // Advance past the 15-minute MAX_LOCKOUT_MS (and the 10-minute sliding window).
     jest.advanceTimersByTime(15 * 60 * 1000 + 1);
 
     expect(() => {
@@ -177,7 +165,6 @@ describe('login-rate-limiter — exponential lockout', () => {
     expect(err.code).toBe('AUTH_LOCKED_OUT');
     expect(err.headers?.['Retry-After']).toBeDefined();
 
-    // 5 failures → overshoot 0 → 2^0 * 30s = 30s
     const retryAfterSec = Number.parseInt(err.headers?.['Retry-After'] ?? '0', 10);
     expect(retryAfterSec).toBeGreaterThan(0);
     expect(retryAfterSec).toBeLessThanOrEqual(30);
@@ -186,7 +173,6 @@ describe('login-rate-limiter — exponential lockout', () => {
   it('doubles the lockout window on the 7th consecutive failure', () => {
     jest.useFakeTimers();
 
-    // 5 failures → locked for 30s
     for (let i = 0; i < 5; i++) {
       recordFailedLogin('expo@test.com');
     }
@@ -196,10 +182,8 @@ describe('login-rate-limiter — exponential lockout', () => {
     const retry5 = Number.parseInt(err5.headers?.['Retry-After'] ?? '0', 10);
     expect(retry5).toBeLessThanOrEqual(30);
 
-    // Advance past the 30s lockout so the next record goes through.
     jest.advanceTimersByTime(31 * 1000);
 
-    // 6 failures → 2^1 * 30s = 60s
     recordFailedLogin('expo@test.com');
     const err6 = expectThrowsAppError(() => {
       checkLoginRateLimit('expo@test.com');
@@ -208,10 +192,8 @@ describe('login-rate-limiter — exponential lockout', () => {
     expect(retry6).toBeGreaterThan(30);
     expect(retry6).toBeLessThanOrEqual(60);
 
-    // Advance past the 60s lockout.
     jest.advanceTimersByTime(61 * 1000);
 
-    // 7 failures → 2^2 * 30s = 120s — doubled again.
     recordFailedLogin('expo@test.com');
     const err7 = expectThrowsAppError(() => {
       checkLoginRateLimit('expo@test.com');
@@ -289,8 +271,6 @@ describe('login-rate-limiter — distributed Redis path', () => {
 
     expect(mock.increment).toHaveBeenCalledTimes(1);
     const [key, windowMs] = mock.increment.mock.calls[0];
-    // I-SEC6: sliding-window key must be hashed (no raw email in Redis keyspace),
-    // mirroring the lockout key. Was `login-attempts:distrib@test.com` (raw PII).
     expect(key).toBe(`login-attempts:${hashEmail('distrib@test.com')}`);
     expect(key).not.toContain('@');
     expect(windowMs).toBe(10 * 60 * 1000);
@@ -302,7 +282,6 @@ describe('login-rate-limiter — distributed Redis path', () => {
         .fn<ReturnType<IncrementFn>, Parameters<IncrementFn>>()
         .mockImplementation((...args): Promise<IncrementResult> => {
           const windowMs = args[1];
-          // simulate 9 peer-instance failures already recorded
           return Promise.resolve(countedUnit(10, Date.now() + windowMs));
         }),
     });
@@ -358,7 +337,6 @@ describe('login-rate-limiter — distributed Redis path', () => {
     }).not.toThrow();
     await flushMicrotasks();
 
-    // Local lockout still protects (threshold=5 on this instance alone).
     for (let i = 0; i < 4; i++) {
       recordFailedLogin('fail-open@test.com');
     }
@@ -418,10 +396,6 @@ describe('login-rate-limiter — fail-closed degraded mode', () => {
     });
     setLoginRateLimitStore(mock);
 
-    // Record a failure on this email — Redis fails, marking email degraded
-    // AND seeding local snapshot. We then clear ONLY the local snapshot (not
-    // the degraded marker) to simulate a "cold instance" whose Redis link is
-    // down and whose local state was wiped or never populated.
     recordFailedLogin('cold@test.com');
     await flushMicrotasks();
     _clearLocalOnlyForTest('cold@test.com');
@@ -443,11 +417,9 @@ describe('login-rate-limiter — fail-closed degraded mode', () => {
     });
     setLoginRateLimitStore(mock);
 
-    // Degrade one email
     recordFailedLogin('noisy@test.com');
     await flushMicrotasks();
 
-    // A different email with no prior Redis failure should pass freely.
     expect(() => {
       checkLoginRateLimit('fresh@test.com');
     }).not.toThrow();
@@ -463,15 +435,12 @@ describe('login-rate-limiter — fail-closed degraded mode', () => {
     });
     setLoginRateLimitStore(mock);
 
-    // First record — Redis throws; email is marked degraded.
     recordFailedLogin('recover@test.com');
     await flushMicrotasks();
 
-    // Second record — Redis recovers; degraded marker cleared.
     recordFailedLogin('recover@test.com');
     await flushMicrotasks();
 
-    // Clearing only local state should now NOT surface a 503 — degraded is gone.
     _clearLocalOnlyForTest('recover@test.com');
     expect(() => {
       checkLoginRateLimit('recover@test.com');

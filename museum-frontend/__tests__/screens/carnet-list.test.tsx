@@ -1,31 +1,9 @@
-/**
- * Red tests for B1 — `app/(stack)/carnet.tsx` (visit notebook list screen).
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B1.md` :
- *
- *   §1.2 R11 — groups rendered with museumLabel headers (role=header).
- *   §1.2 R12 — empty state when no groups + non-loading + no error.
- *   §1.2 R13 — tap card → router.push('/(stack)/carnet/${sessionId}').
- *   §1.2 R14 — skeleton placeholders while loading.
- *   §1.2 R15 — error state rendering on hook error.
- *   §4 AC4-AC7.
- *
- * At baseline (B1 not yet implemented) :
- *   - `app/(stack)/carnet.tsx` does NOT exist
- *     (verified : `ls museum-frontend/app/(stack)/carnet*` → 0).
- *   - `useVisitCarnet` does NOT exist either.
- *   → Jest fails with "Cannot find module" at module load time.
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.2 R11-R17 ; §4 AC4-AC7.
- */
-
 import '../helpers/test-utils';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { VisitCarnetGroup } from '@/features/chat/domain/carnet';
 
-// ── Mock useVisitCarnet so we drive screen state directly ──────────────────
 const mockUseVisitCarnet = jest.fn();
 jest.mock(
   '@/features/chat/application/useVisitCarnet',
@@ -35,7 +13,6 @@ jest.mock(
   { virtual: true },
 );
 
-// ── Mock the card so we observe its onPress wiring ─────────────────────────
 const mockCardRender = jest.fn();
 jest.mock(
   '@/features/chat/ui/CarnetSessionCard',
@@ -65,12 +42,10 @@ jest.mock(
   { virtual: true },
 );
 
-// ── Standard expo-router mock (already in test-utils) ──────────────────────
 const { router } = jest.requireMock<{ router: { push: jest.Mock; back: jest.Mock } }>(
   'expo-router',
 );
 
-// ── useStartConversation (used by empty state CTA) ─────────────────────────
 const mockStartConversation = jest.fn();
 jest.mock('@/features/chat/application/useStartConversation', () => ({
   useStartConversation: () => ({
@@ -80,7 +55,6 @@ jest.mock('@/features/chat/application/useStartConversation', () => ({
   }),
 }));
 
-// ── RED ASSERTION : the screen module does not exist yet ───────────────────
 import CarnetListScreen from '@/app/(stack)/carnet';
 
 function makeGroup(
@@ -130,7 +104,6 @@ describe('<CarnetListScreen /> (B1 — list screen)', () => {
     });
 
     render(<CarnetListScreen />);
-    // i18n keys are returned verbatim by the test-utils i18n mock.
     expect(screen.getByText('carnet.empty.title')).toBeTruthy();
   });
 
@@ -161,10 +134,8 @@ describe('<CarnetListScreen /> (B1 — list screen)', () => {
     });
 
     render(<CarnetListScreen />);
-    // Both museum labels are rendered.
     expect(screen.getByText('Louvre')).toBeTruthy();
     expect(screen.getByText('Orsay')).toBeTruthy();
-    // 3 cards rendered total (mock spy fired 3 times).
     expect(mockCardRender).toHaveBeenCalledTimes(3);
   });
 

@@ -10,7 +10,6 @@ interface SettingsDangerZoneProps {
   isDeletingAccount: boolean;
 }
 
-/** Danger zone card with account deletion. */
 export const SettingsDangerZone = ({
   onDeleteAccount,
   isDeletingAccount,

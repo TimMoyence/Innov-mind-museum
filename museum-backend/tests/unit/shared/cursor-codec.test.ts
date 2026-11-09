@@ -18,7 +18,6 @@ describe('CursorCodec', () => {
     it('should produce a Base64URL string without padding', () => {
       const encoded = codec.encode({ createdAt: '2026-01-01T00:00:00Z', id: 'x' });
 
-      // Base64URL alphabet: A-Z, a-z, 0-9, -, _  (no + / =)
       expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
     });
   });
@@ -34,7 +33,6 @@ describe('CursorCodec', () => {
     });
 
     it('should return null when schema validation fails', () => {
-      // Valid JSON but wrong shape (missing 'id')
       const wrong = Buffer.from(JSON.stringify({ createdAt: '2026-01-01' }), 'utf8').toString(
         'base64url',
       );
@@ -69,7 +67,6 @@ describe('CursorCodec', () => {
       const sessionSchema = z.object({ updatedAt: z.string(), id: z.string() });
       const sessionCodec = new CursorCodec(sessionSchema);
 
-      // Encode with message codec, decode with session codec — should fail
       const encoded = codec.encode({ createdAt: '2026-01-01T00:00:00Z', id: 'x' });
       expect(sessionCodec.decode(encoded)).toBeNull();
     });
@@ -77,26 +74,20 @@ describe('CursorCodec', () => {
 
   describe('base64url vs base64 encoding', () => {
     it('decodes base64url-encoded cursors correctly', () => {
-      // Use a value that produces base64url-specific characters
       const value = { createdAt: '2026-01-01T00:00:00.000Z', id: 'test>>value' };
       const encoded = codec.encode(value);
-      // Base64URL should NOT contain + / =
       expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
       expect(codec.decode(encoded)).toEqual(value);
     });
 
     it('uses base64url alphabet (- and _) instead of standard base64 (+ and /)', () => {
-      // This value produces + and / in standard base64 but - and _ in base64url
       const value = { createdAt: '>>><<<???', id: '~~~' };
       const encoded = codec.encode(value);
       const standardB64 = Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
 
-      // Standard base64 would use + and /
       expect(standardB64).toMatch(/[+/]/);
-      // But codec.encode uses base64url which replaces them with - and _
       expect(encoded).not.toMatch(/[+/=]/);
       expect(encoded).toMatch(/[-_]/);
-      // And it still round-trips correctly
       expect(codec.decode(encoded)).toEqual(value);
     });
   });

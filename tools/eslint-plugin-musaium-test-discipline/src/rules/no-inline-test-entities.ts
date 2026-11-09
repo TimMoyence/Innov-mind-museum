@@ -6,9 +6,7 @@ type Options = [
     entities?: string[];
     factoryHints?: Record<string, string>;
     helperPaths?: string[];
-    /** Phase 7: enable shape-match detection (default false). */
     detectShapeMatch?: boolean;
-    /** Phase 7: per-entity signature for shape-match. */
     shapeSignatures?: Record<string, string[]>;
   },
 ];
@@ -84,7 +82,6 @@ export default createRule<Options, MessageIds>({
     const detectShapeMatch = opts?.detectShapeMatch ?? false;
     const shapeSignatures = { ...DEFAULT_SHAPE_SIGNATURES, ...(opts?.shapeSignatures ?? {}) };
 
-    // Skip factory/helper files themselves
     if (helperPaths.some((p) => filename.includes(p))) {
       return {};
     }
@@ -162,21 +159,18 @@ export default createRule<Options, MessageIds>({
     }
 
     return {
-      // pattern A: { ... } as User
       TSAsExpression(node) {
         const name = typeNameOf(node.typeAnnotation);
         if (name && entities.includes(name) && node.expression.type === 'ObjectExpression') {
           reportInlineEntity(node, name);
         }
       },
-      // pattern B: <User>{ ... }
       TSTypeAssertion(node) {
         const name = typeNameOf(node.typeAnnotation);
         if (name && entities.includes(name) && node.expression.type === 'ObjectExpression') {
           reportInlineEntity(node, name);
         }
       },
-      // pattern C: const u: User = { ...3+ properties... }
       VariableDeclarator(node) {
         if (
           node.init?.type === 'ObjectExpression' &&
@@ -190,7 +184,6 @@ export default createRule<Options, MessageIds>({
           }
         }
       },
-      // pattern D (Phase 7): shape-match — ObjectExpression containing all signature props
       ObjectExpression(node) {
         if (!detectShapeMatch) return;
         if (isFactoryCallArgument(node)) return;

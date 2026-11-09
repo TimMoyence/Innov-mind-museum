@@ -3,56 +3,30 @@ import { useConnectivity } from '@/shared/infrastructure/connectivity/useConnect
 import { syncKeywords, getLocale } from '../infrastructure/artKeywordsApi';
 import { useArtKeywordsStore } from '../infrastructure/artKeywordsStore';
 
-const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-/** Max consecutive retries before we wait for the next 24h cycle. */
+const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const MAX_RETRY_ATTEMPTS = 3;
-/** Base delay for exponential backoff between retries. */
-const BACKOFF_BASE_MS = 60_000; // 1 minute
+const BACKOFF_BASE_MS = 60_000;
 
-/**
- * Jitter factor applied to SYNC_INTERVAL_MS to de-synchronise cold starts
- * (prevents a thundering herd of clients refreshing at the same moment).
- * Range ±10% of the interval.
- */
 const JITTER_RATIO = 0.1;
 
-/** RNG seam for tests — default delegates to Math.random(). */
 export type Random = () => number;
 
-/** Clock seam for tests — default delegates to Date.now(). */
 export type Clock = () => number;
 
 export interface UseArtKeywordsSyncOptions {
-  /** Inject a deterministic RNG for testing jitter bounds. */
   random?: Random;
-  /** Inject a deterministic clock for testing staleness / skew. */
   clock?: Clock;
 }
 
 export interface UseArtKeywordsSyncResult {
-  /** True when the cached keywords for the current locale are older than
-   *  the 24h refresh window OR the device clock rewound past the last sync.
-   *  UI can surface this to let the user know classification may be degraded. */
   isStale: boolean;
 }
 
-/**
- * Computes the effective refresh interval with ±JITTER_RATIO jitter.
- * Exported for test coverage of the jitter bounds.
- */
 export function computeSyncIntervalMs(random: Random = Math.random): number {
-  const jitter = (random() * 2 - 1) * JITTER_RATIO; // in [-JITTER_RATIO, +JITTER_RATIO)
+  const jitter = (random() * 2 - 1) * JITTER_RATIO;
   return Math.round(SYNC_INTERVAL_MS * (1 + jitter));
 }
 
-/**
- * Determines whether the stored keywords are stale and should be refreshed.
- *
- * Clock-skew-safe: if `now < lastSyncedAt` (device clock rewound — common on
- * Android reboot), the elapsed time goes negative and the naive `elapsed > MAX`
- * check would silently skip the refresh forever. We treat any negative elapsed
- * as stale.
- */
 export function isKeywordCacheStale(
   lastSyncedAtIso: string | undefined,
   now: number,
@@ -62,15 +36,10 @@ export function isKeywordCacheStale(
   const lastSynced = new Date(lastSyncedAtIso).getTime();
   if (Number.isNaN(lastSynced)) return true;
   const elapsed = now - lastSynced;
-  if (elapsed < 0) return true; // clock rewound → treat as stale
+  if (elapsed < 0) return true;
   return elapsed > intervalMs;
 }
 
-/**
- * Returns true when we should attempt a sync given the current failure state.
- * Caps retries at MAX_RETRY_ATTEMPTS with exponential backoff between them;
- * once the cap is hit we wait for the next natural 24h cycle.
- */
 export function canRetryAfterFailure(
   attempts: number | undefined,
   lastFailedAtIso: string | undefined,
@@ -81,20 +50,11 @@ export function canRetryAfterFailure(
   const lastFailed = new Date(lastFailedAtIso).getTime();
   if (Number.isNaN(lastFailed)) return true;
   const elapsed = now - lastFailed;
-  if (elapsed < 0) return true; // clock rewound → allow retry
+  if (elapsed < 0) return true;
   const backoff = BACKOFF_BASE_MS * 2 ** (attempts - 1);
   return elapsed >= backoff;
 }
 
-/**
- * Background sync hook for art keywords.
- * Syncs on app launch when network is available, and also when the cached
- * keywords for the current locale are older than ~24h (with jitter) or when
- * the device clock has rewound. On failure, retries with exponential backoff
- * up to MAX_RETRY_ATTEMPTS before waiting for the next 24h cycle.
- *
- * Designed to be mounted once at app root level.
- */
 export function useArtKeywordsSync(
   options: UseArtKeywordsSyncOptions = {},
 ): UseArtKeywordsSyncResult {
@@ -136,11 +96,8 @@ export function useArtKeywordsSync(
         try {
           const response = await syncKeywords(locale, lastSynced);
           mergeKeywords(locale, response.keywords, response.syncedAt);
-          // Success — staleness cleared. `mergeKeywords` also wipes the
-          // persisted failure counter.
           setIsStale(false);
         } catch {
-          // Surface failure in the store so the next launch can back off.
           recordSyncFailure(locale, new Date(now).toISOString());
         }
       } finally {
@@ -150,7 +107,6 @@ export function useArtKeywordsSync(
     [mergeKeywords, getLastSyncedAt, getSyncFailure, recordSyncFailure, clock],
   );
 
-  // Sync on launch when network is available
   useEffect(() => {
     if (!isConnected || hasRunOnLaunch.current) return;
     hasRunOnLaunch.current = true;

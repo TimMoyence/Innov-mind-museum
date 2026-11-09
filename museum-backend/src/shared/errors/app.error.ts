@@ -2,7 +2,6 @@ export class AppError extends Error {
   readonly statusCode: number;
   readonly code: string;
   readonly details?: unknown;
-  /** Applied by error middleware (e.g. Retry-After on 429). */
   readonly headers?: Record<string, string>;
   readonly inputRejected: boolean;
 
@@ -24,11 +23,6 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Strict-input validation failure (e.g. Wikidata QID, SPARQL literal control chars).
- * Distinct subclass for `toThrow(ValidationError)` assertions. Always 400/`VALIDATION_ERROR`.
- * Extends AppError so error middleware maps to 400 (previously degraded to 500).
- */
 export class ValidationError extends AppError {
   constructor(message: string, details?: unknown) {
     super({ message, statusCode: 400, code: 'VALIDATION_ERROR', details });
@@ -84,7 +78,6 @@ export const forbidden = (message: string): AppError => {
   });
 };
 
-/** `retryAfterSec` sets Retry-After header (clamped ≥1s). */
 export const tooManyRequests = (
   message: string,
   options?: { retryAfterSec?: number; code?: string; details?: unknown },
@@ -104,7 +97,6 @@ export const tooManyRequests = (
   });
 };
 
-/** `retryAfterSec` sets Retry-After header (clamped ≥1s). */
 export const serviceUnavailable = (
   message: string,
   options?: { retryAfterSec?: number; code?: string; details?: unknown },
@@ -131,7 +123,6 @@ export const unauthorized = (message: string, code = 'UNAUTHORIZED'): AppError =
   });
 };
 
-/** C3 — POST /chat/compare: missing image / unsupported MIME / magic-byte / OCR-injection fail (R6/R12). FE branches on code to prompt retake. */
 export const compareInvalidImage = (
   message: string,
   details?: unknown,
@@ -146,7 +137,6 @@ export const compareInvalidImage = (
   });
 };
 
-/** C3 — POST /chat/compare: topK outside [1, 10] (R17). FE branches on code to clamp carousel. */
 export const compareInvalidTopK = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,
@@ -157,7 +147,6 @@ export const compareInvalidTopK = (message: string, details?: unknown): AppError
   });
 };
 
-/** C3 — POST /chat/compare: OCR/prompt-injection guardrail blocked (R18). FE surfaces message verbatim. */
 export const compareGuardrailBlocked = (message: string, details?: unknown): AppError => {
   return new AppError({
     message,

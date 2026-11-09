@@ -8,7 +8,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- RN image require pattern
 const musaiumLogo = require('../../assets/images/logo.png') as ImageSourcePropType;
 
 type BrandMarkVariant = 'auth' | 'auth-compact' | 'hero' | 'header';
@@ -39,7 +38,6 @@ const resolveResponsiveSize = (variant: BrandMarkVariant, viewportWidth: number)
   return clamp(Math.round(viewportWidth * 0.5), 140, 184);
 };
 
-/** Displays the Musaium logo at a responsive size determined by the chosen variant (auth, hero, or header). */
 export const BrandMark = ({ variant = 'hero', size, style }: BrandMarkProps) => {
   const { width } = useWindowDimensions();
   const resolvedSize = size ?? resolveResponsiveSize(variant, width);

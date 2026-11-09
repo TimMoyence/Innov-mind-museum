@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# scripts/dev-stack-down.sh
-#
-# Stops the museum-backend Docker stack (Postgres + Redis + Adminer + backend).
-# Companion to scripts/dev-stack.sh.
-# Generated 2026-05-17 by /team local-mobile-env-viable run.
 
 set -euo pipefail
 

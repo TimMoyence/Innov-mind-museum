@@ -82,11 +82,6 @@ describe('Consent use cases — audit-chain emission (S4-P0-02)', () => {
       expect(sink.rows[0].action).toBe(AUDIT_CONSENT_GRANTED_LOCATION_TO_LLM);
     });
 
-    // Cycle 1.5 (RUN_ID 2026-05-26-chat-pipeline-hardening) — CR4. The new coarse
-    // geo scope produces an audit row. Per D-AUDIT (recommendation: generic
-    // fallback, no dedicated constant), it maps to AUDIT_CONSENT_GRANTED with the
-    // scope in metadata. FAILS today: scope validation rejects the unknown scope
-    // (`location_coarse_to_llm` not yet in CONSENT_SCOPES) → execute() throws.
     it('CR4: emits an audit row with scope metadata on a location_coarse_to_llm grant', async () => {
       const repo = makeUserConsentRepo();
       const sink = makeAuditSink();
@@ -125,7 +120,6 @@ describe('Consent use cases — audit-chain emission (S4-P0-02)', () => {
       await expect(
         useCase.execute(42, 'tos_privacy', '2026-06-01', 'registration'),
       ).resolves.toMatchObject({ scope: 'tos_privacy' });
-      // No throw, no sink call — back-compat: existing callers that ignore audit still work.
     });
 
     it('does NOT emit when scope validation fails', async () => {

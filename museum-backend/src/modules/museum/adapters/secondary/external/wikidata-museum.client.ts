@@ -1,19 +1,19 @@
 import { ValidationError } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import {
   assertEntityId,
   assertLang,
   escapeSparqlLiteral as strictEscapeSparqlLiteral,
 } from '@shared/http/wikidata-ids';
 import { logger } from '@shared/logger/logger';
+import { wikimediaHttps } from '@shared/media/wikimedia-https';
 
 const USER_AGENT = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
 const WIKIDATA_API = 'https://www.wikidata.org/w/api.php';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 const DEFAULT_TIMEOUT_MS = 5_000;
-/** Max metres between museum coords and a Wikidata candidate to be considered a match. */
 const COORDS_MATCH_RADIUS_M = 500;
 
-/** `confidence` decays with the fallback method used. */
 export interface WikidataMuseumMatch {
   qid: string;
   label: string;
@@ -42,7 +42,6 @@ export interface WikidataMuseumClient {
   fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null>;
 }
 
-/** Loose pre-filter — authoritative {@link assertLang} runs downstream. BCP47-aware. */
 function isValidLanguageCode(lang: string): boolean {
   return /^[a-z]{2,3}$/i.test(lang) || /^[a-z]{2,3}-[a-z]{2,4}$/i.test(lang);
 }
@@ -80,7 +79,6 @@ async function fetchWithTimeout(url: string, init: FetchWithTimeoutInit): Promis
   }
 }
 
-/** Haversine, metres. */
 function distanceMetres(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6_371_000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -92,14 +90,7 @@ function distanceMetres(a: { lat: number; lng: number }, b: { lat: number; lng: 
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Fail-open on every external call — returns `null` instead of throwing. */
 export class HttpWikidataMuseumClient implements WikidataMuseumClient {
-  /**
-   * Strategy:
-   *   1. SPARQL `P31/P279* wd:Q33506` (museum class) filtered by localised label.
-   *   2. If coords + multiple candidates: pick one within {@link COORDS_MATCH_RADIUS_M}.
-   *   3. Fallback: `wbsearchentities` free-text search.
-   */
   async findMuseumQid(input: {
     name: string;
     lat?: number;
@@ -116,16 +107,13 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     } catch (err) {
       logger.warn('wikidata_museum_find_qid_error', {
         name: input.name,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     }
   }
 
-  /** Fail-open. */
   async fetchFacts(input: { qid: string; locale: string }): Promise<WikidataMuseumFacts | null> {
-    // Strict assert at trust boundary; caught + fail-open below to preserve
-    // never-throws contract.
     try {
       assertEntityId(input.qid);
     } catch (err) {
@@ -143,7 +131,7 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     } catch (err) {
       logger.warn('wikidata_museum_fetch_facts_error', {
         qid: input.qid,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     }
@@ -153,7 +141,6 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     name: string,
     language: string,
   ): Promise<{ qid: string; label: string; lat?: number; lng?: number }[]> {
-    // SEC: strict assert at trust boundary before SPARQL composition.
     assertLang(language);
     const safeName = escapeSparqlLiteral(name);
     const sparql = `
@@ -259,7 +246,6 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
     qid: string,
     language: string,
   ): Promise<Omit<WikidataMuseumFacts, 'wikipediaTitle'> | null> {
-    // SEC: strict assert at trust boundary before SPARQL composition.
     assertEntityId(qid);
     assertLang(language);
     const sparql = `
@@ -289,12 +275,11 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
       summary: get('description'),
       website: get('website'),
       phone: get('phone'),
-      imageUrl: get('image'),
+      imageUrl: wikimediaHttps(get('image')),
     };
   }
 
   private async fetchSitelinkTitle(qid: string, language: string): Promise<string | null> {
-    // SEC: strict assert before composing `${language}wiki` sitelink + `ids=` URL param.
     assertEntityId(qid);
     assertLang(language);
     const site = `${language}wiki`;
@@ -314,7 +299,6 @@ export class HttpWikidataMuseumClient implements WikidataMuseumClient {
   }
 }
 
-/** Parses Wikidata WKT `Point(lng lat)` → `{lat,lng}`. */
 function parseWktPoint(value: string | undefined): { lat: number; lng: number } | null {
   if (!value) return null;
   const m = /^Point\(([-0-9.]+) ([-0-9.]+)\)$/.exec(value);

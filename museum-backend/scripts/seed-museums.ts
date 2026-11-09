@@ -13,17 +13,10 @@ interface MuseumSeed {
   description: string;
   latitude: number;
   longitude: number;
-  /**
-   * T-A9 — Wikidata Q-identifier (e.g. `Q3329534`). Optional during the
-   * backfill window — only the Bordeaux trio + Pont de Pierre monument need
-   * Q-codes for V1 SPARQL ingest / DoD validation (cf. D-SCOPE-WAVEA).
-   * Other rows can land it later via admin UI or a follow-up seed pass.
-   */
   wikidataQid?: string;
 }
 
 const MUSEUMS: MuseumSeed[] = [
-  // ── Paris ──
   {
     name: 'Musée du Louvre',
     slug: 'musee-du-louvre',
@@ -78,7 +71,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 48.8661,
     longitude: 2.3142,
   },
-  // ── Lyon ──
   {
     name: 'Musée des Beaux-Arts de Lyon',
     slug: 'musee-des-beaux-arts-de-lyon',
@@ -97,12 +89,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 45.7326,
     longitude: 4.818,
   },
-  // ── Bordeaux ──
-  // Q-codes verified 2026-05-21 via SPARQL — cf. c4b-sparql-counts.md +
-  // memory `reference_bordeaux_museum_qcodes.md`. Only Musée d'Aquitaine
-  // has Wikidata-ingest-viable artwork data (133 rows P195+P18). CAPC +
-  // Cité du Vin keep their Q-code for cards/maps/geoloc but no auto-ingest
-  // (D-SCOPE-WAVEA decision).
   {
     name: "Musée d'Aquitaine",
     slug: 'musee-d-aquitaine',
@@ -133,13 +119,6 @@ const MUSEUMS: MuseumSeed[] = [
     longitude: -0.5502,
     wikidataQid: 'Q16964634',
   },
-  // Monument hors-musée — first-class V1 "dehors" (D-SCOPE-WAVEA). Q-code
-  // verified 2026-05-21 via SPARQL (Q1773424 = `pont routier` + `pont
-  // tramway` at Bordeaux Q1479). Beware of training-data artist Q-codes
-  // (cf. c4b-sparql-counts.md trap list). Re-uses the same `museums` table — a future
-  // schema split (`monuments` table) is post-V1 backlog. The address /
-  // coords / type are best-effort metadata so the row surfaces on FE cards
-  // and the geoloc map alongside the museum trio.
   {
     name: 'Pont de Pierre',
     slug: 'pont-de-pierre',
@@ -150,7 +129,6 @@ const MUSEUMS: MuseumSeed[] = [
     longitude: -0.5641,
     wikidataQid: 'Q1773424',
   },
-  // ── Marseille ──
   {
     name: 'MuCEM',
     slug: 'mucem',
@@ -169,7 +147,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 43.3042,
     longitude: 5.3944,
   },
-  // ── Toulouse ──
   {
     name: 'Les Abattoirs',
     slug: 'les-abattoirs',
@@ -188,7 +165,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 43.6012,
     longitude: 1.4446,
   },
-  // ── Lille ──
   {
     name: 'Palais des Beaux-Arts de Lille',
     slug: 'palais-des-beaux-arts-de-lille',
@@ -198,7 +174,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 50.6311,
     longitude: 3.0625,
   },
-  // ── Nice ──
   {
     name: 'MAMAC Nice',
     slug: 'mamac-nice',
@@ -217,7 +192,6 @@ const MUSEUMS: MuseumSeed[] = [
     latitude: 43.7197,
     longitude: 7.2769,
   },
-  // ── Strasbourg ──
   {
     name: "Musée d'Art Moderne et Contemporain de Strasbourg",
     slug: 'musee-d-art-moderne-et-contemporain-de-strasbourg',
@@ -229,16 +203,6 @@ const MUSEUMS: MuseumSeed[] = [
   },
 ];
 
-/**
- * Idempotent upsert of the museum seed list against the given DataSource.
- *
- * Exported so integration tests can drive it against a testcontainer
- * (`tests/integration/scripts/seed-museums.idempotent.spec.ts`). The CLI
- * `main()` below stays as the prod/dev entrypoint.
- *
- * @returns counts useful to the caller : `inserted` = newly-created rows,
- * `totalInDb` = total `museums` rows after the upsert.
- */
 export async function seedMuseums(
   dataSource: DataSource,
 ): Promise<{ inserted: number; totalInDb: number }> {
@@ -260,22 +224,9 @@ export async function seedMuseums(
         wikidataQid: m.wikidataQid ?? null,
       })),
     )
-    // T-A9 — re-running the seed on a DB where the rows already exist
-    // (prod first-deploy after seeding had run once without Q-codes)
-    // BACKFILLS the wikidata_qid column instead of being a no-op like
-    // `.orIgnore()` was. Conflict target = `slug` column (the existing
-    // UNIQUE constraint is named `UQ_museums_slug` — passing `['slug']`
-    // as an ARRAY emits `ON CONFLICT ("slug")`, letting Postgres resolve
-    // the constraint via its unique index on the column. A bare string
-    // `'slug'` would be misread as a constraint NAME → SQL
-    // `ON CONFLICT ON CONSTRAINT "slug"` → PG error 42704. Only
-    // `wikidata_qid` is in the overwrite list — admin UI edits to
-    // name/description/coords/config are preserved.
     .orUpdate(['wikidata_qid'], ['slug'])
     .execute();
 
-  // `.orUpdate(...)` returns `undefined` identifiers for conflict rows.
-  // Count only entries where id.id is a valid number = newly-inserted rows.
   const inserted = result.identifiers.filter((id) => id?.id != null).length;
   const totalInDb = await repo.count();
   return { inserted, totalInDb };
@@ -294,9 +245,6 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-// Guard the CLI entrypoint so `require('./seed-museums')` from a test does
-// NOT auto-execute main() (which would touch AppDataSource + side-effect
-// process.exit). Only fire when invoked directly via `ts-node scripts/seed-museums.ts`.
 if (require.main === module) {
   main().catch((err) => {
     console.error('Seed failed:', err);

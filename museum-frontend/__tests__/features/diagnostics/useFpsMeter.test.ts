@@ -4,11 +4,6 @@ import { renderHook, act } from '@testing-library/react-native';
 import { perfStore } from '@/features/diagnostics/perfStore';
 import { useFpsMeter } from '@/features/diagnostics/useFpsMeter';
 
-// ── rAF harness ──────────────────────────────────────────────────────────────
-// react-native's jest preset installs a setup.js that polyfills
-// requestAnimationFrame onto a setTimeout(_, 1000/60) call. We replace it with
-// a manual scheduler so tests can step through frames deterministically.
-
 type FrameCallback = (now: number) => void;
 
 interface RafHarness {
@@ -43,8 +38,6 @@ const createRafHarness = (): RafHarness => {
       queue.clear();
     },
     step(deltaMs = 16.67) {
-      // Process exactly one queued frame (the most recently registered) so
-      // each step advances the rAF loop by one tick.
       const ids = [...queue.keys()];
       const id = ids[ids.length - 1];
       if (id === undefined) return;
@@ -91,7 +84,6 @@ describe('useFpsMeter', () => {
       useFpsMeter(true);
     });
 
-    // 60 frames of 16.67ms steady cadence → P50 delta = 16.67 → ~60 FPS.
     act(() => {
       for (let i = 0; i < 60; i += 1) {
         raf.step(16.67);
@@ -108,8 +100,6 @@ describe('useFpsMeter', () => {
       useFpsMeter(true);
     });
 
-    // Mostly fast frames + a handful of slow (200ms = 5 FPS) frames; the
-    // P5 (worst-5%) bucket must reflect the stutter.
     act(() => {
       for (let i = 0; i < 54; i += 1) {
         raf.step(16.67);
@@ -148,7 +138,7 @@ describe('useFpsMeter', () => {
     act(() => {
       raf.step(16.67);
     });
-    perfStore.updateFps(45, 30); // simulate populated state
+    perfStore.updateFps(45, 30);
     expect(perfStore.get().fpsP50).toBe(45);
 
     unmount();
@@ -165,7 +155,6 @@ describe('useFpsMeter', () => {
       useFpsMeter(true);
     });
 
-    // 60 zero-ms frames → median delta = 0 → guard branch returns 0.
     act(() => {
       for (let i = 0; i < 60; i += 1) {
         raf.step(0);

@@ -9,7 +9,6 @@ describe('ListUserTicketsUseCase', () => {
     repo = new InMemorySupportRepository();
     useCase = new ListUserTicketsUseCase(repo);
 
-    // Seed tickets for user 10
     repo.seed({
       id: 't1',
       userId: 10,
@@ -34,7 +33,6 @@ describe('ListUserTicketsUseCase', () => {
       status: 'resolved',
       priority: 'medium',
     });
-    // Seed ticket for another user
     repo.seed({ id: 't4', userId: 20, subject: 'Other user', description: 'd4' });
   });
 

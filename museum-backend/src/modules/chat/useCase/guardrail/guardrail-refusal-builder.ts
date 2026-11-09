@@ -5,12 +5,6 @@ import { buildGuardrailRefusal } from './art-topic-guardrail';
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { ChatAssistantMetadata } from '@modules/chat/domain/chat.types';
 
-/**
- * Pure helper: build the `{ text, metadata, allowed: false }` payload returned
- * by the output guardrail when the LLM response is suppressed. Bundles the
- * localised refusal text with the policy citation merged into the metadata
- * envelope. No I/O, no side effects.
- */
 export function buildBlockedOutputPayload(params: {
   reason: GuardrailBlockReason | undefined;
   requestedLocale: string | undefined;

@@ -60,7 +60,6 @@ export class SupportRepositoryPg implements ISupportRepository {
       description: input.description,
       priority: input.priority ?? 'medium',
       category: input.category ?? null,
-      // Wave B C7 / R-C7a — tenant scope. Undefined → null (unscoped).
       museumId: input.museumId ?? null,
     });
     const saved = await this.ticketRepo.save(entity);
@@ -68,20 +67,6 @@ export class SupportRepositoryPg implements ISupportRepository {
   }
 
   async listTickets(filters: ListTicketsFilters): Promise<PaginatedResult<TicketDTO>> {
-    // paginate-skip: subquery-required (COUNT(m.id) + getRawAndEntities)
-    //
-    // This site is intentionally OUT OF SCOPE of the shared
-    // `@shared/pagination/offset-paginate` helper (design.md DL-1/DL-2,
-    // pr8-paginate-sentinel.test.ts SWEPT_FILES excludes this path).
-    //
-    // The shared helper relies on `getManyAndCount()`, which cannot project
-    // a correlated `COUNT(m.id)` subquery for the per-ticket `messageCount`.
-    // Here we need `getRawAndEntities()` to read both the entity columns AND
-    // the raw `messageCount` alias per row in a single round-trip.
-    //
-    // Migrating away from the inline form would require a separate count
-    // query (extra round-trip) OR extending the helper with a raw-projection
-    // overload — both rejected for PR-8 scope.
     const { page, limit } = filters.pagination;
     const offset = (page - 1) * limit;
 
@@ -96,9 +81,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     if (filters.priority) {
       qb.andWhere('t.priority = :priority', { priority: filters.priority });
     }
-    // Wave B C7 / R-C7c — BOLA guard. When set, only tickets of the given
-    // tenant are returned. null/undefined → no scope filter (super_admin
-    // cross-tenant view).
     if (filters.museumId !== undefined && filters.museumId !== null) {
       qb.andWhere('t.museumId = :museumId', { museumId: filters.museumId });
     }
@@ -143,7 +125,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     };
   }
 
-  /** Atomic: insert message + bump parent ticket's updatedAt in one transaction. */
   async addMessage(input: AddTicketMessageInput): Promise<TicketMessageDTO> {
     return await this.dataSource.transaction(async (manager) => {
       const msgRepo = manager.getRepository(TicketMessage);
@@ -186,10 +167,6 @@ export class SupportRepositoryPg implements ISupportRepository {
     return count > 0;
   }
 
-  /**
-   * GDPR DSAR — tickets + messages. Two queries (IN (...)) to minimise
-   * round-trips on bounded data sets.
-   */
   async listForUser(userId: number): Promise<TicketDetailDTO[]> {
     const tickets = await this.ticketRepo.find({
       where: { userId },

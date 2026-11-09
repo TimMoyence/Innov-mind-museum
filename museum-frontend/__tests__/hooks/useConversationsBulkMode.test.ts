@@ -4,15 +4,11 @@ import { useConversationsBulkMode } from '@/features/conversation/application/us
 import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
 }));
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const card1 = makeDashboardSessionCard({ id: 'card-1' });
 const card2 = makeDashboardSessionCard({ id: 'card-2' });
@@ -26,8 +22,6 @@ const makeVisibleItemsDeps = (items: DashboardSessionCard[] = [card1, card2, car
   searchQuery: '',
   getVisibleItems: () => items,
 });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useConversationsBulkMode', () => {
   beforeEach(() => {
@@ -54,19 +48,16 @@ describe('useConversationsBulkMode', () => {
   it('toggleEditMode exits bulk mode and clears selection', () => {
     const { result } = renderHook(() => useConversationsBulkMode(makeVisibleItemsDeps()));
 
-    // Enter edit mode
     act(() => {
       result.current.toggleEditMode();
     });
 
-    // Select an item
     act(() => {
       result.current.toggleSelection('card-1');
     });
 
     expect(result.current.selectedIds.size).toBe(1);
 
-    // Exit edit mode
     act(() => {
       result.current.toggleEditMode();
     });
@@ -141,7 +132,6 @@ describe('useConversationsBulkMode', () => {
   it('resetSelection clears selection and exits edit mode', () => {
     const { result } = renderHook(() => useConversationsBulkMode(makeVisibleItemsDeps()));
 
-    // Enter edit mode and select items
     act(() => {
       result.current.toggleEditMode();
     });

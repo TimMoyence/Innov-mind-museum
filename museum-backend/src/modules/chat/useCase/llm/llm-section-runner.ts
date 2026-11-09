@@ -1,7 +1,5 @@
-/**
- * Parallel LLM section runner. V1 = only 'summary'; architecture supports
- * adding analysis/metadata/multi-language sections without infra changes.
- */
+import { randomSource } from '@shared/utils/random';
+
 import { Semaphore } from './semaphore';
 
 type SectionRunStatus = 'success' | 'timeout' | 'error';
@@ -10,7 +8,6 @@ export interface SectionTask<TValue> {
   name: string;
   timeoutMs: number;
   payloadBytes: number;
-  /** Receives an AbortSignal that fires on timeout. */
   run: (signal: AbortSignal) => Promise<TValue>;
 }
 
@@ -70,11 +67,9 @@ interface SectionRunnerOptions {
   maxConcurrent: number;
   retries: number;
   retryBaseDelayMs: number;
-  /** Total wall-clock budget (ms) across all sections. */
   totalBudgetMs: number;
   requestId?: string;
   hooks?: SectionRunnerHooks;
-  /** Defaults to no retries. */
   shouldRetry?: (error: unknown, status: SectionRunStatus) => boolean;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -106,7 +101,7 @@ const jitteredDelay = (baseMs: number, attempt: number, remainingBudgetMs: numbe
     return 0;
   }
   const exponential = baseMs * Math.pow(2, Math.max(0, attempt - 1));
-  const jitter = Math.floor(Math.random() * Math.max(1, baseMs)); // eslint-disable-line sonarjs/pseudo-random -- jitter for retry backoff, not security-sensitive
+  const jitter = Math.floor(randomSource.unit() * Math.max(1, baseMs));
   return Math.min(exponential + jitter, Math.max(0, remainingBudgetMs - 1));
 };
 
@@ -152,7 +147,6 @@ const buildFailureResult = (
   };
 };
 
-/** Caller MUST clearTimeout when done. */
 const createTimeoutRace = (
   effectiveTimeoutMs: number,
 ): { controller: AbortController; timeoutId: NodeJS.Timeout; timeoutPromise: Promise<never> } => {
@@ -211,7 +205,6 @@ const toStartEvent = (ctx: AttemptContext): SectionStartEvent => ({
   requestId: ctx.requestId,
 });
 
-/** Jittered exponential backoff, capped by remaining budget. */
 const sleepWithBackoff = async (
   sleepFn: (ms: number) => Promise<void>,
   baseMs: number,
@@ -307,7 +300,6 @@ const executeTask = async <TValue>(
   };
 };
 
-/** Bounded concurrency + per-task timeouts + jittered backoff + global budget. */
 export const runSectionTasks = async <TValue>(
   tasks: SectionTask<TValue>[],
   options: SectionRunnerOptions,

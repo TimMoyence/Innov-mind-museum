@@ -1,16 +1,12 @@
-/**
- * Tests for `useAudioDescriptionMode` compat shim (TD-2 Option B 2026-05-15).
- *
- * The shim wraps `useAudioDescriptionStore` and preserves the historical
- * `{ enabled, isLoading, toggle }` shape so existing call sites
- * (`SettingsAccessibilityCard`, `useChatSession`, chat session screen) keep
- * working with zero changes. This file pins the public surface.
- */
 import '@/__tests__/helpers/test-utils';
 import { act, renderHook } from '@testing-library/react-native';
 
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
 import { useAudioDescriptionStore } from '@/features/settings/infrastructure/audioDescriptionStore';
+
+jest.mock('@/features/settings/infrastructure/userProfileApi', () => ({
+  saveProfilePreferences: jest.fn().mockResolvedValue(null),
+}));
 
 describe('useAudioDescriptionMode (compat shim)', () => {
   beforeEach(() => {
@@ -59,7 +55,7 @@ describe('useAudioDescriptionMode (compat shim)', () => {
 
   it('toggle returns a Promise (preserves the async call-site contract)', async () => {
     const { result } = renderHook(() => useAudioDescriptionMode());
-    let ret: Promise<void> | undefined;
+    let ret: Promise<Error | null> | undefined;
     await act(async () => {
       ret = result.current.toggle();
       await ret;

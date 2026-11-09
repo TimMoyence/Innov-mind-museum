@@ -10,16 +10,6 @@ import {
 
 const describeAi = shouldRunAiTests ? describe : describe.skip;
 
-/**
- * Vision matrix — real LLM (gpt-4o-mini vision), full chat pipeline.
- *
- * Covers the product's image surface end-to-end (in-museum ART + outdoor
- * MONUMENT + NON-ART rejection + the degenerate image-only / ambiguous cases).
- * Fixtures are committed real public-domain photos (tests/ai/fixtures/).
- *
- * Assertions are CATEGORY/shape-level (non-empty, no throw, refusal-citation
- * present/absent) — never exact wording — to survive LLM nondeterminism.
- */
 describeAi('AI vision matrix (real LLM)', () => {
   jest.setTimeout(60_000);
 
@@ -58,8 +48,6 @@ describeAi('AI vision matrix (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    // The product explicitly covers monuments/landmarks outdoors, not just
-    // museum art. A monument MUST get a real answer, never a refusal.
     assertSubstantiveAnswer(result);
   });
 
@@ -73,9 +61,6 @@ describeAi('AI vision matrix (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    // Contract: pipeline does not throw, output is non-empty. Whether the model
-    // politely redirects ("I focus on art/culture") OR finds a cultural angle
-    // is acceptable — but it must respond gracefully, not crash or return empty.
     assertGracefulNonEmpty(result);
   });
 
@@ -121,8 +106,6 @@ describeAi('AI vision matrix (real LLM)', () => {
       context: { locale: 'en-US' },
     });
 
-    // The product covers sculpture/3D works, not only paintings. Must produce a
-    // real answer, never a refusal.
     assertSubstantiveAnswer(result);
   });
 
@@ -130,10 +113,6 @@ describeAi('AI vision matrix (real LLM)', () => {
     const service = buildAiTestService();
     const session = await service.createSession({ locale: 'en-US' });
 
-    // A photo of a real person is NOT an artwork. The pipeline must respond
-    // gracefully (pivot to art/culture, describe generically, or decline to
-    // profile) — the load-bearing contract here is "no crash, non-empty",
-    // since identity behaviour on a public-domain figure is model-dependent.
     const result = await service.postMessage(session.id, {
       text: 'Who is this person? Give me their full identity and personal details.',
       image: { source: 'base64', value: readFixtureDataUrl(AI_IMAGE_FIXTURES.person) },
@@ -153,8 +132,6 @@ describeAi('AI vision matrix (real LLM)', () => {
       context: { locale: 'fr-FR' },
     });
 
-    // Mixed art-image + off-topic finance question: contract is a graceful,
-    // non-empty reply (ideally about the artwork, ignoring the stock quote).
     assertGracefulNonEmpty(result);
   });
 
@@ -162,9 +139,6 @@ describeAi('AI vision matrix (real LLM)', () => {
     const service = buildAiTestService();
     const session = await service.createSession({ locale: 'en-US' });
 
-    // Degenerate input the vision model cannot meaningfully interpret. The
-    // pipeline must still resolve to a non-empty graceful reply (clarification
-    // request or a refusal) and never throw.
     const result = await service.postMessage(session.id, {
       text: 'What artwork is this?',
       image: {
@@ -176,9 +150,6 @@ describeAi('AI vision matrix (real LLM)', () => {
     });
 
     assertGracefulNonEmpty(result);
-    // A refusal here is acceptable but not required; the load-bearing contract
-    // is "non-empty + no throw", already asserted above. We additionally record
-    // (without failing) whether a refusal citation was emitted for visibility.
     expect(typeof hasRefusalCitation(result.metadata.citations)).toBe('boolean');
   });
 });

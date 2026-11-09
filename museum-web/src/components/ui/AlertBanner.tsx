@@ -1,18 +1,3 @@
-/**
- * Inline alert banner (error / success / info).
- *
- * UFR-022 RUN_ID 2026-05-23-web-refactor-p1 — replaces the inline
- * `<div className="rounded-{md,lg} bg-{red,green}-50 px-4 py-3 text-sm
- * text-{red,green}-700">…</div>` pattern duplicated across 18 form / admin sites.
- *
- * - Pure presentational component (no hooks).
- * - Accessible: `role="alert"` for error/success (assertive live region),
- *   `role="status"` for info (NFR-A11Y-2, U-R14.3).
- * - Differentiated by role + textual message (NFR-A11Y-3 — never colour-only).
- * - Text content only — `dangerouslySetInnerHTML` is forbidden (UB-2).
- * - i18n: `message` is fully caller-owned (NFR-I18N-1/2).
- */
-
 type AlertVariant = 'error' | 'success' | 'info';
 
 export interface AlertBannerProps {

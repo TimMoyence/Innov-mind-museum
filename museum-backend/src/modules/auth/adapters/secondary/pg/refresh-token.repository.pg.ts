@@ -7,16 +7,16 @@ import type {
 } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
-// Re-exported for legacy consumers.
 export type {
   StoredRefreshTokenRow,
   InsertRefreshTokenInput,
 } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
+const loadedUserId = (user: { id: number } | undefined): number | undefined => user?.id;
+
 function toRow(entity: AuthRefreshToken): StoredRefreshTokenRow {
   const fallbackUserId = (entity as AuthRefreshToken & { userId?: number }).userId;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- TypeORM relation may not be loaded at runtime
-  const userId = entity.user ? entity.user.id : fallbackUserId;
+  const userId = loadedUserId(entity.user) ?? fallbackUserId;
   if (typeof userId !== 'number') {
     throw new Error('Refresh token row is missing userId');
   }
@@ -67,7 +67,6 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
     return entity ? toRow(entity) : null;
   }
 
-  /** Atomic — inserts new + marks current rotated. */
   async rotate(params: {
     currentTokenId: string;
     next: InsertRefreshTokenInput;
@@ -120,7 +119,6 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
     return result.affected ?? 0;
   }
 
-  /** Used after password change to invalidate all existing sessions. */
   async revokeAllForUser(userId: number, excludeJti?: string): Promise<void> {
     const qb = this.repo
       .createQueryBuilder()
@@ -135,7 +133,6 @@ export class RefreshTokenRepositoryPg implements IRefreshTokenRepository {
     await qb.execute();
   }
 
-  /** `reuseDetected=true` also sets `reuseDetectedAt` on all family members. */
   async revokeFamily(familyId: string, reuseDetected = false): Promise<void> {
     await (reuseDetected
       ? this.repo

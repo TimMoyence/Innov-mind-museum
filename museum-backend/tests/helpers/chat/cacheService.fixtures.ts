@@ -1,14 +1,7 @@
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * Creates an in-memory mock CacheService for unit testing.
- * All operations are synchronous Map-based — no Redis needed.
- * Exposes internal Maps for test assertions.
- */
 export function makeMockCache(): CacheService & {
-  /** Inspect the raw store for assertions. */
   readonly store: Map<string, unknown>;
-  /** Inspect the raw sorted sets for assertions. */
   readonly zsets: Map<string, Map<string, number>>;
 } {
   const store = new Map<string, unknown>();
@@ -23,7 +16,6 @@ export function makeMockCache(): CacheService & {
       return val !== undefined ? (val as T) : null;
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- mirrors CacheService generic interface
     async set<T>(key: string, value: T, _ttlSeconds?: number): Promise<void> {
       store.set(key, value);
     },
@@ -38,7 +30,6 @@ export function makeMockCache(): CacheService & {
       }
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- mirrors CacheService generic interface
     async setNx<T>(key: string, value: T, _ttlSeconds: number): Promise<boolean> {
       if (store.has(key)) return false;
       store.set(key, value);

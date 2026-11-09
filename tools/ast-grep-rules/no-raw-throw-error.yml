@@ -1,7 +1,3 @@
-# Forbid raw `throw new Error(...)` in BE modules — use AppError factories.
-# CLAUDE.md § Backend Architect, agent-mandate.md regle 5.
-#
-# Allowlist: domain/ entity files (entity validation throws OK), test fixtures.
 
 id: no-raw-throw-error
 language: typescript

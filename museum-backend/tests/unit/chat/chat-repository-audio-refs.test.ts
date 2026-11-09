@@ -1,17 +1,3 @@
-/**
- * RED (T1.1) — `findAudioRefsByUserId` chat-repository read.
- *
- * GDPR Art.17 erasure (B1, R1/R2): the account-deletion flow must resolve the
- * user's stored TTS audio refs from the DB before the cascade wipes the rows.
- * This mirrors the existing `findLegacyImageRefsByUserId` query-builder shape:
- *   SELECT message.audioUrl
- *   INNER JOIN message.session session
- *   WHERE session.userId = :userId AND message.audioUrl IS NOT NULL
- * then dedup + drop nullish.
- *
- * FAILS at red baseline: `findAudioRefsByUserId` is not implemented yet (the
- * accessor returns `undefined`), so the first assertion fails.
- */
 import { getFindAudioRefsByUserId } from 'tests/helpers/chat/gdpr-export-reads.accessor';
 
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
@@ -46,9 +32,9 @@ describe('findAudioRefsByUserId (B1 / R1 / R2)', () => {
 
     const { repo, mocks } = buildMessageRepoMock([
       { audioUrl: 's3://chat-audios/2026/05/a.mp3' },
-      { audioUrl: 's3://chat-audios/2026/05/a.mp3' }, // duplicate
+      { audioUrl: 's3://chat-audios/2026/05/a.mp3' },
       { audioUrl: 's3://chat-audios/2026/05/b.mp3' },
-      { audioUrl: null }, // dropped
+      { audioUrl: null },
     ]);
 
     const refs = await findAudioRefs!(repo, 42);
@@ -57,7 +43,6 @@ describe('findAudioRefsByUserId (B1 / R1 / R2)', () => {
       's3://chat-audios/2026/05/a.mp3',
       's3://chat-audios/2026/05/b.mp3',
     ]);
-    // Scoped to the user's sessions only + filters NULLs at the SQL level.
     expect(mocks.where).toHaveBeenCalledWith('session.userId = :userId', { userId: 42 });
     expect(mocks.andWhere).toHaveBeenCalledWith('message.audioUrl IS NOT NULL');
     expect(mocks.innerJoin).toHaveBeenCalledWith('message.session', 'session');

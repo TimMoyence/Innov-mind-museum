@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -18,12 +19,6 @@ interface SearxngApiResponse {
   results?: SearxngApiResult[];
 }
 
-/**
- * SearXNG metasearch (operator-hosted, privacy-focused). Tries the configured
- * instances in list order and returns the first instance that yields a non-empty
- * result set. Never throws — any error returns an empty array (fail-open). Each
- * configured instance MUST be vetted by the operator (cf. docs/compliance/SUBPROCESSORS.md #18).
- */
 export class SearxngClient implements WebSearchProvider {
   readonly name = 'searxng';
 
@@ -69,7 +64,7 @@ export class SearxngClient implements WebSearchProvider {
         }));
       } catch (err) {
         logger.warn('searxng_search_exception', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
           instance,
           query: query.query,
         });

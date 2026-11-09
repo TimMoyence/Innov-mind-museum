@@ -1,10 +1,3 @@
-/**
- * Typed Express partial mock helpers for middleware unit tests.
- *
- * Eliminates the recurring `{ headers: {...} } as unknown as Request` pattern
- * by centralising the single cast inside typed factory functions.
- */
-
 import type { Request, Response, NextFunction } from 'express';
 
 export interface MockRequestInit {
@@ -16,11 +9,9 @@ export interface MockRequestInit {
   method?: string;
   path?: string;
   socket?: { remoteAddress?: string };
-  /** Arbitrary extra fields (e.g. user, museumId, requestId set by middleware). */
   [key: string]: unknown;
 }
 
-/** Returns a partial Express Request typed as Request. Single cast lives here. */
 export function makePartialRequest(init: MockRequestInit = {}): Request {
   return {
     headers: {},
@@ -36,7 +27,6 @@ export function makePartialRequest(init: MockRequestInit = {}): Request {
   } as unknown as Request;
 }
 
-/** Returns a partial Express Response with status/json/send/setHeader jest fns. */
 export function makePartialResponse(): Response {
   const res = {
     status: jest.fn().mockReturnThis(),
@@ -50,7 +40,6 @@ export function makePartialResponse(): Response {
   return res;
 }
 
-/** Returns a jest.fn() NextFunction. */
 export function makeNext(): NextFunction {
   return jest.fn() as NextFunction;
 }

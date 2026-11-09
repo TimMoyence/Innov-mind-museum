@@ -9,23 +9,15 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, surfaceColors } from '@/shared/ui/tokens';
 
 interface ChatInputProps {
-  /** Current text value. */
   value: string;
-  /** Text change handler. */
   onChangeText: (text: string) => void;
-  /** Called when the send button is pressed. */
   onSend: () => void;
-  /** Whether the send action is in progress. */
   isSending: boolean;
-  /** Whether the input and send button should be disabled. */
   disabled?: boolean;
-  /** URI of the attached image to show as inline thumbnail. */
   imageUri?: string | null;
-  /** Called when user taps the × on the thumbnail. */
   onClearImage?: () => void;
 }
 
-/** Renders the chat text input with optional image thumbnail and a send button. */
 export const ChatInput = ({
   value,
   onChangeText,

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// Pre-flight check for `npm run dev:local`.
-// Verifies the Docker dev-backend is reachable on localhost:3000 BEFORE Metro
-// starts, so the developer sees a clear "Docker stack not up" error instead
-// of mysterious 60s socket timeouts inside the simulator.
-//
-// Generated 2026-05-17 by /team local-mobile-env-viable run.
 
 import http from 'node:http';
 

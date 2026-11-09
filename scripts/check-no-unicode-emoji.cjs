@@ -1,24 +1,4 @@
 #!/usr/bin/env node
-/**
- * P4 emoji guard.
- *
- * Musaium UX policy (memory: feedback_no_unicode_emoji): user-facing
- * mobile screens and copy must not embed unicode emoji. Use PNG (require)
- * or Ionicons instead so style stays consistent across iOS/Android and
- * older devices render correctly.
- *
- * Scans the React Native screens + i18n dictionaries for unicode emoji
- * codepoints and exits non-zero if any is found.
- *
- * Allowed exceptions:
- *   - museum-backend (server, no UI)
- *   - test files / snapshots / docs
- *   - copy in `museum-frontend/shared/i18n/copy-emoji-allowlist.json`
- *     (intentional cases — currency symbols, math signs, etc.)
- *
- * Run from repo root:
- *   node scripts/check-no-unicode-emoji.cjs
- */
 
 'use strict';
 
@@ -27,20 +7,8 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 
-// Unicode property escapes — \p{Extended_Pictographic} matches the full
-// emoji set (faces, hands, animals, symbols) without false-positive on
-// CJK/digits. Requires Node 12+.
-//
-// Note: per Unicode TR51, this property includes © (U+00A9), ® (U+00AE),
-// ™ (U+2122) and similar legal/trade marks. They're flagged as emoji
-// here even though the brain reads them as plain copy. Use the allowlist
-// (`copy-emoji-allowlist.json`) for legitimate occurrences.
 const EMOJI_REGEX = /[\p{Extended_Pictographic}]/u;
 
-// Roots to scan. Mobile only — the UFR (`feedback_no_unicode_emoji`)
-// targets RN screens and the i18n copy that ends up rendered in the
-// mobile app. Web (Next.js) has its own icon conventions (Lucide, etc.)
-// and is not in scope for this guard. Backend has no UI.
 const SCAN_ROOTS = [
   path.join(ROOT, 'museum-frontend', 'app'),
   path.join(ROOT, 'museum-frontend', 'features'),
@@ -48,7 +16,6 @@ const SCAN_ROOTS = [
   path.join(ROOT, 'museum-frontend', 'shared', 'ui'),
 ];
 
-// Skip these path segments anywhere in the file path.
 const SKIP_SEGMENTS = [
   '__tests__',
   '__snapshots__',
@@ -62,14 +29,11 @@ const SKIP_SEGMENTS = [
   '/.next/',
   '.stryker-tmp',
   '.stryker-run',
-  // Test-utility assets.
   'test-utils',
 ];
 
 const FILE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.json']);
 
-// Per-line allowlist: an exact substring on the offending line silences
-// the violation. Use sparingly — prefer Ionicons / PNG over allowlisting.
 const ALLOWLIST_FILE = path.join(
   ROOT,
   'museum-frontend',

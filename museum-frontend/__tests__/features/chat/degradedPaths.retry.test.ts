@@ -1,19 +1,3 @@
-/**
- * RED (W1-L1-16) — M7 geo/search + auth degraded-network retry caps (spec R6).
- *
- * Under an edge/2g profile a transient (Network/Timeout) failure is retried up to
- * the backoff cap, then surfaces an actionable AppError; an Unauthorized (401/403)
- * is NOT retried (`isRetryableError` returns false). Drives the simulated transport
- * through the test-only `withNetworkSim` harness and builds snapshots via the DRY
- * `makeNetInfoSnapshot` factory.
- *
- * Fails RED because `withNetworkSim` (`@/shared/testing/...`) and the
- * `makeNetInfoSnapshot` factory do not exist yet.
- *
- * lib-docs:
- * - @react-native-community/netinfo PATTERNS.md:173 (§4 — isConnected alone is not
- *   "API reachable"; degraded interfaces fail transiently).
- */
 import { runWithRetry, isRetryableError } from '@/shared/lib/retry';
 import { createAppError } from '@/shared/types/AppError';
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';
@@ -44,7 +28,7 @@ describe('M7 — degraded geo/search + auth retry caps', () => {
     await clock.runAll();
     const error = await run;
 
-    expect(op).toHaveBeenCalledTimes(3); // initial + 2 backoff retries (cap)
+    expect(op).toHaveBeenCalledTimes(3);
     expect((error as { kind: string }).kind).toBe('Network');
     expect(isRetryableError(error)).toBe(true);
   });
@@ -67,7 +51,7 @@ describe('M7 — degraded geo/search + auth retry caps', () => {
     await clock.runAll();
     const error = await run;
 
-    expect(op).toHaveBeenCalledTimes(1); // fatal → no retry
+    expect(op).toHaveBeenCalledTimes(1);
     expect((error as { kind: string }).kind).toBe('Unauthorized');
   });
 

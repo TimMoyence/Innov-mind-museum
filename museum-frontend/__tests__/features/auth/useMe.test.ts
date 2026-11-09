@@ -1,19 +1,7 @@
-/**
- * Tests for {@link useMe} (Spec C T2.10).
- *
- * The hook wraps `GET /api/auth/me` via `authService.me` and caches the
- * profile envelope under the `['user', 'me']` query key so the existing
- * invalidation calls from {@link useUpdateTtsVoice} and the AuthContext
- * foreground resync actually have a subscriber to refetch. The `'user'`
- * head segment inherits the existing `SENSITIVE_QUERY_KEY_PREFIXES`
- * exclusion in `shared/data/queryClient.ts` (no AsyncStorage persistence).
- */
 import '@/__tests__/helpers/test-utils';
 import { waitFor } from '@testing-library/react-native';
 
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockMe = jest.fn();
 
@@ -24,8 +12,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 }));
 
 import { useMe } from '@/features/auth/application/useMe';
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useMe (Spec C T2.10)', () => {
   beforeEach(() => {
@@ -104,24 +90,9 @@ describe('useMe (Spec C T2.10)', () => {
     expect(result.current.error).toBeDefined();
   });
 
-  // ── TD-TQ-01 — AbortSignal plumbing through queryFn ───────────────────────
-  //
-  // Spec R1 + design D1 mandate that `useMe`'s `queryFn` consume the
-  // `QueryFunctionContext.signal` and forward it to `authService.me()` so
-  // cancellation propagates down to the underlying HTTP layer.
-  //
-  // lib-docs cite: lib-docs/@tanstack/react-query/PATTERNS.md:295.
-  //
-  // RED contract: the current source calls `authService.me()` with NO args;
-  // the assertions below fail until the green phase threads `{ signal }`.
   describe('TD-TQ-01 — signal propagation', () => {
     it('forwards an AbortSignal to authService.me() via QueryFunctionContext', async () => {
-      mockMe.mockImplementationOnce(
-        () =>
-          new Promise(() => {
-            /* deferred — never resolves so the test can observe the in-flight signal */
-          }),
-      );
+      mockMe.mockImplementationOnce(() => new Promise(() => {}));
 
       renderHookWithQueryClient(() => useMe());
 
@@ -136,12 +107,7 @@ describe('useMe (Spec C T2.10)', () => {
     });
 
     it("flips the captured signal's .aborted flag when queryClient.cancelQueries is called", async () => {
-      mockMe.mockImplementationOnce(
-        () =>
-          new Promise(() => {
-            /* deferred */
-          }),
-      );
+      mockMe.mockImplementationOnce(() => new Promise(() => {}));
 
       const { client } = renderHookWithQueryClient(() => useMe());
 

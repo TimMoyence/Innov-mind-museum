@@ -1,16 +1,3 @@
-/**
- * Tests for {@link useMuseumEnrichment}. Covers:
- *  - the `enabled` gate (null / non-positive museumId)
- *  - the synchronous `ready` path (single API call)
- *  - the `pending` → poll → `ready` handoff (1500 ms cadence)
- *  - the 30 s hard timeout that surfaces `null` instead of spinning forever
- *  - `refresh()` invalidating any in-flight poll + triggering a refetch
- *
- * All timings are driven by `jest.useFakeTimers()` so the 30 s cap can be
- * exercised in ~milliseconds of wall-clock. React-query runs its queryFn
- * asynchronously, so every step interleaves `advanceTimersByTimeAsync` with
- * microtask flushes via `waitFor`.
- */
 import '../helpers/test-utils';
 import { act, waitFor } from '@testing-library/react-native';
 
@@ -20,8 +7,6 @@ import type {
   MuseumEnrichmentView,
 } from '@/features/museum/infrastructure/museumApi';
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockGetEnrichment = jest.fn();
 const mockGetEnrichmentStatus = jest.fn();
@@ -38,8 +23,6 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => {
     },
   };
 });
-
-// ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const makeEnrichmentView = (overrides?: Partial<MuseumEnrichmentView>): MuseumEnrichmentView => ({
   museumId: 42,
@@ -64,15 +47,12 @@ const pendingResponse = (jobId: string): MuseumEnrichmentResponse => ({
   jobId,
 });
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useMuseumEnrichment', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   afterEach(() => {
-    // Restore real timers between tests — some cases opt into fake timers.
     jest.useRealTimers();
   });
 
@@ -80,7 +60,6 @@ describe('useMuseumEnrichment', () => {
     it('does not fetch when museumId is null', async () => {
       const { result } = renderHookWithQueryClient(() => useMuseumEnrichment(null, 'en'));
 
-      // Let any queued microtask settle so we assert against a stable state.
       await act(async () => {
         await Promise.resolve();
       });
@@ -140,7 +119,6 @@ describe('useMuseumEnrichment', () => {
 
       const { result } = renderHookWithQueryClient(() => useMuseumEnrichment(2, 'en'));
 
-      // Drain the initial getEnrichment() microtask.
       await act(async () => {
         await Promise.resolve();
       });
@@ -148,7 +126,6 @@ describe('useMuseumEnrichment', () => {
       expect(mockGetEnrichment).toHaveBeenCalledWith(2, 'en');
       expect(mockGetEnrichmentStatus).not.toHaveBeenCalled();
 
-      // Cross the 1500 ms poll interval.
       await act(async () => {
         await jest.advanceTimersByTimeAsync(1500);
       });
@@ -177,13 +154,11 @@ describe('useMuseumEnrichment', () => {
         await Promise.resolve();
       });
 
-      // First poll tick → returns pending with job-2.
       await act(async () => {
         await jest.advanceTimersByTimeAsync(1500);
       });
       expect(mockGetEnrichmentStatus).toHaveBeenNthCalledWith(1, 3, 'en', 'job-1');
 
-      // Second poll tick → hands over the new jobId.
       await act(async () => {
         await jest.advanceTimersByTimeAsync(1500);
       });
@@ -201,7 +176,6 @@ describe('useMuseumEnrichment', () => {
       jest.useFakeTimers();
 
       mockGetEnrichment.mockResolvedValueOnce(pendingResponse('job-forever'));
-      // Every status call keeps returning pending — simulates a stuck job.
       mockGetEnrichmentStatus.mockImplementation(() =>
         Promise.resolve(pendingResponse('job-forever')),
       );
@@ -212,7 +186,6 @@ describe('useMuseumEnrichment', () => {
         await Promise.resolve();
       });
 
-      // Advance well past the 30 s hard cap (30_000 ms).
       await act(async () => {
         await jest.advanceTimersByTimeAsync(31_000);
       });
@@ -220,10 +193,7 @@ describe('useMuseumEnrichment', () => {
       await waitFor(() => {
         expect(result.current.status).toBe('ready');
       });
-      // Timeout path resolves with `null` — the caller renders an
-      // "unavailable" placeholder rather than spinning forever.
       expect(result.current.data).toBeNull();
-      // Status endpoint was polled multiple times during the window.
       expect(mockGetEnrichmentStatus.mock.calls.length).toBeGreaterThan(1);
     });
   });
@@ -248,7 +218,6 @@ describe('useMuseumEnrichment', () => {
         result.current.refresh();
       });
 
-      // Refetch is async — wait for the second getEnrichment call to land.
       await waitFor(() => {
         expect(mockGetEnrichment).toHaveBeenCalledTimes(2);
       });

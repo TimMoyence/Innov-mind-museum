@@ -10,7 +10,6 @@ import type {
   SessionListItemDTO,
 } from '@/features/chat/domain/contracts';
 
-/** Creates a SessionDTO with sensible defaults. */
 const makeSessionDTO = (overrides?: Partial<SessionDTO>): SessionDTO => ({
   id: faker.string.uuid(),
   locale: 'en-US',
@@ -23,7 +22,6 @@ const makeSessionDTO = (overrides?: Partial<SessionDTO>): SessionDTO => ({
   ...overrides,
 });
 
-/** Creates a ChatMessageDTO with sensible defaults. */
 const makeChatMessageDTO = (overrides?: Partial<ChatMessageDTO>): ChatMessageDTO => ({
   id: faker.string.uuid(),
   role: faker.helpers.arrayElement(['user', 'assistant', 'system'] as const),
@@ -35,7 +33,6 @@ const makeChatMessageDTO = (overrides?: Partial<ChatMessageDTO>): ChatMessageDTO
   ...overrides,
 });
 
-/** Creates a CreateSessionResponseDTO with sensible defaults. */
 export const makeCreateSessionResponse = (
   overrides?: Partial<CreateSessionResponseDTO>,
 ): CreateSessionResponseDTO => ({
@@ -43,7 +40,6 @@ export const makeCreateSessionResponse = (
   ...overrides,
 });
 
-/** Creates a GetSessionResponseDTO with sensible defaults. */
 export const makeGetSessionResponse = (
   overrides?: Partial<GetSessionResponseDTO>,
 ): GetSessionResponseDTO => ({
@@ -53,7 +49,6 @@ export const makeGetSessionResponse = (
   ...overrides,
 });
 
-/** Creates a ListSessionsResponseDTO with sensible defaults. */
 export const makeListSessionsResponse = (
   overrides?: Partial<ListSessionsResponseDTO>,
 ): ListSessionsResponseDTO => {
@@ -82,7 +77,6 @@ export const makeListSessionsResponse = (
   };
 };
 
-/** Creates a PostMessageResponseDTO with sensible defaults. */
 export const makePostMessageResponse = (
   overrides?: Partial<PostMessageResponseDTO>,
 ): PostMessageResponseDTO => ({
@@ -99,8 +93,6 @@ export const makePostMessageResponse = (
       artist: faker.person.fullName(),
     },
     recommendations: [faker.lorem.sentence()],
-    // B3 — singular follow-up (≤80 chars), replaces legacy `followUpQuestions: string[]`.
-    suggestedFollowUp: faker.lorem.sentence({ min: 4, max: 8 }).slice(0, 79) + '?',
   },
   ...overrides,
 });

@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
-import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
 import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
 import { consentApi } from '@/features/chat/infrastructure/consentApi';
+import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
+import { settleWrite } from '@/features/settings/infrastructure/accountPreference';
+import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
 import {
   REQUIRED_CONSENT_SCOPE,
   THIRD_PARTY_AI_SCOPES,
   type ThirdPartyAiScope,
 } from '@/features/chat/domain/consentScopes';
+import { formatAppDate } from '@/shared/lib/formatDate';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -20,26 +23,11 @@ interface ConsentRow {
   grantedAt: string | null;
 }
 
-/**
- * Cycle 1.5-FE (D1 Option C, REQ-FE-8) — the two geo scopes are mutually
- * exclusive: granting one revokes the other so the BE never holds both geo
- * grants at once (which would let full silently dominate coarse — misleading
- * consent). Mirrors the sheet's local-state exclusivity (`AiConsentSheetContent`).
- */
 const GEO_SCOPES: readonly ThirdPartyAiScope[] = ['location_to_llm', 'location_coarse_to_llm'];
 
 const isThirdPartyAiScope = (scope: string): scope is ThirdPartyAiScope =>
   (THIRD_PARTY_AI_SCOPES as readonly string[]).includes(scope);
 
-/**
- * GDPR Art. 7(3) / Apple Guideline 5.1.2(i) revocation surface — lists each
- * third-party-AI consent scope with a one-tap toggle. Granting / revoking
- * round-trips through `/api/auth/consent` so every change writes a
- * hash-chained audit row (`CONSENT_GRANTED_THIRD_PARTY_AI` / `*_REVOKED_*`).
- *
- * Date format follows the CLAUDE.md ISO/Intl doctrine — Intl.DateTimeFormat
- * keyed on (isoString, locale), try/catch falls back to raw ISO if parse fails.
- */
 export const SettingsAiConsentCard = () => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
@@ -49,6 +37,7 @@ export const SettingsAiConsentCard = () => {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [pendingScope, setPendingScope] = useState<ThirdPartyAiScope | null>(null);
+  const { refusal, track } = useLatestSaveOutcome();
 
   const refresh = useCallback(async () => {
     try {
@@ -56,7 +45,6 @@ export const SettingsAiConsentCard = () => {
       const byScope = new Map<ThirdPartyAiScope, { granted: boolean; grantedAt: string | null }>();
       for (const row of remote) {
         if (!isThirdPartyAiScope(row.scope)) continue;
-        // listForUser returns newest first ; first occurrence wins.
         if (!byScope.has(row.scope)) {
           byScope.set(row.scope, {
             granted: row.revokedAt === null,
@@ -72,7 +60,6 @@ export const SettingsAiConsentCard = () => {
         })),
       );
     } catch {
-      // Network or 401 — keep prior state, user can pull-to-refresh on parent screen
     } finally {
       setIsLoading(false);
     }
@@ -82,31 +69,15 @@ export const SettingsAiConsentCard = () => {
     void refresh();
   }, [refresh]);
 
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
-    [i18n.language],
-  );
-
-  const formatGrantedAt = (iso: string | null): string => {
-    if (!iso) return '';
-    try {
-      const parsed = new Date(iso);
-      if (Number.isNaN(parsed.getTime())) return iso;
-      return dateFormatter.format(parsed);
-    } catch {
-      return iso;
-    }
-  };
+  const grantedOn = (row: ConsentRow): string | null =>
+    row.granted && row.grantedAt
+      ? formatAppDate(row.grantedAt, i18n.language, { dateStyle: 'medium' })
+      : null;
 
   const onToggle = useCallback(
     async (scope: ThirdPartyAiScope, next: boolean) => {
       setPendingScope(scope);
-      // Optimistic update — revert on failure.
       const previous = rows;
-      // D1 Option C — when granting a geo scope, the other geo scope must be
-      // revoked (mutual exclusivity). Capture the conflicting geo scopes that
-      // were granted so the optimistic UI flips them OFF and we round-trip a
-      // revoke for each.
       const geoToRevoke =
         next && GEO_SCOPES.includes(scope)
           ? previous
@@ -124,52 +95,39 @@ export const SettingsAiConsentCard = () => {
           return r;
         }),
       );
-      try {
+      const writeOnServer = async (): Promise<void> => {
         if (next) {
           await consentApi.grant(scope);
-          // Geo exclusivity: revoke any other geo scope that was active.
           for (const other of geoToRevoke) {
             await consentApi.revoke(other);
           }
         } else {
           await consentApi.revoke(scope);
-          // When the user withdraws the mandatory scope, the local "we
-          // already asked you" memo MUST be cleared so the chat surface
-          // re-prompts the consent sheet on next mount — otherwise the
-          // BE says "not granted" but the FE silently honours the stale
-          // accept-flag and the user sees an inert chat (reported
-          // 2026-05-20 : "j'ai tout remis à zéro mais l'écran ne se
-          // réaffiche pas"). Optional-scope revocations keep the flag
-          // intact — the user is informed-managing, not withdrawing.
           if (scope === REQUIRED_CONSENT_SCOPE) {
             await clearConsentAcceptedFlag();
           }
         }
-        await refresh();
-      } catch (toggleError) {
-        Sentry.captureException(toggleError, {
-          tags: {
-            flow: next ? 'consent.grant.settings' : 'consent.revoke.settings',
-            scope,
-          },
-        });
-        setRows(previous);
-        // Re-sync with server truth: on a partial geo-exclusivity failure
-        // (grant succeeded but revoke(other) threw) the optimistic `previous`
-        // is stale — the backend may now hold BOTH geo scopes. refresh() pulls
-        // the real state so the UI never lies about what's granted (P3-CONSENT).
-        await refresh();
-      } finally {
-        setPendingScope(null);
-      }
+      };
+      const refusal = await track(
+        settleWrite(writeOnServer(), next ? 'consent.grant.settings' : 'consent.revoke.settings', {
+          scope,
+        }),
+        scope,
+      );
+      if (refusal) setRows(previous);
+      await refresh();
+      setPendingScope((current) => (current === scope ? null : current));
     },
-    [rows, refresh],
+    [rows, refresh, track],
   );
 
   return (
     <GlassCard style={styles.card} intensity={56}>
       <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>
         {t('settings.ai_consent_title')}
+      </Text>
+      <Text style={[styles.cardHint, { color: theme.textSecondary }]}>
+        {t('ai_disclosure.chat_footer')}
       </Text>
       <Text style={[styles.cardHint, { color: theme.textSecondary }]}>
         {t('settings.ai_consent_hint')}
@@ -184,9 +142,9 @@ export const SettingsAiConsentCard = () => {
               <Text style={[styles.label, { color: theme.textPrimary }]}>
                 {t(`settings.ai_consent_scope.${row.scope}`)}
               </Text>
-              {row.granted && row.grantedAt ? (
+              {grantedOn(row) ? (
                 <Text style={[styles.hint, { color: theme.textSecondary }]}>
-                  {t('settings.ai_consent_granted_on', { date: formatGrantedAt(row.grantedAt) })}
+                  {t('settings.ai_consent_granted_on', { date: grantedOn(row) })}
                 </Text>
               ) : null}
             </View>
@@ -204,6 +162,7 @@ export const SettingsAiConsentCard = () => {
           </View>
         ))
       )}
+      <SaveRefusalNotice refusal={refusal} />
     </GlassCard>
   );
 };

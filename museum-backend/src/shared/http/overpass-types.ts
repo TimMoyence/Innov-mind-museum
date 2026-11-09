@@ -14,14 +14,11 @@ export interface OverpassMuseumResult {
   phone?: string;
   imageUrl?: string;
   description?: string;
-  /** Raw OSM `wheelchair`: yes | no | limited | designated. */
   wheelchair?: string;
 }
 
-/** WGS84 bbox `[minLng, minLat, maxLng, maxLat]`. */
 export type OverpassBoundingBox = [number, number, number, number];
 
-/** Either center+radius OR `bbox` required. `bbox` takes precedence when both set. */
 export interface OverpassSearchParams {
   lat?: number;
   lng?: number;

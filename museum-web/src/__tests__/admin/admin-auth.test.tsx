@@ -1,14 +1,9 @@
-/**
- * Admin auth flow tests — AuthGuard, RoleGuard, LoginForm, logout.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider, AuthGuard, RoleGuard, useAuth } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import LoginForm from '@/components/admin/LoginForm';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
@@ -35,15 +30,11 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 vi.mock('@/lib/api', () => ({
   apiPost: vi.fn(),
   apiGet: vi.fn(),
   registerLogoutHandler: vi.fn(),
 }));
-
-// ── Helper: wrap with required providers ─────────────────────────────────────
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -52,10 +43,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ============================================================================
-// AuthGuard
-// ============================================================================
 
 describe('AuthGuard', () => {
   beforeEach(() => {
@@ -71,10 +58,8 @@ describe('AuthGuard', () => {
       </Providers>,
     );
 
-    // The protected content should NOT be visible
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
 
-    // Should redirect to login
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/en/admin/login');
     });
@@ -90,14 +75,9 @@ describe('AuthGuard', () => {
     );
 
     expect(screen.queryByText('Secret Dashboard')).not.toBeInTheDocument();
-    // Should render null — the container should be mostly empty (just the provider wrappers)
     expect(container.querySelector('[data-testid="secret"]')).toBeNull();
   });
 });
-
-// ============================================================================
-// RoleGuard
-// ============================================================================
 
 describe('RoleGuard', () => {
   beforeEach(() => {
@@ -121,8 +101,6 @@ describe('RoleGuard', () => {
   });
 
   it('shows 403 access denied for users with wrong role', async () => {
-    // We need to simulate an authenticated user with a wrong role.
-    // The AuthProvider uses login() to set user, and we mock apiPost to return a visitor user.
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
     mockedApiPost.mockResolvedValueOnce({
@@ -140,7 +118,6 @@ describe('RoleGuard', () => {
       },
     });
 
-    // Component that logs in then renders RoleGuard
     function TestComponent() {
       const { login, isAuthenticated } = useAuth();
       return (
@@ -161,16 +138,13 @@ describe('RoleGuard', () => {
       </Providers>,
     );
 
-    // Login as visitor
     fireEvent.click(screen.getByText('Login'));
 
-    // Should show 403 access denied
     await waitFor(() => {
       expect(screen.getByText('403')).toBeInTheDocument();
       expect(screen.getByText('Access Denied')).toBeInTheDocument();
     });
 
-    // Admin Only Content should NOT be visible
     expect(screen.queryByText('Admin Only Content')).not.toBeInTheDocument();
   });
 
@@ -219,9 +193,6 @@ describe('RoleGuard', () => {
     });
   });
 
-  // Regression for audit-2026-05-12 P0-6 + F4 Claim 1: a `super_admin` user
-  // must satisfy ANY role check, even when `allowedRoles` only lists 'admin'.
-  // Before the auth.tsx fix the `.includes()`-only check would 403 here.
   it('allows super_admin implicitly even when allowedRoles only lists admin', async () => {
     const { apiPost } = await import('@/lib/api');
     const mockedApiPost = vi.mocked(apiPost);
@@ -265,7 +236,6 @@ describe('RoleGuard', () => {
     await waitFor(() => {
       expect(screen.getByText('Admin-Only Surface')).toBeInTheDocument();
     });
-    // And the 403 surface must NOT appear.
     expect(screen.queryByText('403')).not.toBeInTheDocument();
   });
 
@@ -314,10 +284,6 @@ describe('RoleGuard', () => {
     });
   });
 });
-
-// ============================================================================
-// LoginForm
-// ============================================================================
 
 describe('LoginForm', () => {
   beforeEach(() => {
@@ -384,8 +350,6 @@ describe('LoginForm', () => {
           email: 'admin@test.com',
           password: 'secret123',
         },
-        // M1 (T4.2): a 401/403 on /login is a domain/credential error, not
-        // session expiry — login() opts out of the auto-refresh/logout path.
         { skipAuthRefresh: true },
       );
     });

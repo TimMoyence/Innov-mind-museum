@@ -1,12 +1,3 @@
-/**
- * Musaium Design System — Color Tokens (SSOT)
- *
- * This is the single source of truth for all colors across:
- * - museum-frontend (React Native / Expo)
- * - museum-web (Next.js / Tailwind 4)
- *
- * Run `node --import tsx design-system/build.ts` to regenerate platform outputs.
- */
 
 export const colors = {
   primary: {
@@ -23,7 +14,6 @@ export const colors = {
     900: '#172554',
   },
 
-  /** Gradient endpoint used in mobile light theme */
   gradient: {
     lightEnd: '#D5F0FF',
   },
@@ -44,9 +34,6 @@ export const colors = {
     primary: '#0F172A',
     secondary: '#334155',
     tertiary: '#475569',
-    // 5.91:1 on white; 4.54:1 on the bluest page-veil stop (#D8E7FF). WCAG 1.4.3
-    // AA both. Darkened from #5E7184 (which was 4.03:1 on the deepened blue
-    // gradient) so the page background can read bluer without losing muted text.
     muted: '#556677',
     placeholder: '#64748B',
   },

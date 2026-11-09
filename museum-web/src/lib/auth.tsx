@@ -18,25 +18,10 @@ import type { AuthSessionResponse, UserRole } from '@/lib/admin-types';
 
 export type { UserRole } from '@/lib/admin-types';
 
-// ---------------------------------------------------------------------------
-// Admin authz cookie — middleware redirect hint
-// ---------------------------------------------------------------------------
-
-/**
- * Cookie name read by `src/middleware.ts` to decide whether to redirect a
- * request hitting `/{locale}/admin/*` to the login page. Value is intentionally
- * opaque — backend still enforces the real JWT on every admin API call.
- *
- * Keep in sync with {@link ADMIN_AUTHZ_COOKIE} in `src/middleware.ts`.
- */
 const ADMIN_AUTHZ_COOKIE = 'admin-authz';
 
 function setAdminAuthzCookie(): void {
   if (typeof document === 'undefined') return;
-  // 8h — shorter than the refresh token so the middleware stops redirecting
-  // once the real session is effectively dead. Path=/ so it propagates to
-  // every admin sub-route. SameSite=Lax is enough: admin login is always
-  // first-party. Secure in production; HTTP OK on localhost for dev.
   const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `${ADMIN_AUTHZ_COOKIE}=1; Path=/; Max-Age=${60 * 60 * 8}; SameSite=Lax${secureFlag}`;
 }
@@ -51,14 +36,9 @@ function hasAdminAuthzCookie(): boolean {
   return document.cookie.split('; ').some((c) => c.startsWith(`${ADMIN_AUTHZ_COOKIE}=1`));
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface AuthUser {
   id: number;
   email: string;
-  /** Display name derived from firstname + lastname (or email fallback). */
   name: string;
   role: UserRole;
 }
@@ -67,21 +47,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  /** True while the mount-time `/api/auth/me` probe is in flight. */
   isHydrating: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 interface AuthMeResponse {
   user: {
@@ -96,22 +67,10 @@ interface AuthMeResponse {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // `isHydrating` is the mount-time `/api/auth/me` probe state. Kept
-  // separate from `isLoading` so LoginForm's submit-button text doesn't
-  // flicker through "..." on first render of the login page (where the
-  // probe never runs because admin-authz is absent).
   const [isHydrating, setIsHydrating] = useState(true);
   const router = useRouter();
   const locale = useAdminLocale();
 
-  // Hydrate session from the HttpOnly access_token cookie on mount.
-  // Gated on the readable `admin-authz` hint cookie so the public-route
-  // / unit-test cases (no admin session ever) skip the fetch entirely
-  // and resolve to `isLoading=false` synchronously.
-  // The mutable ref is the standard "ignore late response after unmount"
-  // pattern — `let cancelled = false` would trip
-  // `@typescript-eslint/no-unnecessary-condition` because the linter
-  // can't see that cleanup runs in a different tick.
   const cancelledRef = useRef(false);
   useEffect(() => {
     cancelledRef.current = false;
@@ -149,7 +108,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, [router, locale]);
 
-  // Register the logout handler so api.ts can trigger it on refresh failure
   useEffect(() => {
     registerLogoutHandler(logout);
   }, [logout]);
@@ -187,10 +145,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
@@ -198,10 +152,6 @@ export function useAuth(): AuthContextValue {
   }
   return ctx;
 }
-
-// ---------------------------------------------------------------------------
-// Guard — redirects unauthenticated users to the login page
-// ---------------------------------------------------------------------------
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading, isHydrating } = useAuth();
@@ -229,10 +179,6 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   return <>{children}</>;
 }
-
-// ---------------------------------------------------------------------------
-// RoleGuard — AuthGuard + role-based access control
-// ---------------------------------------------------------------------------
 
 interface RoleGuardProps {
   children: ReactNode;
@@ -264,11 +210,6 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     return null;
   }
 
-  // `super_admin` implicitly satisfies any role check — mirrors the BE
-  // `requireRole` middleware (`require-role.middleware.ts:28`) and honors the
-  // JSDoc contract in `admin-types.ts:UserRole`. Closes audit-2026-05-12 P0-6
-  // + F4 Claim 1 latent bug (the previous `.includes()`-only check would
-  // wrongly 403 a super_admin against `allowedRoles={['admin']}`).
   const hasRole = user && (user.role === 'super_admin' || allowedRoles.includes(user.role));
   if (!user || !hasRole) {
     return (

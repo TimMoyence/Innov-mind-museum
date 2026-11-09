@@ -3,29 +3,9 @@ import { z } from 'zod';
 
 import { textField } from '@shared/validation/text-field';
 
-/**
- * Wave B C7 / R-C7b — rating widened 1-5 → 0-10 (NPS scale).
- *
- * Net Promoter Score endpoints :
- *   - 0  = strongest detractor
- *   - 6  = neutral threshold
- *   - 9-10 = promoters (NPS aggregation : %promoters - %detractors)
- *
- * Back-compat (D8 / Q-C7) : existing 1-5 ratings remain valid; no
- * normalization of historical reviews (seed/demo data, low stakes).
- * Schema widening is an OpenAPI breaking change (acknowledged) — FE types
- * regenerated via `pnpm openapi:validate` + `npm run check:openapi-types`.
- *
- * Spec: design.md §3 Vague B C7, T-B9. Frozen test: `tests/unit/review/review.schema.test.ts`.
- */
 export const createReviewSchema = z.object({
   rating: z.number().int().min(0).max(10),
   comment: textField(TEXT_LIMITS.reviewComment, { trim: true }),
-  /**
-   * NPS attribution link (C2 / R1 / R23). UUID of the chat session the review
-   * was authored from. Optional — absent / foreign / not-owned sessions are
-   * silently treated as a global (NULL museum) review by the use-case.
-   */
   sessionId: z.uuid().optional(),
 });
 

@@ -1,10 +1,3 @@
-/**
- * TD-2 — Unit tests for {@link UpdateProfilePreferencesUseCase}.
- *
- * Pattern mirrors `updateTtsVoice-usecase.test.ts` — same fixture + repo mock.
- * Covers: partial patch, full patch, empty patch (use-case-safe / route-blocked),
- * user-not-found 404, and the canonical "patch overrides server" return shape.
- */
 import { UpdateProfilePreferencesUseCase } from '@modules/auth/useCase/account/updateProfilePreferences.useCase';
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
@@ -15,7 +8,6 @@ describe('UpdateProfilePreferencesUseCase', () => {
     const repo = makeUserRepo(
       makeUser({
         id: 1,
-        defaultLocale: 'en-US',
         defaultMuseumMode: true,
         guideLevel: 'beginner',
         dataMode: 'auto',
@@ -24,16 +16,13 @@ describe('UpdateProfilePreferencesUseCase', () => {
     );
 
     const result = await new UpdateProfilePreferencesUseCase(repo).execute(1, {
-      defaultLocale: 'fr-FR',
       guideLevel: 'expert',
     });
 
     expect(repo.updateProfilePreferences).toHaveBeenCalledWith(1, {
-      defaultLocale: 'fr-FR',
       guideLevel: 'expert',
     });
     expect(result).toEqual({
-      defaultLocale: 'fr-FR',
       defaultMuseumMode: true,
       guideLevel: 'expert',
       dataMode: 'auto',
@@ -41,11 +30,10 @@ describe('UpdateProfilePreferencesUseCase', () => {
     });
   });
 
-  it('persists a full patch with all 5 fields', async () => {
+  it('persists a full patch with all 4 fields', async () => {
     const repo = makeUserRepo(makeUser({ id: 1 }));
 
     const result = await new UpdateProfilePreferencesUseCase(repo).execute(1, {
-      defaultLocale: 'fr-FR',
       defaultMuseumMode: false,
       guideLevel: 'intermediate',
       dataMode: 'low',
@@ -53,14 +41,12 @@ describe('UpdateProfilePreferencesUseCase', () => {
     });
 
     expect(repo.updateProfilePreferences).toHaveBeenCalledWith(1, {
-      defaultLocale: 'fr-FR',
       defaultMuseumMode: false,
       guideLevel: 'intermediate',
       dataMode: 'low',
       audioDescriptionMode: true,
     });
     expect(result).toEqual({
-      defaultLocale: 'fr-FR',
       defaultMuseumMode: false,
       guideLevel: 'intermediate',
       dataMode: 'low',
@@ -74,9 +60,7 @@ describe('UpdateProfilePreferencesUseCase', () => {
     const result = await new UpdateProfilePreferencesUseCase(repo).execute(1, {});
 
     expect(repo.updateProfilePreferences).toHaveBeenCalledWith(1, {});
-    // All fields fall through to server defaults.
     expect(result).toEqual({
-      defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       dataMode: 'auto',
@@ -88,7 +72,7 @@ describe('UpdateProfilePreferencesUseCase', () => {
     const repo = makeUserRepo(null);
 
     await expect(
-      new UpdateProfilePreferencesUseCase(repo).execute(99, { defaultLocale: 'fr-FR' }),
+      new UpdateProfilePreferencesUseCase(repo).execute(99, { guideLevel: 'expert' }),
     ).rejects.toMatchObject({ statusCode: 404 });
 
     expect(repo.updateProfilePreferences).not.toHaveBeenCalled();

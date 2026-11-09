@@ -6,7 +6,6 @@ import { SkeletonChatBubble } from '@/shared/ui/SkeletonChatBubble';
 
 import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
-import { AiDisclosureFooter } from './AiDisclosureFooter';
 import { ChatMessageList } from './ChatMessageList';
 
 interface ChatSessionSurfaceProps {
@@ -15,7 +14,6 @@ interface ChatSessionSurfaceProps {
   isSending: boolean;
   isStreaming: boolean;
   locale: string;
-  onFollowUpPress: (text: string) => void;
   onRecommendationPress: (text: string) => void;
   onCamera: () => void;
   onImageError: (messageId: string) => void;
@@ -23,35 +21,18 @@ interface ChatSessionSurfaceProps {
   onLinkPress: (url: string) => boolean;
   onRetry?: (message: ChatUiMessage) => void;
   isAssistantPending: boolean;
-  /**
-   * A5 — Currently displayed pipeline phase, forwarded as-is to
-   * `<ChatMessageList>` for footer rendering. `null` hides the indicator
-   * (silence-is-success — spec R17).
-   */
   currentPhase: ChatPipelinePhase | null;
   surfaceStyle: StyleProp<ViewStyle>;
   skeletonStyle: StyleProp<ViewStyle>;
-  /**
-   * A2 — Forwarded scroll handler propagated to the inner `<FlashList>`. Lets
-   * the screen drive the artwork hero card collapse/expand state. Optional ;
-   * existing callers can omit it.
-   */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-/**
- * Renders the chat-session message-list surface inside its `GlassCard`.
- * Falls back to a 3-row `SkeletonChatBubble` block while the session is
- * still loading from the persistent store. Pulled out of `[sessionId].tsx`
- * so the screen file stays focused on state wiring + top-level layout.
- */
 export const ChatSessionSurface = ({
   isLoading,
   messages,
   isSending,
   isStreaming,
   locale,
-  onFollowUpPress,
   onRecommendationPress,
   onCamera,
   onImageError,
@@ -72,25 +53,21 @@ export const ChatSessionSurface = ({
         <SkeletonChatBubble alignSelf="flex-start" />
       </View>
     ) : (
-      <>
-        <ChatMessageList
-          messages={messages}
-          isSending={isSending}
-          isStreaming={isStreaming}
-          locale={locale}
-          onFollowUpPress={onFollowUpPress}
-          onRecommendationPress={onRecommendationPress}
-          onCamera={onCamera}
-          onImageError={onImageError}
-          onReport={onReport}
-          onLinkPress={onLinkPress}
-          onRetry={onRetry}
-          isAssistantPending={isAssistantPending}
-          currentPhase={currentPhase}
-          onScroll={onScroll}
-        />
-        <AiDisclosureFooter />
-      </>
+      <ChatMessageList
+        messages={messages}
+        isSending={isSending}
+        isStreaming={isStreaming}
+        locale={locale}
+        onRecommendationPress={onRecommendationPress}
+        onCamera={onCamera}
+        onImageError={onImageError}
+        onReport={onReport}
+        onLinkPress={onLinkPress}
+        onRetry={onRetry}
+        isAssistantPending={isAssistantPending}
+        currentPhase={currentPhase}
+        onScroll={onScroll}
+      />
     )}
   </GlassCard>
 );

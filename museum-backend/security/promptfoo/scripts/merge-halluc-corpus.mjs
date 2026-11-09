@@ -1,19 +1,4 @@
 #!/usr/bin/env node
-// merge-halluc-corpus.mjs — T4.2d merge.
-//
-// Reads the 5 halluc-corpus-*.partial.json files (versioned source-of-truth) and
-// produces:
-//   - halluc-corpus.json       (Promptfoo-flat: array of {description, vars, assert, metadata})
-//   - halluc-corpus.meta.json  (provenance: schema_version, partials list, per_category counts)
-//
-// The flat shape is required because the halluc.config.yaml references the corpus via
-// `tests: 'file://halluc-corpus.json'` — Promptfoo expects an array at the top level.
-//
-// Usage (from museum-backend/):
-//   node security/promptfoo/scripts/merge-halluc-corpus.mjs
-//
-// Exit 1 if duplicate IDs, missing required fields, or category count drift > 0.
-// Exit 0 PASS — writes both files.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -102,4 +87,6 @@ writeFileSync(
 );
 
 console.log(`merge OK — ${tests.length} entries, per_category:`, perCat);
-console.log(`assertions: ${totalAssertions}, llm-rubric: ${llmRubricCount} (${llmRubricPct.toFixed(1)}%)`);
+console.log(
+  `assertions: ${totalAssertions}, llm-rubric: ${llmRubricCount} (${llmRubricPct.toFixed(1)}%)`,
+);

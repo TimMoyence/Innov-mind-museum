@@ -55,7 +55,7 @@ describe('useTextToSpeech — low data mode', () => {
 
   it('hits the network when data mode is normal', async () => {
     setCurrentDataMode('normal');
-    mockSynthesizeSpeech.mockResolvedValue(null); // 204 — no audio
+    mockSynthesizeSpeech.mockResolvedValue(null);
 
     const { result } = renderHook(() => useTextToSpeech());
 

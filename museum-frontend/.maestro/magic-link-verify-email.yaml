@@ -1,36 +1,23 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: VerifyEmailScreen
-#
-# Universal/App Link in-app routing (TD-RNAV-01 cycle 2) — verify-email
-# (UFR-021 coverage for /(stack)/verify-email).
-#
-# The email link cold-starts the app of a signed-out visitor: the screen must
-# mount, auto-submit the token and settle on an outcome. The fixture token is
-# not seeded, so the outcome is the invalid-token state; a seeded token reaches
-# success. Either way the CTA appears and leads on.
-
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Reach the verify-email route via deep-link, app closed
-# ──────────────────────────────────────────────
 - stopApp
 - openLink:
-    link: "musaium:///(stack)/verify-email?token=e2e-verify-token"
+    link: 'musaium:///(stack)/verify-email?token=e2e-verify-token'
 
 - extendedWaitUntil:
     visible:
-      id: "verify-email-(success|invalidToken|error)"
+      id: 'verify-email-(success|invalidToken|error)'
     timeout: 40000
 - tapOn:
-    id: "verify-email-cta"
+    id: 'verify-email-cta'
 - waitForAnimationToEnd:
     timeout: 10000

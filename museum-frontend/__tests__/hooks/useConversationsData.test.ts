@@ -3,8 +3,6 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useConversationsData } from '@/features/conversation/application/useConversationsData';
 import { makeListSessionsResponse } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockListSessions = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -14,7 +12,9 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 }));
 
 jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: jest.fn().mockResolvedValue({ defaultLocale: 'en-US' }),
+  loadRuntimeSettings: jest
+    .fn()
+    .mockResolvedValue({ defaultMuseumMode: true, guideLevel: 'beginner' }),
 }));
 
 jest.mock('@/shared/lib/errors', () => ({
@@ -50,8 +50,6 @@ jest.mock('@/features/chat/domain/dashboard-session', () => ({
     })),
   ),
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useConversationsData', () => {
   beforeEach(() => {
@@ -128,7 +126,6 @@ describe('useConversationsData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Setup next page
     const secondResponse = makeListSessionsResponse({
       page: { nextCursor: null, hasMore: false, limit: 20 },
     });
@@ -182,7 +179,6 @@ describe('useConversationsData', () => {
       await result.current.loadMore();
     });
 
-    // Should not set error (loadMore fails silently)
     expect(result.current.error).toBeNull();
     expect(result.current.isLoadingMore).toBe(false);
   });
@@ -208,7 +204,6 @@ describe('useConversationsData', () => {
 
     const { result } = renderHook(() => useConversationsData());
 
-    // Initial load uses isLoading (not isRefreshing)
     expect(result.current.isLoading).toBe(true);
     expect(result.current.isRefreshing).toBe(false);
 

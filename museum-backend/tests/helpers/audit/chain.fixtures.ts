@@ -6,16 +6,6 @@ import {
   type HashVersion,
 } from '@shared/audit/audit-chain';
 
-/**
- * Creates an AuditChainRow with sensible defaults and a correctly computed row_hash.
- *
- * `hashVersion` (default {@link CURRENT_HASH_VERSION} = 2) selects the serializer
- * used to compute the row_hash AND is carried on the returned row, so passing
- * `{ hashVersion: 1 }` forges a deterministic legacy row whose hash matches the
- * frozen v1 serializer (used for AC7 mixed-chain tests).
- * @param overrides
- * @param prevHash
- */
 export function makeChainRow(
   overrides: Partial<AuditChainRow> = {},
   prevHash: string = AUDIT_CHAIN_GENESIS_HASH,
@@ -37,10 +27,6 @@ export function makeChainRow(
   return { ...base, rowHash };
 }
 
-/**
- * Builds a correctly chained sequence of rows (each prev_hash = previous row_hash).
- * @param count
- */
 export function makeChain(count: number): AuditChainRow[] {
   const rows: AuditChainRow[] = [];
   let prev = AUDIT_CHAIN_GENESIS_HASH;

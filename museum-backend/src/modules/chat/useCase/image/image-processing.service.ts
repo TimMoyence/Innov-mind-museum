@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { AppError, badRequest, invalidInput } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
@@ -22,32 +23,12 @@ import type { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail
 export interface ProcessedImage {
   imageRef: string;
   orchestratorImage: NonNullable<PostMessageInput['image']>;
-  /**
-   * C3 — Visual content signature (SHA-256 of the post-EXIF-strip image
-   * buffer, 32-char hex prefix). Present for `upload` and legacy-base64
-   * sources ; absent for `url` source (no buffer to hash). Feeds the LLM
-   * cache key derivation in {@link ChatMessageService.buildLlmCacheInput}.
-   * Honest naming (UFR-013) — this is a content-bytes SHA-256, NOT a
-   * SigLIP / CLIP embedding hash.
-   *
-   * Note on HEIC→JPEG transcode (spec C3 Q6): if `imageProcessor` performs
-   * a non-deterministic transcode, this hash will diverge between repeat
-   * scans of the same source photo, lowering cache hit-rate. The default
-   * EXIF stripper used in V1 is deterministic (sharp `rotate().toBuffer()`),
-   * so this falls out cleanly. Verified in `c3-llm-cache.test.ts` R3.
-   */
   imageContentHash?: string;
 }
 
 interface ImageProcessingServiceDeps {
   imageStorage: ImageStorage;
   ocr?: OcrService;
-  /**
-   * EXIF / metadata stripper applied between magic-byte validation and the
-   * size cap. Required for GDPR Art. 5(1)(c) data minimisation. When omitted,
-   * the pipeline still works but EXIF is preserved — only acceptable in unit
-   * tests that explicitly exercise upstream code paths.
-   */
   imageProcessor?: ImageProcessorPort;
 }
 
@@ -66,14 +47,6 @@ export class ImageProcessingService {
     image: NonNullable<PostMessageInput['image']>,
     sessionId: string,
     ownerId?: number,
-    // C3 — `/chat/compare` passes { skipStorage: true }: it only needs the
-    // EXIF-stripped buffer to ENCODE for visual similarity and discards the
-    // imageRef (the use-case persists the match RESULT, never the query photo).
-    // Skipping the upload removes a useless S3 round-trip that 500'd compare
-    // whenever the object store was unavailable — prod incident 2026-06-14:
-    // every /chat/compare returned 500 on `S3 upload failed (403)` (object
-    // store misconfigured) BEFORE the encoder ever ran. The buffer the compare
-    // actually needs never required S3.
     options?: { skipStorage?: boolean },
   ): Promise<ProcessedImage> {
     if (image.source === 'url') {
@@ -98,8 +71,6 @@ export class ImageProcessingService {
       assertMimeType(mimeType, env.upload.allowedMimeTypes);
       assertMagicBytes(normalizedBase64);
 
-      // EXIF strip BEFORE size check — GDPR Art. 5(1)(c) / STRIDE I4. An
-      // oversize-pre-strip image that fits post-strip is accepted.
       const stripped = await this.stripExif(normalizedBase64, mimeType);
       assertImageSize(stripped.sizeBytes, env.llm.maxImageBytes);
 
@@ -123,14 +94,10 @@ export class ImageProcessingService {
           mimeType: stripped.mimeType,
           sizeBytes: stripped.sizeBytes,
         },
-        // C3 (R1, R5) — hash the POST-EXIF-strip buffer so two uploads of
-        // the same photo with different EXIF still produce the same hash
-        // and hit the same cache entry.
         imageContentHash: hashImageBuffer(stripped.buffer),
       };
     }
 
-    // Legacy base64 (data-URL or raw)
     const decoded = decodeBase64Image(image.value);
     assertMimeType(decoded.mimeType, env.upload.allowedMimeTypes);
     assertMagicBytes(decoded.base64);
@@ -158,16 +125,10 @@ export class ImageProcessingService {
         mimeType: strippedLegacy.mimeType,
         sizeBytes: strippedLegacy.sizeBytes,
       },
-      // C3 (R1, R5) — same post-strip hash on the legacy-base64 path.
       imageContentHash: hashImageBuffer(strippedLegacy.buffer),
     };
   }
 
-  /**
-   * When no processor is configured (legacy unit tests), the input is returned
-   * untouched — this branch is intentionally observable so wiring regressions
-   * surface in CI.
-   */
   private async stripExif(
     base64: string,
     mimeType: string,
@@ -186,7 +147,6 @@ export class ImageProcessingService {
     };
   }
 
-  /** Fails open: if OCR extraction itself errors, the request proceeds. */
   async runOcrGuard(
     orchestratorImage: NonNullable<PostMessageInput['image']>,
     evaluateGuardrail: typeof evaluateUserInputGuardrail,
@@ -205,20 +165,13 @@ export class ImageProcessingService {
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.warn('ocr_guard_fail_open', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         sessionId,
       });
     }
   }
 }
 
-/**
- * C3 — Computes a 32-char hex SHA-256 prefix over a (post-EXIF-strip) image
- * buffer. Used as the visual signature for the LLM response cache key
- * derivation. Length aligns with `sha256OfCanonicalInput` in
- * `llm-cache.service.ts` (128 bits — collision probability ≈ 10⁻²⁰ over 10⁹
- * entries). One-way: safe to log the hex prefix (no PII / no raw bytes).
- */
 function hashImageBuffer(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex').slice(0, 32);
 }

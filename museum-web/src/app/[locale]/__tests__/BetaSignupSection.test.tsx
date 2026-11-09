@@ -1,28 +1,8 @@
-/**
- * R3 RED tests — BetaSignupSection (client component on the landing).
- *
- * Pins R3 §1 R2-R11 + R17 (a11y for live region) + AC3(a-i) down BEFORE
- * implementation.
- *
- * - 1 email input + 1 consent checkbox + 1 hidden honeypot `website`
- * - empty submit → consent + email errors visible (form not POSTed)
- * - happy path : POST `/api/leads/beta` JSON `{ email, consent: true, website }`
- *   → 202 → success message visible (in role="status" aria-live="polite")
- * - 5xx response : error message displayed, form values preserved
- * - honeypot filled → value POSTed, the server decides (TIM-2026-11-08-DEUX-SIGNAUX)
- * - sending label visible while pending
- * - aria-live="polite" region exposed
- * - idempotent path : duplicate signups → same 202 success UX (no leak)
- *
- * MUST FAIL at baseline `d5919dd3` — `BetaSignupSection.tsx` does not exist.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import BetaSignupSection from '../BetaSignupSection';
 import { acceptedResponse, serverErrorResponse } from '@/__tests__/helpers/http-responses.fixture';
-
-// ── i18n fixtures (mirror R3.md §3.5) ────────────────────────────────────────
 
 const dictEN = {
   heading: 'Join the pre-launch beta',
@@ -51,8 +31,6 @@ function submitForm() {
   if (!form) throw new Error('expected submit button to be inside a <form>');
   fireEvent.submit(form);
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   beforeEach(() => {
@@ -88,7 +66,6 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
 
     await waitFor(() => {
       const errors = screen.getAllByRole('alert');
-      // At least the email + consent validation messages must be visible.
       expect(errors.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -134,9 +111,6 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   });
 
   it('shows the same success UX on idempotent duplicate signup (R16 anti-enumeration)', async () => {
-    // BE returns 202 for both first signup and duplicate — FE must show the
-    // SAME success copy in both cases so an attacker cannot enumerate the
-    // waitlist via the response shape.
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(acceptedResponse()));
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);
@@ -146,7 +120,6 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
     await waitFor(() => {
       expect(screen.getByText(dictEN.success)).toBeInTheDocument();
     });
-    // No leak about "already subscribed" — only the canonical success copy.
     expect(screen.queryByText(/already/i)).toBeNull();
     expect(screen.queryByText(/again/i)).toBeNull();
   });
@@ -154,12 +127,7 @@ describe('BetaSignupSection (R3 §1 R2-R11)', () => {
   it('shows the sending label while pending (R9)', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(
-        () =>
-          new Promise(() => {
-            /* never resolves */
-          }),
-      ),
+      vi.fn().mockImplementation(() => new Promise(() => {})),
     );
 
     render(<BetaSignupSection dict={dictEN} locale="en" />);

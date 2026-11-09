@@ -8,8 +8,6 @@ import {
 import { adminToken, visitorToken } from '../../helpers/auth/token.helpers';
 import { createAdminKeRouter } from '@modules/admin/adapters/primary/http/routes/admin-ke.route';
 
-// ── Auth middleware mocks ──────────────────────────────────────────────────────
-
 jest.mock('@shared/middleware/authenticated.middleware', () => ({
   isAuthenticated: (req: Request, _res: Response, next: NextFunction) => {
     const auth = req.headers.authorization;
@@ -21,7 +19,6 @@ jest.mock('@shared/middleware/authenticated.middleware', () => ({
   },
 }));
 
-// requireRole mock: reads the role from the test-injected req.role header
 jest.mock('@shared/middleware/require-role.middleware', () => ({
   requireRole:
     (...allowed: string[]) =>
@@ -51,14 +48,11 @@ jest.mock('@shared/middleware/validate-query.middleware', () => ({
     },
 }));
 
-// ── Test app factory ──────────────────────────────────────────────────────────
-
 function makeApp(repoOverrides: Parameters<typeof makeMockArtworkKnowledgeRepo>[0] = {}) {
   const repo = makeMockArtworkKnowledgeRepo(repoOverrides);
   const app = express();
   app.use(express.json());
   app.use('/', createAdminKeRouter(repo));
-  // Minimal error handler
   app.use(
     (
       err: { statusCode?: number; message?: string },
@@ -73,8 +67,6 @@ function makeApp(repoOverrides: Parameters<typeof makeMockArtworkKnowledgeRepo>[
 }
 
 const adminHeaders = { Authorization: 'Bearer test-token', 'x-test-role': 'admin' };
-
-// ── GET /ke/pending ───────────────────────────────────────────────────────────
 
 describe('GET /ke/pending', () => {
   it('returns empty list when no items need review', async () => {
@@ -130,8 +122,6 @@ describe('GET /ke/pending', () => {
   });
 });
 
-// ── PATCH /ke/:id/approve ─────────────────────────────────────────────────────
-
 describe('PATCH /ke/:id/approve', () => {
   it('approves item and returns updated record', async () => {
     const artwork = makeArtworkKnowledge({ needsReview: false });
@@ -168,6 +158,5 @@ describe('PATCH /ke/:id/approve', () => {
   });
 });
 
-// silence unused import warning from token helpers
 void adminToken;
 void visitorToken;

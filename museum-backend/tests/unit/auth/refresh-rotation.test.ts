@@ -1,14 +1,3 @@
-/**
- * H1 — Refresh-token sliding idle window.
- *
- * Validates that `AuthSessionService.refresh`:
- *   - accepts rotation within the 14-day idle window,
- *   - rejects rotation once the idle window is exceeded even if the token's
- *     own `expiresAt` is still in the future, and revokes the whole family.
- *
- * Uses shared fixtures from `tests/helpers/auth/` per CLAUDE.md DRY test rules.
- */
-
 import crypto from 'node:crypto';
 
 import jwt from 'jsonwebtoken';
@@ -30,11 +19,6 @@ const sha256 = (value: string): string => crypto.createHash('sha256').update(val
 
 const IDLE_WINDOW_MS = env.auth.refreshIdleWindowSeconds * 1000;
 
-/**
- * Build a persisted refresh-token row with sensible defaults for the sliding-window tests.
- * `lastRotatedAt` is the anchor the service uses to decide whether the session is idle.
- * @param overrides
- */
 const makeStoredToken = (overrides: Partial<StoredRefreshTokenRow> = {}): StoredRefreshTokenRow => {
   const now = new Date();
   return {
@@ -44,7 +28,6 @@ const makeStoredToken = (overrides: Partial<StoredRefreshTokenRow> = {}): Stored
     familyId: 'fam-1',
     tokenHash: 'placeholder',
     issuedAt: now,
-    // Absolute TTL still valid (30d default).
     expiresAt: new Date(now.getTime() + 30 * 86_400 * 1000),
     rotatedAt: null,
     lastRotatedAt: now,
@@ -80,9 +63,6 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     const familyId = 'fam-within';
     const token = signRefresh(jti, familyId);
 
-    // Anchor 1 hour ago — safely inside the (now 24h) idle window.
-    // F8 (2026-04-30) tightened the default from 14d to 24h, so anchors using
-    // the previous "~1 day ago" baseline are borderline; use a smaller offset.
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     refreshTokenRepo.findByJti.mockResolvedValue(
       makeStoredToken({
@@ -100,7 +80,6 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     expect(result.accessToken.split('.')).toHaveLength(3);
     expect(result.refreshToken.split('.')).toHaveLength(3);
     expect(refreshTokenRepo.rotate).toHaveBeenCalledTimes(1);
-    // Family must NOT be revoked on a happy-path rotation.
     expect(refreshTokenRepo.revokeFamily).not.toHaveBeenCalled();
   });
 
@@ -115,7 +94,6 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     const familyId = 'fam-idle';
     const token = signRefresh(jti, familyId);
 
-    // Anchor just past the idle threshold — 1 minute over.
     const staleAnchor = new Date(Date.now() - IDLE_WINDOW_MS - 60_000);
     refreshTokenRepo.findByJti.mockResolvedValue(
       makeStoredToken({
@@ -134,7 +112,6 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     });
 
     expect(refreshTokenRepo.revokeFamily).toHaveBeenCalledWith(familyId);
-    // Must NOT have rotated — idle check comes before rotation.
     expect(refreshTokenRepo.rotate).not.toHaveBeenCalled();
   });
 
@@ -149,7 +126,6 @@ describe('AuthSessionService — refresh-token sliding idle window', () => {
     const familyId = 'fam-legacy';
     const token = signRefresh(jti, familyId);
 
-    // Legacy row: lastRotatedAt null, createdAt older than idle window.
     const staleCreatedAt = new Date(Date.now() - IDLE_WINDOW_MS - 5_000);
     refreshTokenRepo.findByJti.mockResolvedValue(
       makeStoredToken({

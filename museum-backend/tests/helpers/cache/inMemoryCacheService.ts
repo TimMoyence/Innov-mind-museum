@@ -1,6 +1,5 @@
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** In-memory CacheService for tests. Supports TTL tracking but does not auto-expire. */
 export class InMemoryCacheService implements CacheService {
   private readonly store = new Map<string, { value: unknown; expiresAt?: number }>();
   private readonly sortedSets = new Map<string, Map<string, number>>();
@@ -69,15 +68,10 @@ export class InMemoryCacheService implements CacheService {
       .slice(0, n);
   }
 
-  /**
-   * Test helper: check if a key exists.
-   * @param key
-   */
   has(key: string): boolean {
     return this.store.has(key);
   }
 
-  /** Test helper: clear all entries. */
   clear(): void {
     this.store.clear();
     this.sortedSets.clear();

@@ -6,13 +6,6 @@ import Constants from 'expo-constants';
 import type { AppError } from '@/shared/types/AppError';
 import { installOnlineManagerBridge } from '@/shared/infrastructure/connectivity/onlineManagerBridge';
 
-// Wire NetInfo -> TanStack Query `onlineManager` ONCE at app bootstrap (design
-// §D4). This module is imported by the root layout before any provider renders,
-// so the bridge is installed before any query can run and cannot remount.
-// Without it, `refetchOnReconnect:true` (below) and offline mutation pausing are
-// dead on React Native (react-query's reconnect detection is web-only). The
-// returned unsubscribe is intentionally not retained in prod (process lifetime).
-// lib-docs: @tanstack/react-query PATTERNS.md:174,191.
 installOnlineManagerBridge();
 
 const STALE_TIME_DEFAULT = 5 * 60 * 1000;
@@ -27,11 +20,6 @@ const appVersion =
   asString(Constants.expoConfig?.extra?.APP_VERSION) ??
   'dev';
 
-/**
- * Returns `false` when the error is a terminal client-side AppError that should
- * not be retried (auth, forbidden, validation, business limits). Else keeps
- * React Query's default retry policy (server/network/timeout errors).
- */
 const shouldRetry = (failureCount: number, error: unknown): boolean => {
   const code = (error as AppError | null)?.kind;
   if (
@@ -47,13 +35,6 @@ const shouldRetry = (failureCount: number, error: unknown): boolean => {
   return failureCount < 2;
 };
 
-/**
- * Global React Query client with production-tuned defaults:
- * - 5 min staleTime so returning to a screen doesn't refetch every time
- * - 24 h gcTime (and persisted cache maxAge) so the UI feels immediate at cold start
- * - refetchOnReconnect enabled so data self-heals when the device regains connectivity
- * - refetchOnWindowFocus disabled (mobile uses an explicit AppState listener)
- */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -70,18 +51,6 @@ export const queryClient = new QueryClient({
   },
 });
 
-/**
- * Query-key prefixes whose cached payloads MUST NOT leak to AsyncStorage.
- *
- * AsyncStorage on both iOS and Android is a plaintext file readable by anyone
- * with device access (backup, jailbreak, `adb pull`). The in-memory React
- * Query cache is still used at runtime — we only suppress the persister
- * roundtrip for these keys.
- *
- * - `messages`, `session` — chat payloads (PII-level content)
- * - `admin`             — admin dashboard queries (privileged visibility)
- * - `auth`, `user`      — identity + profile
- */
 const SENSITIVE_QUERY_KEY_PREFIXES = new Set<string>([
   'messages',
   'session',
@@ -90,77 +59,29 @@ const SENSITIVE_QUERY_KEY_PREFIXES = new Set<string>([
   'user',
 ]);
 
-/**
- * Guard run by `createAsyncStoragePersister` before every dehydrate. Returning
- * `false` keeps the query in memory but skips the AsyncStorage write for this
- * entry. Exported for unit tests.
- */
 export function shouldDehydrateQuery(query: {
   queryKey: readonly unknown[];
   state: { status: string };
 }): boolean {
-  // Only persist SETTLED, successful queries. A custom predicate REPLACES React
-  // Query's built-in status gate (defaultShouldDehydrateQuery), so without this
-  // a PENDING (in-flight) query is serialised and rehydrates as a dead promise
-  // on cold start → "A query that was dehydrated as pending ended up rejecting /
-  // CancelledError" (QA-05, observed on ['museums','directory']).
   if (query.state.status !== 'success') return false;
   const head = query.queryKey[0];
   if (typeof head !== 'string') return true;
   return !SENSITIVE_QUERY_KEY_PREFIXES.has(head);
 }
 
-/**
- * AsyncStorage-backed persister for {@link queryClient}. Used by
- * `PersistQueryClientProvider` in the root layout to hydrate React Query's
- * cache across cold starts.
- *
- * Security note: {@link shouldDehydrateQuery} filters out sensitive query
- * keys so that chat/auth/admin payloads never reach on-device storage.
- */
 export const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: 'musaium.query.cache',
   throttleTime: 1000,
 });
 
-/**
- * Cache buster — changing the app version invalidates the persisted cache.
- * Intentionally not user-scoped here: cache purging on session change is
- * handled explicitly via {@link resetPersistedCache} at logout, which is
- * synchronous with respect to AsyncStorage rather than relying on hydration
- * buster checks.
- */
 export const persistBuster = `musaium-${appVersion}`;
 
-/** Max age for persisted queries. */
 export const persistMaxAge = PERSIST_MAX_AGE;
 
-/**
- * Purges every trace of the React Query cache — both in-memory and the
- * AsyncStorage-backed persister. MUST be called at logout and on forced
- * sign-out (401) to prevent user A's data from hydrating in user B's session
- * on a shared device.
- *
- * Implementation notes:
- * - `queryClient.clear()` empties the in-memory cache but only enqueues a
- *   persist roundtrip that is throttled ({@link queryPersister} uses
- *   `throttleTime: 1000`), so the AsyncStorage key may still contain the old
- *   cache for up to 1 s after `clear()`.
- * - `queryPersister.removeClient()` deletes the AsyncStorage key immediately
- *   (returns a promise resolved once the storage write completes).
- *
- * Order matters: remove the persisted blob first so a crash mid-reset cannot
- * leave the memory cache wiped while the on-disk copy lingers and rehydrates
- * on the next cold start.
- */
 export const resetPersistedCache = async (): Promise<void> => {
   try {
     await queryPersister.removeClient();
-  } catch {
-    // AsyncStorage failure is non-fatal: an in-memory clear still protects
-    // this runtime and the persister will overwrite on the next successful
-    // write.
-  }
+  } catch {}
   queryClient.clear();
 };

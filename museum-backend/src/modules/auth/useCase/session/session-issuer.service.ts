@@ -9,7 +9,6 @@ import type {
 } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 
-/** PII-safe `User` projection for auth envelopes. */
 export interface SafeUser {
   id: number;
   email: string;
@@ -23,20 +22,12 @@ export interface SafeUser {
 export interface AuthSessionResponse {
   accessToken: string;
   refreshToken: string;
-  /** seconds */
   expiresIn: number;
-  /** seconds */
   refreshExpiresIn: number;
   user: SafeUser;
 }
 
-/**
- * Refresh-token rotation contract: issue a fresh JWT pair (persist +
- * sliding-window anchor), reject reuse / expiry / idle-timeout before emit.
- * Banking-grade — co-pinned with `refresh-token.repository.pg.ts` as Stryker hot file.
- */
 export class SessionIssuerService {
-  /** Sliding-window threshold (ms). Exceeded → next refresh rejected + family revoked. */
   private readonly refreshIdleWindowMs: number;
 
   constructor(
@@ -47,7 +38,6 @@ export class SessionIssuerService {
     this.refreshIdleWindowMs = refreshIdleWindowSeconds * 1000;
   }
 
-  /** Insert on first issue, rotate when `rotateFrom` set. */
   async issueSession(params: {
     user: SafeUser;
     familyId?: string;
@@ -79,7 +69,6 @@ export class SessionIssuerService {
       tokenHash: this.tokenJwt.sha256(refreshToken),
       issuedAt,
       expiresAt: refreshExpiresAt,
-      // Sliding-window anchor at issue/rotation time.
       lastRotatedAt: issuedAt,
     };
 
@@ -99,7 +88,6 @@ export class SessionIssuerService {
     };
   }
 
-  /** Throws 401 with precise code on violation; revokes family on reuse/replay/idle. */
   async assertRefreshTokenUsable(
     stored: StoredRefreshTokenRow,
     providedToken: string,
@@ -120,8 +108,6 @@ export class SessionIssuerService {
       throw unauthorized('Refresh token expired', 'REFRESH_TOKEN_EXPIRED');
     }
 
-    // Sliding idle window — no rotation within threshold → force re-auth.
-    // Legacy rows pre-`last_rotated_at`: fallback to createdAt (non-null by schema).
     const idleAnchor = stored.lastRotatedAt ?? stored.createdAt;
     const idleMs = Date.now() - idleAnchor.getTime();
     if (idleMs > this.refreshIdleWindowMs) {

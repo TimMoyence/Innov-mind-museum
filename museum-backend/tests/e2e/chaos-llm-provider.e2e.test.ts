@@ -10,7 +10,6 @@ describeE2E('chaos: LLM provider failures', () => {
   let stub: StubLLMOrchestrator;
 
   beforeEach(async () => {
-    // Stub config: throw on next 3 calls (below default failureThreshold=5).
     stub = new StubLLMOrchestrator({ failuresBeforeFallback: 3, errorKind: 'llm-provider-error' });
     harness = await createE2EHarness({ chatOrchestratorOverride: stub });
   });
@@ -45,23 +44,19 @@ describeE2E('chaos: LLM provider failures', () => {
       token,
     );
 
-    // Production behavior: either 200 (fallback) OR 503 (LLM error). Both are valid contracts;
-    // assert one of them, not 5xx beyond 503.
     expect([200, 201, 503]).toContain(res.status);
     expect(res.status).not.toBe(500);
 
     const body = JSON.stringify(res.body);
-    expect(body).not.toMatch(/openai|deepseek|anthropic/i); // no provider name leak
+    expect(body).not.toMatch(/openai|deepseek|anthropic/i);
     expect(body).not.toMatch(/api[_-]?key/i);
   });
 
   it('after threshold (failuresBeforeFallback=3), 4th call returns fallback', async () => {
-    // Reset stub for this scenario: only 3 failures, then success
     stub.reset();
     const { token } = await registerAndLogin(harness);
     const sessionId = await startChatSession(token);
 
-    // 3 failing calls
     for (let i = 0; i < 3; i += 1) {
       const r = await harness.request(
         `/api/chat/sessions/${sessionId}/messages`,
@@ -74,10 +69,8 @@ describeE2E('chaos: LLM provider failures', () => {
         },
         token,
       );
-      // each may be 503 OR 200-with-fallback depending on production path
       expect([200, 201, 503]).toContain(r.status);
     }
-    // 4th call: stub returns fallback text (since failuresBeforeFallback=3)
     const fourth = await harness.request(
       `/api/chat/sessions/${sessionId}/messages`,
       {

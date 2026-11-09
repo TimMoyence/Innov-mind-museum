@@ -1,26 +1,3 @@
-/**
- * W2-01 (RED) — resolveNetFaultEnabled prod-refusal gate.
- *
- * spec.md §EARS R5: WHEN NODE_ENV=production THE mw SHALL NEVER mount —
- *   `resolveNetFaultEnabled` coerces false UNCONDITIONALLY (NO escape hatch,
- *   stricter than `resolveChaosRate`) + emits a structured stderr refusal
- *   `{event:'net_fault_injection_refused'}`.
- * design.md §Verified anchors: mirrors `resolveChaosRate` (env-helpers.ts:87)
- *   structure BUT takes NO `escapeHatch` param. Default OFF.
- *
- * Decision D3 (master spec §Security): fault injection is OFF in prod with NO
- * way to turn it on at the helper boundary — distinct from chaos, which has the
- * `I-know-what-I-am-doing` hatch. There is deliberately NO third argument.
- *
- * RED state: `@src/config/net-fault.config` does not exist yet → the import
- * throws (module not found) → every assertion fails.
- *
- * lib-docs: none — pure function under test, no external lib imported (the
- *   stderr write uses node:process global, stdlib). No inline test entities;
- *   the unit is a referentially-transparent parser like `resolveChaosRate`.
- *
- * Frozen-test invariant: byte-immutable once manifested (phase=green).
- */
 import { resolveNetFaultEnabled } from '@src/config/net-fault.config';
 
 describe('resolveNetFaultEnabled — D3 prod-refusal gate (W2-01)', () => {
@@ -68,8 +45,6 @@ describe('resolveNetFaultEnabled — D3 prod-refusal gate (W2-01)', () => {
     expect(writeSpy).toHaveBeenCalledTimes(1);
     const written = writeSpy.mock.calls[0]?.[0] as string;
     expect(written).toContain('net_fault_injection_refused');
-    // Refusal line is valid JSON terminated by a newline (matches the
-    // `resolveChaosRate` / `toIsoTimestamp` stderr convention).
     expect(written.endsWith('\n')).toBe(true);
     const parsed = JSON.parse(written.trim()) as { event?: string; level?: string };
     expect(parsed.event).toBe('net_fault_injection_refused');
@@ -80,13 +55,10 @@ describe('resolveNetFaultEnabled — D3 prod-refusal gate (W2-01)', () => {
     expect(resolveNetFaultEnabled(undefined, 'production')).toBe(false);
     expect(resolveNetFaultEnabled('0', 'production')).toBe(false);
     expect(resolveNetFaultEnabled('false', 'production')).toBe(false);
-    // No refusal noise for the nominal (disabled) prod case.
     expect(writeSpy).not.toHaveBeenCalled();
   });
 
   it('exposes a 2-arity signature — NO escape-hatch parameter (stricter than resolveChaosRate)', () => {
-    // The function takes exactly (raw, nodeEnv). A third "escape hatch" arg
-    // would re-introduce the prod footgun D3 forbids.
     expect(resolveNetFaultEnabled).toHaveLength(2);
   });
 });

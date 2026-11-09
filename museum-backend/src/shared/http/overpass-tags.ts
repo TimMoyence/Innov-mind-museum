@@ -20,7 +20,6 @@ export const extractAddress = (tags: Record<string, string> | undefined): string
 };
 
 export const classifyMuseumType = (tags: Record<string, string> | undefined): MuseumCategory => {
-  // Stryker disable next-line StringLiteral: the fallback value is unobservable — any non-matching string lowercases to a value that fails every includes() check below and yields 'general'.
   const raw = tags?.museum ?? tags?.subject ?? '';
   const lower = raw.toLowerCase();
 
@@ -45,7 +44,6 @@ export const classifyMuseumType = (tags: Record<string, string> | undefined): Mu
   return 'general';
 };
 
-/** First non-empty tag value. Used to fallback `website`→`contact:website`, etc. */
 export const pickTag = (
   tags: Record<string, string> | undefined,
   keys: readonly string[],
@@ -58,7 +56,6 @@ export const pickTag = (
   return undefined;
 };
 
-/** Prefers any localized `description:<lang>` over bare `description` (locale-agnostic). */
 export const extractOptionalTags = (
   tags: Record<string, string> | undefined,
 ): Pick<

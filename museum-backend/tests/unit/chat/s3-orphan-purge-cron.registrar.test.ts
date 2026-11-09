@@ -1,20 +1,3 @@
-/**
- * RED (T4.1) — S3 orphan-purge cron registrar (B5, R10–R11).
- *
- * Mirrors the `chat-purge-cron.registrar` / `audit-cron.registrar` pattern:
- *   - `upsertJobScheduler` called with a STABLE scheduler id (idempotent reboot).
- *   - a worker tick invokes the injected `runS3OrphanPurge` stub.
- *   - registration error (`upsertJobScheduler` throws) → fail-open: a no-op
- *     `stop()` handle is returned and registration does NOT rethrow.
- *   - the worker has a mandatory `'error'` listener (lib-docs/bullmq, TD-BMQ-01).
- *
- * `bullmq` (Queue + Worker) and the orphan-purge job module are hoisted-mocked
- * so the registrar runs without Redis / Postgres / S3. The registrar MODULE
- * itself does not exist yet — it is loaded via a computed dynamic import that
- * tsc cannot statically resolve, so this file typechecks; at red runtime the
- * `import()` rejects (module not found) → every test fails. After green, the
- * mocked `bullmq` / job stub drive the assertions.
- */
 import { Queue, Worker } from 'bullmq';
 
 import { runS3OrphanPurge } from '@modules/chat/jobs/s3-orphan-purge.job';
@@ -22,8 +5,6 @@ import { loadRegisterS3OrphanPurgeCron } from 'tests/helpers/chat/orphan-cron.ac
 
 import type { ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';
-
-// ─── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -96,7 +77,6 @@ describe('registerS3OrphanPurgeCron (B5 / R10–R11)', () => {
     ];
     expect(typeof schedulerId).toBe('string');
     expect(schedulerId.length).toBeGreaterThan(0);
-    // Pattern is a cron expression (5 space-separated fields).
     expect(schedule.pattern.trim().split(/\s+/)).toHaveLength(5);
   });
 
@@ -131,7 +111,6 @@ describe('registerS3OrphanPurgeCron (B5 / R10–R11)', () => {
     expect(typeof handle.stop).toBe('function');
     await expect(handle.stop()).resolves.not.toThrow();
 
-    // No worker should be spawned when registration failed.
     expect(Worker).not.toHaveBeenCalled();
   });
 

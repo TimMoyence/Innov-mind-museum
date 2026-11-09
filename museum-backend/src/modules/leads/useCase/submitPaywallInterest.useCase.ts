@@ -13,13 +13,6 @@ import type {
   BetaSignupPayload,
 } from '@modules/leads/domain/ports/beta-signup-notifier.port';
 
-/**
- * R1 (C6) — paywall email capture. Mirrors `SubmitBetaSignupUseCase` (R3) but
- * tags Brevo contact with `OPT_IN_SOURCE='paywall_premium_interest'` (R1 §0.1
- * + §3.9 D9). Reuses `BetaSignupNotifier` port + Brevo adapter (no new
- * adapter / env var). Validation = R3 doctrine: literal consent, lowercased
- * email, honeypot silent-drop, full email NEVER logged.
- */
 interface SubmitPaywallInterestInput {
   email: string;
   consent: boolean;
@@ -61,12 +54,9 @@ export class SubmitPaywallInterestUseCase {
       ip: input.ip,
       requestId: input.requestId,
       userAgent: input.userAgent,
-      // R19 — funnel cohort. Hardcoded literal; route never reads from wire.
       source: 'paywall_premium_interest',
     };
 
-    // R1 — persist `pending` BEFORE the notifier so a Brevo failure cannot lose
-    // it (the `source` discriminator is persisted in the jsonb payload).
     const lead = await this.repository.insertPending({ type: 'paywall', payload, dedupKey: null });
     logger.info('lead_persisted', {
       requestId: input.requestId,
@@ -81,19 +71,15 @@ export class SubmitPaywallInterestUseCase {
       const brevoOutcome: BetaSignupOutcome | 'unknown' =
         outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
 
-      // R2 — delivery confirmed → pending → delivered.
       await this.repository.markDelivered(lead.id);
       logger.info('lead_delivered', { leadId: lead.id, type: 'paywall' });
 
-      // R21 — log requestId + emailDomain + brevoOutcome. Full email forbidden (R17 PII).
       logger.info('paywall_email_captured', {
         requestId: input.requestId,
         emailDomain,
         brevoOutcome,
       });
     } catch (err) {
-      // R3/R5 — NEVER rethrow: the lead is durable; the retry job re-delivers it.
-      // R16 — sanitise before persisting (no api-key, no full recipient email).
       await this.repository.markFailed(lead.id, toSanitizedLeadError(err));
       logger.warn('lead_delivery_failed', {
         leadId: lead.id,

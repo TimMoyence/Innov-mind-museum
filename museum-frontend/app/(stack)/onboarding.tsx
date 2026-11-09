@@ -27,10 +27,10 @@ import { semantic } from '@/shared/ui/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SLIDE_COUNT = 4;
+const VIEWABILITY_CONFIG = { viewAreaCoveragePercentThreshold: 50 };
 
 type SlideKey = 'greeting' | 'museumMode' | 'cameraIntent' | 'walkIntent';
 
-/** Renders the Onboarding v2 Spec B carousel: Greeting → MuseumMode → CameraIntent → WalkIntent. */
 export default function OnboardingScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -50,14 +50,7 @@ export default function OnboardingScreen() {
     [goToStep],
   );
 
-  // eslint-disable-next-line react-hooks/refs -- stable config ref pattern
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
-
   const handleComplete = useCallback(async () => {
-    // Skip the server-side mark when unauthenticated — the endpoint requires
-    // a valid session. Local `hasSeenOnboarding` flag is enough until the
-    // user signs up/in; server sync happens on the next authenticated boot
-    // via AuthContext.bootstrapProfile.
     if (isAuthenticated) {
       try {
         await markOnboardingComplete();
@@ -128,7 +121,7 @@ export default function OnboardingScreen() {
           index,
         })}
         onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
+        viewabilityConfig={VIEWABILITY_CONFIG}
         contentContainerStyle={styles.carouselContent}
         style={styles.carousel}
         snapToInterval={SCREEN_WIDTH - 36}

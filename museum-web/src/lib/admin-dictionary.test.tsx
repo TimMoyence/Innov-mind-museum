@@ -20,7 +20,6 @@ describe('AdminDictProvider / useAdminDict', () => {
   });
 
   it('throws when used outside provider', () => {
-    // renderHook will catch the error for us
     expect(() => {
       renderHook(() => useAdminDict());
     }).toThrow('useAdminDict must be used within an AdminDictProvider');

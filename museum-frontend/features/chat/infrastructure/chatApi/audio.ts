@@ -24,18 +24,10 @@ export interface PostAudioMessageParams {
   locale?: string;
   preClassified?: 'art';
   audioDescriptionMode?: boolean;
-  /**
-   * C9.10 (2026-05-17) — auto-set to `true` by the STT path. Constrains the
-   * LLM response to a 60-80w prose-only branch for natural TTS playback.
-   */
   voiceMode?: boolean;
   contentPreferences?: ContentPreference[];
 }
 
-/**
- * Posts an audio message for transcription and returns the assistant
- * response. Accepts either a local audio URI or a Blob.
- */
 export const postAudioMessage = async (
   params: PostAudioMessageParams,
 ): Promise<PostMessageResponseDTO> => {
@@ -93,13 +85,6 @@ export const postAudioMessage = async (
   const data = await httpRequest<unknown>(`${CHAT_BASE}/sessions/${sessionId}/audio`, {
     method: 'POST',
     body: formData,
-    // Explicit multipart Content-Type. Axios in React Native does not recognise
-    // RN's FormData polyfill, so without this it defaults a POST body to
-    // `application/x-www-form-urlencoded`; RN's native NetworkingModule then
-    // builds a MultipartBody from the FormData and `MultipartBody.setType`
-    // throws `multipart != application/x-www-form-urlencoded`, so the voice
-    // upload fails on-device ("Network unavailable"). The image-compare upload
-    // (imageComparisonApi.ts) already sets this same header for the same reason.
     headers: { 'Content-Type': 'multipart/form-data' },
     timeoutMs: MODEL_REPLY_TIMEOUT_MS,
   });
@@ -107,20 +92,17 @@ export const postAudioMessage = async (
   return ensureContract(data, isPostMessageResponseDTO, 'post-audio-message');
 };
 
-/**
- * Synthesises speech from an assistant message and returns the audio buffer.
- * Returns `null` when the backend responds 204 (message has no text).
- */
 export const synthesizeSpeech = async (messageId: string): Promise<ArrayBuffer | null> => {
   try {
-    const response = await httpRequest<ArrayBuffer>(`${CHAT_BASE}/messages/${messageId}/tts`, {
-      method: 'POST',
-      responseType: 'arraybuffer',
-      timeoutMs: MODEL_REPLY_TIMEOUT_MS,
-    });
-    // 204 No Content: Axios returns empty/zero-length data
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive response check
-    if (!response || (response instanceof ArrayBuffer && response.byteLength === 0)) {
+    const response: ArrayBuffer | null | undefined = await httpRequest<ArrayBuffer | null>(
+      `${CHAT_BASE}/messages/${messageId}/tts`,
+      {
+        method: 'POST',
+        responseType: 'arraybuffer',
+        timeoutMs: MODEL_REPLY_TIMEOUT_MS,
+      },
+    );
+    if (!response || response.byteLength === 0) {
       return null;
     }
     return response;

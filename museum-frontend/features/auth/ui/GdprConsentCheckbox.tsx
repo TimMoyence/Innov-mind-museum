@@ -7,21 +7,12 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { authStyles as styles } from './authStyles';
 
 interface GdprConsentCheckboxProps {
-  /** Whether the user has accepted GDPR terms. */
   accepted: boolean;
-  /** Toggle the accepted state. */
   onToggle: () => void;
-  /** Open the terms-of-service screen. */
   onOpenTerms: () => void;
-  /** Open the privacy policy screen. */
   onOpenPrivacy: () => void;
 }
 
-/**
- * GDPR consent checkbox with inline rich-text links to the terms of
- * service and privacy policy. Used inside the registration form to
- * gate account creation and social sign-in until consent is granted.
- */
 export function GdprConsentCheckbox({
   accepted,
   onToggle,

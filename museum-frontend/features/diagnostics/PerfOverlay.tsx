@@ -7,16 +7,6 @@ import { useFpsMeter } from './useFpsMeter';
 const formatFps = (fps: number): string => (fps > 0 ? fps.toFixed(0) : '--');
 const formatMs = (ms: number | null): string => (ms === null ? '--' : `${ms.toFixed(0)}ms`);
 
-/**
- * Dev-only heads-up display rendered on top of the MapLibre map. Shows the
- * rolling P50/P5 FPS pair and the last cluster-render bracket. Returns null
- * in production so the View tree, the rAF loop and the store subscription
- * never run in a release build.
- *
- * Consumers still need to call `perfStore.markRenderStart()` and
- * `perfStore.markRenderEnd()` around the bracket they want to measure — this
- * component only displays what the store has.
- */
 export const PerfOverlay = () => {
   const [metrics, setMetrics] = useState<PerfMetrics>(() => perfStore.get());
   useFpsMeter(__DEV__);

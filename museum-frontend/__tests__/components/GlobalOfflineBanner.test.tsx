@@ -1,27 +1,8 @@
-/**
- * GlobalOfflineBannerHost — offline-only host.
- * Run `undefined-network-detection-reliability`, cluster D, task D-R1 (TR-07).
- *
- * CONTRACT EVOLUTION (spec §10 invalidated test #8, INV-12 / INV-13): the host
- * keeps mounting the single global OfflineBanner (offline state surfaced on
- * EVERY screen, auth included — R8/R10 unchanged) but no longer renders ANY
- * low-data UI: the low-data indicator moves to the chat-scoped `LowDataBadge`
- * (own component test, D-R2). The former low-data host cases are replaced by
- * the proof that the host is offline-only.
- *
- * No `useDataMode` mock (D-R1): low-data is produced through the REAL
- * `DataModeProvider` with `preference: 'low'` (INV-03 short-circuit).
- *
- * RED contract: the "null while online even in low-data" case FAILS today
- * because OfflineBanner still renders the yellow variant. If green believes a
- * case is wrong, emit BLOCK-TEST-WRONG — never edit this file (UFR-022).
- */
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
 
 import '../helpers/test-utils';
 
-// Tri-state connectivity context driven per-test (host consumes useConnectivity).
 let mockIsOnline = true;
 jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   useConnectivity: () => ({
@@ -42,8 +23,6 @@ describe('GlobalOfflineBannerHost — offline-only (D-R1, INV-12/INV-13)', () =>
   });
 
   afterEach(() => {
-    // act(): a mounted DataModeProvider subscribes to the zustand store —
-    // resetting outside act() triggers the React update warning.
     act(() => {
       useDataModePreferenceStore.setState({ preference: 'auto' });
     });

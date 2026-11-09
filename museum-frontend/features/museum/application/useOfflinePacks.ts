@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { City, CityId } from '../infrastructure/cityCatalog';
-import {
-  type CityPackProgress,
-  type CityPackSummary,
-  offlinePackManager,
-} from '../infrastructure/offlinePackManager';
+import { type CityPackProgress, offlinePackManager } from '../infrastructure/offlinePackManager';
 import { OFFLINE_STYLE_URL } from '../infrastructure/mapStyleUrl';
 
 export type CityPackState =
@@ -21,23 +17,11 @@ export interface UseOfflinePacksResult {
   remove: (cityId: CityId) => Promise<void>;
 }
 
-const summaryToState = (summary: CityPackSummary): CityPackState =>
-  summary.state === 'complete'
-    ? { status: 'complete', bytesOnDisk: summary.bytesOnDisk }
-    : { status: 'active', percentage: summary.percentage, bytesOnDisk: summary.bytesOnDisk };
-
-const progressToState = (progress: CityPackProgress): CityPackState =>
+const toPackState = (progress: CityPackProgress): CityPackState =>
   progress.state === 'complete'
     ? { status: 'complete', bytesOnDisk: progress.bytesOnDisk }
     : { status: 'active', percentage: progress.percentage, bytesOnDisk: progress.bytesOnDisk };
 
-/**
- * Reads and mutates the offline-pack catalog for the city list. State is
- * keyed by cityId so the UI can render a row per city without having to
- * reconcile native pack ids. Progress updates from in-flight downloads are
- * wired through the same state so the settings screen re-renders on every
- * percentage tick.
- */
 export const useOfflinePacks = (): UseOfflinePacksResult => {
   const [packsByCity, setPacksByCity] = useState<Record<CityId, CityPackState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +32,7 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
       const summaries = await offlinePackManager.listPacks();
       const next: Record<CityId, CityPackState> = {};
       for (const summary of summaries) {
-        next[summary.cityId] = summaryToState(summary);
+        next[summary.cityId] = toPackState(summary);
       }
       setPacksByCity(next);
     } finally {
@@ -76,13 +60,12 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
           (progress) => {
             setPacksByCity((current) => ({
               ...current,
-              [progress.cityId]: progressToState(progress),
+              [progress.cityId]: toPackState(progress),
             }));
           },
         );
         await refresh();
       } catch (error) {
-        // Revert optimistic state so the row shows as absent (retryable).
         setPacksByCity((current) => {
           const { [city.id]: _removed, ...rest } = current;
           return rest;
@@ -102,7 +85,6 @@ export const useOfflinePacks = (): UseOfflinePacksResult => {
       try {
         await offlinePackManager.deletePackByCity(cityId);
       } catch (error) {
-        // Native delete failed — re-sync so UI reflects actual storage state.
         await refresh();
         throw error;
       }

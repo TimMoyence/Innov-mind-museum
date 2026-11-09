@@ -1,35 +1,9 @@
-/**
- * Red tests for A5 — screen integration of <StatusIndicator>.
- *
- * Asserts that `ChatSessionScreen`:
- *   1. Forwards a `currentPhase` prop to `<ChatMessageList>` (R10 + AC14).
- *   2. Sets `currentPhase` to `'analyzing-image'` when the user attached an
- *      image AND the session is sending (R13).
- *   3. Sets `currentPhase` to `'searching-collection'` when text-only AND
- *      sending (R14).
- *   4. Sets `currentPhase` to `null` when not sending (R17).
- *
- * At baseline (A5 not yet implemented) :
- *   - The screen does NOT consume `useStatusPhase` (no such hook exists).
- *   - `<ChatMessageList>` does NOT yet receive a `currentPhase` prop.
- *   - Therefore the captured `props.currentPhase` reads back as `undefined`,
- *     making every `expect(...).toBe(...)` assertion fail.
- *
- * Why a dedicated file (not merged into `chat-session-deep.test.tsx`) :
- *   - The deep file is already 1k+ lines, with global mocks tuned to its
- *     own assertions. Adding A5 tests there mixes concerns and risks
- *     accidental coupling.
- *   - This file mocks the minimum surface to render the screen and probe
- *     `ChatMessageList` props — independent green/red lifecycle.
- */
-
 import type * as ReactTypes from 'react';
 import React from 'react';
 import { render } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 
-// ── Stub heavy children before importing the screen ────────────────────────
 jest.mock('@/features/chat/ui/ChatMessageList', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -77,11 +51,9 @@ jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
   };
 });
 
-// ── expo-router params ──────────────────────────────────────────────────────
 const mockExpoRouterMock = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouterMock.useLocalSearchParams = () => ({ sessionId: 'session-A5' });
 
-// ── @react-navigation/native ────────────────────────────────────────────────
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     setOptions: jest.fn(),
@@ -94,7 +66,6 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// ── chatApi (avoid network) ─────────────────────────────────────────────────
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
     createSession: jest.fn(),
@@ -103,13 +74,11 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── useChatSession (drives isSending) ──────────────────────────────────────
 const mockUseChatSession = jest.fn();
 jest.mock('@/features/chat/application/useChatSession', () => ({
   useChatSession: (...args: unknown[]) => mockUseChatSession(...args),
 }));
 
-// ── Side hooks (no-op) ──────────────────────────────────────────────────────
 const mockImagePickerState = {
   selectedImage: null as string | null,
   onPickImage: jest.fn(),
@@ -171,9 +140,7 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-// ── Import AFTER mocks ──────────────────────────────────────────────────────
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
-// RED ASSERTION : phases module does not exist yet at baseline.
 import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 
 function defaultSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -243,8 +210,6 @@ describe('ChatSessionScreen — A5 status phase wiring', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ isSending: true }));
     render(<ChatSessionScreen />);
     const props = lastChatMessageListProps();
-    // The presence of the key (even if value is null/undefined) is the wiring
-    // signal — baseline `ChatMessageList` does not receive this prop at all.
     expect(Object.prototype.hasOwnProperty.call(props, 'currentPhase')).toBe(true);
   });
 });

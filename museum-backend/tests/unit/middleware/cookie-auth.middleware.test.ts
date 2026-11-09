@@ -1,14 +1,3 @@
-/**
- * F7 (HIGH) — Cookie auth fallback unit tests.
- *
- * `isAuthenticated` is updated to support a dual auth path:
- *   - Authorization: Bearer <jwt>  → existing path (mobile, takes precedence)
- *   - Cookie:        access_token=<jwt>  → web admin path
- *
- * If both are present, Bearer wins (so mobile cannot be confused by cookies
- * propagated from a webview).
- */
-
 import { AppError } from '@shared/errors/app.error';
 
 import {
@@ -17,9 +6,6 @@ import {
   makeNext,
 } from '../../helpers/http/express-mock.helpers';
 
-// Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
-// verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
-// for denylist consultation per R8.
 jest.mock('@modules/auth/useCase', () => ({
   authSessionService: {
     verifyAccessToken: jest.fn(),
@@ -34,8 +20,6 @@ jest.mock('@shared/observability/sentry', () => ({
 import { authSessionService } from '@modules/auth/useCase';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 
-// Post C3: middlewares are async (await denylist.has). Helper accepts both
-// sync-throw and async-rejection patterns via Promise.resolve(fn()).
 const expectUnauthorized = async (fn: () => void | Promise<void>): Promise<AppError> => {
   try {
     await Promise.resolve(fn());
@@ -44,7 +28,6 @@ const expectUnauthorized = async (fn: () => void | Promise<void>): Promise<AppEr
     expect(error).toBeInstanceOf(AppError);
     return error as AppError;
   }
-  // Unreachable — fail() throws.
   throw new Error('unreachable');
 };
 
@@ -110,7 +93,6 @@ describe('isAuthenticated — cookie fallback (F7)', () => {
 
     await isAuthenticated(req, res, next);
 
-    // Bearer wins — verifyAccessToken called with the header value, not the cookie.
     expect(authSessionService.verifyAccessTokenWithClaims).toHaveBeenCalledWith('header-jwt');
     expect(authSessionService.verifyAccessTokenWithClaims).not.toHaveBeenCalledWith('cookie-jwt');
     expect(next).toHaveBeenCalledTimes(1);
@@ -129,10 +111,6 @@ describe('isAuthenticated — cookie fallback (F7)', () => {
   });
 
   it('does not treat msk_-prefixed cookie as an API key (cookie path is JWT-only)', async () => {
-    // Cookies are set by us and only ever carry user-session JWTs; if one
-    // arrives with the API-key prefix it's almost certainly tampered. Try to
-    // verify it as a JWT (which will fail) rather than route to the API-key
-    // path that bypasses CSRF protections.
     (authSessionService.verifyAccessTokenWithClaims as jest.Mock).mockImplementation(() => {
       throw new Error('not a JWT');
     });

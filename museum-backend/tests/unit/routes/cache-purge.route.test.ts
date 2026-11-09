@@ -32,15 +32,6 @@ const makeCacheMock = (overrides: Partial<CacheService> = {}): CacheService =>
   }) as unknown as CacheService;
 
 describe('POST /api/admin/museums/:id/cache/purge', () => {
-  // I-FIX1 (2026-05-21) — the route now delegates to
-  // `LlmCacheServiceImpl.invalidateMuseum`, which iterates `museum-mode` +
-  // `personalized` contextClasses with the real namespace
-  // `llm:v4:{contextClass}:{museumId}:` (KEY_VERSION bumped v2→v3 on
-  // 2026-06-12 for the lowDataMode dimension — US-12.2/INV-21).
-  // Integer ids are required (rejects
-  // non-numeric like the previous "abc-123" string ids). Full namespace +
-  // boundary behaviour is covered by
-  // `tests/integration/admin/cache-purge.namespace.test.ts`.
   it('purges LLM cache via invalidateMuseum and returns timing (admin token)', async () => {
     const cache = makeCacheMock();
     const app = buildApp(cache);
@@ -52,7 +43,6 @@ describe('POST /api/admin/museums/:id/cache/purge', () => {
     expect(res.status).toBe(200);
     expect(res.body.museumId).toBe(42);
     expect(typeof res.body.durationMs).toBe('number');
-    // invalidateMuseum issues TWO delByPrefix calls — museum-mode + personalized.
     expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v4:museum-mode:42:');
     expect(cache.delByPrefix).toHaveBeenCalledWith('llm:v4:personalized:42:');
     expect(cache.delByPrefix).toHaveBeenCalledTimes(2);

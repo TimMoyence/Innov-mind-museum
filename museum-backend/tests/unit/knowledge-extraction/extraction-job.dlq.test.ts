@@ -1,10 +1,3 @@
-/**
- * Dead-letter queue (DLQ) semantics for the extraction worker:
- * - Intermediate retries: log only, no Sentry alert.
- * - Final attempt (attemptsMade >= attempts): log + Sentry capture.
- * - enqueueUrls uses canonical jobId → BullMQ deduplicates same URL.
- */
-
 jest.mock('bullmq', () => ({
   Queue: jest.fn().mockImplementation(() => ({
     addBulk: jest.fn().mockResolvedValue([]),
@@ -61,8 +54,6 @@ const KE_OPTIONS = {
   queueName: 'knowledge-extraction',
   summarize: (data: { url?: string }) => ({ url: data.url }),
 };
-
-// ── handleJobFailure DLQ semantics ────────────────────────────────────────────
 
 describe('handleJobFailure — DLQ semantics', () => {
   it('logs but does NOT capture to Sentry on intermediate retry (attempt 1 of 2)', () => {
@@ -125,8 +116,6 @@ describe('handleJobFailure — DLQ semantics', () => {
     expect(sinks.capture).not.toHaveBeenCalled();
   });
 });
-
-// ── enqueueUrls jobId deduplication ──────────────────────────────────────────
 
 describe('ExtractionWorker.enqueueUrls — canonical jobId dedup', () => {
   let queueInstance: { addBulk: jest.Mock; close: jest.Mock };

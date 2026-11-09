@@ -1,13 +1,5 @@
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 
-/**
- * GDPR DSAR (B3) — factory for `MessageReport` rows. Used by the chat-repo
- * export-read tests (`listMessageReportsForUser`) and the DSAR completeness
- * test. Note: `reviewedBy` / `reviewerNotes` / `reviewedAt` are third-party
- * moderator data and MUST be excluded from the subject's export DTO (design D7);
- * the factory still seeds them so the test can assert their ABSENCE downstream.
- * @param overrides - Partial entity override merged on top of the defaults.
- */
 export function makeMessageReport(overrides: Partial<MessageReport> = {}): MessageReport {
   return Object.assign(new MessageReport(), {
     id: 'rep-uuid-1',

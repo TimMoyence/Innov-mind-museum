@@ -1,13 +1,3 @@
-/**
- * F2 (2026-04-30) — fail-closed contract for the rate-limit middleware.
- *
- * Original behaviour silently degraded to per-instance in-memory buckets when
- * the Redis store rejected. In multi-instance prod that disables distributed
- * limits — every replica gets its own bucket, defeating the control. This
- * suite asserts the new contract:
- *   - failClosed=true  (prod default): respond 503 + Retry-After + Sentry alert
- *   - failClosed=false (dev default):  fall back to in-memory bucket (legacy)
- */
 import type { Request } from 'express';
 
 jest.mock('@shared/logger/logger', () => ({
@@ -84,7 +74,6 @@ describe('F2 — rate-limit fail-closed when Redis is down', () => {
     const next = jest.fn();
 
     mw(req, res, next);
-    // Async catch resolution — wait one microtask + a setImmediate tick.
     await new Promise((r) => setImmediate(r));
 
     expect(next).toHaveBeenCalledWith(
@@ -145,7 +134,6 @@ describe('F2 — rate-limit fail-closed when Redis is down', () => {
     await new Promise((r) => setImmediate(r));
     expect(next2).toHaveBeenCalledWith();
 
-    // Third request should hit local bucket cap (limit=2 → 429).
     const next3 = jest.fn();
     mw(req, res, next3);
     await new Promise((r) => setImmediate(r));

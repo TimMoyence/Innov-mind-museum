@@ -1,22 +1,3 @@
-/**
- * C3 — Cache LLM élargi scans œuvres répétitifs (RED tests).
- *
- * Feature spec: `docs/chat-ux-refonte/specs/C3.md`.
- * Baseline: `38d0aa23b`.
- *
- * These tests MUST FAIL at baseline. They assert that:
- *  - `LlmCacheKeyInput.imageContentHash` extends the canonical input hash
- *    (R6-R10) without invalidating legacy text-only keys (R8 / AC6).
- *  - TTL constants are REUSED, not introduced (R15-R17).
- *  - `ImageProcessingService.processImage` exposes `imageContentHash` on
- *    upload + legacy-base64 paths (R1, R3, R4, R5), absent on url path (R2).
- *  - `chat-message.service.postMessage` lifts the image bypass when a visual
- *    signature is plumbed (R11) and preserves the bypass otherwise (R12).
- *
- * The tests use the existing fixtures patterns from `llm-cache.service.test.ts`
- * and `image-processing-service.test.ts` — no new shared factory introduced.
- */
-
 import { createHash } from 'node:crypto';
 
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
@@ -74,13 +55,11 @@ const makeMockImageStorage = (): jest.Mocked<ImageStorage> => ({
 
 type ImageInput = NonNullable<PostMessageInput['image']>;
 
-// JPEG magic-byte fixture used by image-processing tests
 const VALID_JPEG_BYTES = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
 ]);
 const VALID_JPEG_BASE64 = VALID_JPEG_BYTES.toString('base64');
 
-// Slightly different JPEG buffer (one byte changed) → distinct content hash (R4)
 const DIFFERENT_JPEG_BYTES = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x02,
 ]);
@@ -94,9 +73,6 @@ describe('C3 — LlmCacheServiceImpl key derivation extension (R6-R10)', () => {
     const cache = buildMockCache();
     const service = new LlmCacheServiceImpl(cache);
 
-    // This call MUST type-check at baseline. RED expectation: the input type
-    // does not currently include `imageContentHash`, so this fails TS2353 at
-    // baseline. After C3 lands (T2.1), it compiles.
     const input: LlmCacheKeyInput = {
       ...baseInput,
       imageContentHash: 'a'.repeat(32),
@@ -116,9 +92,6 @@ describe('C3 — LlmCacheServiceImpl key derivation extension (R6-R10)', () => {
     const keyWithImage = String(cache.set.mock.calls[1][0]);
 
     expect(keyTextOnly).not.toBe(keyWithImage);
-    // Both keys share the prefix shape `llm:v4:{contextClass}:{museumId|none}:{userId|anon}:`
-    // (F1 2026-05-19 — KEY_VERSION bumped v1→v2 to isolate voiceMode + audioDescriptionMode entries ;
-    // 2026-06-12 — bumped v2→v3 for the lowDataMode dimension, US-12.2/INV-21)
     expect(keyTextOnly).toMatch(/^llm:v4:generic:none:anon:[0-9a-f]{32}$/);
     expect(keyWithImage).toMatch(/^llm:v4:generic:none:anon:[0-9a-f]{32}$/);
   });
@@ -154,10 +127,7 @@ describe('C3 — LlmCacheServiceImpl key derivation extension (R6-R10)', () => {
     const service = new LlmCacheServiceImpl(cacheLegacy);
     const serviceC3 = new LlmCacheServiceImpl(cacheC3);
 
-    // Legacy call (pre-C3 shape — no imageContentHash field).
     await service.store(baseInput, { text: 'x' });
-    // C3-aware call where the caller has no image — must NOT add the field
-    // to the canonical (R10/R8). Result: byte-identical key.
     await serviceC3.store({ ...baseInput }, { text: 'x' });
 
     expect(String(cacheLegacy.set.mock.calls[0][0])).toBe(String(cacheC3.set.mock.calls[0][0]));
@@ -282,10 +252,6 @@ describe('C3 — ImageProcessingService exposes imageContentHash (R1-R5)', () =>
 
     const result = await service.processImage(image, 'session-c3-1', 42);
 
-    // RED expectation: `imageContentHash` does not exist on the returned
-    // envelope at baseline. After T1.3 lands, the property is present and
-    // equals the SHA-256 32-char prefix of the post-EXIF-strip buffer (which,
-    // without an imageProcessor injected, is identical to the input buffer).
     const hash = (result as { imageContentHash?: string }).imageContentHash;
     expect(hash).toBe(expectedHashOf(VALID_JPEG_BYTES));
     expect(hash).toHaveLength(32);
@@ -367,8 +333,6 @@ describe('C3 — ImageProcessingService exposes imageContentHash (R1-R5)', () =>
 
   it('R5 — hash is computed on the post-EXIF-strip buffer (when imageProcessor strips bytes)', async () => {
     const storage = makeMockImageStorage();
-    // Mock imageProcessor that strips: returns a deterministic shortened buffer.
-    // C3 must hash the OUTPUT of stripExif, not the input.
     const strippedBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
     const imageProcessor = {
       stripExif: jest.fn().mockResolvedValue({ buffer: strippedBuffer, mime: 'image/jpeg' }),
@@ -386,30 +350,16 @@ describe('C3 — ImageProcessingService exposes imageContentHash (R1-R5)', () =>
     const result = await service.processImage(image, 'session-c3-strip', 42);
 
     const hash = (result as { imageContentHash?: string }).imageContentHash;
-    // R5 — hash is of the stripped buffer (6 bytes), NOT the input buffer.
     expect(hash).toBe(expectedHashOf(strippedBuffer));
     expect(hash).not.toBe(expectedHashOf(VALID_JPEG_BYTES));
   });
 });
 
 describe('C3 — bypass preservation when no visual signature (R12)', () => {
-  // R11 happy-path (image present + hash plumbed → lookup happens) is covered
-  // by the integration-flavoured behavior tests in `chat-message-service.test.ts`
-  // (extended in green phase). The unit-level R12 invariant is the cache
-  // service contract: when `imageContentHash` is absent, the key derivation
-  // is byte-identical to today's text-only path. Already locked by R8 above.
-  //
-  // Here we lock the additional invariant: the `LlmCacheServiceImpl` itself
-  // is **agnostic** to the bypass decision — it ALWAYS derives a key. Bypass
-  // is owned by the caller (ADR-036 contract). The test is a contract test.
-
   it('R12 / ADR-036 — service does NOT contain bypass-on-image logic; it derives a key for every input', async () => {
     const cache = buildMockCache();
     const service = new LlmCacheServiceImpl(cache);
 
-    // Even with imageContentHash present, the service simply looks up. The
-    // caller decides whether to bypass (the bypass logic for url-source
-    // resides in chat-message.service.ts, not here).
     cache.get.mockResolvedValueOnce(null);
     const result = await service.lookup({
       ...baseInput,
@@ -418,8 +368,6 @@ describe('C3 — bypass preservation when no visual signature (R12)', () => {
 
     expect(cache.get).toHaveBeenCalledTimes(1);
     expect(result.hit).toBe(false);
-    // The derived key MUST embed the imageContentHash (different from a no-image key).
-    // (v3 since 2026-06-12 — lowDataMode KEY_VERSION bump, US-12.2/INV-21.)
     const key = String(cache.get.mock.calls[0][0]);
     expect(key).toMatch(/^llm:v4:generic:none:anon:[0-9a-f]{32}$/);
   });

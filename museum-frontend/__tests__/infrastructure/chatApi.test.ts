@@ -7,8 +7,6 @@ import {
   makePostMessageResponse,
 } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockHttpRequest = jest.fn<Promise<unknown>, [string, Record<string, unknown>?]>();
 const mockOpenApiRequest = jest.fn<Promise<unknown>, [Record<string, unknown>]>();
 
@@ -40,8 +38,6 @@ jest.mock('@sentry/core', () => ({
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('chatApi', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,8 +46,6 @@ describe('chatApi', () => {
   afterAll(() => {
     jest.restoreAllMocks();
   });
-
-  // ── createSession ──────────────────────────────────────────────────────────
 
   describe('createSession', () => {
     it('sends correct path, method, and body', async () => {
@@ -64,7 +58,7 @@ describe('chatApi', () => {
         expect.objectContaining({
           path: '/api/chat/sessions',
           method: 'post',
-          body: JSON.stringify({ locale: 'fr-FR', museumMode: true }),
+          json: { locale: 'fr-FR', museumMode: true },
         }),
       );
     });
@@ -85,8 +79,6 @@ describe('chatApi', () => {
       await expect(chatApi.createSession({})).rejects.toThrow('Invalid create-session contract');
     });
   });
-
-  // ── postMessage ────────────────────────────────────────────────────────────
 
   describe('postMessage', () => {
     it('sends JSON body for text-only message', async () => {
@@ -148,8 +140,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── postAudioMessage ───────────────────────────────────────────────────────
-
   describe('postAudioMessage', () => {
     it('sends FormData with audio URI', async () => {
       const response = makePostMessageResponse();
@@ -190,8 +180,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── getSession ─────────────────────────────────────────────────────────────
-
   describe('getSession', () => {
     it('calls openApiRequest with correct path and query', async () => {
       const response = makeGetSessionResponse();
@@ -226,8 +214,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── deleteSessionIfEmpty ───────────────────────────────────────────────────
-
   describe('deleteSessionIfEmpty', () => {
     it('calls openApiRequest with DELETE method', async () => {
       mockOpenApiRequest.mockResolvedValue({ sessionId: 'sess-1', deleted: true });
@@ -252,8 +238,6 @@ describe('chatApi', () => {
       expect(result.deleted).toBe(true);
     });
   });
-
-  // ── listSessions ───────────────────────────────────────────────────────────
 
   describe('listSessions', () => {
     it('passes cursor and limit as query params', async () => {
@@ -285,8 +269,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── reportMessage ──────────────────────────────────────────────────────────
-
   describe('reportMessage', () => {
     it('sends correct payload structure', async () => {
       mockOpenApiRequest.mockResolvedValue({ messageId: 'msg-1', reported: true });
@@ -302,13 +284,11 @@ describe('chatApi', () => {
           path: '/api/chat/messages/{messageId}/report',
           method: 'post',
           pathParams: { messageId: 'msg-1' },
-          body: JSON.stringify({ reason: 'offensive', comment: 'This is offensive' }),
+          json: { reason: 'offensive', comment: 'This is offensive' },
         }),
       );
     });
   });
-
-  // ── setMessageFeedback ─────────────────────────────────────────────────────
 
   describe('setMessageFeedback', () => {
     it('sends POST with feedback value', async () => {
@@ -321,14 +301,12 @@ describe('chatApi', () => {
           path: '/api/chat/messages/{messageId}/feedback',
           method: 'post',
           pathParams: { messageId: 'msg-1' },
-          body: JSON.stringify({ value: 'positive' }),
+          json: { value: 'positive' },
         }),
       );
       expect(result.status).toBe('created');
     });
   });
-
-  // ── synthesizeSpeech ───────────────────────────────────────────────────────
 
   describe('synthesizeSpeech', () => {
     it('returns ArrayBuffer on success', async () => {
@@ -368,8 +346,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── getMessageImageUrl ─────────────────────────────────────────────────────
-
   describe('getMessageImageUrl', () => {
     it('calls correct endpoint with messageId', async () => {
       const signedResponse = {
@@ -391,8 +367,6 @@ describe('chatApi', () => {
     });
   });
 
-  // ── createSessionOrThrow ───────────────────────────────────────────────────
-
   describe('createSessionOrThrow', () => {
     it('delegates to createSession on success', async () => {
       const response = makeCreateSessionResponse();
@@ -410,17 +384,8 @@ describe('chatApi', () => {
     });
   });
 
-  // ── sendMessageSmart (post-burial: ALWAYS sync) ──────────────────────────────
-  //
-  // After the dormant SSE path is buried (D1), `sendMessageSmart` is a thin
-  // façade over the sync `postMessage` transport: it ignores any streaming
-  // callbacks and never consults a streaming feature flag. These assertions
-  // pin that always-sync contract.
-
   describe('sendMessageSmart', () => {
     it('returns the sync postMessage DTO even when onToken is supplied', async () => {
-      // The streaming flag being "enabled" must NOT route to a stream path —
-      // the SSE transport no longer exists, so the only path is sync.
       const originalStreamingFlag = process.env.EXPO_PUBLIC_CHAT_STREAMING;
       process.env.EXPO_PUBLIC_CHAT_STREAMING = 'true';
 
@@ -431,9 +396,7 @@ describe('chatApi', () => {
         const result = await chatApi.sendMessageSmart({
           sessionId: 'sess-1',
           text: 'Hello',
-          onToken: () => {
-            /* never invoked — streaming buried, always sync */
-          },
+          onToken: () => {},
         });
 
         expect(result).toBeTruthy();
@@ -455,9 +418,7 @@ describe('chatApi', () => {
         sessionId: 'sess-1',
         text: 'What is this?',
         imageUri: '/path/to/photo.jpg',
-        onToken: () => {
-          /* noop */
-        },
+        onToken: () => {},
       });
 
       expect(result).toBeTruthy();
@@ -476,8 +437,6 @@ describe('chatApi', () => {
       expect(mockHttpRequest).toHaveBeenCalled();
     });
   });
-
-  // ── postMessage image MIME type normalization ─────────────────────────────
 
   describe('postMessage image MIME types', () => {
     it('normalizes .jpeg extension to image/jpeg', async () => {

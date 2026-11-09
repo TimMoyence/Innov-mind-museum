@@ -2,8 +2,6 @@ import { logger } from '@shared/logger/logger';
 
 import type { DataSource, EntityManager } from 'typeorm';
 
-// Small enough for short transactions (~ms per tick), large enough to avoid
-// per-row round-trip. 1000 rows ≈ one 8 KB Postgres page.
 const DEFAULT_BATCH_SIZE = 1000;
 
 interface AuditIpRow {
@@ -11,26 +9,12 @@ interface AuditIpRow {
   ip: string;
 }
 
-/** pg UPDATE tuple: [rows, affectedCount]. */
 type UpdateResult = [unknown[], number];
 
 export interface AuditIpAnonymizerResult {
   anonymized: number;
 }
 
-/**
- * CNIL / GDPR 13-month retention pass. Scans `audit_logs` rows >13 months
- * with non-null `ip`, rewrites to anonymized form (IPv4 → /24, IPv6 → /64).
- * Runs in single transaction that whitelists itself via
- * `SET LOCAL app.audit_anonymization_allowed = 'true'`, which the
- * `prevent_audit_log_mutation` trigger recognizes to allow the UPDATE.
- *
- * Hash chain unaffected: `row_hash` is computed from (id, actor_id, action,
- * target_type, target_id, metadata, created_at, prev_hash) — `ip` deliberately
- * excluded — so rewriting `ip` does not break chain verification.
- *
- * Idempotent: re-masking /24 is a no-op; values stay stable after first pass.
- */
 export async function runAuditIpAnonymizer(
   dataSource: DataSource,
   batchSize: number = DEFAULT_BATCH_SIZE,
@@ -38,8 +22,6 @@ export async function runAuditIpAnonymizer(
   let anonymized = 0;
 
   await dataSource.transaction(async (manager: EntityManager) => {
-    // Whitelist this txn for append-only trigger. SET LOCAL auto-reverts at
-    // COMMIT/ROLLBACK so no other session affected.
     await manager.query(`SET LOCAL app.audit_anonymization_allowed = 'true'`);
 
     const rows = await manager.query<AuditIpRow[]>(
@@ -66,8 +48,6 @@ export async function runAuditIpAnonymizer(
       [ids],
     );
 
-    // pg driver returns [rows, affectedCount]; some adapters normalize to
-    // second element. Fall back to selected batch size if unreadable.
     anonymized = Array.isArray(result) && typeof result[1] === 'number' ? result[1] : rows.length;
   });
 

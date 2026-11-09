@@ -1,10 +1,3 @@
-/**
- * Tests for `useUserProfileStore.mergeFromServer` (TD-2 Option B 2026-05-15).
- *
- * Hydrates content preferences from the server-side `/auth/me` payload
- * (server-wins-first per session — R3). Schema tolerance (R5) silently skips
- * absent or wrong-shape fields.
- */
 import '@/__tests__/helpers/test-utils';
 
 import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
@@ -42,8 +35,6 @@ describe('useUserProfileStore.mergeFromServer (TD-2)', () => {
 
   it('is a no-op when contentPreferences is not an array (R5 schema tolerance)', () => {
     useUserProfileStore.setState({ contentPreferences: ['history'] });
-    // Intentionally wrong shape to verify the runtime guard. Tests must
-    // exercise the R5 schema-tolerance branch and a static-typed call cannot.
     useUserProfileStore
       .getState()
       .mergeFromServer({ contentPreferences: 'history' as unknown as ContentPreference[] });

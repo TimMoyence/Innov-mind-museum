@@ -7,7 +7,6 @@ import type {
   UpdateTicketStatusUseCase,
 } from '@modules/support/useCase/ticket-admin/updateTicketStatus.useCase';
 
-/** See {@link AdminReviewFacade} for rationale. */
 export class AdminSupportFacade {
   constructor(
     private readonly listAll: ListAllTicketsUseCase,

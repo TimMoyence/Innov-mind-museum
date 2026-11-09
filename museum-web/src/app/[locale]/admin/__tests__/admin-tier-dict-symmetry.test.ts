@@ -1,16 +1,3 @@
-/**
- * R1 RED — dictionary symmetry for `admin.userDetailPage.tier.*` (T1.15 — L in brief).
- *
- * Pins R1 §0.3 web + N8 + AC7 down BEFORE implementation : every key under
- * `admin.userDetailPage.tier.{label, currentFree, currentPremium,
- * toggleToPremium, toggleToFree, confirmTitle, confirmBody, confirmCta,
- * cancel, success, error}` MUST exist in BOTH `fr.json` AND `en.json`
- * (full parity, identical key shape).
- *
- * MUST FAIL at baseline `cd7e22bc` — neither dict has the
- * `admin.userDetailPage.tier` subtree yet. Mirrors the R2
- * `admin-export-dict-symmetry.test.ts` pattern verbatim.
- */
 import { describe, it, expect } from 'vitest';
 import frDict from '@/dictionaries/fr.json';
 import enDict from '@/dictionaries/en.json';

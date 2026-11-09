@@ -1,26 +1,10 @@
 import type { EmailLocale } from '@shared/email/email-locale';
 
-/**
- * Musaium email layout — single source of truth for charte graphique.
- * Mirrors mobile app design (museum-frontend/shared/ui/).
- *
- * Email-specific constraints:
- * - Table-based layout (Outlook desktop = Word render engine, requires tables).
- * - Inline CSS only, except single `<style>` block in `<head>` for `@media`
- *   queries and Outlook fallbacks.
- * - Bulletproof CTA: VML mso conditional for Outlook + standard `<a>` rest.
- * - No backdrop-filter / glass effects (not supported by ANY email client).
- *
- * Colors MIRROR design-system/tokens/colors.ts (primary600 = mobile
- * lightTheme.primary). Hard-coded — design-system not consumed at backend
- * runtime. Drift guarded by tests/unit/shared/email/templates/palette-mirror.test.ts.
- */
-
 const PALETTE = {
-  brandPrimary: '#1D4ED8', // primary600 — matches mobile lightTheme.primary
-  brandPrimaryDark: '#1E40AF', // primary700 — gradient end + hover
-  brandAccent: '#0EA5E9', // accent500
-  brandGold: '#C49A3C', // gold500 — cultural highlight
+  brandPrimary: '#1D4ED8',
+  brandPrimaryDark: '#1E40AF',
+  brandAccent: '#0EA5E9',
+  brandGold: '#C49A3C',
   textPrimary: '#0F172A',
   textSecondary: '#334155',
   textMuted: '#64748B',
@@ -28,11 +12,9 @@ const PALETTE = {
   surfaceElevated: '#F8FAFC',
   surfaceMuted: '#F1F5F9',
   borderSubtle: '#E2E8F0',
-  // Pastel gradient stops mirroring lightTheme.pageGradient
-  // [primaryScale.50, primaryScale.100, gradient.lightEnd]
-  gradientStart: '#EAF2FF', // primary50
-  gradientMid: '#D8E8FF', // primary100
-  gradientEnd: '#D5F0FF', // gradient.lightEnd
+  gradientStart: '#EAF2FF',
+  gradientMid: '#D8E8FF',
+  gradientEnd: '#D5F0FF',
 } as const;
 
 const FONT_STACK = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
@@ -40,21 +22,14 @@ const FONT_STACK = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const DEFAULT_LOGO_URL = 'https://musaium.com/images/logo.png';
 
 export interface EmailLayoutInput {
-  /** Static or pre-escaped. */
   heading: string;
-  /** Pre-escaped where user data involved. */
   bodyHtml: string;
   ctaLabel?: string;
-  /** Server-built, no escaping needed for href. */
   ctaUrl?: string;
-  /** Defaults to ctaUrl. For clients that block buttons. */
   fallbackUrl?: string;
-  /** Hidden inbox preview, plain text only, ≤120 chars. */
   preheader?: string;
   locale?: EmailLocale;
-  /** Footer context line ("Why am I receiving this?"). */
   footerNote?: string;
-  /** Defaults to `<FRONTEND_URL>/images/logo.png`. */
   logoUrl?: string;
 }
 
@@ -77,7 +52,6 @@ const FALLBACK_PROMPT: Record<EmailLocale, string> = {
   en: 'Button not showing? Copy this link:',
 };
 
-/** Priority: explicit `logoUrl` > env `FRONTEND_URL` > musaium.com default. */
 const resolveLogoUrl = (override: string | undefined): string => {
   if (override) return override;
   const frontendUrl = process.env.FRONTEND_URL;
@@ -222,14 +196,12 @@ const buildCtaTable = (
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;">${inner}</table>`;
 };
 
-/** Pastel header + hosted logo, body card with optional CTA, footer with brand. */
 export function renderEmailLayout(input: EmailLayoutInput): string {
   const locale = input.locale ?? 'en';
   const footer = FOOTER_COPY[locale];
   const fallbackPrompt = FALLBACK_PROMPT[locale];
   const preheader = input.preheader ?? '';
   const logoUrl = resolveLogoUrl(input.logoUrl);
-  // Stryker disable next-line StringLiteral: trailing `?? ''` reached only when fallbackUrl AND ctaUrl nullish; buildCtaTable returns '' at !ctaUrl guard without rendering fallbackUrl. Verified equivalent 2026-05-13.
   const fallbackUrl = input.fallbackUrl ?? input.ctaUrl ?? '';
   const ctaTable = buildCtaTable(input.ctaLabel, input.ctaUrl, fallbackUrl, fallbackPrompt);
   const footerNoteBlock = input.footerNote ? renderFooterNote(input.footerNote) : '';

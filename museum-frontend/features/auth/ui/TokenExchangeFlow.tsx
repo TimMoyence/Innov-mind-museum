@@ -12,10 +12,8 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/** Outcome states of a one-shot token-exchange (auto-submit) screen. */
 type Status = 'loading' | 'success' | 'invalidToken' | 'error';
 
-/** i18n keys for the four-state copy + the post-success CTA. */
 export interface TokenExchangeCopy {
   title: ParseKeys;
   loading: ParseKeys;
@@ -26,31 +24,13 @@ export interface TokenExchangeCopy {
 }
 
 interface TokenExchangeFlowProps {
-  /** The one-time token from the route param (opaque; never logged — R13). */
   token: string | undefined;
-  /** Posts the token to the backend; resolves on success, rejects on failure. */
   submit: (token: string) => Promise<unknown>;
-  /** Localised copy keys for every state + the CTA. */
   copy: TokenExchangeCopy;
-  /** Test ID prefix, e.g. `verify-email` → `verify-email-success`/`-cta`. */
   testIDPrefix: string;
-  /** Invoked when the user taps the post-success / post-error CTA. */
   onContinue: () => void;
 }
 
-/**
- * Shared 4-state auto-submit flow for the `verify-email` and
- * `confirm-email-change` magic-link screens (design D5/D6). Mirrors the web
- * `EmailTokenFlow`: render `loading` synchronously when a token is present,
- * POST it on mount (guarded by a `cancelled` closure cell —
- * `feedback_closure_cell_cancellation_react_hooks`), and resolve to
- * `success | invalidToken | error`. A 400 backend error
- * (`isAppError(err) && err.status === 400`) maps to `invalidToken`; everything
- * else to `error` (design D4).
- *
- * The token is opaque to this component: it is forwarded verbatim to `submit`
- * and never logged, persisted, echoed in an a11y label, or rendered (R13).
- */
 export function TokenExchangeFlow({
   token,
   submit,
@@ -82,7 +62,6 @@ export function TokenExchangeFlow({
     return () => {
       state.cancelled = true;
     };
-    // `submit` is a stable wrapper; the token drives the single POST.
   }, [token, submit]);
 
   const iconName =

@@ -26,7 +26,6 @@ describe('buildSignedChatImageReadUrl', () => {
     });
 
     const expiresMs = new Date(result.expiresAt).getTime();
-    // Should be roughly 60 seconds from now
     expect(expiresMs).toBeGreaterThanOrEqual(before + 59_000);
     expect(expiresMs).toBeLessThanOrEqual(before + 62_000);
   });
@@ -36,11 +35,10 @@ describe('buildSignedChatImageReadUrl', () => {
     const result = buildSignedChatImageReadUrl({
       baseUrl: 'https://api.example.com',
       messageId: 'msg-789',
-      ttlSeconds: 5, // below minimum
+      ttlSeconds: 5,
     });
 
     const expiresMs = new Date(result.expiresAt).getTime();
-    // Should be at least 30 seconds
     expect(expiresMs).toBeGreaterThanOrEqual(before + 29_000);
   });
 });
@@ -149,7 +147,6 @@ describe('verifySignedChatImageReadUrl', () => {
     const token = url.searchParams.get('token')!;
     const sig = url.searchParams.get('sig')!;
 
-    // Advance time past expiry
     jest.advanceTimersByTime(31_000);
 
     const result = verifySignedChatImageReadUrl({
@@ -167,7 +164,6 @@ describe('verifySignedChatImageReadUrl', () => {
   });
 
   it('returns error when token payload has no dot separator', () => {
-    // Craft a token that decodes to "nodot" (no messageId.expiresAt pattern)
     const fakeToken = Buffer.from('nodot').toString('base64url');
 
     const result = verifySignedChatImageReadUrl({
@@ -183,14 +179,8 @@ describe('verifySignedChatImageReadUrl', () => {
   });
 
   it('returns error when expiresAt is not a finite number', () => {
-    // Craft a token with a non-numeric expiry
     const payload = 'msg-test.notanumber';
     const fakeToken = Buffer.from(payload).toString('base64url');
-
-    // We need the signature to match for this branch to be reached
-    // But the signature check happens before the expiresAt check
-    // So this branch is hard to reach directly
-    // Let's test a different way — craft with NaN-ish string
 
     const result = verifySignedChatImageReadUrl({
       messageId: 'msg-test',
@@ -198,7 +188,6 @@ describe('verifySignedChatImageReadUrl', () => {
       signature: 'wrong-sig',
     });
 
-    // Will fail at signature check before reaching expiresAt
     expect(result.ok).toBe(false);
   });
 });

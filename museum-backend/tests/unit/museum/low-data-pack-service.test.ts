@@ -5,10 +5,6 @@ import type { MuseumQaSeedRepository } from '@modules/museum/domain/qa-seed/muse
 import type { MuseumQaSeed } from '@modules/museum/domain/qa-seed/museumQaSeed.entity';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * Creates a mock seed repository with configurable results.
- * @param seeds
- */
 function makeMockSeedRepo(seeds: MuseumQaSeed[] = []): MuseumQaSeedRepository {
   return {
     findByMuseumAndLocale: async (_museumId: string, _locale: string) =>
@@ -16,10 +12,6 @@ function makeMockSeedRepo(seeds: MuseumQaSeed[] = []): MuseumQaSeedRepository {
   };
 }
 
-/**
- * Creates a MuseumQaSeed fixture.
- * @param overrides
- */
 function makeSeed(overrides: Partial<MuseumQaSeed> = {}): MuseumQaSeed {
   return {
     id: 'seed-1',
@@ -33,18 +25,6 @@ function makeSeed(overrides: Partial<MuseumQaSeed> = {}): MuseumQaSeed {
   };
 }
 
-/**
- * Populates the mock cache with a cached entry and its popularity score.
- * @param cache
- * @param museumId
- * @param key
- * @param entry
- * @param entry.originalText
- * @param entry.locale
- * @param entry.text
- * @param entry.metadata
- * @param score
- */
 async function seedCacheEntry(
   cache: CacheService,
   museumId: string,
@@ -131,14 +111,12 @@ describe('LowDataPackService', () => {
     const seedRepo = makeMockSeedRepo(seeds);
     const service = new LowDataPackService(cache, seedRepo, MAX_ENTRIES);
 
-    // Override ztop to throw
     cache.ztop = async () => {
       throw new Error('Redis connection lost');
     };
 
     const pack = await service.getLowDataPack(MUSEUM_ID, LOCALE);
 
-    // Should still return seeded entries despite cache failure
     expect(pack.entries).toHaveLength(1);
     expect(pack.entries[0].source).toBe('seeded');
   });
@@ -148,7 +126,6 @@ describe('LowDataPackService', () => {
     const seedRepo = makeMockSeedRepo([]);
     const service = new LowDataPackService(cache, seedRepo, MAX_ENTRIES);
 
-    // Add a French entry and an English entry
     await seedCacheEntry(
       cache,
       MUSEUM_ID,

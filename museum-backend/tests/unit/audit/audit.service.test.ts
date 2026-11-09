@@ -27,10 +27,8 @@ describe('AuditService', () => {
     });
     const service = new AuditService(repo);
 
-    // Should not throw
     service.log({ action: 'TEST', actorType: 'system' });
 
-    // Wait for the fire-and-forget promise to settle
     await new Promise((r) => setTimeout(r, 10));
   });
 
@@ -77,7 +75,6 @@ describe('AuditService', () => {
     service.log({ action: 'TEST', actorType: 'system' });
 
     await new Promise((r) => setTimeout(r, 10));
-    // Should not throw; the catch handler converts non-Error to String()
   });
 
   it('logs non-Error rejection from insertBatch as string', async () => {
@@ -111,9 +108,6 @@ describe('AuditService', () => {
     const repo = makeAuditRepo();
     const service = new AuditService(repo);
 
-    // reporterUserId omitted → undefined.
-    // Real `undefined == null` → true → 'system'.
-    // Mutant `undefined === null` → false → 'user'. Mutant dies.
     await service.auditCriticalSecurityEvent({
       eventName: BREACH_EVENTS.JWT_SECRET_LEAKED,
       severity: 'P1',
@@ -128,7 +122,6 @@ describe('AuditService', () => {
     expect(insertCall.actorType).toBe('system');
     expect(insertCall.actorId).toBeNull();
 
-    // Cross-check: an explicit numeric reporterUserId routes to 'user'.
     (repo.insert as jest.Mock).mockClear();
     await service.auditCriticalSecurityEvent({
       eventName: BREACH_EVENTS.JWT_SECRET_LEAKED,
@@ -146,9 +139,6 @@ describe('AuditService', () => {
   });
 
   it('logs the literal "audit_log_batch_failed" key when insertBatch rejects (kills BlockStatement→{} L135-141 + StringLiteral→"" L136)', async () => {
-    // Kills 2 Stryker survivors at once:
-    //   - L135 BlockStatement→{}: catch body emptied → no logger.error call
-    //   - L136 StringLiteral→"": logger.error called with empty string instead
     const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     try {
       const repo = makeAuditRepo({
@@ -158,8 +148,6 @@ describe('AuditService', () => {
 
       await service.logBatch([{ action: 'TEST_BATCH', actorType: 'system' }]);
 
-      // Assert exact literal — neither "" (StringLiteral mutant) nor missing call
-      // (BlockStatement mutant) would satisfy this.
       expect(errorSpy).toHaveBeenCalledWith(
         'audit_log_batch_failed',
         expect.objectContaining({
@@ -167,7 +155,6 @@ describe('AuditService', () => {
           error: 'DB down',
         }),
       );
-      // Belt-and-braces: ensure the empty-string mutant cannot pass by accident.
       const keys = errorSpy.mock.calls.map((call) => call[0]);
       expect(keys).toContain('audit_log_batch_failed');
       expect(keys).not.toContain('');
@@ -177,9 +164,6 @@ describe('AuditService', () => {
   });
 
   it('logs the literal "audit_breach_insert_failed" key when persisting the breach row fails (kills StringLiteral→"" L205)', async () => {
-    // Kills the L205 StringLiteral survivor: the log key when the breach
-    // insert path catches a rejection. Mutant "" would emit an empty key
-    // which our SOC2 audit pipeline can't grep for.
     const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     try {
       const repo = makeAuditRepo({

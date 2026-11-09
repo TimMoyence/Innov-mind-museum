@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 
+import { sameSecret } from '@shared/security/same-secret';
 import { env } from '@src/config/env';
 
 const toBase64Url = (value: Buffer | string): string => {
@@ -10,7 +11,6 @@ const signPayload = (payload: string): string => {
   return crypto.createHmac('sha256', env.storage.signingSecret).update(payload).digest('base64url');
 };
 
-/** ttlSeconds floor: 30. */
 export const buildSignedChatImageReadUrl = (params: {
   baseUrl: string;
   messageId: string;
@@ -51,14 +51,9 @@ const decodeToken = (
   return { ok: true, payload: decoded };
 };
 
-/** Constant-time comparison (timingSafeEqual). */
 const verifySignature = (payload: string, signature: string): boolean => {
   const expectedSignature = signPayload(payload);
-  const sigBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignature);
-  return (
-    sigBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(sigBuffer, expectedBuffer)
-  );
+  return sameSecret(signature, expectedSignature);
 };
 
 export const verifySignedChatImageReadUrl = (params: {

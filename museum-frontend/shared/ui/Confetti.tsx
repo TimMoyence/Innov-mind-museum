@@ -12,16 +12,21 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 interface ConfettiProps {
   count?: number;
-  /** Origin point in screen coordinates; default = top-center. */
   origin?: { x: number; y: number };
-  /** Total fall duration in ms (was `fallSpeed` in the legacy ConfettiCannon). */
   fallSpeed?: number;
-  /** Fired once after the last particle has finished its animation. */
   onAnimationEnd?: () => void;
   testID?: string;
 }
 
-const PARTICLE_COLORS = ['#F94144', '#F8961E', '#F9C74F', '#90BE6D', '#43AA8B', '#577590', '#9B5DE5'];
+const PARTICLE_COLORS = [
+  '#F94144',
+  '#F8961E',
+  '#F9C74F',
+  '#90BE6D',
+  '#43AA8B',
+  '#577590',
+  '#9B5DE5',
+];
 const PARTICLE_SIZE = 8;
 const GRAVITY_BAND = 80;
 
@@ -95,15 +100,6 @@ const ConfettiParticle = memo(function ConfettiParticle({
   );
 });
 
-/**
- * One-shot confetti animation driven by Reanimated 4 — drop-in replacement for
- * react-native-confetti-cannon (unmaintained since 2022). Renders `count`
- * particles falling from `origin`, fading out by the end of `fallSpeed` ms.
- *
- * Callers should mount this conditionally and unmount once the animation
- * completes (matching the legacy showConfetti pattern). Use `onAnimationEnd`
- * if you want to trigger unmount automatically.
- */
 export function Confetti({
   count = 80,
   origin,

@@ -1,30 +1,5 @@
-/**
- * UFR-022 red phase — PR-13 `SlidingWindowFailureStrategy` unit tests.
- * RUN_ID: 2026-05-23-pr-13-threeStateCircuit.
- *
- * Strategy used by `LLMCircuitBreaker` AND `GuardrailCircuitBreaker`. Encodes
- * the sliding-window failure-count trip predicate. The strategy file does NOT
- * exist yet — these tests fail with a `Cannot find module
- * '@shared/circuit-breaker/strategies/sliding-window-failure-strategy'` resolve
- * error pre-green (counts as RED).
- *
- * Pre-green failure mode: module not found.
- * Post-green expected: 6 cases pass (see design.md §6.2).
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/design.md §4.1
- *   .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/tasks.md T2 / T7.b
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
- */
 import { SlidingWindowFailureStrategy } from '@shared/circuit-breaker/strategies/sliding-window-failure-strategy';
 
-/**
- * Mutable virtual clock.
- * @param start
- */
 function makeClock(start = 1_700_000_000_000): {
   now: () => number;
   advance: (ms: number) => void;
@@ -83,7 +58,7 @@ describe('SlidingWindowFailureStrategy', () => {
     strategy.recordFailure();
     expect(strategy.getFailureCount()).toBe(2);
 
-    clock.advance(10_001); // strictly past window
+    clock.advance(10_001);
     strategy.pruneExpired(clock.now());
 
     expect(strategy.getFailureCount()).toBe(0);
@@ -136,13 +111,11 @@ describe('SlidingWindowFailureStrategy', () => {
       now: clock.now,
     });
 
-    // Record 3 failures (would trip immediately)
     strategy.recordFailure();
     strategy.recordFailure();
     strategy.recordFailure();
     expect(strategy.shouldTrip(clock.now())).toBe(true);
 
-    // Advance past window. shouldTrip MUST prune lazily, returning false.
     clock.advance(10_001);
     expect(strategy.shouldTrip(clock.now())).toBe(false);
   });

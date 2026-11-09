@@ -8,7 +8,6 @@ import type {
 } from '@/features/chat/application/chatSessionLogic.pure';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 
-/** Creates a ChatUiMessage with sensible defaults. */
 export const makeChatUiMessage = (overrides?: Partial<ChatUiMessage>): ChatUiMessage => ({
   id: faker.string.uuid(),
   role: 'user',
@@ -18,7 +17,6 @@ export const makeChatUiMessage = (overrides?: Partial<ChatUiMessage>): ChatUiMes
   ...overrides,
 });
 
-/** Creates a backend API message shape with sensible defaults. */
 export const makeApiMessage = (overrides?: Partial<ApiMessage>): ApiMessage => ({
   id: faker.string.uuid(),
   role: 'user',
@@ -27,7 +25,6 @@ export const makeApiMessage = (overrides?: Partial<ApiMessage>): ApiMessage => (
   ...overrides,
 });
 
-/** Creates an assistant message with metadata (detectedArtwork, recommendations, suggestedFollowUp). */
 export const makeAssistantMessage = (
   overrides?: Partial<ChatUiMessage>,
   metadataOverrides?: Partial<ChatUiMessageMetadata>,
@@ -41,8 +38,6 @@ export const makeAssistantMessage = (
       confidence: faker.number.float({ min: 0.5, max: 1, fractionDigits: 2 }),
     },
     recommendations: [faker.lorem.sentence(), faker.lorem.sentence()],
-    // B3 — singular follow-up (≤80 chars), replaces legacy `followUpQuestions: string[]`.
-    suggestedFollowUp: faker.lorem.sentence({ min: 4, max: 8 }).slice(0, 79) + '?',
     expertiseSignal: faker.helpers.arrayElement(['beginner', 'intermediate', 'expert']),
     ...metadataOverrides,
   };
@@ -58,11 +53,6 @@ export const makeAssistantMessage = (
   };
 };
 
-/**
- * Creates a ChatUiEnrichedImage with sensible v2 defaults (rationale +
- * caption present). C2 finition (2026-05) — pass `rationale: ''` in overrides
- * to test the FE i18n-fallback branch.
- */
 export const makeEnrichedImage = (
   overrides?: Partial<ChatUiEnrichedImage>,
 ): ChatUiEnrichedImage => ({
@@ -75,7 +65,6 @@ export const makeEnrichedImage = (
   ...overrides,
 });
 
-/** Creates a DashboardSessionCard view-model with sensible defaults. */
 export const makeDashboardSessionCard = (
   overrides?: Partial<DashboardSessionCard>,
 ): DashboardSessionCard => ({

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -25,8 +25,6 @@ import type {
   EngagementAnalytics,
   AnalyticsGranularity,
 } from '@/lib/admin-types';
-
-// ── Helpers ──────────────────────────────────────────────────────────────
 
 const DAYS_OPTIONS = [7, 14, 30, 90] as const;
 const GRANULARITY_OPTIONS: AnalyticsGranularity[] = ['daily', 'weekly', 'monthly'];
@@ -71,39 +69,25 @@ function mergeUsageTimeSeries(usage: UsageAnalytics): UsageChartPoint[] {
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/**
- * True when every numeric value in every row is zero. Recharts happily
- * renders blank axes for this case, which looks broken to the admin — we
- * want the same "no data" placeholder as for an empty array.
- */
 function isAllZero<T>(data: readonly T[], numericKeys: readonly (keyof T)[]): boolean {
   if (data.length === 0) return true;
   return data.every((row) => numericKeys.every((k) => row[k] === 0));
 }
 
-// ── Component ────────────────────────────────────────────────────────────
-
 export default function AnalyticsPage() {
   const adminDict = useAdminDict();
 
-  // Data state
   const [usage, setUsage] = useState<UsageAnalytics | null>(null);
   const [content, setContent] = useState<ContentAnalytics | null>(null);
   const [engagement, setEngagement] = useState<EngagementAnalytics | null>(null);
 
-  // Filter state
   const [days, setDays] = useState(30);
   const [granularity, setGranularity] = useState<AnalyticsGranularity>('daily');
 
-  // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // ── Fetch all three in parallel on mount ──────────────────────────────
-  // C1B / D6 — the dead per-museum `?museumId=` plumbing was removed: the BE
-  // analytics schemas are `z.strictObject` with no `museumId` key (picking a
-  // museum 400'd every call) and no per-museum analytics feature is built. The
-  // page now always fetches the global aggregate (admin-only surface).
+  const [initialUsageQuery] = useState(() => `days=${days}&granularity=${granularity}`);
+  const skipFirstUsageFetch = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,9 +97,7 @@ export default function AnalyticsPage() {
       setError(null);
       try {
         const [usageData, contentData, engagementData] = await Promise.all([
-          apiGet<UsageAnalytics>(
-            `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
-          ),
+          apiGet<UsageAnalytics>(`/api/admin/analytics/usage?${initialUsageQuery}`),
           apiGet<ContentAnalytics>('/api/admin/analytics/content?limit=10'),
           apiGet<EngagementAnalytics>('/api/admin/analytics/engagement'),
         ]);
@@ -139,11 +121,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-    // Mount-only: `days`/`granularity` changes re-fetch usage via fetchUsage below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only full load
-  }, []);
-
-  // ── Re-fetch only usage when granularity / days change ───────────────
+  }, [initialUsageQuery]);
 
   const fetchUsage = useCallback(async () => {
     try {
@@ -156,23 +134,16 @@ export default function AnalyticsPage() {
     }
   }, [days, granularity]);
 
-  // Skip the initial render (handled by the mount useEffect above)
-  const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
-    if (!hasMounted) {
-      setHasMounted(true);
+    if (skipFirstUsageFetch.current) {
+      skipFirstUsageFetch.current = false;
       return;
     }
     void fetchUsage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- useCallback-wrapped fetch is stable
   }, [fetchUsage]);
-
-  // ── Derived data ──────────────────────────────────────────────────────
 
   const chartData = usage ? mergeUsageTimeSeries(usage) : [];
   const usageChartIsEmpty = isAllZero(chartData, ['sessions', 'messages', 'activeUsers']);
-
-  // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -186,17 +157,14 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Error */}
       {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
-      {/* ── KPI Cards ────────────────────────────────────────────────────── */}
       {engagement && (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div className="rounded-xl border border-primary-100 bg-white p-6">
@@ -246,7 +214,6 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Usage Charts ─────────────────────────────────────────────────── */}
       {usage && (
         <div className="mt-8 rounded-xl border border-primary-100 bg-white p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -329,10 +296,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* ── Content Analytics ────────────────────────────────────────────── */}
       {content && (
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          {/* Top Artworks — Bar Chart */}
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <h2 className="text-lg font-semibold text-text-primary">
               {adminDict.analyticsPage.topArtworks}
@@ -361,7 +326,6 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* Top Museums — Table */}
           <div className="rounded-xl border border-primary-100 bg-white p-6">
             <h2 className="text-lg font-semibold text-text-primary">
               {adminDict.analyticsPage.topMuseums}
@@ -396,7 +360,6 @@ export default function AnalyticsPage() {
               <EmptyChartPlaceholder label={adminDict.common.noData} />
             )}
 
-            {/* Guardrail Block Rate */}
             <div className="mt-6 rounded-lg bg-amber-50 px-4 py-3">
               <p className="text-sm font-medium text-amber-800">
                 {adminDict.analyticsPage.guardrailBlockRate}

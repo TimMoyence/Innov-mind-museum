@@ -3,22 +3,11 @@ import request from 'supertest';
 import { createRouteTestApp, stopRateLimitSweep } from '../../helpers/http/route-test-setup';
 import { makeToken } from '../../helpers/auth/token.helpers';
 
-// ─── Mock the auth useCase barrel — route + isAuthenticated middleware both
-//     pull from @modules/auth/useCase, so the mock must expose everything the
-//     route reaches (use cases + repo) AND everything isAuthenticated needs
-//     (authSessionService.verifyAccessToken).
-// ────────────────────────────────────────────────────────────────────────────
-
 jest.mock('@modules/auth/useCase', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const { env: envConfig } = require('@src/config/env');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- same reason
   const { GrantConsentUseCase } = require('@modules/auth/useCase/consent/grantConsent.useCase');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- same reason
   const { RevokeConsentUseCase } = require('@modules/auth/useCase/consent/revokeConsent.useCase');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoisted above top-level imports
   const { makeUserConsentRepo: makeRepo } = require('../../helpers/auth/userConsent-repo.mock');
 
   const sharedRepo = makeRepo();
@@ -73,8 +62,6 @@ jest.mock('@modules/auth/useCase', () => {
       refresh: jest.fn(),
       logout: jest.fn(),
     },
-    // Other auth use cases — the auth route also imports these but consent
-    // tests only exercise the consent sub-router, so stubs suffice.
     registerUseCase: { execute: jest.fn() },
     forgotPasswordUseCase: { execute: jest.fn() },
     resetPasswordUseCase: { execute: jest.fn() },
@@ -98,9 +85,6 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-// After jest.mock hoisting, re-grab the shared repo through the mocked
-// module so tests can assert against it directly.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- factory module boot order
 const { userConsentRepository: sharedRepo } = require('@modules/auth/useCase') as {
   userConsentRepository: ReturnType<
     typeof import('../../helpers/auth/userConsent-repo.mock').makeUserConsentRepo
@@ -177,9 +161,6 @@ describe('Consent Routes — HTTP + auth gate', () => {
       expect(res.status).toBe(400);
     });
 
-    // Cycle 1.5 (RUN_ID 2026-05-26-chat-pipeline-hardening) — the NEW coarse
-    // geo consent scope must be a valid grant target. FAILS today (Zod enum
-    // does not yet include `location_coarse_to_llm` → 400 invalid scope).
     it('CR1/CR2: accepts location_coarse_to_llm grant (201) and isGranted becomes true', async () => {
       const token = makeToken({ sub: '42' });
 
@@ -222,9 +203,6 @@ describe('Consent Routes — HTTP + auth gate', () => {
       expect(res.status).toBe(400);
     });
 
-    // Cycle 1.5 — revoking the coarse scope MUST NOT touch the full scope
-    // (NFR-3, independent grants). FAILS today (coarse scope not yet valid for
-    // revoke → 400). Asserts isolation once the scope exists.
     it('CR3: revoking location_coarse_to_llm leaves location_to_llm untouched (NFR-3)', async () => {
       await sharedRepo.grant(42, 'location_to_llm', '2026-05-26', 'api');
       await sharedRepo.grant(42, 'location_coarse_to_llm', '2026-05-26', 'api');
@@ -237,7 +215,6 @@ describe('Consent Routes — HTTP + auth gate', () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ revoked: true, scope: 'location_coarse_to_llm' });
       expect(await sharedRepo.isGranted(42, 'location_coarse_to_llm')).toBe(false);
-      // The full-precision scope is independent and still active.
       expect(await sharedRepo.isGranted(42, 'location_to_llm')).toBe(true);
     });
   });
@@ -246,7 +223,7 @@ describe('Consent Routes — HTTP + auth gate', () => {
     it("returns the authenticated user's consent history", async () => {
       await sharedRepo.grant(42, 'location_to_llm', '2026-04-24', 'ui');
       await sharedRepo.grant(42, 'analytics', '2026-04-24', 'api');
-      await sharedRepo.grant(99, 'location_to_llm', '2026-04-24', 'ui'); // other user — must not leak
+      await sharedRepo.grant(99, 'location_to_llm', '2026-04-24', 'ui');
       const token = makeToken({ sub: '42' });
 
       const res = await request(app)

@@ -1,11 +1,5 @@
-/**
- * Screen-specific mocks for ChatSessionScreen.
- * Import AFTER test-utils (which provides global mocks for theme, router, etc.).
- */
-
 import type * as ReactTypes from 'react';
 
-// Locally declared so babel-jest allows them in the jest.mock factory below.
 const mockChatApiCreate = jest.fn();
 const mockChatApiDeleteSessionIfEmpty = jest.fn();
 const mockChatApiReportMessage = jest.fn();
@@ -18,14 +12,12 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-/** Exported handles for test files that import this setup. */
 export const chatScreenApiMocks = {
   createSession: mockChatApiCreate,
   deleteSessionIfEmpty: mockChatApiDeleteSessionIfEmpty,
   reportMessage: mockChatApiReportMessage,
 };
 
-// Override useLocalSearchParams from the test-utils expo-router mock
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => ({ sessionId: 'test-session-123' });
 
@@ -35,9 +27,6 @@ jest.mock('@react-navigation/native', () => ({
     canGoBack: () => true,
     addListener: jest.fn(() => jest.fn()),
   }),
-  // Screen-focus re-runs the consent re-check (`recheckConsent`) so the sheet
-  // re-prompts after a Settings revoke. The mock executes the effect once on
-  // mount (same lifecycle as real focus-on-mount) and returns a noop cleanup.
   useFocusEffect: (effect: ReactTypes.EffectCallback) => {
     const ReactRuntime = require('react') as typeof ReactTypes;
     ReactRuntime.useEffect(() => effect(), [effect]);
@@ -93,6 +82,7 @@ jest.mock('@/features/chat/application/useMessageActions', () => ({
 }));
 
 jest.mock('@/features/chat/application/chatSessionLogic.pure', () => ({
+  ...jest.requireActual<object>('@/features/chat/application/chatSessionLogic.pure'),
   buildVisitSummary: () => ({ title: 'Visit Summary', artworks: [], totalMessages: 0 }),
 }));
 
@@ -120,15 +110,6 @@ jest.mock('@/features/chat/ui/OfflineBanner', () => {
   const { View } = require('react-native');
   return { OfflineBanner: () => <View testID="offline-banner" /> };
 });
-
-// NOTE: `<Composer>` and the bottom-sheet-router are NOT mocked here. Tests
-// that need to capture composer props or intercept `router.open(...)` calls
-// (e.g. `chat-cartel-scanner.test.tsx`) define their own jest.mock() factories
-// at the top of the file — those win because babel-jest hoists them above
-// this helper's import. Tests that don't care about these surfaces still pass
-// because the real `<Composer>` is lightweight (its `ChatInput` child is
-// mocked just below) and the real `<BottomSheetRouter>` renders to `null`
-// while `activeRoute === null`.
 
 export function defaultChatSession() {
   return {

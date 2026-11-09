@@ -1,60 +1,38 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth — Submit with invalid email (Zod inline error)
-#
-# TD-RHF-02 — surfaces the react-hook-form field-level error from the Zod
-# `email()` validator inline next to the email input. The form must NOT
-# submit (no backend call, no auth-error-state banner) and the error must
-# carry testID="auth-email-error" with accessibilityRole="alert" so VO/TB
-# announce it.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 0: Cold start -> auth screen (login mode is default)
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
-
-# ──────────────────────────────────────────────
-# Phase 2: Type a malformed email + a structurally-valid password
-# (avoids the catch-all "fill all fields" Alert from useEmailPasswordAuth)
-# ──────────────────────────────────────────────
-- tapOn:
-    id: "email-input"
-- inputText: "not-an-email"
+    id: 'analytics-consent-decline'
 
 - tapOn:
-    id: "password-input"
-- inputText: "AnyValidPwd123"
-
-# Dismiss keyboard via a static-text tap (hideKeyboard intermittently hard-fails
-# on iOS when no standard dismiss accessory is present).
-- tapOn:
-    text: "Welcome back|Bon retour"
+    id: 'email-input'
+- inputText: 'not-an-email'
 
 - tapOn:
-    id: "auth-submit"
+    id: 'password-input'
+- inputText: 'AnyValidPwd123'
 
-# ──────────────────────────────────────────────
-# Phase 3: Inline Zod email error must appear
-# ──────────────────────────────────────────────
+- tapOn:
+    text: 'Welcome back|Bon retour'
+
+- tapOn:
+    id: 'auth-submit'
+
 - extendedWaitUntil:
     visible:
-      id: "auth-email-error"
+      id: 'auth-email-error'
     timeout: 5000
 
-# Sanity: form did not submit — no global error banner, still on login screen
 - assertNotVisible:
-    id: "auth-error-state"
+    id: 'auth-error-state'
 - assertVisible:
-    text: "Welcome back|Bon retour"
+    text: 'Welcome back|Bon retour'

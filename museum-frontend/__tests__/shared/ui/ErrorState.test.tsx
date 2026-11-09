@@ -42,7 +42,6 @@ describe('ErrorState', () => {
     render(<ErrorState title="Failed" variant="fullscreen" testID="err" />);
     const container = screen.getByTestId('err');
     expect(container.props.accessibilityRole).toBe('alert');
-    // Style assertion: fullscreen has flex 1
     const flat = Array.isArray(container.props.style)
       ? Object.assign({}, ...container.props.style.flat())
       : container.props.style;

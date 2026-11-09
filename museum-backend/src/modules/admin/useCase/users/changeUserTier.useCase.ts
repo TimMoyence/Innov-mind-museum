@@ -5,7 +5,6 @@ import { invalidInput, notFound } from '@shared/errors/app.error';
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 
-/** R1 §3.5 D5 */
 interface ChangeUserTierInput {
   userId: number;
   newTier: 'free' | 'premium';
@@ -14,12 +13,6 @@ interface ChangeUserTierInput {
   requestId?: string;
 }
 
-/**
- * R1 (C6) — Admin tier override. validate → mutate → audit → return.
- * - Idempotent no-op when previous.tier === newTier (R1 §3.5 D5) — no audit, no write.
- * - Audit emitted AFTER mutation, BEFORE return (N3 audit ordering).
- * - MUST NOT touch the monthly counter (R17 — handled by repo).
- */
 export class ChangeUserTierUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
@@ -34,7 +27,6 @@ export class ChangeUserTierUseCase {
       throw notFound('User not found');
     }
 
-    // R1 §3.5 D5 — no-op skip prevents double-click audit chain inflation.
     if (previous.tier === input.newTier) {
       return previous;
     }

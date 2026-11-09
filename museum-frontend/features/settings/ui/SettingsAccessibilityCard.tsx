@@ -2,15 +2,17 @@ import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native'
 import { useTranslation } from 'react-i18next';
 
 import { useAudioDescriptionMode } from '@/features/settings/application/useAudioDescriptionMode';
+import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
+import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-/** Accessibility card: audio description mode toggle. */
 export const SettingsAccessibilityCard = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { enabled, isLoading, toggle } = useAudioDescriptionMode();
+  const { refusal, track } = useLatestSaveOutcome();
 
   return (
     <GlassCard style={styles.card} intensity={56}>
@@ -31,7 +33,7 @@ export const SettingsAccessibilityCard = () => {
         ) : (
           <Switch
             value={enabled}
-            onValueChange={() => void toggle()}
+            onValueChange={() => void track(toggle())}
             trackColor={{ false: theme.cardBorder, true: theme.primary }}
             accessibilityRole="switch"
             accessibilityLabel={t('settings.audio_description')}
@@ -39,6 +41,7 @@ export const SettingsAccessibilityCard = () => {
           />
         )}
       </View>
+      <SaveRefusalNotice refusal={refusal} />
     </GlassCard>
   );
 };

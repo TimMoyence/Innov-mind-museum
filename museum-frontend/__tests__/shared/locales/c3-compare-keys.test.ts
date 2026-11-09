@@ -1,20 +1,3 @@
-/**
- * RED test for T8.6 — C3 compare i18n key parity (FR/EN).
- *
- * Asserts both `shared/locales/fr/translation.json` and
- * `shared/locales/en/translation.json` contain the new keys introduced
- * by Phase 8:
- *   - chat.compare.title
- *   - chat.compare.empty
- *   - chat.compare.viewArtist
- *   - chat.compare.attribution
- *   - chat.compare.rationale.fallback
- *
- * Also enforces parity: any C3-namespaced key (`chat.compare.*`) present
- * in one locale MUST exist in the other.
- *
- * Keys do NOT exist yet — the test must FAIL until T8.6 lands.
- */
 import fs from 'fs';
 import path from 'path';
 

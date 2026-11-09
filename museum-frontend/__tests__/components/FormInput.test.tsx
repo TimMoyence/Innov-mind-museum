@@ -60,7 +60,6 @@ describe('FormInput — variant-driven defaults', () => {
       />,
     );
     const input = getByPlaceholderText('placeholder');
-    // still secureTextEntry because we didn't override it
     expect(input.props.secureTextEntry).toBe(true);
     expect(input.props.autoComplete).toBe('one-time-code');
     expect(input.props.textContentType).toBe('oneTimeCode');

@@ -1,39 +1,8 @@
 "use strict";
-/**
- * Cross-runtime Sentry PII scrubber — single source of truth for redaction logic.
- *
- * Sentry-SDK-free so it can be unit-tested with plain objects and reused
- * across Node, React Native, and Next.js (client / server / edge) runtimes.
- *
- * The host injects its own `hashEmail` implementation (Node `crypto.createHash`
- * on the backend, 32-bit fold elsewhere) — that is the ONLY platform-specific
- * piece. Everything else (regex constants, traversal, URL/header/record
- * scrubbing, breadcrumb dropping) is identical across runtimes and lives here.
- *
- * @see packages/musaium-shared/src/observability/sentry-scrubber.test.ts
- *   golden-input/golden-output identity test that guards against silent drift.
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shouldDropBreadcrumb = exports.scrubEvent = exports.scrubUrl = exports.isUrlLikeValue = exports.scrubRecord = exports.scrubHeaders = exports.hashEmail = exports.REDACTED = exports.SENSITIVE_BREADCRUMB_PATHS = exports.SENSITIVE_QUERY_KEYS = exports.SENSITIVE_FIELD_REGEX = exports.SENSITIVE_HEADER_REGEX = void 0;
-/** Header names (case-insensitive) whose values must be redacted before leaving the app. */
 exports.SENSITIVE_HEADER_REGEX = /^(authorization|cookie|x-api-key|x-auth-token)$/i;
-/** Body / extra field names whose values must be redacted before leaving the app. */
 exports.SENSITIVE_FIELD_REGEX = /password|token|secret|api[_-]?key|refresh/i;
-/** Query-string keys whose values must be stripped from captured URLs.
- *
- * R1 (2026-05-21) — extended from 7 to 11 entries to close the magic-link /
- * OAuth / signup query-string leak (`code`, `state`, `email`, `phone`). Sentinel
- * `scripts/sentinels/sentry-scrubber-parity.mjs` `CANONICAL_HASH` bumped in
- * lockstep ; golden test `sentry-scrubber.test.ts` asserts the set size.
- *
- * Cycle 10 (A-02, 2026-05-26) — extended from 11 to 16 entries to close the
- * presigned-S3 / signed-URL signature leak (`x-amz-signature`,
- * `x-amz-credential`, `x-amz-security-token`, `sig`, `signature`). Matching is
- * case-insensitive (`key.toLowerCase()` in `scrubUrl`) so `X-Amz-Signature`
- * matches `x-amz-signature`. Generic `key` / `author` are deliberately NOT
- * added (too prone to false positives — D4). Sentinel `CANONICAL_HASH` bumped
- * in lockstep ; golden test asserts the 16-entry set.
- */
 exports.SENSITIVE_QUERY_KEYS = new Set([
     'access_token',
     'api_key',
@@ -52,14 +21,12 @@ exports.SENSITIVE_QUERY_KEYS = new Set([
     'x-amz-security-token',
     'x-amz-signature',
 ]);
-/** Auth-adjacent paths where breadcrumb bodies could leak credentials. */
 exports.SENSITIVE_BREADCRUMB_PATHS = [
     '/auth/login',
     '/auth/register',
     '/auth/reset-password',
     '/auth/change-password',
 ];
-/** Replacement marker written in place of redacted values. */
 exports.REDACTED = '[redacted]';
 const hashEmail = (email) => {
     if (!email)
@@ -71,7 +38,6 @@ const hashEmail = (email) => {
     return (hash >>> 0).toString(16).padStart(8, '0').slice(0, 8);
 };
 exports.hashEmail = hashEmail;
-/** Returns a copy of `headers` with sensitive values redacted. */
 const scrubHeaders = (headers) => {
     const out = { ...headers };
     for (const key of Object.keys(out)) {
@@ -82,7 +48,6 @@ const scrubHeaders = (headers) => {
     return out;
 };
 exports.scrubHeaders = scrubHeaders;
-/** Recursively redacts values under sensitive keys. Arrays and nested objects are walked. */
 const scrubRecord = (input) => {
     if (Array.isArray(input)) {
         return input.map((item) => (0, exports.scrubRecord)(item));
@@ -95,11 +60,6 @@ const scrubRecord = (input) => {
                 out[key] = exports.REDACTED;
             }
             else if ((0, exports.isUrlLikeValue)(value)) {
-                // TD-68 (SCRUB-01) — a URL-like value under a NON-sensitive key still
-                // carries sensitive query-string params (`?token=…`, `?code=…`). Without
-                // this, such a URL nested in `extra` / `request.data` reached Sentry raw
-                // (only `tags` and `request.url` previously ran scrubUrl). scrubUrl is a
-                // no-op on URLs with no sensitive params, so this never over-masks.
                 out[key] = (0, exports.scrubUrl)(value);
             }
             else {
@@ -111,23 +71,12 @@ const scrubRecord = (input) => {
     return input;
 };
 exports.scrubRecord = scrubRecord;
-/**
- * Heuristic for detecting URL-like string values in dynamic tag/context maps.
- *
- * R2/R3 (2026-05-21) — used by both `scrubEvent` (when walking `event.tags`)
- * and `captureExceptionWithContext` (BE wrapper at sentry.ts) to decide
- * whether to run `scrubUrl` on a given tag value. Conservative on purpose:
- * matches strings carrying `?` (query-string), absolute paths (`/…`), or
- * `http://` / `https://` schemes. Non-URL string values (e.g. `'GET'`,
- * `'500'`) flow through untouched.
- */
 const isUrlLikeValue = (value) => typeof value === 'string' &&
     (value.includes('?') ||
         value.startsWith('/') ||
         value.startsWith('http://') ||
         value.startsWith('https://'));
 exports.isUrlLikeValue = isUrlLikeValue;
-/** Strips sensitive query-string values from a URL while preserving the rest. */
 const scrubUrl = (url) => {
     const qIndex = url.indexOf('?');
     if (qIndex === -1)
@@ -147,7 +96,6 @@ const scrubUrl = (url) => {
     return `${base}?${parts.join('&')}`;
 };
 exports.scrubUrl = scrubUrl;
-/** Returns a copy of `request` with sensitive headers / data / URL fields scrubbed. */
 const scrubRequest = (request) => {
     const out = { ...request };
     if (out.headers && typeof out.headers === 'object') {
@@ -160,18 +108,11 @@ const scrubRequest = (request) => {
         out.url = (0, exports.scrubUrl)(out.url);
     }
     if (typeof out.query_string === 'string') {
-        // TD-71 — Sentry's dedicated request.query_string field (raw query) was never
-        // scrubbed, so a token=…/code=… reached Sentry verbatim. Strip any leading '?'
-        // first (defensive — Sentry's convention omits it; without this strip a
-        // '?token=x' input would key on '?token', which isn't sensitive → leak), then
-        // wrap as a bare query to reuse scrubUrl's sensitive-key redaction, and strip
-        // the synthetic '?'. No-op when no sensitive param is present.
         const rawQuery = out.query_string.replace(/^\?/, '');
         out.query_string = (0, exports.scrubUrl)(`?${rawQuery}`).slice(1);
     }
     return out;
 };
-/** Returns a copy of `user` with the raw email removed, replaced by a stable fingerprint. */
 const scrubUser = (user, deps) => {
     const out = { ...user };
     const fingerprint = deps.hashEmail(out.email ?? '');
@@ -182,12 +123,6 @@ const scrubUser = (user, deps) => {
     }
     return out;
 };
-/**
- * Applies all scrubbing rules to a Sentry event (returns a new object).
- *
- * Email fingerprinting is delegated to `deps.hashEmail` — pass the runtime's
- * implementation (Node crypto on backend, 32-bit fold elsewhere).
- */
 const scrubEvent = (event, deps) => {
     const next = { ...event };
     if (next.request) {
@@ -199,14 +134,6 @@ const scrubEvent = (event, deps) => {
     if (next.extra && typeof next.extra === 'object') {
         next.extra = (0, exports.scrubRecord)(next.extra);
     }
-    // R2 (2026-05-21) — Sentry `tags` are indexed + persistent for 30 days.
-    // Tags carry both body-shaped keys (password/token/...) and header-shaped keys
-    // (authorization/cookie/...). Walk both regexes :
-    //   - `SENSITIVE_FIELD_REGEX` (body fields — handled by scrubRecord)
-    //   - `SENSITIVE_HEADER_REGEX` (header names like `authorization`)
-    // Then `scrubUrl` strips sensitive query-string params from URL-like VALUES
-    // (e.g. `tags.path = '/api/auth/x?code=…'`). Defense-in-depth with the
-    // upstream `captureExceptionWithContext` scrub at the BE wrapper site.
     if (next.tags && typeof next.tags === 'object') {
         const scrubbedTags = (0, exports.scrubRecord)(next.tags);
         for (const [key, value] of Object.entries(scrubbedTags)) {
@@ -223,7 +150,6 @@ const scrubEvent = (event, deps) => {
     return next;
 };
 exports.scrubEvent = scrubEvent;
-/** Returns `true` when the breadcrumb should be dropped (auth-adjacent HTTP call). */
 const shouldDropBreadcrumb = (breadcrumb) => {
     if (breadcrumb.category !== 'http')
         return false;

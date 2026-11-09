@@ -1,9 +1,3 @@
-/**
- * Tests for `useVoiceDisclosure` — the EU AI Act Article 50 voice-disclosure
- * gate hook. The hook reads/writes to `expo-secure-store`; we mock both the
- * native module and `reportError` so failures surface as assertions rather
- * than console noise.
- */
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),

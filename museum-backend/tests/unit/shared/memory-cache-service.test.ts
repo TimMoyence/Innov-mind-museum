@@ -67,7 +67,7 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService({ maxEntries: 2 });
       await cache.set('a', 1);
       await cache.set('b', 2);
-      await cache.set('c', 3); // evicts 'a'
+      await cache.set('c', 3);
 
       expect(await cache.get('a')).toBeNull();
       expect(await cache.get('b')).toBe(2);
@@ -78,7 +78,7 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService({ maxEntries: 2 });
       await cache.set('a', 1);
       await cache.set('b', 2);
-      await cache.set('a', 99); // overwrite, no eviction
+      await cache.set('a', 99);
 
       expect(await cache.get('a')).toBe(99);
       expect(await cache.get('b')).toBe(2);
@@ -148,7 +148,7 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService();
       await cache.zadd('ranking', 'alice', 5);
       await cache.zadd('ranking', 'bob', 3);
-      await cache.zadd('ranking', 'alice', 2); // alice: 7
+      await cache.zadd('ranking', 'alice', 2);
 
       const top = await cache.ztop('ranking', 2);
       expect(top).toEqual([
@@ -182,11 +182,9 @@ describe('MemoryCacheService', () => {
       await cache.set('will-expire', 'x', 1);
       await cache.set('still-alive', 'y', 3600);
 
-      // Advance past expiry, then past GC interval (60s)
       jest.advanceTimersByTime(2_000);
       jest.advanceTimersByTime(60_000);
 
-      // Verify expired entry is gone (via a direct get, which also evicts lazily)
       expect(await cache.get('will-expire')).toBeNull();
       expect(await cache.get('still-alive')).toBe('y');
     });
@@ -228,9 +226,6 @@ describe('MemoryCacheService', () => {
       await cache.destroy();
       await cache.destroy();
 
-      // First destroy clears; second destroy must skip (gcTimer === null).
-      // If the `gcTimer !== null` guard is mutated to `true`, clearInterval
-      // would be called twice instead of once.
       expect(clearSpy.mock.calls.length - before).toBe(1);
       clearSpy.mockRestore();
     });
@@ -243,11 +238,9 @@ describe('MemoryCacheService', () => {
       jest.spyOn(Date, 'now').mockReturnValue(base);
       await cache.set('k', 'boundary', 1);
 
-      // expiresAt is base + 1000. Read exactly at base + 1000.
       (Date.now as jest.Mock).mockReturnValue(base + 1000);
       expect(await cache.get('k')).toBe('boundary');
 
-      // One ms past expiry → null.
       (Date.now as jest.Mock).mockReturnValue(base + 1001);
       expect(await cache.get('k')).toBeNull();
 
@@ -257,11 +250,8 @@ describe('MemoryCacheService', () => {
 
   describe('set with maxEntries=0 (firstKey undefined branch)', () => {
     it('does not throw and stores values when maxEntries is 0 and store is empty', async () => {
-      // size >= maxEntries (0 >= 0) is always true, but store.keys().next().value
-      // is undefined on first insert → the `firstKey !== undefined` guard must hold.
       const cache = new MemoryCacheService({ maxEntries: 0 });
       await expect(cache.set('a', 1, 60)).resolves.toBeUndefined();
-      // Subsequent set evicts 'a' (firstKey defined this time)
       await cache.set('b', 2, 60);
       expect(await cache.get('a')).toBeNull();
       expect(await cache.get('b')).toBe(2);
@@ -275,9 +265,6 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService({ defaultTtlSeconds: 100 });
       await cache.set('k', 'v', -5);
 
-      // If the `ttlSeconds && ttlSeconds > 0` guard were mutated to
-      // `ttlSeconds || ttlSeconds > 0`, ttl would be -5, making the entry
-      // already expired. With the original, ttl = defaultTtlSeconds = 100s.
       jest.advanceTimersByTime(50_000);
       expect(await cache.get('k')).toBe('v');
 
@@ -322,14 +309,9 @@ describe('MemoryCacheService', () => {
       await cache.set('expired-2', 'b', 1);
       await cache.set('alive', 'c', 3600);
 
-      // Move past TTL but BEFORE the 60s GC tick.
       jest.advanceTimersByTime(2_000);
-      // No GC yet → still 3 entries in store, logger not called.
       expect(logger.info).not.toHaveBeenCalled();
 
-      // Trigger the GC interval at 60s — this calls evictExpired() via setInterval.
-      // If the setInterval body block is mutated to {}, evictExpired never runs
-      // and logger.info is never called.
       jest.advanceTimersByTime(58_000);
 
       expect(logger.info).toHaveBeenCalledTimes(1);
@@ -338,8 +320,6 @@ describe('MemoryCacheService', () => {
         remaining: 1,
       });
 
-      // The surviving entry must still be readable (lazy expiry would otherwise
-      // re-delete it, but the GC path is what we're testing).
       expect(await cache.get('alive')).toBe('c');
       await cache.destroy();
     });
@@ -351,7 +331,6 @@ describe('MemoryCacheService', () => {
       await cache.set('alive-1', 'a', 3600);
       await cache.set('alive-2', 'b', 3600);
 
-      // Tick GC interval without anything being expired.
       jest.advanceTimersByTime(60_000);
 
       expect(logger.info).not.toHaveBeenCalled();
@@ -363,8 +342,8 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService();
 
       await cache.set('e1', 1, 1);
-      jest.advanceTimersByTime(2_000); // e1 expired
-      jest.advanceTimersByTime(58_000); // first GC tick → 1 eviction
+      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(58_000);
 
       expect(logger.info).toHaveBeenCalledTimes(1);
       expect(logger.info).toHaveBeenLastCalledWith('memory_cache_gc', {
@@ -374,8 +353,8 @@ describe('MemoryCacheService', () => {
 
       await cache.set('e2', 2, 1);
       await cache.set('e3', 3, 1);
-      jest.advanceTimersByTime(2_000); // e2, e3 expired
-      jest.advanceTimersByTime(60_000); // next GC tick → 2 evictions
+      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(60_000);
 
       expect(logger.info).toHaveBeenCalledTimes(2);
       expect(logger.info).toHaveBeenLastCalledWith('memory_cache_gc', {
@@ -391,15 +370,10 @@ describe('MemoryCacheService', () => {
       const base = Date.now();
       const cache = new MemoryCacheService();
 
-      // Build an entry whose expiresAt aligns exactly with the next GC tick.
-      // GC ticks at base+60_000. An entry set with ttl=60s expires at base+60_000.
-      // Strict `now > expiresAt` means this entry should survive the first tick.
       await cache.set('borderline', 'edge', 60);
-      jest.advanceTimersByTime(60_000); // GC fires; now === expiresAt for borderline
+      jest.advanceTimersByTime(60_000);
 
-      // With strict `>`, no eviction happened, no log.
       expect(logger.info).not.toHaveBeenCalled();
-      // Sanity: we are at the boundary.
       expect(Date.now()).toBe(base + 60_000);
 
       await cache.destroy();
@@ -433,7 +407,6 @@ describe('MemoryCacheService', () => {
       const cache = new MemoryCacheService();
       await cache.set('c', 10, 60);
       await expect(cache.incrBy('c', -4, 60)).resolves.toBe(6);
-      // If the operator were mutated from `+` to `-`, result would be 10 - (-4) = 14.
       expect(await cache.get<number>('c')).toBe(6);
       await cache.destroy();
     });
@@ -441,7 +414,6 @@ describe('MemoryCacheService', () => {
     it('returns null when amount is 0', async () => {
       const cache = new MemoryCacheService();
       await expect(cache.incrBy('c', 0, 60)).resolves.toBeNull();
-      // Side effect: nothing was written.
       expect(await cache.get<number>('c')).toBeNull();
       await cache.destroy();
     });
@@ -493,15 +465,15 @@ describe('MemoryCacheService', () => {
       jest.useFakeTimers();
       const cache = new MemoryCacheService();
 
-      await cache.incrBy('c', 1, 10); // expires at t+10s
+      await cache.incrBy('c', 1, 10);
 
       jest.advanceTimersByTime(8_000);
-      await cache.incrBy('c', 1, 10); // refresh → expires at t+18s
+      await cache.incrBy('c', 1, 10);
 
-      jest.advanceTimersByTime(8_000); // t+16s — still alive (refreshed)
+      jest.advanceTimersByTime(8_000);
       expect(await cache.get<number>('c')).toBe(2);
 
-      jest.advanceTimersByTime(3_000); // t+19s — past refreshed TTL
+      jest.advanceTimersByTime(3_000);
       expect(await cache.get<number>('c')).toBeNull();
       await cache.destroy();
     });

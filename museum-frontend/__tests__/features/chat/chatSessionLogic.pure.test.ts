@@ -5,8 +5,6 @@ describe('decideMarkdownLinkAction', () => {
     expect(decideMarkdownLinkAction('https://www.capc-bordeaux.fr')).toBe('in-app');
   });
 
-  // TD-MD-02 — http is now REJECTED (downgrade / mixed-content attack risk on
-  // V1 mobile). Behaviour change from the pre-allowlist startsWith logic.
   it('returns "ignore" for http URLs (downgrade attack rejection)', () => {
     expect(decideMarkdownLinkAction('http://example.com')).toBe('ignore');
   });
@@ -35,8 +33,6 @@ describe('decideMarkdownLinkAction', () => {
     expect(decideMarkdownLinkAction(undefined)).toBe('ignore');
   });
 
-  // TD-MD-02 — prompt-injectable schemes must never reach Linking.openURL
-  // ('system') nor the in-app browser ('in-app'). Each maps to 'ignore'.
   it.each([
     'intent://scan/#Intent;scheme=zxing;end',
     'app-scheme://deeplink/hijack',
@@ -55,15 +51,8 @@ describe('decideMarkdownLinkAction', () => {
     expect(decideMarkdownLinkAction('not a url at all')).toBe('ignore');
   });
 
-  // Regression test for the C1 double-open bug from sprint 2 code review.
-  // The contract of `@ronradtke/react-native-markdown-display.onLinkPress`
-  // is COUNTER-INTUITIVE: returning `true` makes the library ALSO call
-  // `Linking.openURL`. So our chat screen MUST translate "in-app" → false.
   it('regression: in-app action implies caller must return `false` from onLinkPress', () => {
     const action = decideMarkdownLinkAction('https://example.com');
-    // The chat screen wires this as: if (action === 'in-app') return false
-    // If this assertion ever fails or the mapping changes, the screen
-    // wiring in [sessionId].tsx must be revisited.
     expect(action).toBe('in-app');
   });
 });

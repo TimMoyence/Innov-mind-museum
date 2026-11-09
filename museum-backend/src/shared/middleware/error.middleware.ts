@@ -1,6 +1,7 @@
 import { MulterError } from 'multer';
 
 import { AppError } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { markInputRejected } from '@shared/middleware/input-rejected';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
@@ -16,11 +17,6 @@ interface ErrorResponseShape {
   };
 }
 
-/**
- * Duck-typed — `instanceof AppError` breaks across module boundaries when Jest calls
- * `jest.resetModules()` (e2e harness reset). Two distinct AppError class identities
- * end up coexisting; pre-reset AppError throws look "unknown" → degrade to 500.
- */
 const isAppErrorLike = (error: unknown): error is AppError => {
   if (error instanceof AppError) return true;
   if (!(error instanceof Error)) return false;
@@ -28,14 +24,6 @@ const isAppErrorLike = (error: unknown): error is AppError => {
   return typeof candidate.statusCode === 'number' && typeof candidate.code === 'string';
 };
 
-/**
- * Multer DoS bounds (`limits.fields` / `limits.parts` / `limits.fileSize` /
- * `limits.fieldNameSize` / `limits.fieldSize`) all guard resource exhaustion
- * — exceeding them is "payload too large" semantics (413), not a malformed
- * request (400). File-count / unexpected-field overruns stay 400 because
- * they are semantic request shape errors, not size overruns (cf. TD-MUL-02
- * which keeps `LIMIT_FILE_COUNT` / `LIMIT_UNEXPECTED_FILE` on 400).
- */
 const MULTER_PAYLOAD_TOO_LARGE_CODES = new Set<MulterError['code']>([
   'LIMIT_FILE_SIZE',
   'LIMIT_PART_COUNT',
@@ -103,11 +91,10 @@ const logServerError = (error: unknown, req: Request, requestId: string | undefi
     method: req.method,
     path: req.originalUrl,
     statusCode: isAppErrorLike(error) ? error.statusCode : 500,
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage(error),
   });
 };
 
-/** Scoped to `/api/auth/` only — avoid flooding logs with every wrong password attempt. */
 const logAuth4xx = (
   error: unknown,
   req: Request,

@@ -1,8 +1,3 @@
-/**
- * Idempotence invariant: processing the same URL twice within the TTL window
- * must produce exactly one `extracted_content` row — the second call is a no-op.
- */
-
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -22,8 +17,6 @@ import {
   makeMockArtworkKnowledgeRepo,
   makeMockMuseumEnrichmentRepo,
 } from '../../helpers/knowledge-extraction/extraction.fixtures';
-
-// ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const URL_A = 'https://example.com/mona-lisa';
 
@@ -51,8 +44,6 @@ const CLASSIFICATION: ClassificationResult = {
 
 const CONFIG = { confidenceThreshold: 0.7, reviewThreshold: 0.4, refetchAfterDays: 7 };
 
-// ── Factory helpers ───────────────────────────────────────────────────────────
-
 function makeScraper(): jest.Mocked<ScraperPort> {
   return { scrape: jest.fn().mockResolvedValue(SCRAPED) };
 }
@@ -67,7 +58,6 @@ function makeContentRepo(firstCallResult: { scrapedAt: Date } | null) {
     findByUrl: jest.fn().mockImplementation(async () => {
       callCount++;
       if (callCount === 1) return firstCallResult;
-      // Second call simulates the record written by the first pass
       return { scrapedAt: new Date() };
     }),
   });
@@ -75,8 +65,6 @@ function makeContentRepo(firstCallResult: { scrapedAt: Date } | null) {
 
 const makeArtworkRepo = () => makeMockArtworkKnowledgeRepo();
 const makeMuseumRepo = () => makeMockMuseumEnrichmentRepo();
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ExtractionJobService — idempotence', () => {
   beforeEach(() => {
@@ -97,17 +85,14 @@ describe('ExtractionJobService — idempotence', () => {
       CONFIG,
     );
 
-    // First call — no existing record → full pipeline
     await service.processUrl(URL_A, 'en');
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
     expect(contentRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ url: URL_A, status: ExtractedContentStatus.SCRAPED }),
     );
 
-    // Second call — record exists and is fresh → skipped
     await service.processUrl(URL_A, 'en');
 
-    // upsert total must still be 1 — second call was a no-op
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
     expect(artworkRepo.upsertFromClassification).toHaveBeenCalledTimes(1);
   });
@@ -132,13 +117,11 @@ describe('ExtractionJobService — idempotence', () => {
 
     await service.processUrl(URL_A, 'en');
 
-    // Stale → re-scraped → upsert called once
     expect(contentRepo.upsert).toHaveBeenCalledTimes(1);
     expect(artworkRepo.upsertFromClassification).toHaveBeenCalledTimes(1);
   });
 
   it('is safe to call concurrently — findByUrl is the guard (no double-write)', async () => {
-    // Simulate a race: both concurrent calls find no existing record
     const contentRepo = makeMockExtractedContentRepo();
 
     const artworkRepo = makeArtworkRepo();
@@ -155,9 +138,6 @@ describe('ExtractionJobService — idempotence', () => {
 
     await Promise.all([service.processUrl(URL_A, 'en'), service.processUrl(URL_A, 'en')]);
 
-    // Both calls proceed (no in-process lock), but the DB upsert is idempotent
-    // (TypeORM upsert by url = ON CONFLICT DO UPDATE).
-    // The test asserts the service itself doesn't throw on concurrent runs.
     expect(contentRepo.upsert).toHaveBeenCalledTimes(2);
   });
 });

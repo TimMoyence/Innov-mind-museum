@@ -1,14 +1,3 @@
-/**
- * Sliding-window failure-count trip predicate. Shared by `LLMCircuitBreaker`
- * and `GuardrailCircuitBreaker`. Trips when the count of failure timestamps
- * inside `windowMs` reaches `threshold`.
- *
- * Pure data — no logging, no I/O. `now()` injection for deterministic tests.
- *
- * Design references:
- *   - design.md §4.1
- */
-
 import type { CircuitTripStrategy } from '@shared/circuit-breaker/three-state-circuit';
 
 export interface SlidingWindowFailureStrategyOptions {
@@ -49,12 +38,6 @@ export class SlidingWindowFailureStrategy implements CircuitTripStrategy {
     this.failures = [];
   }
 
-  /**
-   * W1-C1 transient reset. This strategy's entire state (the failure-timestamp
-   * window) IS transient, so this is byte-identical to {@link reset} — the
-   * probe-success recovery of LLM/Guardrail breakers behaves exactly as before
-   * (no behavioral regression; AC-C1.6).
-   */
   resetTransient(): void {
     this.failures = [];
   }

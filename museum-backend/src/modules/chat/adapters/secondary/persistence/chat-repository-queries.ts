@@ -29,7 +29,6 @@ export async function fetchMessageCounts(
   return countBySessionId;
 }
 
-/** DISTINCT ON per session, latest by createdAt. */
 export async function fetchMessagePreviews(
   messageRepo: Repository<ChatMessage>,
   sessionIds: string[],
@@ -66,7 +65,6 @@ export async function fetchMessagePreviews(
   return previewBySessionId;
 }
 
-/** GDPR data portability. */
 export async function exportUserChatData(
   sessionRepo: Repository<ChatSession>,
   userId: number,
@@ -78,8 +76,7 @@ export async function exportUserChatData(
     const allSessions: UserChatExportData['sessions'] = [];
     let offset = 0;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- infinite pagination loop
-    while (true) {
+    for (;;) {
       const sessionBatch = await sessionEM.find({
         where: { user: { id: userId } },
         order: { createdAt: 'DESC' },
@@ -90,10 +87,6 @@ export async function exportUserChatData(
       if (sessionBatch.length === 0) break;
 
       const sessionIds = sessionBatch.map((s) => s.id);
-      // Cycle 4 (DSAR Art.15/20 — B-03) — load `artworkMatches` in the SAME
-      // batch find (no N+1, NFR-2). The relation is `eager: false`
-      // (chatMessage.entity.ts:80-84) so it MUST be requested explicitly
-      // (lib-docs/typeorm/PATTERNS.md §3.2 find options, §3.7 relations).
       const messages = await messageEM.find({
         where: { session: { id: In(sessionIds) } },
         relations: ['session', 'artworkMatches'],
@@ -114,7 +107,6 @@ export async function exportUserChatData(
           id: session.id,
           locale: session.locale,
           museumMode: session.museumMode,
-          // B3 (DSAR) — previously-omitted ChatSession columns (R13).
           intent: session.intent,
           museumId: session.museumId ?? null,
           coordinates: session.coordinates ?? null,
@@ -133,10 +125,6 @@ export async function exportUserChatData(
             audioUrl: msg.audioUrl ?? null,
             createdAt: msg.createdAt.toISOString(),
             metadata: msg.metadata,
-            // Cycle 4 (DSAR Art.15/20 — B-03) — allow-list per field (D-2):
-            // never the uuid PK `m.id` nor the FK `m.message`. The `@OneToMany`
-            // relation is requested explicitly above, so TypeORM populates it as
-            // `[]` (never undefined) when a message has no match (EARS-3).
             artworkMatches: msg.artworkMatches.map((m) => ({
               artworkId: m.artworkId ?? null,
               title: m.title ?? null,

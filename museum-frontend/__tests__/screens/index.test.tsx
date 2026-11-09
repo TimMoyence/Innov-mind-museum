@@ -12,7 +12,6 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-// Patch the expo-router mock to include Redirect (not present in test-utils)
 const expoRouter = require('expo-router');
 const mockRedirect = jest.fn(() => null);
 expoRouter.Redirect = mockRedirect;

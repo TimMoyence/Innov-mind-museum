@@ -14,8 +14,6 @@ describe('DeleteAccountUseCase', () => {
     jest.clearAllMocks();
   });
 
-  // ── Happy paths ──────────────────────────────────────────────────
-
   it('deletes user and cleans up images when imageStorage is provided', async () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
@@ -38,8 +36,6 @@ describe('DeleteAccountUseCase', () => {
     expect(repo.deleteUser).toHaveBeenCalledWith(1);
   });
 
-  // ── Error paths ──────────────────────────────────────────────────
-
   it('throws 404 when user does not exist', async () => {
     const repo = makeUserRepo(null);
     const useCase = new DeleteAccountUseCase({ userRepository: repo });
@@ -52,19 +48,15 @@ describe('DeleteAccountUseCase', () => {
     expect(repo.deleteUser).not.toHaveBeenCalled();
   });
 
-  // ── Edge cases (RGPD resilience) ─────────────────────────────────
-
   it('continues deletion when imageStorage.deleteByPrefix fails (RGPD resilience)', async () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     imageStorage.deleteByPrefix.mockRejectedValue(new Error('S3 connection timeout'));
     const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
 
-    // Should NOT throw
     await useCase.execute(1);
 
     expect(imageStorage.deleteByPrefix).toHaveBeenCalledWith(1, undefined);
-    // User must still be deleted even if images fail
     expect(repo.deleteUser).toHaveBeenCalledWith(1);
   });
 

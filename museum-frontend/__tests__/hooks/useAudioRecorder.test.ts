@@ -2,15 +2,12 @@ import { renderHook, act } from '@testing-library/react-native';
 import { useAudioRecorder } from '@/features/chat/application/useAudioRecorder';
 import { Platform } from 'react-native';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
-// Mock recorder instance returned by useAudioRecorder from expo-audio
 const mockRecorderPrepare = jest.fn<Promise<void>, []>();
 const mockRecorderRecord = jest.fn();
 const mockRecorderStop = jest.fn<Promise<void>, []>();
@@ -24,7 +21,6 @@ const mockRecorder = {
 const mockRequestPermissions = jest.fn<Promise<{ granted: boolean }>, []>();
 const mockSetAudioMode = jest.fn<Promise<void>, [Record<string, boolean>]>();
 
-// Mock player returned by createAudioPlayer
 const mockPlayerPlay = jest.fn();
 const mockPlayerRemove = jest.fn();
 const mockPlayerAddListener = jest.fn();
@@ -45,8 +41,6 @@ jest.mock('expo-audio', () => ({
     return mockCreateAudioPlayer;
   },
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useAudioRecorder', () => {
   const originalPlatformOS = Platform.OS;
@@ -101,13 +95,11 @@ describe('useAudioRecorder', () => {
   it('toggleRecording() stops recording and sets recordedAudioUri', async () => {
     const { result } = renderHook(() => useAudioRecorder());
 
-    // Start
     await act(async () => {
       await result.current.toggleRecording();
     });
     expect(result.current.isRecording).toBe(true);
 
-    // Stop
     await act(async () => {
       await result.current.toggleRecording();
     });
@@ -149,7 +141,6 @@ describe('useAudioRecorder', () => {
   it('clearRecordedAudio() resets audio state', async () => {
     const { result } = renderHook(() => useAudioRecorder());
 
-    // Record something
     await act(async () => {
       await result.current.toggleRecording();
     });
@@ -158,7 +149,6 @@ describe('useAudioRecorder', () => {
     });
     expect(result.current.recordedAudioUri).toBe('file://recording.m4a');
 
-    // Clear it
     act(() => {
       result.current.clearRecordedAudio();
     });
@@ -181,8 +171,6 @@ describe('useAudioRecorder', () => {
 
     expect(result.current.recordedAudioUri).toBeNull();
   });
-
-  // ── Web platform recording path ─────────────────────────────────────────
 
   describe('web platform', () => {
     let mockMediaRecorder: {
@@ -274,18 +262,15 @@ describe('useAudioRecorder', () => {
     it('stops web recording and produces a blob URI', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Start recording
       await act(async () => {
         await result.current.toggleRecording();
       });
 
-      // Simulate data available
       const fakeBlob = new Blob(['audio-chunk'], { type: 'audio/webm' });
       act(() => {
         mockMediaRecorder.ondataavailable?.({ data: fakeBlob });
       });
 
-      // Stop recording
       mockMediaRecorder.stop.mockImplementation(() => {
         mockMediaRecorder.state = 'inactive';
         Promise.resolve().then(() => {
@@ -319,13 +304,10 @@ describe('useAudioRecorder', () => {
     });
   });
 
-  // ── Playback on native ────────────────────────────────────────────────────
-
   describe('playRecordedAudio - native', () => {
     it('plays recorded audio via createAudioPlayer', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -334,7 +316,6 @@ describe('useAudioRecorder', () => {
       });
       expect(result.current.recordedAudioUri).toBe('file://recording.m4a');
 
-      // Play
       await act(async () => {
         await result.current.playRecordedAudio();
       });
@@ -352,7 +333,6 @@ describe('useAudioRecorder', () => {
 
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -360,13 +340,11 @@ describe('useAudioRecorder', () => {
         await result.current.toggleRecording();
       });
 
-      // Play
       await act(async () => {
         await result.current.playRecordedAudio();
       });
       expect(result.current.isPlayingAudio).toBe(true);
 
-      // Simulate playback finished
       act(() => {
         statusCallback?.({ didJustFinish: true });
       });
@@ -389,7 +367,6 @@ describe('useAudioRecorder', () => {
     it('does not play when already playing', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -397,13 +374,11 @@ describe('useAudioRecorder', () => {
         await result.current.toggleRecording();
       });
 
-      // Play first time
       await act(async () => {
         await result.current.playRecordedAudio();
       });
       expect(result.current.isPlayingAudio).toBe(true);
 
-      // Try playing again - should be a no-op
       mockCreateAudioPlayer.mockClear();
       await act(async () => {
         await result.current.playRecordedAudio();
@@ -419,7 +394,6 @@ describe('useAudioRecorder', () => {
 
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -427,7 +401,6 @@ describe('useAudioRecorder', () => {
         await result.current.toggleRecording();
       });
 
-      // Play - should catch and alert
       await act(async () => {
         await result.current.playRecordedAudio();
       });
@@ -443,7 +416,6 @@ describe('useAudioRecorder', () => {
 
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -451,18 +423,15 @@ describe('useAudioRecorder', () => {
         await result.current.toggleRecording();
       });
 
-      // Play first time
       await act(async () => {
         await result.current.playRecordedAudio();
       });
 
-      // Simulate playback ended
       act(() => {
         statusCallback?.({ didJustFinish: true });
       });
       expect(result.current.isPlayingAudio).toBe(false);
 
-      // Play second time - previous player should be removed
       await act(async () => {
         await result.current.playRecordedAudio();
       });
@@ -470,8 +439,6 @@ describe('useAudioRecorder', () => {
       expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(2);
     });
   });
-
-  // ── Web playback path ──────────────────────────────────────────────────────
 
   describe('playRecordedAudio - web', () => {
     const originalPlatformOS = Platform.OS;
@@ -504,8 +471,6 @@ describe('useAudioRecorder', () => {
     it('plays web audio via window.Audio', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Set a URI manually by recording + stopping on native first, then switch to web for playback
-      // Instead, we can set the ref via the recording flow on web
       Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
       await act(async () => {
         await result.current.toggleRecording();
@@ -581,18 +546,15 @@ describe('useAudioRecorder', () => {
       });
 
       Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
-      // Play first time
       await act(async () => {
         await result.current.playRecordedAudio();
       });
 
-      // End playback so we can play again
       act(() => {
         mockAudioInstance.onended?.();
       });
 
       const firstInstance = mockAudioInstance;
-      // Create new mock instance for second play
       mockAudioInstance = {
         play: jest.fn().mockResolvedValue(undefined),
         pause: jest.fn(),
@@ -606,14 +568,9 @@ describe('useAudioRecorder', () => {
         await result.current.playRecordedAudio();
       });
 
-      // First instance should have been paused (cleanup happens inside playRecordedAudio)
-      // The implementation checks webAudioPlaybackRef — since onended nullified it, pause won't be called
-      // This validates the second player was created
       expect(mockAudioInstance.play).toHaveBeenCalled();
     });
   });
-
-  // ── Web stopRecording edge case ──────────────────────────────────────────
 
   describe('web platform - edge cases', () => {
     const originalPlatformOS = Platform.OS;
@@ -629,7 +586,6 @@ describe('useAudioRecorder', () => {
     it('web stopRecording returns early when MediaRecorder is already inactive', async () => {
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Stop without starting — should not throw
       await act(async () => {
         if (result.current.isRecording) {
           await result.current.toggleRecording();
@@ -644,7 +600,6 @@ describe('useAudioRecorder', () => {
       Object.defineProperty(Platform, 'OS', { value: 'ios', writable: true });
       const { result } = renderHook(() => useAudioRecorder());
 
-      // Record on native
       await act(async () => {
         await result.current.toggleRecording();
       });
@@ -652,7 +607,6 @@ describe('useAudioRecorder', () => {
         await result.current.toggleRecording();
       });
 
-      // Clear
       act(() => {
         result.current.clearRecordedAudio();
       });
@@ -692,8 +646,6 @@ describe('useAudioRecorder', () => {
       expect(result.current.isRecording).toBe(false);
     });
   });
-
-  // ── toggleRecording error path ────────────────────────────────────────────
 
   it('toggleRecording catches errors and resets state', async () => {
     mockRecorderPrepare.mockRejectedValue(new Error('Microphone error'));

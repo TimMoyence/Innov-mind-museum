@@ -9,7 +9,6 @@ import type { UpdateMuseumInput } from '@modules/museum/domain/museum/museum.typ
 export class UpdateMuseumUseCase {
   constructor(private readonly repository: IMuseumRepository) {}
 
-  /** Throws 404 if museum not found. */
   async execute(id: number, input: UpdateMuseumInput): Promise<Museum> {
     if (input.slug !== undefined && !isSlug(input.slug)) {
       throw invalidInput('Slug must contain only lowercase letters, numbers, and hyphens');

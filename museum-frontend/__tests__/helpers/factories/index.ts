@@ -20,6 +20,8 @@ export {
   makeMuseumEnrichmentView,
 } from './museum.factories';
 export type { GeoLocation } from './museum.factories';
+export { makeArtworkHeroModel, makeDailyArtwork } from './artwork.factories';
+export { makeQuotaReason } from './paywall.factories';
 export { makeReview } from './review.factories';
 export { makeSupportTicket, makeSupportTicketDetail, makeTicketMessage } from './support.factories';
 export {

@@ -1,5 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import type * as WebBrowserNamespace from 'expo-web-browser';
+import * as WebBrowserNamespace from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
@@ -8,54 +8,30 @@ import { createAppError } from '@/shared/types/AppError';
 
 type WebBrowserModule = typeof WebBrowserNamespace;
 
-// expo-web-browser is loaded lazily so a missing native module (e.g. iOS
-// Pods/ out of sync with package.json after a config-plugin change) cannot
-// crash the JS bundle at module-load time. Combined with the global JS error
-// handler in app/_layout.tsx, an unlinked native module degrades to a
-// SocialAuth AppError surfaced in the UI instead of an app abort (SIGABRT
-// via RCTFatal). Caught by test mocks via `jest.mock('expo-web-browser', …)`.
+const exposesAuthSession = (mod: Partial<WebBrowserModule> | undefined): boolean =>
+  typeof mod?.openAuthSessionAsync === 'function';
+
 const loadWebBrowser = (): WebBrowserModule => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- defensive runtime require; static import would throw at module-load when the ExpoWebBrowser native module is not linked into the iOS/Android binary.
-    const mod = require('expo-web-browser') as Partial<WebBrowserModule> | undefined;
-    if (!mod || typeof mod.openAuthSessionAsync !== 'function') {
-      throw new Error('expo-web-browser exports incomplete');
-    }
-    return mod as WebBrowserModule;
-  } catch (cause) {
+  if (!exposesAuthSession(WebBrowserNamespace)) {
     throw createAppError({
       kind: 'SocialAuth',
       code: 'browser_unavailable',
       message: 'In-app browser is unavailable on this build',
-      details: { cause: cause instanceof Error ? cause.message : String(cause) },
+      details: { cause: 'expo-web-browser exports incomplete' },
     });
   }
+  return WebBrowserNamespace;
 };
 
-/**
- * F11-mobile (2026-05) — deeplink scheme the in-app OAuth browser must land on
- * for the Google flow. Hardcoded server-side too, so the redirect is not
- * client-controlled (no open-redirect surface).
- */
 const MOBILE_DEEPLINK_SUCCESS = 'musaium://auth/google/callback';
 const MOBILE_DEEPLINK_PREFIX = 'musaium://';
 
-/** Result of a successful Apple sign-in (direct ID-token POST flow). */
 interface AppleAuthResult {
   provider: 'apple';
   idToken: string;
-  /** Raw nonce echoed for backend verification — `undefined` only on legacy callers. */
   nonce?: string;
 }
 
-/**
- * Initiates the Apple Sign-In flow and returns the identity token.
- *
- * @param options.nonce - Optional OIDC nonce (F3). Apple's SDK hashes it with
- *   SHA-256 client-side and embeds the digest as the `nonce` claim of the
- *   returned ID token. Pass it through to `authService.socialLogin` so the
- *   backend can verify a single-use binding.
- */
 export const signInWithApple = async (
   options: { nonce?: string } = {},
 ): Promise<AppleAuthResult> => {
@@ -82,21 +58,6 @@ export const signInWithApple = async (
   };
 };
 
-/**
- * F11-mobile (2026-05) — Google sign-in via the server-mediated redirect flow.
- *
- * Flow:
- *   1. Build `${apiBaseUrl}/api/auth/google/initiate?platform=mobile`.
- *   2. Open via `WebBrowser.openAuthSessionAsync` (auto-closes on `musaium://`).
- *   3. Backend signs state JWT, issues nonce, redirects to Google; on success
- *      mints a single-use OTC (60s TTL, base64url) and 302s to
- *      `musaium://auth/google/callback?code=<otc>`.
- *   4. We parse the OTC and exchange it via POST /api/auth/social-redeem.
- *
- * @returns The authenticated session payload, identical to /login.
- * @throws An {@link AppError} `kind: 'SocialAuth'` for cancellation
- *   (`google_cancelled`) or any backend failure (`google_unknown`).
- */
 export const signInWithGoogle = async (): Promise<LoginResponse> => {
   const WebBrowser = loadWebBrowser();
   const baseUrl = resolveInitialApiBaseUrl().replace(/\/$/, '');
@@ -126,26 +87,11 @@ export const signInWithGoogle = async (): Promise<LoginResponse> => {
 
 type CallbackParse = { kind: 'ok'; code: string } | { kind: 'error'; reason: string };
 
-/**
- * Parses a `musaium://...` deeplink URL into either an OTC code (success path)
- * or an error reason (failure path). Anything that doesn't carry a code is
- * treated as failure to avoid silently swallowing edge cases.
- */
 function parseCallbackUrl(url: string): CallbackParse {
-  // The success path is `musaium://auth/google/callback?code=<otc>` and the
-  // failure path is `musaium://auth/google/error?reason=<reason>`. Both share
-  // the `musaium://` prefix; we read the query regardless of host so a
-  // backend-side path tweak does not silently break the parser.
   const queryIndex = url.indexOf('?');
   if (!url.startsWith(MOBILE_DEEPLINK_PREFIX) || queryIndex === -1) {
     return { kind: 'error', reason: 'invalid_callback_url' };
   }
-  // Strip the fragment (`#...`) before parsing query. URLSearchParams does
-  // NOT strip it on its own — `URLSearchParams('code=ABC#frag').get('code')`
-  // returns `'ABC#frag'`, not `'ABC'`. Any stray fragment appended by the
-  // host OS / in-app browser (observed on iOS ASWebAuthenticationSession in
-  // TestFlight 1.2.2/88) would leak into the OTC value and fail the backend
-  // `^[A-Za-z0-9_-]+$` regex with a misleading `Code must be base64url`.
   const afterQuery = url.slice(queryIndex + 1);
   const fragmentIndex = afterQuery.indexOf('#');
   const queryString = fragmentIndex === -1 ? afterQuery : afterQuery.slice(0, fragmentIndex);
@@ -161,10 +107,6 @@ function parseCallbackUrl(url: string): CallbackParse {
   return { kind: 'ok', code };
 }
 
-/**
- * Checks whether Apple Sign-In is available on the current device.
- * @returns `true` on iOS devices that support Apple Authentication, `false` otherwise.
- */
 export const isAppleSignInAvailable = async (): Promise<boolean> => {
   if (Platform.OS !== 'ios') {
     return false;

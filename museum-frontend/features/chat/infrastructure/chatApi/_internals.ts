@@ -1,11 +1,9 @@
 import { createAppError } from '@/shared/types/AppError';
 
-/** Base path for all chat HTTP endpoints. */
 export const CHAT_BASE = '/api/chat';
 
 export const MODEL_REPLY_TIMEOUT_MS = 60_000;
 
-/** Maps audio file extensions to MIME types for `postAudioMessage` form uploads. */
 export const audioMimeByExtension: Record<string, string> = {
   m4a: 'audio/mp4',
   mp4: 'audio/mp4',
@@ -16,7 +14,6 @@ export const audioMimeByExtension: Record<string, string> = {
   aac: 'audio/aac',
 };
 
-/** Resolves a sane image MIME type from a filename extension; defaults to JPEG. */
 export const normalizeImageMimeTypeFromExtension = (extensionRaw: string | undefined): string => {
   const extension = (extensionRaw ?? 'jpg').toLowerCase();
   if (extension === 'jpg') {
@@ -34,7 +31,6 @@ export const normalizeImageMimeTypeFromExtension = (extensionRaw: string | undef
   return `image/${extension}`;
 };
 
-/** Wraps a contract validator into an `AppError`-throwing assertion. */
 export const ensureContract = <T>(
   payload: unknown,
   validator: (value: unknown) => value is T,
@@ -52,21 +48,10 @@ export const ensureContract = <T>(
   return payload;
 };
 
-/**
- * React Native's `FormData.append` accepts the `{ uri, name, type }` shape
- * for file uploads, but the lib.dom.d.ts types only declare `Blob | string`.
- * This helper isolates the platform cast in one place — every other call
- * site stays cleanly typed.
- *
- * @see https://reactnative.dev/docs/network#sending-multipart-data
- */
 export const appendRnFile = (
   formData: FormData,
   field: string,
   file: { uri: string; name: string; type: string },
 ): void => {
-  // React Native's FormData polyfill accepts this object shape natively at
-  // runtime. The browser DOM types reject it at compile time, so we narrow
-  // the cast to this single helper instead of leaking it to every caller.
   formData.append(field, file as unknown as Blob);
 };

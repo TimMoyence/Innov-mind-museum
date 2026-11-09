@@ -1,7 +1,6 @@
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { Repository } from 'typeorm';
 
-/** Assistant messages only. */
 export async function updateMessageAudio(
   messageRepo: Repository<ChatMessage>,
   messageId: string,
@@ -27,11 +26,6 @@ export async function clearMessageAudio(
   );
 }
 
-/**
- * GDPR right-to-erasure: reaches keys predating user-scoped S3 path format
- * (`chat-images/user-<id>/YYYY/MM/<uuid>.ext`). MUST run BEFORE user row delete
- * (CASCADE wipes messages/sessions).
- */
 async function findStoredRefsByUserId(
   messageRepo: Repository<ChatMessage>,
   userId: number,
@@ -59,14 +53,6 @@ export function findLegacyImageRefsByUserId(
   return findStoredRefsByUserId(messageRepo, userId, 'imageRef');
 }
 
-/**
- * GDPR right-to-erasure (B1, R1/R2): resolves the user's stored TTS audio refs
- * from the DB so the account-deletion flow can delete each S3 object via
- * `AudioStorage.deleteByRef` BEFORE the cascade wipes the rows. Mirrors
- * {@link findLegacyImageRefsByUserId} but selects `message.audioUrl`. Audio keys
- * (`chat-audios/YYYY/MM/<uuid>`) carry no user segment, so a prefix scan is
- * impossible — the DB ref set is the only reliable source.
- */
 export function findAudioRefsByUserId(
   messageRepo: Repository<ChatMessage>,
   userId: number,

@@ -1,23 +1,5 @@
-/**
- * RED test — T2.3 (run 2026-05-21-connectivity-offline-first).
- *
- * Proves `useOfflineQueue` derives `isOffline: !isConnected`
- * (useOfflineQueue.ts:65) off the coerced connectivity value — so a captive
- * portal (`{isConnected:true, isInternetReachable:false}`) reads as ONLINE
- * (`isOffline === false`) even though no internet is reachable.
- *
- * Spec R8/R11 derivation, design §D7. Target: `isOffline = !isOnline(...)`
- * sourced from the now-tri-state `useConnectivity()` (canonical predicate).
- *
- * lib-docs cited: @react-native-community/netinfo PATTERNS.md:173 (reachable !=
- * connected).
- *
- * RED contract: the captive-portal case FAILS before T2.3 because the current
- * derivation reads only `isConnected` (true) → `isOffline === false`.
- */
 import { renderHook } from '@testing-library/react-native';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
 const fakeStore: Record<string, string> = {};
 jest.mock('@/shared/infrastructure/storage', () => ({
   storage: {
@@ -26,14 +8,11 @@ jest.mock('@/shared/infrastructure/storage', () => ({
       fakeStore[key] = value;
     }),
     removeItem: jest.fn((key: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
-      delete fakeStore[key];
+      Reflect.deleteProperty(fakeStore, key);
     }),
   },
 }));
 
-// Tri-state connectivity context (post-T2.1 shape): isConnected/isInternetReachable
-// nullable + a derived canonical `isOnline`.
 let mockConnectivity: {
   isConnected: boolean | null;
   isInternetReachable: boolean | null;
@@ -57,8 +36,7 @@ describe('useOfflineQueue — canonical isOffline derivation — T2.3 / spec R8+
     jest.clearAllMocks();
     mockConnectivity = { isConnected: true, isInternetReachable: true, isOnline: true };
     for (const key of Object.keys(fakeStore)) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
-      delete fakeStore[key];
+      Reflect.deleteProperty(fakeStore, key);
     }
   });
 

@@ -22,8 +22,6 @@ describe('SocialLoginUseCase', () => {
     jest.clearAllMocks();
   });
 
-  // ── Happy paths ──────────────────────────────────────────────────
-
   it('returns session when user exists via social link', async () => {
     const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const user = makeUser();
@@ -144,8 +142,6 @@ describe('SocialLoginUseCase', () => {
     });
   });
 
-  // ── Error paths ──────────────────────────────────────────────────
-
   it('throws 400 when idToken is empty', async () => {
     const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const useCase = new SocialLoginUseCase(
@@ -221,8 +217,6 @@ describe('SocialLoginUseCase', () => {
     });
   });
 
-  // ── Edge cases ───────────────────────────────────────────────────
-
   it('does not link by email for Apple private relay addresses', async () => {
     const { userRepo, socialAccountRepo, authSessionService, socialTokenVerifier } = makeMocks();
     const newUser = makeUser({ id: 20, email: 'abc123@privaterelay.appleid.com' });
@@ -252,9 +246,7 @@ describe('SocialLoginUseCase', () => {
 
     await useCase.execute('apple', 'apple-token');
 
-    // Should NOT call getUserByEmail (no linking attempt)
     expect(userRepo.getUserByEmail).not.toHaveBeenCalled();
-    // Should create new user instead
     expect(userRepo.registerSocialUser).toHaveBeenCalled();
   });
 
@@ -287,7 +279,6 @@ describe('SocialLoginUseCase', () => {
 
     await useCase.execute('google', 'some-token');
 
-    // Should NOT attempt linking because email is not verified
     expect(userRepo.getUserByEmail).not.toHaveBeenCalled();
     expect(userRepo.registerSocialUser).toHaveBeenCalled();
   });
@@ -395,7 +386,6 @@ describe('SocialLoginUseCase', () => {
 
     await useCase.execute('google', 'some-token');
 
-    // Google provider should still attempt linking even with privaterelay domain
     expect(userRepo.getUserByEmail).toHaveBeenCalledWith('relay@privaterelay.appleid.com');
   });
 
@@ -428,7 +418,6 @@ describe('SocialLoginUseCase', () => {
 
     await useCase.execute('apple', 'some-token');
 
-    // socialAccountRepo.create should be called with email undefined (null?.trim().toLowerCase() is undefined)
     expect(socialAccountRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({ providerUserId: 'apple-null' }),
     );

@@ -1,6 +1,5 @@
 import type { EmailService } from './email.port';
 
-/** Brevo (formerly Sendinblue) transactional email service implementation. */
 export class BrevoEmailService implements EmailService {
   constructor(private readonly apiKey: string) {}
 

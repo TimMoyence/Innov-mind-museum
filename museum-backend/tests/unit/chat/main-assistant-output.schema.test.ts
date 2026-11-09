@@ -1,20 +1,3 @@
-/**
- * C9.17 T0.2.a — pins the `sources` field added to
- * `mainAssistantOutputSchema` so Citations v2 round-trips through the
- * structured-output fast path (the sole path since the legacy plain-text +
- * JSON-tail parser was retired in Step B).
- *
- * The shared `CitationSourceSchema` (chat.types.ts) is the runtime
- * per-entry validator used by `toSources` in `assistant-response.ts`.
- * Here the LLM-emission schema is a sibling whose only divergence is
- * `.nullable()` on `confidence` (OpenAI structured-output strict mode
- * rejects `.optional()`).
- *
- * Refs:
- *   - spec.md  → .claude/skills/team/team-state/2026-05-18-w1-c9-17-sunset-meta-parser/spec.md (§6 Q1, §10 OQ-1)
- *   - tasks.md → .claude/skills/team/team-state/2026-05-18-w1-c9-17-sunset-meta-parser/tasks.md (T0.2.a, T2.2.f)
- */
-
 import { mainAssistantOutputSchema } from '@modules/chat/useCase/llm/llm-sections/main-assistant-output.schema';
 
 const VALID_SOURCE = {
@@ -38,7 +21,6 @@ function makeBasePayload(): Record<string, unknown> {
     text: 'Mona Lisa is a portrait painted by Leonardo da Vinci between 1503 and 1519.',
     deeperContext: null,
     openQuestion: null,
-    suggestedFollowUp: null,
     imageDescription: null,
     suggestedImages: null,
     detectedArtwork: null,
@@ -82,7 +64,6 @@ describe('mainAssistantOutputSchema — sources field (C9.17 T0.2.a)', () => {
       url: 'https://example.org/article',
       type: 'web' as const,
       title: 'No quote here',
-      // quote intentionally omitted
       confidence: 0.5,
     };
     const payload = {

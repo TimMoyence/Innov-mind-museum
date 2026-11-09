@@ -1,16 +1,3 @@
-/**
- * P4 — Visit summary parcours utilisateur réel.
- *
- * `buildVisitSummary` is the proactive end-of-visit summary the app renders
- * in `VisitSummaryModal`. The user-facing claim is "Musaium proactif aux
- * transitions (fin de visite → résumé)" — this suite tests the aggregation
- * end-to-end on real session shapes (ordered messages, multiple artworks,
- * deduped titles, expertise progression, room collection).
- *
- * Inline fixtures forbidden — uses `makeChatUiMessage` /
- * `makeAssistantMessage` factories per UFR-002.
- */
-
 import {
   buildVisitSummary,
   type ChatUiMessage,
@@ -63,7 +50,6 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
     expect(summary.duration.startedAt).toBe(at(0));
     expect(summary.duration.endedAt).toBe(at(600));
     expect(summary.messageCount).toBe(5);
-    // Last expertiseSignal observed wins.
     expect(summary.expertiseLevel).toBe('intermediate');
   });
 
@@ -110,7 +96,6 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
           detectedArtwork: {
             title: 'Anonymous bronze',
             confidence: 0.4,
-            // No museum / no room — common at outdoor monuments.
           },
         },
       ),
@@ -185,10 +170,6 @@ describe('buildVisitSummary — proactive end-of-visit aggregation (P4)', () => 
   });
 
   it('falls back to the full-size url when the thumbnailUrl is empty (defensive against malformed payloads)', () => {
-    // The type contract has `thumbnailUrl: string` non-optional, but the SUT
-    // uses `??` to defensively handle null/undefined coming from a misbehaving
-    // backend. We bypass the compile-time guard here to exercise that branch
-    // — the cast is intentional and isolated to this single fixture.
     const messages: ChatUiMessage[] = [
       makeAssistantMessage(
         { createdAt: at(0) },

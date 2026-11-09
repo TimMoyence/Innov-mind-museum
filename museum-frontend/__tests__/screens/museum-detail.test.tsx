@@ -3,16 +3,12 @@ import { screen } from '@testing-library/react-native';
 
 import { renderWithQueryClient } from '../helpers/data/renderWithQueryClient';
 
-// MuseumDetailScreen now calls `useMuseumEnrichment` (React Query), so every
-// render needs a QueryClientProvider in scope. Aliased to `render` to keep
-// the rest of the test bodies untouched.
 const render = renderWithQueryClient;
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: { createSession: jest.fn() },
 }));
 
-// Patch useLocalSearchParams to return museum data
 const expoRouter = require('expo-router');
 expoRouter.useLocalSearchParams = () => ({
   id: '1',

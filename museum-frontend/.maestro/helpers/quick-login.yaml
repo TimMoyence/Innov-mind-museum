@@ -1,46 +1,23 @@
 appId: com.musaium.mobile.preview
 ---
-# Helper: Quick login with a known test account
-#
-# This flow is used by other flows via `runFlow` when they detect
-# the auth screen is showing. It assumes the test account already exists
-# in the backend database.
-#
-# Test account: e2e-test-login@test.musaium.dev / TestPassword123!
-# This account must be seeded in the backend before running E2E tests
-# (`SMOKE_TEST_EMAIL=… SMOKE_TEST_PASSWORD=… pnpm seed:smoke-account`).
-#
-# Selectors use the form's stable testIDs (LoginForm.tsx: email-input /
-# password-input / auth-submit). The previous text selectors ("Email" /
-# "Password" / "Log in") did NOT match the live UI — the fields render the
-# i18n PLACEHOLDER t('auth.email') ("E-mail"), not the literal "Email", so
-# `tapOn: { text: "Email" }` resolved to nothing. Verified failing on a live
-# iOS 26.4 simulator run (2026-05-25); switched to testIDs (locale-independent).
+- tapOn:
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
-
-- tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 
 - hideKeyboard
 
-# hideKeyboard dismisses the keyboard so `auth-submit` is tappable. The password
-# field wires no onSubmitEditing (see LoginForm.tsx / FormInput.tsx), so the
-# explicit button tap is the real login trigger on both platforms.
-# `optional: true` taps it when present and tolerates it already being gone —
-# the caller's post-login assertion proves login either way.
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
     optional: true
 
 - waitForAnimationToEnd:
     timeout: 10000
 
-# Handle onboarding if it appears after login
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd

@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { Dictionary } from '@/lib/i18n';
 
-// ── Module mocks ──────────────────────────────────────────────────────────────
-
 vi.mock('@/lib/i18n', () => ({
   getDictionary: vi.fn(),
   defaultLocale: 'fr',
@@ -17,8 +15,6 @@ vi.mock('@/lib/seo', () => ({
 
 import { getDictionary } from '@/lib/i18n';
 import SupportPage from '../page';
-
-// ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const supportEN: Dictionary['support'] = {
   title: 'Help Center',
@@ -71,8 +67,6 @@ const supportFR: Dictionary['support'] = {
 function makeDict(support: Dictionary['support']): Dictionary {
   return { support } as unknown as Dictionary;
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('SupportPage', () => {
   beforeEach(() => {

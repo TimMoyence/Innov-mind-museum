@@ -16,7 +16,7 @@ const MONA: ArtworkFacts = { qid: 'Q12418', title: 'Mona Lisa' };
 const baseConfig: WikidataBreakerConfig = {
   timeoutMs: 5000,
   errorThresholdPercentage: 50,
-  resetTimeoutMs: 80, // small for fast tests
+  resetTimeoutMs: 80,
   volumeThreshold: 5,
   capacity: 5,
 };
@@ -144,27 +144,10 @@ describe('WikidataBreakerClient', () => {
   });
 });
 
-/**
- * TD-OP-01 — `WikidataBreakerClient.dispose()` lifecycle.
- *
- * opossum's `new CircuitBreaker` starts an internal rolling-stats `setInterval`
- * that is never released unless `breaker.shutdown()` is called. Without a
- * `dispose()` method, every constructed client leaks that timer — the concrete
- * Stryker/Jest open-handle gotcha (CLAUDE.md § Stryker; lib-docs/opossum
- * LESSONS.md F1, PATTERNS.md §3 "DO call breaker.shutdown() ... on process
- * termination").
- *
- * Contract:
- *   - `dispose()` calls the underlying opossum `breaker.shutdown()` exactly once.
- *   - `dispose()` is idempotent — a second call does not throw and does not
- *     call `shutdown()` again.
- */
 describe('WikidataBreakerClient — dispose() (TD-OP-01)', () => {
   let shutdownSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    // Spy on the opossum prototype so we observe the breaker the client owns
-    // internally without reaching into its private field.
     shutdownSpy = jest.spyOn(CircuitBreaker.prototype, 'shutdown');
   });
 
@@ -184,7 +167,6 @@ describe('WikidataBreakerClient — dispose() (TD-OP-01)', () => {
   it('dispose() calls the underlying opossum breaker.shutdown() exactly once', () => {
     const inner = makeInner();
     const client = new WikidataBreakerClient(inner as never, baseConfig);
-    // The constructor itself must not have triggered a shutdown.
     shutdownSpy.mockClear();
 
     client.dispose();
@@ -211,9 +193,6 @@ describe('WikidataBreakerClient — dispose() (TD-OP-01)', () => {
     await client.lookup(QUERY);
     expect(client.getState().name).toBe('CLOSED');
 
-    // dispose() must release the rolling-stats interval (asserted indirectly:
-    // shutdown is invoked, and --detectOpenHandles must stay clean in the
-    // green-phase verifier run per tasks.md DONE-WHEN).
     expect(() => client.dispose()).not.toThrow();
     expect(shutdownSpy).toHaveBeenCalled();
   });

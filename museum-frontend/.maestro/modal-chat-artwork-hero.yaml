@@ -1,80 +1,47 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: ArtworkHeroModal
-#
-# C2 — ArtworkHeroModal happy path (UFR-021 modal coverage).
-#
-# Trigger (prod): tap <ArtworkHeroCard> in a chat session whose assistant
-# message carries a `detectedArtwork`, which flips `heroModalVisible`
-# (app/(stack)/chat/[sessionId].tsx). Requires a live backend (localhost:3000)
-# that detects the artwork in the uploaded fixture, so this flow is NIGHTLY
-# (backend-dependent), NOT PR-blocking — same class as chat-compare.yaml.
-#
-# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
-#   artwork-hero-card           (ArtworkHeroCard, open trigger)
-#   artwork-hero-modal-image    (assert modal open)
-#   artwork-hero-modal-close    (dismiss)
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-#   - Fixture image .maestro/fixtures/test-artwork.jpg in the simulator photo
-#     library (CI uploads it via `xcrun simctl addmedia` before the run).
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ──────────────────────────────────────────────
-# Phase 2: Attach the artwork fixture so the assistant detects an artwork
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "composer-attach-button"
+    id: 'composer-attach-button'
 - extendedWaitUntil:
     visible:
-      id: "attachment-picker-gallery"
+      id: 'attachment-picker-gallery'
     timeout: 40000
 - tapOn:
-    id: "attachment-picker-gallery"
+    id: 'attachment-picker-gallery'
 - tapOn:
-    text: "Allow|Allow Access to All Photos|Autoriser"
+    text: 'Allow|Allow Access to All Photos|Autoriser'
     optional: true
 - waitForAnimationToEnd
 - tapOn:
-    text: "test-artwork.jpg"
+    text: 'test-artwork.jpg'
     optional: true
 - tapOn:
-    point: "15%,30%"
+    point: '15%,30%'
     optional: true
 - waitForAnimationToEnd
 
-# The photo sits in the composer until the visitor sends it.
 - tapOn:
-    id: "chat-input"
-- inputText: "What can you tell me about this artwork?"
+    id: 'chat-input'
+- inputText: 'What can you tell me about this artwork?'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
+    id: 'send-button'
 
-# ──────────────────────────────────────────────
-# Phase 3: Wait for the detected-artwork card, then open the hero modal
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "artwork-hero-card"
+      id: 'artwork-hero-card'
     timeout: 60000
 - tapOn:
-    id: "artwork-hero-card"
+    id: 'artwork-hero-card'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 4: Assert the modal is open, then dismiss it
-# ──────────────────────────────────────────────
 - assertVisible:
-    id: "artwork-hero-modal-image"
+    id: 'artwork-hero-modal-image'
 - tapOn:
-    id: "artwork-hero-modal-close"
+    id: 'artwork-hero-modal-close'
 - waitForAnimationToEnd
 - assertNotVisible:
-    id: "artwork-hero-modal-image"
+    id: 'artwork-hero-modal-image'

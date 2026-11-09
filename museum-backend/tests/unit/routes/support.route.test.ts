@@ -7,8 +7,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
-// ── Mock use cases so handlers execute without DB ────────────────────
-
 const mockSubmitSupportContact = jest.fn();
 const mockCreateTicket = jest.fn();
 const mockListUserTickets = jest.fn();
@@ -23,15 +21,9 @@ jest.mock('@modules/support/useCase', () => ({
   listUserTicketsUseCase: { execute: (...args: unknown[]) => mockListUserTickets(...args) },
   getTicketDetailUseCase: { execute: (...args: unknown[]) => mockGetTicketDetail(...args) },
   addTicketMessageUseCase: { execute: (...args: unknown[]) => mockAddTicketMessage(...args) },
-  // Admin use cases also imported by admin.route — provide stubs
   listAllTicketsUseCase: { execute: jest.fn() },
   updateTicketStatusUseCase: { execute: jest.fn() },
 }));
-
-/**
- * Support route integration tests — auth enforcement + validation + happy-path handler bodies.
- * No DB required — use cases are mocked.
- */
 
 const { app } = createRouteTestApp();
 
@@ -44,8 +36,6 @@ describe('Support Routes — HTTP Layer', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {
     it('POST /api/support/tickets returns 401 without token', async () => {
@@ -72,8 +62,6 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
   });
-
-  // ── Public contact endpoint (no auth) ─────────────────────────
 
   describe('POST /api/support/contact — public form', () => {
     it('accepts a valid payload without authentication', async () => {
@@ -136,8 +124,6 @@ describe('Support Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Invalid token returns 401 ──────────────────────────────────
-
   describe('Invalid token returns 401', () => {
     it('returns 401 for token signed with wrong secret', async () => {
       const badToken = jwt.sign({ sub: '1', type: 'access', jti: 'jti' }, 'wrong-secret', {
@@ -149,8 +135,6 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
   });
-
-  // ── POST /api/support/tickets — body validation ────────────────
 
   describe('POST /api/support/tickets — validation', () => {
     it('returns 400 for empty body', async () => {
@@ -206,8 +190,6 @@ describe('Support Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/support/tickets/:id/messages — body validation ───
-
   describe('POST /api/support/tickets/:id/messages — validation', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app)
@@ -225,8 +207,6 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── Error response format ──────────────────────────────────────
 
   describe('Error response format', () => {
     it('401 returns structured JSON with error field', async () => {
@@ -246,8 +226,6 @@ describe('Support Routes — HTTP Layer', () => {
       expect(res.body.error).toHaveProperty('message');
     });
   });
-
-  // ── Happy-path handler body coverage ─────────────────────────────
 
   describe('Happy-path — handler bodies', () => {
     it('POST /api/support/contact submits support contact', async () => {

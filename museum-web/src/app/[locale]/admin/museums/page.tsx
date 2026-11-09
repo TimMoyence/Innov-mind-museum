@@ -5,10 +5,6 @@ import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO } from '@/lib/admin-types';
 
-// W4 W2.1/2.2 — Admin museum list. Parent route for /admin/museums/new
-// and /admin/museums/[id]/branding. English-only strings inline (admin is
-// internal + operator is bilingual; full i18n parity tracked as TD-27).
-
 const STRINGS = {
   title: 'Museums',
   subtitle: 'Manage B2B-pilot museum tenants. Onboard new museums and configure branding.',
@@ -34,8 +30,6 @@ interface ListResponse {
 }
 
 export default function MuseumsListPage() {
-  // The BE returns { museums: [...] } for /directory and may return either
-  // shape for the admin list. parseData tolerates both and yields MuseumDTO[].
   const {
     data: museumsPayload,
     loading,

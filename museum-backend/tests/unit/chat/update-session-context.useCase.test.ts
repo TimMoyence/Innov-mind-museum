@@ -4,20 +4,6 @@ import { makeSession, makeSessionUser } from '../../helpers/chat/message.fixture
 
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 
-/**
- * W3 (T5.3) — unit tests for `UpdateSessionContextUseCase`.
- *
- * Coverage:
- *   - happy path: patch both fields, both set
- *   - happy path: patch only currentArtworkId, currentRoom untouched
- *   - happy path: clear currentArtworkId via explicit null
- *   - access check delegates to `ensureSessionAccess` — wrong owner → 404
- *   - malformed sessionId → 400 (`ensureSessionAccess` raises)
- *   - reload returns null → useCase returns null fields (degrades gracefully)
- *
- * Spec: docs/team-state/2026-05-17-w3-geo-walk-intra/spec.md R19/R20.
- */
-
 const SESSION_ID = '01234567-89ab-4cde-9012-3456789abcde';
 const OWNER_ID = 42;
 const ARTWORK_ID = '11111111-2222-4333-9444-555555555555';
@@ -74,7 +60,6 @@ describe('UpdateSessionContextUseCase (W3 T5.3)', () => {
       sessionId: SESSION_ID,
       currentArtworkId: ARTWORK_ID,
       currentUserId: OWNER_ID,
-      // No currentRoom — must NOT appear in the patch.
     });
 
     const patchArg = repo.updateSessionContext.mock.calls[0]?.[1];

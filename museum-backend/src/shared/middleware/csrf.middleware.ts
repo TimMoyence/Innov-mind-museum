@@ -1,27 +1,7 @@
-/**
- * SEC/CSRF (F7 2026-04-30) — OWASP "Double Submit Cookie" with HMAC binding.
- *
- * Contract:
- *   csrf_token cookie == HMAC-SHA256(access_token, CSRF_SECRET)
- *   AND X-CSRF-Token header == csrf_token cookie
- * HMAC binding defeats token fixation — attacker can't pair matching cookie+header
- * without both the access token AND server's CSRF_SECRET.
- *
- * Skip rules:
- *   - SAFE_METHODS (GET/HEAD/OPTIONS, RFC 9110 §9.2.1)
- *   - Authorization: Bearer (mobile/SPA — browsers don't auto-send Authorization
- *     cross-origin). MUST be checked BEFORE cookie probe — iOS URLSession persists
- *     access_token cookies from prior responses even with Bearer auth (incident
- *     2026-05-08: social-login 403 CSRF_INVALID for cookies mobile never opted into)
- *   - PRE_AUTH_PATHS — verify creds fresh, never trust existing cookie
- *   - No access_token cookie — anonymous; nothing to forge against
- *
- * Validation uses `timingSafeEqual` over equal-length buffers — prevents string-cmp timing leaks.
- */
-
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 
 import { AppError } from '@shared/errors/app.error';
+import { sameSecret } from '@shared/security/same-secret';
 import { env } from '@src/config/env';
 
 import type { NextFunction, Request, Response } from 'express';
@@ -53,30 +33,12 @@ export function computeCsrfToken(
   return createHmac('sha256', secret).update(accessToken).digest('hex');
 }
 
-/**
- * SEC: constant-time string equality. `timingSafeEqual` throws on length mismatch
- * (which itself leaks length info) — pad to equal length + AND with length-equal flag.
- */
-function safeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a, 'utf8');
-  const bBuf = Buffer.from(b, 'utf8');
-  const len = Math.max(aBuf.length, bBuf.length);
-  const aPad = Buffer.alloc(len);
-  const bPad = Buffer.alloc(len);
-  aBuf.copy(aPad);
-  bBuf.copy(bPad);
-  const eq = timingSafeEqual(aPad, bPad);
-  return eq && aBuf.length === bBuf.length;
-}
-
-/** @throws {Error} AppError 403 CSRF_INVALID. */
 export function csrfMiddleware(req: Request, _res: Response, next: NextFunction): void {
   if (SAFE_METHODS.has(req.method.toUpperCase())) {
     next();
     return;
   }
 
-  // SEC: Bearer skip MUST precede cookie probe (see header docstring + incident 2026-05-08).
   const authHeader = req.headers.authorization;
   if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     next();
@@ -88,7 +50,6 @@ export function csrfMiddleware(req: Request, _res: Response, next: NextFunction)
     return;
   }
 
-  // @types/express-serve-static-core types `cookies` as `any` — narrow locally.
   const cookies = req.cookies as Record<string, string | undefined>;
   const accessTokenCookie = cookies.access_token;
   if (!accessTokenCookie) {
@@ -106,13 +67,12 @@ export function csrfMiddleware(req: Request, _res: Response, next: NextFunction)
     throw csrfInvalid();
   }
 
-  if (!safeEqual(csrfCookie, headerValue)) {
+  if (!sameSecret(csrfCookie, headerValue)) {
     throw csrfInvalid();
   }
 
-  // SEC HMAC binding: cookie MUST be derived from active access token, not arbitrary.
   const expected = computeCsrfToken(accessTokenCookie);
-  if (!safeEqual(csrfCookie, expected)) {
+  if (!sameSecret(csrfCookie, expected)) {
     throw csrfInvalid();
   }
 

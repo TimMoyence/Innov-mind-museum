@@ -1,6 +1,3 @@
-/**
- * Admin analytics page tests — KPI cards, usage charts, content analytics, filters, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -9,8 +6,6 @@ import AnalyticsPage from '@/app/[locale]/admin/analytics/page';
 import type { UsageAnalytics, ContentAnalytics, EngagementAnalytics } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/analytics',
@@ -33,8 +28,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── Recharts mock ──────────────────────────────────────────────────────────
-
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="chart-container">{children}</div>
@@ -54,8 +47,6 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 
 vi.mock('@/lib/api', () => ({
@@ -64,8 +55,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -73,8 +62,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 const mockUsage: UsageAnalytics = {
   period: { from: '2025-05-01', to: '2025-05-30' },
@@ -113,7 +100,6 @@ const mockEngagement: EngagementAnalytics = {
   returningUsers: 525,
 };
 
-// Helper: resolve all three parallel API calls
 function mockAllApiCalls() {
   mockApiGet
     .mockResolvedValueOnce(mockUsage)
@@ -121,21 +107,13 @@ function mockAllApiCalls() {
     .mockResolvedValueOnce(mockEngagement);
 }
 
-// ============================================================================
-// Analytics page
-// ============================================================================
-
 describe('AnalyticsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders the analytics heading', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending */
-      }),
-    );
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -147,11 +125,7 @@ describe('AnalyticsPage', () => {
   });
 
   it('shows loading spinner while fetching data', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending */
-      }),
-    );
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -282,7 +256,6 @@ describe('AnalyticsPage', () => {
       expect(screen.getByText('Usage')).toBeInTheDocument();
     });
 
-    // Line chart is NOT rendered; the a11y-enabled placeholder is.
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
     const placeholders = screen.getAllByRole('status', { name: 'No data' });
     expect(placeholders.length).toBeGreaterThanOrEqual(1);
@@ -384,7 +357,6 @@ describe('AnalyticsPage', () => {
     });
 
     expect(screen.getByDisplayValue('Daily')).toBeInTheDocument();
-    // The days select option text is "30 Days" (value is numeric 30)
     expect(screen.getByDisplayValue('30 Days')).toBeInTheDocument();
   });
 
@@ -397,8 +369,6 @@ describe('AnalyticsPage', () => {
       </Providers>,
     );
 
-    // C1B / D6 — the dead `/api/museums` call (per-museum filter list) was
-    // removed; only the 3 analytics endpoints fire on mount.
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledTimes(3);
     });
@@ -422,7 +392,6 @@ describe('AnalyticsPage', () => {
       expect(screen.getByText('Usage')).toBeInTheDocument();
     });
 
-    // Prepare the next API call for the filter change
     mockApiGet.mockResolvedValueOnce(mockUsage);
 
     fireEvent.change(screen.getByDisplayValue('Daily'), {

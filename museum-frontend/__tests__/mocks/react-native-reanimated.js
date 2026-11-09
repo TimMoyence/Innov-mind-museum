@@ -1,4 +1,3 @@
-// Mock for react-native-reanimated v4 (SDK 55) — native worklets unavailable in Jest
 const { View } = require('react-native');
 
 const noop = () => {};
@@ -7,7 +6,16 @@ const noopHook = () => ({});
 
 module.exports = {
   __esModule: true,
-  default: { View, Text: View, Image: View, ScrollView: View, FlatList: View, addListener: noop, removeListener: noop, createAnimatedComponent: (C) => C ?? View },
+  default: {
+    View,
+    Text: View,
+    Image: View,
+    ScrollView: View,
+    FlatList: View,
+    addListener: noop,
+    removeListener: noop,
+    createAnimatedComponent: (C) => C ?? View,
+  },
   useSharedValue: (init) => ({ value: init }),
   useAnimatedStyle: (fn) => fn(),
   useAnimatedProps: (fn) => fn(),
@@ -52,7 +60,6 @@ module.exports = {
   measure: () => ({ width: 0, height: 0, x: 0, y: 0, pageX: 0, pageY: 0 }),
   scrollTo: noop,
   setGestureState: noop,
-  // Animated components
   View,
   Text: View,
   Image: View,

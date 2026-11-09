@@ -1,101 +1,65 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: SettingsScreen
-# Settings Flow: log in, open Settings via the home gear, visit the Support
-# screen (FloatingContextMenu entry), return Home.
-#
-# App runs in FRENCH on the e2e sim; every text selector uses FR|EN alternation.
-# Settings is reached via the home hero gear (testID hero-settings-button), NOT a
-# bottom-nav "Settings" tab (which does not exist). The top FloatingContextMenu
-# exposes Préférences / RGPD / Support (app/(stack)/settings.tsx) — each item is a
-# Pressable whose accessibilityLabel is the visible label, tappable by text.
-
-# ──────────────────────────────────────────────
-# Phase 0: Fresh launch + login → home
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
-# Systemic interceptor #1 — analytics consent banner (mounts a beat after the
-# auth screen; wait for it, then decline deterministically).
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
-# Systemic interceptor #2 — iOS native "Save Password?" dialog.
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 1: Navigate to Settings (home hero gear)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 40000
-# UFR-021 anchor for app/(stack)/settings.tsx — the gear opened the Settings
-# stack route /(stack)/settings (the sentinel matches the "/settings" route
-# literal below). The "Paramètres|Settings" title above is the runtime proof
-# that we genuinely reached the screen; this deep-link re-resolves the same
-# route (idempotent, already on it) so the route literal is exercised.
 - openLink:
-    link: "musaium:///(stack)/settings"
+    link: 'musaium:///(stack)/settings'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Visit the Support screen (FloatingContextMenu "Support" entry).
-# The menu pill is at the top of the Settings screen; the "Support" item is a
-# Pressable (accessibilityLabel settings.support = "Support").
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Support"
+    text: 'Support'
     index: 0
 - waitForAnimationToEnd
-# Support screen unique marker — the "Créer un ticket" CTA (tickets.createTicket),
-# always present on the support hub (the social channel is Telegram, not Instagram).
 - extendedWaitUntil:
     visible:
-      text: "Créer un ticket|Create Ticket"
+      text: 'Créer un ticket|Create Ticket'
     timeout: 40000
 
-# Back to Settings via the support screen's in-screen back button. Its visible
-# label is "Retour aux paramètres" but its accessibilityLabel
-# (a11y.support.back_settings = "Retourner aux paramètres" / "Return to
-# settings") COLLAPSES the subtree, so the queryable node carries the a11y
-# label — match THAT. Swipe up first so it is on screen.
 - swipe:
     direction: UP
     duration: 400
 - tapOn:
-    text: "Retourner aux paramètres|Return to settings"
+    text: 'Retourner aux paramètres|Return to settings'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 40000

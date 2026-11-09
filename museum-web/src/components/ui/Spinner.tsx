@@ -1,17 +1,3 @@
-/**
- * Stateless spinner indicator.
- *
- * UFR-022 RUN_ID 2026-05-23-web-refactor-p1 — replaces the historical Tailwind
- * composite `h-8 w-8 animate-spin rounded-full border-4 border-primary-500
- * border-t-transparent` that was duplicated across 11 admin / auth sites.
- *
- * - Pure presentational component (no hooks — UB-1).
- * - CSS-only animation via Tailwind `animate-spin` (NFR-PERF-1, U-R12.4).
- * - `role="status"` + accessible label (NFR-A11Y-1 / U-R12.3).
- * - Locale-agnostic: label is injected by the caller, with an English fallback
- *   "Loading…" used only when no `label` is provided (NFR-I18N-1).
- */
-
 type SpinnerSize = 'sm' | 'md' | 'lg';
 
 export interface SpinnerProps {

@@ -1,21 +1,9 @@
-/**
- * GENERATED-FROM-CANONICAL — DO NOT EDIT MANUALLY.
- *
- * Regenerate with:
- *   node museum-frontend/scripts/codegen-legal-content.mjs
- *
- * Source of truth:
- *   museum-backend/src/shared/legal/privacy-content.canonical.json
- */
-
-/** A single numbered section within the privacy policy document. */
 export interface PrivacyPolicySection {
   id: string;
   title: string;
   paragraphs: string[];
 }
 
-/** A single subprocessor row (R11 — 19 vendors, EU AI Act + GDPR Art. 28). */
 export interface PrivacySubprocessor {
   name: string;
   role: string;
@@ -24,7 +12,6 @@ export interface PrivacySubprocessor {
   category: string;
 }
 
-/** Structured content of the full GDPR-compliant privacy policy, rendered in the legal screen. */
 export interface PrivacyPolicyContent {
   title: string;
   version: string;
@@ -40,11 +27,6 @@ export interface PrivacyPolicyContent {
   subprocessors: PrivacySubprocessor[];
 }
 
-/**
- * Subprocessors disclosed on every public surface (R11). Emitted as a
- * top-level export so the drift sentinel and the in-app subprocessors view
- * both grep / consume the same list.
- */
 export const PRIVACY_SUBPROCESSORS: readonly PrivacySubprocessor[] = [
   {
     name: 'OpenAI',
@@ -174,7 +156,6 @@ export const PRIVACY_SUBPROCESSORS: readonly PrivacySubprocessor[] = [
   },
 ] as const;
 
-/** Complete privacy policy content for the Musaium app, structured for in-app rendering. */
 export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   title: 'Privacy Policy (GDPR / RGPD)',
   version: '1.0.0',
@@ -351,11 +332,6 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPolicyContent = {
   subprocessors: [...PRIVACY_SUBPROCESSORS],
 };
 
-/**
- * Checks whether a string contains a placeholder marker that must be replaced before release.
- * @param value - String to inspect.
- * @returns `true` if the value contains `'TO_FILL_'`.
- */
 export const isPrivacyPlaceholderValue = (value: string): boolean => {
   return value.includes('TO_FILL_');
 };

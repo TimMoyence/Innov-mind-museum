@@ -1,28 +1,8 @@
-/**
- * Red tests for A5 — `useStatusPhase` client-side state machine.
- *
- * Asserts the hook contract documented in
- * `docs/chat-ux-refonte/specs/A5.md` §2.3 + AC6-AC10 :
- *
- *   - `{ isSending: false }` → phase = null (AC9)
- *   - `{ isSending: true, hasImage: false }` initial → 'searching-collection' (AC6)
- *   - `{ isSending: true, hasImage: true  }` initial → 'analyzing-image'  (AC7)
- *   - After PHASE_TICK_MS, text path advances to 'composing' (AC8)
- *   - Subsequent tick stays on 'composing' (terminal-during-wait, R15)
- *   - `{ isSending: false, ttsPending: true }` → 'synthesizing-voice'    (AC10)
- *
- * At baseline (A5 not yet implemented) :
- *   - `@/features/chat/application/useStatusPhase` does not exist → module
- *     resolution fails.
- *   - `@/features/chat/application/phases` does not exist either.
- */
-
 import React from 'react';
 import { render, act } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 
-// RED ASSERTION : both modules do not exist yet at baseline.
 import { useStatusPhase, PHASE_TICK_MS } from '@/features/chat/application/useStatusPhase';
 import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 
@@ -30,11 +10,9 @@ interface ProbeProps {
   isSending: boolean;
   hasImage?: boolean;
   ttsPending?: boolean;
-  /** Out-param style — the test reads the latest phase from this ref. */
   capture: (phase: ChatPipelinePhase | null) => void;
 }
 
-/** Tiny harness that mounts the hook and forwards the current phase. */
 const Probe = ({ isSending, hasImage, ttsPending, capture }: ProbeProps) => {
   const { phase } = useStatusPhase({ isSending, hasImage, ttsPending });
   capture(phase);

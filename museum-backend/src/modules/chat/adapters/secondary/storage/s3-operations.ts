@@ -8,10 +8,10 @@ import {
   normalizeEndpoint,
   buildObjectPath,
   buildReadBaseUrlAndPath,
+  trimTrailingSlashes,
 } from './s3-path-utils';
 import { sha256Hex, toAmzDate, buildCanonicalHeaders, signString } from './s3-signing';
 
-/** Shared across image and audio adapters. */
 export interface S3ImageStorageConfig {
   endpoint: string;
   region: string;
@@ -25,7 +25,6 @@ export interface S3ImageStorageConfig {
   requestTimeoutMs?: number;
 }
 
-/** AWS SigV4 canonical format. */
 export const canonicalQueryString = (query: [string, string][]): string => {
   return [...query]
     .sort((a, b) => {
@@ -88,7 +87,6 @@ const httpRequest = async (params: {
   });
 };
 
-/** Throws if response is not 2xx. */
 export const httpPut = async (params: {
   url: URL;
   headers: Record<string, string>;
@@ -157,13 +155,6 @@ export const buildS3SignedHeadersForPut = (params: {
     canonicalRequest,
   });
 
-  // SigV4 Authorization = "<algo> Credential=...,SignedHeaders=...,Signature=..."
-  // — a SPACE separates the algorithm from the comma-joined params. Joining the
-  // algorithm into the comma list (`AWS4-HMAC-SHA256, Credential=...`) is accepted
-  // by AWS S3 but REJECTED by OVH/Swift's stricter parser, which then returns a
-  // misleading `AWS authentication requires a valid Date or x-amz-date header`
-  // 403 — the real root cause of INC-2026-06-14 (all object-store writes 403'd
-  // against OVH while the same creds worked via aws-cli).
   const authorization =
     'AWS4-HMAC-SHA256 ' +
     [
@@ -222,13 +213,6 @@ export const buildS3SignedHeaders = (params: {
     canonicalRequest,
   });
 
-  // SigV4 Authorization = "<algo> Credential=...,SignedHeaders=...,Signature=..."
-  // — a SPACE separates the algorithm from the comma-joined params. Joining the
-  // algorithm into the comma list (`AWS4-HMAC-SHA256, Credential=...`) is accepted
-  // by AWS S3 but REJECTED by OVH/Swift's stricter parser, which then returns a
-  // misleading `AWS authentication requires a valid Date or x-amz-date header`
-  // 403 — the real root cause of INC-2026-06-14 (all object-store writes 403'd
-  // against OVH while the same creds worked via aws-cli).
   const authorization =
     'AWS4-HMAC-SHA256 ' +
     [
@@ -245,29 +229,25 @@ export const buildS3SignedHeaders = (params: {
   };
 };
 
-/** One listed S3 object paired with its parsed `LastModified` (epoch ms). */
 export interface ListedObject {
   key: string;
   lastModifiedMs: number;
 }
 
 interface ListObjectsResult {
-  /**
-   * Each listed object paired `{ key, lastModifiedMs }`, parsed per `<Contents>`
-   * block so `Key` correlates with its `LastModified` (the orphan-purge age
-   * filter needs the real per-object timestamp, not a flat list of keys).
-   */
   objects: ListedObject[];
   nextToken?: string;
 }
 
-const escapeXmlTag = (tag: string): string => tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const extractXmlValue = (xml: string, tag: string): string | undefined => {
-  const escaped = escapeXmlTag(tag);
-  // eslint-disable-next-line security/detect-non-literal-regexp -- tag is escaped via escapeXmlTag above; callers pass literal S3 XML tag names only
-  const match = new RegExp(`<${escaped}>([^<]*)</${escaped}>`).exec(xml); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  return match?.[1];
+  const open = `<${tag}>`;
+  const start = xml.indexOf(open);
+  if (start === -1) return undefined;
+  const from = start + open.length;
+  const end = xml.indexOf(`</${tag}>`, from);
+  if (end === -1) return undefined;
+  const value = xml.slice(from, end);
+  return value.includes('<') ? undefined : value;
 };
 
 export const listObjectsByPrefix = async (
@@ -277,8 +257,7 @@ export const listObjectsByPrefix = async (
 ): Promise<ListObjectsResult> => {
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
-  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on a single char class, no alternation: linear time
-  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
+  const objectPath = `${trimTrailingSlashes(endpoint.pathname)}${bucketPath}`.replace(
     /\/{2,}/g,
     '/',
   );
@@ -325,17 +304,8 @@ export const listObjectsByPrefix = async (
   return { objects, nextToken };
 };
 
-/**
- * Parses each `<Contents>…</Contents>` block of a ListObjectsV2 response so the
- * `<Key>` correlates with its own `<LastModified>` (the flat `extractXmlValues`
- * cannot pair the two). `LastModified` is the S3 ISO-8601 timestamp → epoch ms
- * via `Date.parse`; an unparseable/absent timestamp falls back to `0` (treated
- * as "old enough" by the age filter, so the DB-reference net stays authoritative).
- */
 const parseContentsObjects = (xml: string): ListedObject[] => {
   const objects: ListedObject[] = [];
-  // `[\s\S]*?` (non-greedy) so each block stops at its own closing tag; the
-  // single literal pattern is linear (no nested alternation / backtracking trap).
   const blockRegex = /<Contents>([\s\S]*?)<\/Contents>/g;
   for (const block of xml.matchAll(blockRegex)) {
     const inner = block[1];
@@ -362,8 +332,7 @@ export const deleteObjectsBatch = async (
 
   const endpoint = normalizeEndpoint(config.endpoint);
   const bucketPath = `/${encodePathSegments(config.bucket)}`;
-  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on a single char class, no alternation: linear time
-  const objectPath = `${endpoint.pathname.replace(/\/+$/, '')}${bucketPath}`.replace(
+  const objectPath = `${trimTrailingSlashes(endpoint.pathname)}${bucketPath}`.replace(
     /\/{2,}/g,
     '/',
   );
@@ -373,7 +342,7 @@ export const deleteObjectsBatch = async (
   url.pathname = objectPath;
   url.search = qs;
 
-  const contentMd5 = crypto.createHash('md5').update(bodyBuffer).digest('base64'); // eslint-disable-line sonarjs/hashing -- S3 API requires Content-MD5 header for integrity verification
+  const contentMd5 = crypto.createHash('md5').update(bodyBuffer).digest('base64');
   const payloadHash = sha256Hex(bodyBuffer);
   const signedHeaders = buildS3SignedHeaders({
     config,
@@ -406,7 +375,6 @@ export const deleteObjectsBatch = async (
   }
 };
 
-/** Shared by image + audio adapters — extracted to avoid adapter→adapter coupling. */
 export const buildS3PresignedReadUrl = (params: {
   key: string;
   config: S3ImageStorageConfig;

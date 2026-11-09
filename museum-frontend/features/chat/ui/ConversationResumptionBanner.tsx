@@ -1,19 +1,3 @@
-/**
- * B2 — Conversation resumption banner.
- *
- * Card rendered at the top of the home screen suggesting the user reopen
- * their most recent chat session ("Continue your conversation about
- * <last artwork>" / "Reprendre …"). Dismissable via a separate Pressable
- * (round X button, own `accessibilityRole="button"` + label) — the dismiss
- * tap MUST NOT trigger the card tap (R19).
- *
- * Tap card → `onResume(session.id)` (parent navigates via `router.push`).
- * Tap dismiss → `onDismiss()` (parent persists 24 h flag via the hook).
- *
- * Spec : `docs/chat-ux-refonte/specs/B2.md` §1.2 R13-R24 ; §1.3 R25-R29 ;
- *        §4 AC11-AC19.
- */
-
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,19 +8,12 @@ import { radius, semantic, space } from '@/shared/ui/tokens';
 
 import type { ResumableSession } from '@/features/chat/application/useResumableSession';
 
-/** Minimal `t` signature used by {@link formatResumptionTimeAgo} — keeps the helper decoupled from i18next runtime. */
 type ResumptionTFunction = (key: string, opts?: { count: number }) => string;
 
 const ONE_MINUTE_MS = 60_000;
 const ONE_HOUR_MS = 3_600_000;
 const ONE_DAY_MS = 86_400_000;
 
-/**
- * Pure helper picking the `chat.resumption.time_ago.*` i18n key + `count`
- * interpolation for a given session age. Boundaries are `< 1 min` →
- * `just_now`, `< 1 h` → `minutes`, `< 1 day` → `hours`, otherwise `days`.
- * Invalid ISO strings fall back to `just_now` (no throw — R29).
- */
 export function formatResumptionTimeAgo(
   updatedAtIso: string,
   now: number,
@@ -60,24 +37,11 @@ export function formatResumptionTimeAgo(
 }
 
 interface ConversationResumptionBannerProps {
-  /** Resumable session payload, or `null` when no eligible session exists. */
   readonly session: ResumableSession | null;
-  /** Invoked with the session id when the card is tapped. */
   readonly onResume?: (sessionId: string) => void;
-  /** Invoked when the dismiss button is tapped. */
   readonly onDismiss?: () => void;
 }
 
-/**
- * B2 — Conversation resumption banner. Renders `null` when `session` is
- * `null` (R13). When non-null, renders a Pressable card with an Ionicons
- * placeholder thumb, title (with-artwork or fallback branch), subtitle
- * (with-museum or fallback branch), and a SEPARATE dismiss Pressable
- * (own role/label, hit-slop 12 → ≥ 44 dp effective hit target).
- *
- * React.memo'd with default ref equality (R24) — the parent hook keeps a
- * stable session reference unless it changes.
- */
 export const ConversationResumptionBanner = React.memo(function ConversationResumptionBanner({
   session,
   onResume,
@@ -85,9 +49,6 @@ export const ConversationResumptionBanner = React.memo(function ConversationResu
 }: ConversationResumptionBannerProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  // Crystallise `now` on mount so re-renders stay deterministic (react-hooks/purity).
-  // Acceptable staleness V1 — the banner already only lives a few seconds on the
-  // home screen before user interaction. Tick refresh deferred V1.1.
   const [now] = useState<number>(() => Date.now());
 
   if (!session) {
@@ -102,8 +63,6 @@ export const ConversationResumptionBanner = React.memo(function ConversationResu
     typeof session.museumName === 'string' && session.museumName.length > 0
       ? session.museumName
       : null;
-  // `t` carries the full i18next key union; cast to the minimal helper signature
-  // — same approach used by `formatDistance` (UFR-013 honesty: type alias not import).
   const timeAgo = formatResumptionTimeAgo(session.updatedAt, now, t as ResumptionTFunction);
 
   const title =
@@ -124,10 +83,6 @@ export const ConversationResumptionBanner = React.memo(function ConversationResu
   };
 
   const handleDismissPress = (event?: GestureResponderEvent): void => {
-    // Stop the press event from bubbling to the outer card Pressable so the
-    // dismiss tap never doubles as a resume tap (R19, AC17). RN's synthetic
-    // event from `fireEvent.press` may be `undefined` in tests — guard so we
-    // never crash the dismiss path.
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }

@@ -42,7 +42,6 @@ describe('WalkSuggestionChips', () => {
       <WalkSuggestionChips suggestions={suggestions} onSelect={onSelect} />,
     );
 
-    // The i18n mock returns the key; ScrollView renders with accessibilityLabel set
     expect(getByLabelText('chat.walk.suggestionsLabel')).toBeTruthy();
   });
 });

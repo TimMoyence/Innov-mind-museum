@@ -1,16 +1,7 @@
-/**
- * Integration tests for `src/middleware.ts`.
- *
- * Exercises three responsibilities layered into a single middleware:
- *   1. i18n locale redirect when no locale is in the path
- *   2. admin gate — redirect to `/admin/login` if `admin-authz` cookie absent
- *   3. CSP header + per-request nonce propagation
- */
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { middleware } from './middleware';
 
-/** Build a minimal NextRequest with optional cookies and headers. */
 function buildRequest(
   url: string,
   init: { cookies?: Record<string, string>; headers?: Record<string, string> } = {},
@@ -87,7 +78,6 @@ describe('middleware — admin gate', () => {
     });
     const res = middleware(req);
     expect(res.status).toBe(200);
-    // Nonce + CSP still emitted on admin pages
     expect(res.headers.get('content-security-policy')).toMatch(/nonce-/);
   });
 
@@ -110,7 +100,6 @@ describe('middleware — CSP + nonce', () => {
   });
 
   it('emits a Content-Security-Policy header with a fresh nonce', () => {
-    // Deterministic nonce for assertion stability; not security-critical.
     vi.spyOn(crypto, 'getRandomValues').mockImplementation(
       <T extends ArrayBufferView | null>(buf: T): T => {
         if (buf instanceof Uint8Array) {

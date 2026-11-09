@@ -12,7 +12,6 @@ interface ConversationsHeaderProps {
   onToggleSavedFilter: () => void;
 }
 
-/** Top context menu row for the conversations dashboard. */
 export const ConversationsHeader = ({
   editMode,
   isSavedOnly,

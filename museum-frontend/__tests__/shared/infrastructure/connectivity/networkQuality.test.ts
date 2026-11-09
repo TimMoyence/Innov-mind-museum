@@ -1,13 +1,3 @@
-/**
- * TR-01 — Pure network-quality engine (run undefined-network-detection-reliability,
- * cluster A, task A-R1). Pins design §2.1 transition semantics: hysteresis
- * 1400/1000 ms, 5-sample minimum, 3-failures-of-last-5, uniform 30 s dwell
- * ok↔slow, 60 s half-life recency weighting, 20-sample buffer, 5 min staleness.
- *
- * Invariants frozen here: INV-06 (pure + deterministic, injected clock),
- * INV-07 (numeric hysteresis), INV-08 (window < 5 ⇒ unknown, never low by
- * measurement without data), INV-10 (bounded memory + identity reset).
- */
 import {
   addQualitySample,
   evictStaleSamples,
@@ -31,8 +21,6 @@ import {
   type QualitySample,
 } from '@/__tests__/helpers/factories/connectivity.factories';
 
-// ── Sequence helpers (samples always built via the DRY factory) ─────────────
-
 const fastOkAt = (atMs: number): QualitySample => makeQualitySample({ atMs });
 
 const okAt = (atMs: number, rttMs: number): QualitySample => makeQualitySample({ atMs, rttMs });
@@ -40,14 +28,12 @@ const okAt = (atMs: number, rttMs: number): QualitySample => makeQualitySample({
 const timeoutAt = (atMs: number): QualitySample =>
   makeQualitySample({ atMs, rttMs: 15000, ok: false, timedOut: true });
 
-/** Network error without response (US-03.2) — a failure that is NOT a timeout. */
 const netFailAt = (atMs: number): QualitySample =>
   makeQualitySample({ atMs, rttMs: 0, ok: false, timedOut: false });
 
 const feed = (state: QualityEngineState, samples: readonly QualitySample[]): QualityEngineState =>
   samples.reduce((s, sample) => addQualitySample(s, sample), state);
 
-/** unknown → slow at t=4000 via 5 ok samples at 1800 ms (clean median build). */
 const buildSlowByMedian = (): QualityEngineState =>
   feed(
     initialQualityEngineState(0),
@@ -121,7 +107,6 @@ describe('networkQuality — ENTER slow median boundary (INV-07 / US-03.1)', () 
   });
 
   it('unknown→slow is direct, with NO dwell wait (spec acceptance #2: slow from boot)', () => {
-    // 5 samples within 4 s of boot — far less than the 30 s dwell — must still land slow.
     const state = buildSlowByMedian();
     expect(state.state).toBe('slow');
     expect(state.slowEnteredAtMs).toBe(4000);
@@ -130,7 +115,6 @@ describe('networkQuality — ENTER slow median boundary (INV-07 / US-03.1)', () 
 
 describe('networkQuality — 3-failures-of-last-5 rule (INV-07 / US-03.2)', () => {
   it('3 timeouts among the last 5 ⇒ slow even when the ok samples are fast', () => {
-    // [fail, ok, fail, ok, fail] — ok median is 100 ms but failures dominate.
     const state = feed(initialQualityEngineState(0), [
       timeoutAt(0),
       fastOkAt(1000),
@@ -164,7 +148,6 @@ describe('networkQuality — 3-failures-of-last-5 rule (INV-07 / US-03.2)', () =
   });
 
   it('counts failures over the LAST 5 samples, not the whole buffer', () => {
-    // Whole window holds 3 failures, but the last 5 = [f, ok, ok, ok, f] = 2 failures.
     const state = feed(initialQualityEngineState(0), [
       timeoutAt(0),
       timeoutAt(1000),
@@ -178,7 +161,6 @@ describe('networkQuality — 3-failures-of-last-5 rule (INV-07 / US-03.2)', () =
 });
 
 describe('networkQuality — dwell ok→slow (INV-07 / US-04.2)', () => {
-  /** ok at t=4000 via 5 fast samples, then failures pushing toward slow. */
   const okThenFailures = (): QualityEngineState =>
     feed(initialQualityEngineState(0), [
       ...makeQualityWindow(5),
@@ -189,12 +171,10 @@ describe('networkQuality — dwell ok→slow (INV-07 / US-04.2)', () => {
 
   it('ENTER condition met 8 s after entering ok ⇒ stays ok (dwell 30 s not elapsed)', () => {
     const state = okThenFailures();
-    // last 5 at t=12 s = [ok@3s, ok@4s, f, f, f] → ENTER met, but 12s-4s < 30s.
     expect(state.state).toBe('ok');
   });
 
   it('transitions ok→slow once exactly 30 s have elapsed in ok (dwell is ≥)', () => {
-    // stateSinceMs = 4000 (entered ok) ; failure at 34 000 ⇒ 30 000 elapsed exactly.
     const state = addQualitySample(okThenFailures(), timeoutAt(34_000));
     expect(state.state).toBe('slow');
     expect(state.slowEnteredAtMs).toBe(34_000);
@@ -202,14 +182,11 @@ describe('networkQuality — dwell ok→slow (INV-07 / US-04.2)', () => {
 
   it('never produces ok→slow→ok within 30 s (US-04.2)', () => {
     const slow = addQualitySample(okThenFailures(), timeoutAt(34_000));
-    // 5 fast post-entry samples 1-5 s after entering slow: exit median/timeout
-    // conditions are all met, but the dwell blocks the inverse transition.
     const after = feed(
       slow,
       [35_000, 36_000, 37_000, 38_000, 39_000].map((t) => fastOkAt(t)),
     );
     expect(after.state).toBe('slow');
-    // One more fast sample at exactly slow-entry + 30 s ⇒ recovery allowed.
     const recovered = addQualitySample(after, fastOkAt(64_000));
     expect(recovered.state).toBe('ok');
   });
@@ -233,8 +210,6 @@ describe('networkQuality — EXIT slow (INV-07 / US-04.1)', () => {
   });
 
   it('requires ≥5 samples POSTERIOR to slow entry — pre-entry samples never count', () => {
-    // 4 fast post-entry samples: a whole-window weighted median would already
-    // be fast (4×100 fresh outweighs 5×1800 aged), but exit needs 5 post-entry.
     const after4 = feed(
       buildSlowByMedian(),
       [40_000, 41_000, 42_000, 43_000].map((t) => fastOkAt(t)),
@@ -278,7 +253,6 @@ describe('networkQuality — staleness eviction (US-10.4 / INV-10)', () => {
 
   it('partial eviction below 5 fresh samples falls back to unknown, keeping fresh ones', () => {
     const ok = feed(initialQualityEngineState(0), makeQualityWindow(5));
-    // now = 300 500 : sample@0 is stale (age 300 500 > 5 min), samples@1000+ are fresh.
     const state = evictStaleSamples(ok, QUALITY_STALE_MS + 500);
     expect(state.state).toBe('unknown');
     expect(state.samples).toHaveLength(4);
@@ -331,7 +305,6 @@ describe('networkQuality — weightedMedianRtt (INV-07 half-life / design §2.1)
   });
 
   it('weights by recency with a 60 s half-life: 2 fresh fast samples outweigh 3 stale slow ones', () => {
-    // 3×2000 ms aged 120 s (weight 0.25 each = 0.75) vs 2×100 ms fresh (weight 1 each = 2).
     const samples = [
       okAt(0, 2000),
       okAt(0, 2000),
@@ -350,8 +323,6 @@ describe('networkQuality — weightedMedianRtt (INV-07 half-life / design §2.1)
 
 describe('networkQuality — recency weighting inside the engine decision', () => {
   it('fresh fast traffic outweighs old slow samples: no false ENTER (INV-07 half-life)', () => {
-    // 3 stale 5000 ms samples (age ~180 s ⇒ weight 0.125) + 2 fresh 100 ms ones.
-    // An unweighted median would read 5000 ⇒ slow; the weighted one reads 100 ⇒ ok.
     const state = feed(initialQualityEngineState(0), [
       okAt(0, 5000),
       okAt(1000, 5000),

@@ -9,7 +9,6 @@ import { semantic, space } from '@/shared/ui/tokens';
 
 const SETTINGS_ROUTE = '/(stack)/settings' as const;
 
-/** Small gear icon surfaced in the top-right corner of the Home hero, opens Settings. */
 export const HeroSettingsButton = (): JSX.Element => {
   const { theme } = useTheme();
   const { t } = useTranslation();

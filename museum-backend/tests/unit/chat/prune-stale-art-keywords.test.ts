@@ -2,10 +2,6 @@ import { pruneStaleArtKeywords } from '@modules/chat/useCase/prune-stale-art-key
 
 import type { DataSource } from 'typeorm';
 
-/**
- * TypeORM 0.3.x DELETE returns `[rows, rowCount]` — see prune-support-tickets.test.ts header.
- * @param rows
- */
 const tupleResult = (rows: { id: string }[]): [{ id: string }[], number] => [rows, rows.length];
 
 describe('pruneStaleArtKeywords', () => {

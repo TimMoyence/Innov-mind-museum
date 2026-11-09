@@ -4,22 +4,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import type { ChatUiMessageMetadata } from '@/features/chat/application/chatSessionLogic.pure';
 import { MessageActions } from '@/features/chat/ui/MessageActions';
 
-jest.mock('@/features/chat/ui/AskMoreChip', () => {
-  const { Text, Pressable } = require('react-native');
-  return {
-    AskMoreChip: ({ text, onPress }: { text: string; onPress: (text: string) => void }) => (
-      <Pressable
-        onPress={() => {
-          onPress(text);
-        }}
-        testID={`askmore-${text}`}
-      >
-        <Text>{text}</Text>
-      </Pressable>
-    ),
-  };
-});
-
 jest.mock('@/features/chat/ui/RecommendationChips', () => {
   const { Text, Pressable } = require('react-native');
   return {
@@ -49,7 +33,6 @@ jest.mock('@/features/chat/ui/RecommendationChips', () => {
 
 describe('MessageActions', () => {
   const baseProps = {
-    onFollowUpPress: jest.fn(),
     onRecommendationPress: jest.fn(),
     isSendingDisabled: false,
   };
@@ -66,17 +49,6 @@ describe('MessageActions', () => {
   it('returns null when metadata is undefined', () => {
     const { toJSON } = render(<MessageActions {...baseProps} metadata={undefined} />);
     expect(toJSON()).toBeNull();
-  });
-
-  it('renders AskMoreChip for suggestedFollowUp and fires onFollowUpPress (B3)', () => {
-    const metadata: ChatUiMessageMetadata = {
-      suggestedFollowUp: 'What year was it painted?',
-    };
-
-    render(<MessageActions {...baseProps} metadata={metadata} />);
-    const btn = screen.getByTestId('askmore-What year was it painted?');
-    fireEvent.press(btn);
-    expect(baseProps.onFollowUpPress).toHaveBeenCalledWith('What year was it painted?');
   });
 
   it('renders recommendation chips and fires onRecommendationPress', () => {

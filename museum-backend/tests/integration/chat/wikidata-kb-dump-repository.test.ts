@@ -1,14 +1,3 @@
-/**
- * C5.3 Phase A — `WikidataKbDumpRepositoryTypeOrm` integration test.
- *
- * Round-trips through a real Postgres testcontainer (shared harness in
- * `tests/helpers/integration/integration-harness.ts`) so the migration,
- * the UNIQUE constraint, the JSONB serialisation, and the language sentinel
- * are exercised together. Unit-level tests are deliberately skipped because
- * the whole value of this class lies in its SQL semantics — mocking the
- * underlying `Repository` would test nothing meaningful.
- */
-
 import { WikidataKbDumpRepositoryTypeOrm } from '@modules/chat/adapters/secondary/persistence/wikidata-kb-dump.repository.typeorm';
 import { WikidataKbDump } from '@modules/chat/domain/wikidata-kb-dump.entity';
 import { makeArtworkFacts } from 'tests/helpers/chat/visual-similarity/artwork-facts.fixtures';
@@ -49,10 +38,9 @@ describe('WikidataKbDumpRepositoryTypeOrm (C5.3 — integration)', () => {
     it('normalises the search term (case-insensitive, trim)', async () => {
       await repo.upsert('  Mona Lisa  ', undefined, MONA);
 
-      // Read with different casing + extra whitespace — must resolve the same row.
       expect(await repo.findFactsBySearchTerm('mona lisa')).toEqual(MONA);
       expect(await repo.findFactsBySearchTerm('MONA LISA')).toEqual(MONA);
-      expect(await repo.findFactsBySearchTerm('  Mona   Lisa  ')).toBeNull(); // collapsed-spaces NOT normalised — only outer trim
+      expect(await repo.findFactsBySearchTerm('  Mona   Lisa  ')).toBeNull();
       expect(await repo.findFactsBySearchTerm('Mona Lisa')).toEqual(MONA);
     });
 

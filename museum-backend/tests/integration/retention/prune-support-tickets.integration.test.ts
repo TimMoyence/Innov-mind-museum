@@ -1,16 +1,3 @@
-/**
- * TD-4 — real-PG integration test for `pruneSupportTickets`.
- *
- * Pins the driver-tuple contract (`[rows, rowCount]` shape of TypeORM 0.3.x
- * DELETE…RETURNING) against a real Postgres testcontainer so the
- * incident-2026-05-08 busy-loop class of bugs cannot reach prod again.
- * See `museum-backend/src/modules/support/useCase/retention/prune-support-tickets.ts`
- * and ADR-018.
- *
- * Run with:
- *   RUN_INTEGRATION=true pnpm test:integration -- \
- *     --testPathPattern=tests/integration/retention/prune-support-tickets
- */
 import type { Repository } from 'typeorm';
 
 import { pruneSupportTickets } from '@modules/support/useCase/retention/prune-support-tickets';
@@ -28,7 +15,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number): Date => new Date(Date.now() - n * DAY_MS);
 
 describeIntegration('pruneSupportTickets (real PG) [integration]', () => {
-
   let harness: IntegrationHarness;
   let ticketRepo: Repository<SupportTicket>;
 
@@ -42,18 +28,6 @@ describeIntegration('pruneSupportTickets (real PG) [integration]', () => {
     await harness.reset();
   });
 
-  /**
-   * Insert a single SupportTicket and (optionally) force its `updatedAt` to a
-   * past timestamp via raw UPDATE because `@UpdateDateColumn` overrides
-   * explicit values on insert (same trick as `forceMessageCreatedAt` in
-   * `chat-repository-typeorm.integration.test.ts`).
-   *
-   * Returns the saved ticket id.
-   * @param params
-   * @param params.status
-   * @param params.updatedAt
-   * @param params.seq
-   */
   async function insertTicket(params: {
     status: 'open' | 'closed' | 'resolved' | 'in_progress';
     updatedAt?: Date;
@@ -85,14 +59,12 @@ describeIntegration('pruneSupportTickets (real PG) [integration]', () => {
   }
 
   it('R1+R4: deletes 50 eligible (closed/resolved >365d) rows, leaves 50 non-eligible untouched', async () => {
-    // 25 closed + 25 resolved, both stale (400d ago)
     for (let i = 0; i < 25; i += 1) {
       await insertTicket({ status: 'closed', updatedAt: daysAgo(400), seq: i });
     }
     for (let i = 25; i < 50; i += 1) {
       await insertTicket({ status: 'resolved', updatedAt: daysAgo(400), seq: i });
     }
-    // 25 open stale (wrong status) + 25 closed recent (right status, too recent)
     for (let i = 50; i < 75; i += 1) {
       await insertTicket({ status: 'open', updatedAt: daysAgo(400), seq: i });
     }
@@ -133,7 +105,6 @@ describeIntegration('pruneSupportTickets (real PG) [integration]', () => {
     for (let i = 0; i < 50; i += 1) {
       await insertTicket({ status: 'closed', updatedAt: daysAgo(400), seq: i });
     }
-    // Add 10 non-eligible "open recent" sentinels — must remain untouched.
     for (let i = 50; i < 60; i += 1) {
       await insertTicket({ status: 'open', updatedAt: daysAgo(5), seq: i });
     }

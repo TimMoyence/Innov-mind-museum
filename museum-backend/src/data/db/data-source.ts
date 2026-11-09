@@ -34,7 +34,6 @@ if (env.nodeEnv === 'production' && env.dbSynchronize) {
   throw new Error('DB_SYNCHRONIZE must not be true in production — use migrations instead.');
 }
 
-/** TypeORM DataSource for PostgreSQL, configured from environment variables. Synchronize is always disabled in production. */
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: env.db.host,
@@ -70,10 +69,6 @@ export const AppDataSource = new DataSource({
   migrations: isCompiledRuntime
     ? ['dist/src/data/db/migrations/*.js']
     : ['src/data/db/migrations/*.ts'],
-  // 'each' wraps each migration in its own transaction AND honors the
-  // `public readonly transaction = false` opt-out used by index migrations
-  // that need CREATE INDEX CONCURRENTLY (forbidden inside a transaction).
-  // Default 'all' rejects per-migration overrides with ForbiddenTransactionModeOverrideError.
   migrationsTransactionMode: 'each',
   ssl:
     env.nodeEnv === 'production' && env.dbSsl
@@ -86,18 +81,12 @@ export const AppDataSource = new DataSource({
   },
 });
 
-/** Runtime shape exposed by the pg driver under TypeORM. */
 interface PgPoolStats {
   totalCount: number;
   idleCount: number;
   waitingCount: number;
 }
 
-/**
- * Type predicate replacing the prior `as unknown as` cast: confirms the
- * TypeORM driver carries the pg-specific `master` pool stats object before
- * the monitor reads numeric counters off it.
- */
 export function hasPgPool(driver: unknown): driver is { master: PgPoolStats } {
   if (typeof driver !== 'object' || driver === null) return false;
   if (!('master' in driver)) return false;
@@ -111,7 +100,6 @@ export function hasPgPool(driver: unknown): driver is { master: PgPoolStats } {
   );
 }
 
-/** Logs pool utilization every 60s when pool usage exceeds 80%. */
 export function startPoolMonitor(intervalMs = 60_000): NodeJS.Timeout {
   return setInterval(() => {
     if (!AppDataSource.isInitialized) return;

@@ -31,10 +31,6 @@ describe('buildVerifyEmail', () => {
     expect(html).toContain('Vérifier mon email');
   });
 
-  // Mutation kill — Stryker survivor in verify-email.template.ts L46:20
-  // (bodyHtml template literal must NOT mutate to empty backtick string ``).
-  // If bodyHtml becomes '', the lead/expires/ignored copy disappears from the rendered HTML
-  // (whereas heading + CTA label come from renderEmailLayout's other inputs and would still render).
   it('embeds the EN bodyHtml copy (lead + expires + ignored) inside the body card', () => {
     const html = buildVerifyEmail({ verifyUrl, locale: 'en' });
     expect(html).toContain(
@@ -135,9 +131,6 @@ describe('buildSupportContactEmail', () => {
     expect(html).toContain('TestAgent/1.0');
   });
 
-  // Mutation kill — Stryker survivor in support-contact.template.ts L28:41
-  // ('unknown' for IP default must NOT mutate to '').
-  // Anchored to the IP <code> cell to differentiate from the userAgent 'unknown'.
   it('renders the literal "unknown" inside the IP <code> cell when ip is omitted (userAgent set to something distinct)', () => {
     const html = buildSupportContactEmail({
       ...basePayload,
@@ -145,7 +138,6 @@ describe('buildSupportContactEmail', () => {
       requestId: 'req-distinct',
       userAgent: 'TestAgent/9.9',
     });
-    // The IP row's <code> tag must wrap exactly the literal 'unknown'.
     expect(html).toContain(
       '<code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#475569;">unknown</code>',
     );

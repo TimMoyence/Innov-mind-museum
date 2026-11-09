@@ -28,7 +28,6 @@ interface ExportUserDataDeps {
   reviewDataExport: ReviewDataExportPort;
   supportDataExport: SupportDataExportPort;
   userConsentRepository: IUserConsentRepository;
-  // B3 — new personal-data categories (lazy-bound ports, wired in index.ts).
   userMemoryExport: UserMemoryExportPort;
   auditLogExport: AuditLogExportPort;
   messageFeedbackExport: MessageFeedbackExportPort;
@@ -36,29 +35,16 @@ interface ExportUserDataDeps {
   socialAccountExport: SocialAccountExportPort;
 }
 
-/** Coerces a Date | string | null to an ISO-8601 string (or null). */
 function toIso(value: Date | string | null | undefined): string | null {
   if (value == null) return null;
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-/** Coerces a Date | string | null to a date-only ISO string `YYYY-MM-DD` (or null). */
 function toIsoDate(value: Date | string | null | undefined): string | null {
   const iso = toIso(value);
   return iso ? iso.slice(0, 10) : null;
 }
 
-/**
- * GDPR Art. 15 (access) + Art. 20 (portability) payload assembler.
- * Pulls from each module via its registered port — never queries DB directly,
- * stays inside the hexagonal contract. Saved artworks (mobile-local) absent
- * by design: never persisted server-side.
- *
- * SECURITY (R14, design D4): every category is mapped via EXPLICIT per-field
- * allow-listing — never entity spread — so secrets (`password`, `*_token`,
- * audit `prevHash`/`rowHash`) cannot leak even if
- * a future column is added to a source entity.
- */
 export class ExportUserDataUseCase {
   constructor(private readonly deps: ExportUserDataDeps) {}
 
@@ -102,7 +88,6 @@ export class ExportUserDataUseCase {
         role: user.role,
         firstname: user.firstname ?? null,
         lastname: user.lastname ?? null,
-        defaultLocale: user.defaultLocale,
         tier: user.tier,
         dateOfBirth: toIsoDate(user.dateOfBirth),
         contentPreferences: [...user.contentPreferences],
@@ -152,7 +137,6 @@ function mapUserMemory(source: UserMemorySource | null): UserMemoryExportEntry |
   };
 }
 
-/** EXCLUDES `prevHash` / `rowHash` (R14). */
 function mapAuditLog(source: AuditLogSource): UserAuditLogExportEntry {
   return {
     action: source.action,
@@ -174,7 +158,6 @@ function mapMessageFeedback(source: MessageFeedbackSource): UserMessageFeedbackE
   };
 }
 
-/** EXCLUDES `reviewedBy` / `reviewerNotes` / `reviewedAt` (third-party moderator data, D7). */
 function mapMessageReport(source: MessageReportSource): UserMessageReportExportEntry {
   return {
     messageId: source.messageId,

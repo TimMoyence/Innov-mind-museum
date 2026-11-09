@@ -1,4 +1,5 @@
 import { MuseumEnrichment } from '@modules/knowledge-extraction/domain/museum-enrichment/museum-enrichment.entity';
+import { wikimediaHttps } from '@shared/media/wikimedia-https';
 
 import type {
   MuseumEnrichmentView,
@@ -8,11 +9,6 @@ import type { Museum } from '@modules/museum/domain/museum/museum.entity';
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 import type { DataSource, Repository } from 'typeorm';
 
-/**
- * Shares the `museum_enrichment` table with the legacy knowledge-extraction
- * repo. New rows have a non-null `museumId` so they never collide on the
- * legacy name-based unique index.
- */
 export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCachePort {
   private readonly repo: Repository<MuseumEnrichment>;
   private readonly museumRepo: Repository<Museum>;
@@ -22,7 +18,6 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     this.museumRepo = dataSource.getRepository(museumEntity);
   }
 
-  /** Returns null if missing or stale (older than `freshWindowMs`). */
   async findFresh(input: {
     museumId: number;
     locale: string;
@@ -42,10 +37,6 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     return row ? toView(row) : null;
   }
 
-  /**
-   * Read-then-save (not `INSERT ... ON CONFLICT`) to preserve legacy columns
-   * set by the knowledge-extraction flow.
-   */
   async upsert(input: MuseumEnrichmentView): Promise<void> {
     const existing = await this.repo
       .createQueryBuilder('me')
@@ -84,7 +75,6 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
     await this.repo.save(fresh);
   }
 
-  /** Excludes legacy name-keyed rows (`museumId IS NULL`) from scheduled refresh. */
   async findStaleRows(
     thresholdDate: Date,
     limit: number,
@@ -103,10 +93,7 @@ export class TypeOrmMuseumEnrichmentCacheAdapter implements MuseumEnrichmentCach
       .map((row) => ({ museumId: row.museumId, locale: row.locale }));
   }
 
-  /** Legacy name-keyed rows (`museumId IS NULL`) are left untouched. */
   async deleteStaleSince(threshold: Date): Promise<number> {
-    // Column identifiers quoted to preserve camelCase — bare references
-    // would be lowercased by Postgres and fail to resolve.
     const result = await this.repo
       .createQueryBuilder()
       .delete()
@@ -129,11 +116,6 @@ function applyViewToEntity(entity: MuseumEnrichment, view: MuseumEnrichmentView)
   entity.fetchedAt = new Date(view.fetchedAt);
 }
 
-/**
- * Shallow spread bridges variance gap (ParsedOpeningHours →
- * Record<string,unknown>) without `as unknown as` cast, and yields a
- * defensive copy so downstream JSONB mutation can't leak back to caller.
- */
 function parsedToJsonb(value: ParsedOpeningHours | null): Record<string, unknown> | null {
   return value === null ? null : { ...value };
 }
@@ -151,11 +133,8 @@ function toView(row: MuseumEnrichment): MuseumEnrichmentView {
     wikidataQid: row.wikidataQid,
     website: row.website,
     phone: row.phone,
-    imageUrl: row.imageUrl,
+    imageUrl: wikimediaHttps(row.imageUrl),
     openingHours: (row.openingHours ?? null) as ParsedOpeningHours | null,
-    // Rich JSONB columns — surfaced as-is (free-form Record | null). The
-    // entity already stores them as `Record<string, unknown> | null`, which
-    // is structurally identical to the view's alias types, so no cast.
     admissionFees: row.admissionFees ?? null,
     collections: row.collections ?? null,
     currentExhibitions: row.currentExhibitions ?? null,

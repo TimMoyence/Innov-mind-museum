@@ -2,8 +2,6 @@ import '@/__tests__/helpers/test-utils';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useBiometricAuth } from '@/features/auth/application/useBiometricAuth';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockHasHardwareAsync = jest.fn<Promise<boolean>, []>();
 const mockIsEnrolledAsync = jest.fn<Promise<boolean>, []>();
 const mockSupportedAuthenticationTypesAsync = jest.fn<Promise<number[]>, []>();
@@ -29,14 +27,12 @@ jest.mock('@/features/auth/infrastructure/biometricStore', () => ({
   setBiometricEnabled: (v: boolean) => mockSetBiometricEnabled(v),
 }));
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useBiometricAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasHardwareAsync.mockResolvedValue(true);
     mockIsEnrolledAsync.mockResolvedValue(true);
-    mockSupportedAuthenticationTypesAsync.mockResolvedValue([2]); // FACIAL_RECOGNITION
+    mockSupportedAuthenticationTypesAsync.mockResolvedValue([2]);
     mockGetBiometricEnabled.mockResolvedValue(false);
     mockAuthenticateAsync.mockResolvedValue({ success: true });
     mockSetBiometricEnabled.mockResolvedValue(undefined);
@@ -54,7 +50,7 @@ describe('useBiometricAuth', () => {
   });
 
   it('sets Touch ID label when only fingerprint is available', async () => {
-    mockSupportedAuthenticationTypesAsync.mockResolvedValue([1]); // FINGERPRINT
+    mockSupportedAuthenticationTypesAsync.mockResolvedValue([1]);
 
     const { result } = renderHook(() => useBiometricAuth());
 
@@ -66,7 +62,7 @@ describe('useBiometricAuth', () => {
   });
 
   it('sets Iris label when only iris is available', async () => {
-    mockSupportedAuthenticationTypesAsync.mockResolvedValue([3]); // IRIS
+    mockSupportedAuthenticationTypesAsync.mockResolvedValue([3]);
 
     const { result } = renderHook(() => useBiometricAuth());
 

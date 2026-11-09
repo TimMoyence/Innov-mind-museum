@@ -14,7 +14,6 @@ export default function () {
   const email = `vu${__VU}_iter${__ITER}@loadtest.com`;
   const password = 'LoadTest123!';
 
-  // Register
   const regRes = registerUser(email, password);
   check(regRes, {
     'register 201': (r) => r.status === 201,
@@ -32,7 +31,6 @@ export default function () {
 
   sleep(0.5);
 
-  // Login
   const loginData = loginUser(email, password);
   if (!loginData) {
     console.warn(`Login failed for ${email}`);
@@ -43,12 +41,9 @@ export default function () {
 
   sleep(0.3);
 
-  // Refresh token
-  const refreshRes = http.post(
-    `${BASE_URL}/api/auth/refresh`,
-    JSON.stringify({ refreshToken }),
-    { headers: { 'Content-Type': 'application/json' } },
-  );
+  const refreshRes = http.post(`${BASE_URL}/api/auth/refresh`, JSON.stringify({ refreshToken }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
   check(refreshRes, {
     'refresh 200': (r) => r.status === 200,
     'refresh returns new tokens': (r) => {
@@ -58,13 +53,11 @@ export default function () {
     },
   });
 
-  const currentToken = refreshRes.status === 200
-    ? JSON.parse(refreshRes.body).accessToken
-    : accessToken;
+  const currentToken =
+    refreshRes.status === 200 ? JSON.parse(refreshRes.body).accessToken : accessToken;
 
   sleep(0.3);
 
-  // GET /me
   const meRes = http.get(`${BASE_URL}/api/auth/me`, authHeaders(currentToken));
   check(meRes, {
     'me 200': (r) => r.status === 200,
@@ -77,7 +70,6 @@ export default function () {
 
   sleep(0.3);
 
-  // Logout
   const logoutRes = http.post(
     `${BASE_URL}/api/auth/logout`,
     JSON.stringify({ refreshToken }),

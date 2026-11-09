@@ -4,7 +4,6 @@ import type { PaginatedResult } from '@shared/types/pagination';
 import { AppError } from '@shared/errors/app.error';
 import { makeAdminRepo } from '../../../helpers/admin/repo.fixtures';
 
-// Mock the audit service module
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_ROLE_CHANGE: 'ADMIN_ROLE_CHANGE',
@@ -103,13 +102,11 @@ describe('ChangeUserRoleUseCase', () => {
     const adminUser = makeUser({ id: 5, role: 'admin' });
     const repo = makeAdminRepo({
       countAdmins: jest.fn().mockResolvedValue(1),
-      // The listUsers with role=admin returns the single admin (id=5), not the target (id=10)
       listUsers: jest.fn().mockResolvedValue(makePaginatedAdmins([adminUser])),
       changeUserRole: jest.fn().mockResolvedValue(makeUser({ id: 10, role: 'moderator' })),
     });
     const uc = new ChangeUserRoleUseCase(repo);
 
-    // Target user 10 is NOT the last admin (id=5 is), so this should succeed
     const result = await uc.execute({ userId: 10, newRole: 'moderator', actorId: 99 });
 
     expect(result.role).toBe('moderator');

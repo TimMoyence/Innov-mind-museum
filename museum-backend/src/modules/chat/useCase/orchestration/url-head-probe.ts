@@ -1,27 +1,3 @@
-/**
- * UrlHeadProbe — Citations v2 (C4) reachability check, third defense after
- * parser + quote validator. Detects hallucinated URLs that pass Zod + survive
- * verbatim-quote but resolve to nothing (broken links, 404s, fabricated paths).
- *
- * Contract:
- * - HEAD with 800ms timeout (design D5); honors parent `AbortSignal` via
- *   `AbortSignal.any` (Node ≥ 22.3, verified in package.json).
- * - On 405 (strict CDNs: Cloudflare Workers, S3) retries `GET` with
- *   `Range: bytes=0-0` (1-byte read).
- * - Caches both reachable AND unreachable outcomes in Redis 1h
- *   (`head-probe:v1:{sha256(url)[:16]}`); re-probing known-dead would defeat
- *   cache (NFR2).
- * - Network errors → `reachable: false`, NEVER throws (fail-open). Empty
- *   input → empty Map (zero I/O).
- *
- * SEC SSRF (NFR-security): NO hostname allowlist. URLs MUST originate
- * exclusively from platform-controlled sources (Wikidata, Brave, Wikimedia
- * Commons, museum catalog — spec §126). Any change letting user-controlled
- * URLs reach this probe MUST add hostname filtering at caller boundary OR
- * introduce allowlist here (V2 hardening, Q3 2026 post-launch). User-Agent
- * identifies probe for upstream good-citizenship.
- */
-
 import { createHash } from 'node:crypto';
 
 import { logger } from '@shared/logger/logger';
@@ -29,18 +5,13 @@ import { logger } from '@shared/logger/logger';
 import type { CacheService } from '@shared/cache/cache.port';
 
 export interface UrlProbeResult {
-  /** True iff 2xx (or 206 from GET-Range fallback). */
   reachable: boolean;
-  /** Undefined on network error / abort. */
   statusCode?: number;
-  /** True when served from Redis (no network call). */
   cached: boolean;
 }
 
 export interface ProbeOptions {
-  /** Default 800 (design D5). */
   timeoutMs?: number;
-  /** Cascades via `AbortSignal.any`. */
   signal?: AbortSignal;
 }
 
@@ -51,10 +22,8 @@ export interface UrlHeadProbeDeps {
 
 const DEFAULT_TIMEOUT_MS = 800;
 const CACHE_TTL_SECONDS = 3600;
-/** Bump on payload-shape changes. */
 const CACHE_KEY_PREFIX = 'head-probe:v1:';
 const USER_AGENT = 'Musaium-CitationProbe/1.0 (+https://musaium.com)';
-/** 64-bit prefix — collisions practically irrelevant at this scale. */
 const SHA_PREFIX_LEN = 16;
 
 function cacheKeyFor(url: string): string {
@@ -62,13 +31,11 @@ function cacheKeyFor(url: string): string {
   return `${CACHE_KEY_PREFIX}${sha}`;
 }
 
-/** `cached` rebuilt per call → excluded from stored record. */
 interface CachedProbeRecord {
   reachable: boolean;
   statusCode?: number;
 }
 
-/** Single instance per process — no per-request state. */
 export class UrlHeadProbe {
   private readonly cache: CacheService;
   private readonly fetchFn: typeof fetch;
@@ -78,11 +45,6 @@ export class UrlHeadProbe {
     this.fetchFn = deps.fetchFn ?? fetch;
   }
 
-  /**
-   * Best-effort cache (Redis outage → probe everything, still correct).
-   * Emits ONE aggregated Langfuse trace per call (not per URL — avoids span
-   * fan-out on 5-URL batches); per-URL Prom counter in `probeOne`.
-   */
   async probeBatch(urls: string[], opts: ProbeOptions = {}): Promise<Map<string, UrlProbeResult>> {
     const out = new Map<string, UrlProbeResult>();
     if (urls.length === 0) return out;
@@ -90,7 +52,6 @@ export class UrlHeadProbe {
     const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const parentSignal = opts.signal;
 
-    // Parallel — probeOne is fail-open so Promise.all resolves on every URL.
     await Promise.all(
       urls.map(async (url) => {
         const result = await this.probeOne(url, timeoutMs, parentSignal);
@@ -101,7 +62,6 @@ export class UrlHeadProbe {
     return out;
   }
 
-  /** Cache-first → HEAD → 405 fallback GET Range. */
   private async probeOne(
     url: string,
     timeoutMs: number,
@@ -109,7 +69,6 @@ export class UrlHeadProbe {
   ): Promise<UrlProbeResult> {
     const key = cacheKeyFor(url);
 
-    // `null` covers both miss and Redis outage (fail-soft).
     const cached = await this.cache.get<CachedProbeRecord>(key);
     if (cached !== null) {
       return { reachable: cached.reachable, statusCode: cached.statusCode, cached: true };
@@ -117,7 +76,6 @@ export class UrlHeadProbe {
 
     const headResult = await this.fetchWithBudget(url, 'HEAD', timeoutMs, parentSignal);
 
-    // 405 → strict CDNs refuse HEAD; retry GET Range: bytes=0-0.
     let final = headResult;
     if (headResult.statusCode === 405) {
       final = await this.fetchWithBudget(url, 'GET', timeoutMs, parentSignal, {
@@ -125,7 +83,6 @@ export class UrlHeadProbe {
       });
     }
 
-    // Cache both reachable and unreachable (file-top contract).
     const toStore: CachedProbeRecord = { reachable: final.reachable };
     if (final.statusCode !== undefined) toStore.statusCode = final.statusCode;
     await this.cache.set(key, toStore, CACHE_TTL_SECONDS);
@@ -135,7 +92,6 @@ export class UrlHeadProbe {
     return result;
   }
 
-  /** NEVER throws — errors (DNS/abort/reset) → `{reachable: false}` per R5. */
   private async fetchWithBudget(
     url: string,
     method: 'HEAD' | 'GET',
@@ -166,7 +122,6 @@ export class UrlHeadProbe {
   }
 }
 
-/** NFR7 PII-adjacent — never leak full URL into logs; never throw on parse error. */
 function safeHost(url: string): string {
   try {
     return new URL(url).host;

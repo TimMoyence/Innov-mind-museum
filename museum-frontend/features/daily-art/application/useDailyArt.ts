@@ -8,11 +8,9 @@ import { fetchDailyArt, type DailyArtwork } from '../infrastructure/dailyArtApi'
 export const SAVED_ARTWORKS_KEY = 'musaium.dailyArt.savedArtworks';
 export const DISMISSED_KEY = 'musaium.dailyArt.dismissed';
 
-/** Pre-namespacing keys migrated forward once before their first read (TD-AS-01). */
 const LEGACY_SAVED_ARTWORKS_KEY = '@musaium/saved_artworks';
 const LEGACY_DISMISSED_KEY = '@musaium/daily_art_dismissed';
 
-/** Toggles an artwork in the saved list. Returns whether it ended up saved. */
 export async function toggleSavedArtwork(artwork: DailyArtwork): Promise<{ saved: boolean }> {
   await migrateStorageKey(SAVED_ARTWORKS_KEY, LEGACY_SAVED_ARTWORKS_KEY);
   const list = (await storage.getJSON<DailyArtwork[]>(SAVED_ARTWORKS_KEY)) ?? [];
@@ -26,7 +24,6 @@ export async function toggleSavedArtwork(artwork: DailyArtwork): Promise<{ saved
 
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
 
-/** Hook that fetches the daily artwork, tracks save/skip state, and handles dismissal for the day. */
 export const useDailyArt = () => {
   const { i18n } = useTranslation();
   const locale = i18n.language;
@@ -39,10 +36,8 @@ export const useDailyArt = () => {
     let cancelled = false;
 
     const load = async () => {
-      // Migrate both daily-art keys forward once before their first read (TD-AS-01).
       await migrateStorageKey(DISMISSED_KEY, LEGACY_DISMISSED_KEY);
       await migrateStorageKey(SAVED_ARTWORKS_KEY, LEGACY_SAVED_ARTWORKS_KEY);
-      // Check if already dismissed today
       const dismissedDate = await storage.getItem(DISMISSED_KEY);
       if (dismissedDate === todayKey()) {
         setDismissed(true);
@@ -55,13 +50,11 @@ export const useDailyArt = () => {
         if (cancelled) return;
         setArtwork(data);
 
-        // Check if already saved
         const saved = await storage.getJSON<DailyArtwork[]>(SAVED_ARTWORKS_KEY);
         if (saved?.some((a) => a.title === data.title && a.artist === data.artist)) {
           setIsSaved(true);
         }
       } catch {
-        // Silently fail — daily art is non-critical
         if (!cancelled) setArtwork(null);
       } finally {
         if (!cancelled) setIsLoading(false);

@@ -4,8 +4,6 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 
-// ── Zustand store mock ───────────────────────────────────────────────────────
-
 let mockItems: DashboardSessionCard[] = [];
 let mockIsLoadingResponse = true;
 
@@ -29,8 +27,6 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
   useConversationsStore: (selector: (state: typeof mockStore) => unknown) => selector(mockStore),
 }));
 
-// ── API + domain mocks ──────────────────────────────────────────────────────
-
 const mockListSessions = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -42,7 +38,7 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 }));
 
 jest.mock('@/features/settings/runtimeSettings', () => ({
-  loadRuntimeSettings: jest.fn(() => ({ defaultLocale: 'en' })),
+  loadRuntimeSettings: jest.fn(() => ({ defaultMuseumMode: true, guideLevel: 'beginner' })),
 }));
 
 jest.mock('@/features/chat/domain/dashboard-session', () => ({
@@ -66,10 +62,6 @@ jest.mock('@/features/conversation/ui/ConversationSearchBar', () => {
   };
 });
 
-// TD-RNGH-04 — SwipeableConversationCard now wraps `ReanimatedSwipeable`
-// (Reanimated worklets), which is not available in this screen test's jsdom
-// context. Mock it to a passthrough wrapper (mirrors the shared
-// conversations-screen.setup.tsx helper) so the screen renders its cards.
 jest.mock('@/features/conversation/ui/SwipeableConversationCard', () => {
   const { View } = require('react-native');
   return {
@@ -87,7 +79,6 @@ describe('ConversationsScreen', () => {
     mockItems = [];
     mockIsLoadingResponse = true;
 
-    // Default: API returns empty list
     mockListSessions.mockResolvedValue({
       sessions: [],
       page: { nextCursor: null, hasMore: false },
@@ -95,7 +86,6 @@ describe('ConversationsScreen', () => {
   });
 
   it('shows loading skeletons initially', () => {
-    // Make the API hang so loading state persists
     mockListSessions.mockReturnValue(new Promise(() => {}));
 
     render(<ConversationsScreen />);
@@ -125,7 +115,6 @@ describe('ConversationsScreen', () => {
       page: { nextCursor: null, hasMore: false },
     });
 
-    // Pre-populate the store with mapped items (simulating what loadDashboard does)
     mockItems = [
       {
         id: 'sess-1',
@@ -149,7 +138,6 @@ describe('ConversationsScreen', () => {
       expect(screen.queryByTestId('skeleton-card')).toBeNull();
     });
 
-    // Cards are rendered with their titles as accessibilityLabels
     expect(screen.getByText('Session sess-1')).toBeTruthy();
     expect(screen.getByText('Session sess-2')).toBeTruthy();
   });

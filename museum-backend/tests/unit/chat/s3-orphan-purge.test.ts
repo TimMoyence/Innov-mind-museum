@@ -23,14 +23,11 @@ const FAKE_S3_CONFIG: S3ImageStorageConfig = {
 };
 
 interface OrphanMockOpts {
-  /** Pages keyed by prefix the lister will yield, in order. */
   pagesByPrefix: Record<
     string,
     { objects: { key: string; lastModifiedMs: number }[]; nextToken?: string }[]
   >;
-  /** s3:// refs the DB query should claim are still referenced. */
   referencedRefs?: string[];
-  /** Force the deleter to throw for a specific key (per-batch isolation). */
   deleterFailKeys?: string[];
 }
 
@@ -55,8 +52,6 @@ function buildOrphanMocks(opts: OrphanMockOpts) {
     return Promise.resolve();
   });
 
-  // DB mock: getRawMany returns rows whose imageRef/audioUrl is in the
-  // referencedRefs allowlist.
   const queryQb = makeMockQb();
   queryQb.getRawMany.mockImplementation(() => {
     const rows = (opts.referencedRefs ?? []).map((ref) => ({
@@ -143,8 +138,8 @@ describe('runS3OrphanPurge', () => {
   });
 
   it('skips fresh objects under the retention threshold', async () => {
-    const recent = Date.now() - 10 * 24 * 60 * 60 * 1000; // 10 days old
-    const old = Date.now() - 200 * 24 * 60 * 60 * 1000; // 200 days old
+    const recent = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    const old = Date.now() - 200 * 24 * 60 * 60 * 1000;
 
     const { dataSource, pageLister, batchDeleter } = buildOrphanMocks({
       pagesByPrefix: {
@@ -251,12 +246,6 @@ describe('runS3OrphanPurge', () => {
     });
   });
 
-  // ─── Mutation kills (s3-orphan-purge.job.ts L230) ──────────────────
-  // 2 first-pass survivors documented in commit 155a62ea on the
-  // terminal logger.info call — event-name StringLiteral and payload
-  // ObjectLiteral mutants. Existing behavioural tests assert on `result`
-  // but never check the observability tap.
-
   it('logs s3_orphan_sweep_completed with retentionDays + result payload (kills L230 StringLiteral + ObjectLiteral mutants)', async () => {
     mockedLogger.info.mockClear();
     const { dataSource, pageLister, batchDeleter } = buildOrphanMocks({
@@ -279,8 +268,6 @@ describe('runS3OrphanPurge', () => {
     );
     expect(completedCall).toBeDefined();
     expect(completedCall![0]).toBe('s3_orphan_sweep_completed');
-    // Payload must include both retentionDays and the spread `result` keys —
-    // kills the ObjectLiteral → {} mutant.
     expect(completedCall![1]).toEqual({
       retentionDays: 42,
       scanned: 0,

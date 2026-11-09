@@ -1,23 +1,3 @@
-/**
- * RED (T3.1) — DSAR (GDPR Art.15/20) export completeness (B3, R12–R14).
- *
- * The export payload must include the previously-omitted personal-data
- * categories — UserMemory, the user's own audit_logs, message_feedback,
- * message_reports, social_accounts — plus previously-omitted User
- * and ChatSession columns; `schemaVersion` bumps `'1'` → `'2'`; and NO secret /
- * credential key may appear anywhere in the serialized payload (R14).
- *
- * Dependency-key contract for the green phase (T3.3 / T3.4) — the use case's
- * `ExportUserDataDeps` must read these ports:
- *   userMemoryExport.getForUser(userId)
- *   auditLogExport.listForUser(userId)
- *   messageFeedbackExport.listForUser(userId)
- *   messageReportExport.listForUser(userId)
- *   socialAccountExport.listForUser(userId)
- *
- * FAILS at red baseline: the current `ExportUserDataUseCase` ignores these
- * ports, returns `schemaVersion: '1'`, and omits the new categories/columns.
- */
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeSocialAccount } from 'tests/helpers/auth/socialAccount.fixtures';
 import { makeAuditLogEntity } from 'tests/helpers/audit/auditLog.fixtures';
@@ -32,7 +12,6 @@ import {
 
 const SECRET_KEY_RE = /password|_token|hash|salt|prevHash|rowHash/i;
 
-/** Recursively collects every object key (incl. nested) from a JSON-serializable value. */
 function collectKeys(value: unknown, out: string[] = []): string[] {
   if (Array.isArray(value)) {
     for (const item of value) collectKeys(item, out);
@@ -60,9 +39,6 @@ function buildWiring(userId: number): ExportWiring {
     museumName: 'CAPC',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
-    // Cycle 4 (DSAR Art.15/20 — B-03) : recognised artworks are exported
-    // nested in each message (design D-1). Allow-listed fields only (D-2) —
-    // never the internal uuid PK nor the FK.
     messages: [
       {
         id: 'msg-1',
@@ -113,7 +89,6 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     id: 42,
     email: 'subject@example.com',
     tier: 'premium',
-    defaultLocale: 'fr-FR',
     dateOfBirth: new Date('1990-05-21T00:00:00.000Z'),
     contentPreferences: ['history', 'technique'],
     ttsVoice: 'verse',
@@ -144,7 +119,6 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     expect(matches[0].title).toBe('Mona Lisa');
     expect(matches[0].artworkId).toBe('A1');
     expect(matches[0].confidence).toBe(0.92);
-    // Allow-list per field (D-2) — no internal uuid PK / FK leaks through.
     expect(matches[0]).not.toHaveProperty('id');
     expect(matches[0]).not.toHaveProperty('message');
     expect(matches[0]).not.toHaveProperty('messageId');
@@ -184,8 +158,7 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     const userOut = payload.user as Record<string, unknown>;
 
     expect(userOut.tier).toBe('premium');
-    expect(userOut.defaultLocale).toBe('fr-FR');
-    expect(userOut.dateOfBirth).toBe('1990-05-21'); // ISO date (no time)
+    expect(userOut.dateOfBirth).toBe('1990-05-21');
     expect(userOut.contentPreferences).toEqual(['history', 'technique']);
     expect(userOut.ttsVoice).toBe('verse');
     expect(userOut.notifyOnReviewModeration).toBe(true);
@@ -195,7 +168,6 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     expect(userOut.audioDescriptionMode).toBe(true);
     expect(userOut.suspended).toBe(false);
     expect(userOut.museumId).toBe(5);
-    // `locale` placeholder replaced by `defaultLocale`.
     expect(userOut).not.toHaveProperty('locale');
   });
 
@@ -218,7 +190,6 @@ describe('ExportUserDataUseCase — DSAR completeness (B3 / R12–R14)', () => {
     const useCase = makeExportUserDataUseCase(buildWiring(42));
     const payload = await runExport(useCase, user);
 
-    // Round-trip through JSON so getters / class instances are flattened.
     const serialized = JSON.parse(JSON.stringify(payload)) as unknown;
     const keys = collectKeys(serialized);
     const offending = keys.filter((k) => SECRET_KEY_RE.test(k));

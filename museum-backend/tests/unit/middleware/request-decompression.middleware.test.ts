@@ -1,31 +1,3 @@
-/**
- * W1-GZIP-01 (RED) — requestDecompressionMiddleware unit test.
- *
- * spec.md §EARS:
- *   R1 — Content-Encoding gzip|deflate|br → middleware inflates so express.json
- *        parses the original object.
- *   R2 — no Content-Encoding → next() untouched (zero overhead, body stream
- *        is left exactly as received).
- *   R3 — unknown encoding (e.g. snappy) → next(AppError 415 UNSUPPORTED_MEDIA_TYPE).
- *
- * design.md §Architecture:
- *   BE `requestDecompressionMiddleware` (NEW, prod-safe): if Content-Encoding
- *   gzip|deflate|br → inflate via node:zlib (createGunzip/createInflate/
- *   createBrotliDecompress); replace req readable (PassThrough) so express.json
- *   reads inflated bytes; unknown encoding → next(AppError 415); no header →
- *   next() untouched.
- *
- * RED state: `@shared/middleware/request-decompression.middleware` does not
- * exist yet → import throws / middleware absent → every assertion fails.
- *
- * Fixtures use node:zlib built-in (BE, no dep) per design.md §Discipline.
- * The fake req is a Readable that emits the (already-compressed) body bytes;
- * the middleware is expected to swap req's readable surface with the inflated
- * stream, which we drain to reconstruct the original JSON.
- *
- * Frozen-test invariant: this file is byte-immutable once manifested (phase=green).
- */
-
 import { Readable } from 'node:stream';
 import { gzipSync, deflateSync, brotliCompressSync } from 'node:zlib';
 
@@ -34,13 +6,6 @@ import { requestDecompressionMiddleware } from '@shared/middleware/request-decom
 
 import type { Request, Response, NextFunction } from 'express';
 
-/**
- * Builds a fake Express Request that is also a Readable stream emitting
- * `payload` as its body. `headers` are lowercased per Node's IncomingMessage.
- * @param payload - raw (possibly compressed) request body bytes
- * @param headers - request headers (e.g. content-encoding)
- * @returns a fake Express Request backed by a Readable
- */
 function makeStreamRequest(payload: Buffer, headers: Record<string, string>): Request {
   const readable = Readable.from([payload]) as unknown as Request & Readable;
   readable.headers = headers;
@@ -51,12 +16,6 @@ function makeStreamRequest(payload: Buffer, headers: Record<string, string>): Re
 
 const mockRes = (): Response => ({}) as Response;
 
-/**
- * Drains whatever readable surface the middleware left on `req` back into a
- * single Buffer so we can assert the inflated bytes equal the original JSON.
- * @param req - the request object after the middleware ran
- * @returns the concatenated body bytes
- */
 async function drainBody(req: Request): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of req as unknown as AsyncIterable<Buffer>) {

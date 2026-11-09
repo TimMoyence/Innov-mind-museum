@@ -1,26 +1,3 @@
-/**
- * TD-RNAV-01 — `.well-known` domain-association files + AASA Content-Type rule.
- *
- * Verifies the server-side half of Universal Links (iOS) + App Links (Android):
- *   - `public/.well-known/apple-app-site-association` (extensionless) is valid
- *     JSON, declares the verified appID, scopes to the 6 real magic-link routes
- *     (FR/EN x verify-email/reset-password/confirm-email-change) with a `?token`
- *     query matcher and NO blind `*` (spec R5/R6).
- *   - `public/.well-known/assetlinks.json` is a valid JSON array declaring the
- *     `handle_all_urls` delegation for the verified Android package + Google Play
- *     App Signing SHA256 fingerprint (spec R7/R8).
- *   - Neither file contains an unsubstituted placeholder token (spec R9, mirrors
- *     the PGP-key placeholder deploy gate).
- *   - `next.config.ts` source text carries a `headers()` rule forcing
- *     `Content-Type: application/json` on the extensionless AASA path
- *     (spec R5/R10/NFR-1, source-text per design D4).
- *
- * Verified literals (appID, package, fingerprint) come verbatim from
- * `prereqs-verified.json` (UFR-013, no fabrication). Runner: Vitest; reads
- * public files from disk via `node:fs` resolved against `process.cwd()`
- * (= museum-web when `pnpm test` runs there).
- */
-
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -70,8 +47,6 @@ interface AssetlinkStatement {
   };
 }
 
-// Lazy readers: parse inside each test so an absent file fails that single
-// assertion (RED proof per requirement) rather than crashing collection.
 const loadAasa = (): Aasa =>
   JSON.parse(readPublic('.well-known/apple-app-site-association')) as Aasa;
 const loadAssetlinks = (): AssetlinkStatement[] =>

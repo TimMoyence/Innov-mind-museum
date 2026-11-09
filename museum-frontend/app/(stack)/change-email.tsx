@@ -13,7 +13,6 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/** Screen allowing the authenticated user to request an email change. */
 export default function ChangeEmailScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();

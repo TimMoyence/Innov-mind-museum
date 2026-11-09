@@ -33,7 +33,6 @@ type ListRow =
   | { kind: 'skeleton'; key: string }
   | { kind: 'empty' };
 
-/** Renders the dashboard screen listing recent chat sessions with sort, save, swipe-to-delete, and bulk delete capabilities. */
 export default function ConversationsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -66,9 +65,8 @@ export default function ConversationsScreen() {
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.title.toLowerCase().includes(query) || item.subtitle.toLowerCase().includes(query),
+      filtered = filtered.filter((item) =>
+        [item.title, item.subtitle].some((field) => field?.toLowerCase().includes(query)),
       );
     }
 
@@ -265,8 +263,6 @@ export default function ConversationsScreen() {
       />
 
       {editMode && selectedIds.size > 0 ? (
-        // Lift the bulk-action bar above the floating tab bar (absolute-positioned
-        // at the screen bottom) so it isn't hidden behind it (QA-04).
         <View style={{ marginBottom: bottomPad }}>
           <ConversationsBulkBar
             selectedCount={selectedIds.size}
@@ -297,10 +293,6 @@ const styles = StyleSheet.create({
     paddingTop: semantic.screen.padding,
   },
   stickyBar: {
-    // Transparent sticky panel — the search bar (own glass bg + border) and the
-    // solid primary button float directly on the page, no surrounding card band.
-    // Spacing via gap (not child margins). Trade-off: as the sticky header is
-    // index 1, list rows scroll under it; the gaps no longer occlude them.
     paddingVertical: semantic.list.itemPaddingYCompact,
     gap: semantic.form.gapLarge,
   },

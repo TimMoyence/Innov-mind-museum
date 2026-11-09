@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Linking,
   Pressable,
   Share,
   StyleSheet,
@@ -14,6 +13,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { findLastAssistantMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import type { ChatPipelinePhase } from '@/features/chat/application/phases';
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
@@ -23,59 +23,31 @@ import { MessageActions } from '@/features/chat/ui/MessageActions';
 import { StatusIndicator } from '@/features/chat/ui/StatusIndicator';
 import { TypingPlaceholder } from '@/features/chat/ui/TypingPlaceholder';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { useKeyboardVisible } from '@/shared/ui/hooks/useKeyboardVisible';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
 interface ChatMessageListProps {
-  /** Array of chat messages to render. */
   messages: ChatUiMessage[];
-  /** Whether the assistant is currently generating a response. */
   isSending: boolean;
-  /** Whether tokens are currently being streamed from the LLM. */
   isStreaming?: boolean;
-  /** Locale string for time formatting. */
   locale: string;
-  /** Called when a follow-up question is pressed. */
-  onFollowUpPress: (text: string) => void;
-  /** Called when a recommendation chip is pressed. */
   onRecommendationPress: (text: string) => void;
-  /** Called when the camera button on the empty state is pressed. */
   onCamera: () => void;
-  /** Called when a message image fails to load. */
   onImageError: (messageId: string) => void;
-  /** Called on long-press of an assistant message. */
   onReport: (messageId: string) => void;
-  /** Called when the user taps a link in an assistant message. Return `true` to mark as handled. */
   onLinkPress?: (url: string) => boolean;
-  /** Called to retry sending a failed message. */
   onRetry?: (message: ChatUiMessage) => void;
-  /** Whether the assistant response is pending (between user submit and first token). */
   isAssistantPending?: boolean;
-  /**
-   * A5 — Current pipeline status phase driven by `useStatusPhase`. When non-null
-   * (and not `'done'`), renders the localised `<StatusIndicator>` in the list
-   * footer in place of the legacy 3-dot typing indicator. `null` hides the row
-   * entirely (silence-is-success — spec R17).
-   */
   currentPhase?: ChatPipelinePhase | null;
-  /**
-   * A2 — Forwarded scroll handler from the screen so the artwork hero card
-   * can collapse/expand based on `scrollY`. Optional ; non-A2 callers can
-   * keep the existing call sites unchanged.
-   */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-/**
- * Renders the scrollable list of chat messages with auto-scroll,
- * welcome card as empty state, and typing indicator as footer.
- */
 export const ChatMessageList = ({
   messages,
   isSending,
   isStreaming = false,
   locale,
-  onFollowUpPress,
   onRecommendationPress,
   onCamera,
   onImageError,
@@ -88,6 +60,7 @@ export const ChatMessageList = ({
 }: ChatMessageListProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
+  const keyboardVisible = useKeyboardVisible();
   const listRef = useRef<FlashListRef<ChatUiMessage>>(null);
   const {
     isPlaying: ttsIsPlaying,
@@ -112,15 +85,8 @@ export const ChatMessageList = ({
     });
   }, []);
 
-  const lastAssistantMessage = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const candidate = messages[i];
-      if (candidate?.role === 'assistant') return candidate;
-    }
-    return null;
-  }, [messages]);
+  const lastAssistantMessage = useMemo(() => findLastAssistantMessage(messages), [messages]);
 
-  // Auto-scroll when new messages arrive or sending starts
   useEffect(() => {
     if (messages.length > 0 || isSending) {
       setTimeout(() => {
@@ -129,14 +95,12 @@ export const ChatMessageList = ({
     }
   }, [messages.length, isSending]);
 
-  // Auto-scroll as streaming content grows
   const handleContentSizeChange = useCallback(() => {
     if (isStreaming) {
       listRef.current?.scrollToEnd({ animated: false });
     }
   }, [isStreaming]);
 
-  // Timer-based scroll during streaming (backup for unreliable onContentSizeChange)
   useEffect(() => {
     if (!isStreaming) return;
     const interval = setInterval(() => {
@@ -157,13 +121,6 @@ export const ChatMessageList = ({
     [t],
   );
 
-  // C9.18 (2026-05-17) — B2B deep-link from chat detected-artwork chip.
-  // The full route `/museum/[id]/artwork/[artworkId]` does not exist yet in
-  // V1; we navigate to the existing `museum-detail` screen with `artworkId`
-  // as a passthrough param. The screen will be extended to scroll/highlight
-  // the artwork in a follow-up (TD-NEW). When `museum-detail` cannot resolve
-  // a museum id, the navigation falls back to the museum NAME stored on the
-  // detected artwork — the screen handles that as a best-effort lookup.
   const handleArtworkPress = useCallback((message: ChatUiMessage) => {
     const detected = message.metadata?.detectedArtwork;
     if (!detected?.artworkId) return;
@@ -174,17 +131,6 @@ export const ChatMessageList = ({
         artworkId: detected.artworkId,
       },
     });
-  }, []);
-
-  // D-06 (cycle D, 2026-05-26) — tapping a C3 compare match card opens the
-  // artwork's Wikidata entry. Mirrors `handleArtworkPress` (local list-level
-  // handler) and `onProvenancePress` (`Linking.openURL` for an external
-  // reference) — `qid` is a required Wikidata QID on every `CompareMatch`.
-  const handleMatchPress = useCallback((qid: string) => {
-    // Only ever open a well-formed Wikidata QID (`Q` + digits) — guards against
-    // a malformed/hostile id reaching the URL even though `qid` is backend-sourced.
-    if (!/^Q\d+$/.test(qid)) return;
-    void Linking.openURL(`https://www.wikidata.org/wiki/${qid}`);
   }, []);
 
   const renderItem = useCallback(
@@ -211,7 +157,6 @@ export const ChatMessageList = ({
             feedbackValue={isAssistant ? (feedbackMap[item.id] ?? null) : undefined}
             onFeedback={isAssistant ? handleFeedback : undefined}
             onArtworkPress={isAssistant ? handleArtworkPress : undefined}
-            onMatchPress={isAssistant ? handleMatchPress : undefined}
           />
 
           {isAssistant && !isItemStreaming && item.text ? (
@@ -231,7 +176,6 @@ export const ChatMessageList = ({
           {isAssistant && isLast && !isStreaming ? (
             <MessageActions
               metadata={item.metadata}
-              onFollowUpPress={onFollowUpPress}
               onRecommendationPress={onRecommendationPress}
               isSendingDisabled={isSending}
             />
@@ -244,7 +188,6 @@ export const ChatMessageList = ({
       locale,
       isSending,
       isStreaming,
-      onFollowUpPress,
       onRecommendationPress,
       onImageError,
       onReport,
@@ -254,7 +197,6 @@ export const ChatMessageList = ({
       handleFeedback,
       handleShare,
       handleArtworkPress,
-      handleMatchPress,
       t,
       theme.textTertiary,
       ttsIsPlaying,
@@ -266,11 +208,6 @@ export const ChatMessageList = ({
     ],
   );
 
-  // A5 — Status indicator displayed only when sending but NOT streaming
-  // (streaming shows inline cursor). Driven by `currentPhase` from the
-  // parent screen ; when the parent passes `null` the indicator unmounts
-  // (silence-is-success — spec R17). The legacy 3-dot `<TypingIndicator>`
-  // has been removed in the same chantier (doctrine `feedback_bury_dead_code`).
   const showStatusIndicator = isSending && !isStreaming && currentPhase !== null;
 
   return (
@@ -298,6 +235,8 @@ export const ChatMessageList = ({
             onPress: onCamera,
             iconName: 'camera-outline',
           }}
+          footnote={t('ai_disclosure.chat_footer')}
+          compact={keyboardVisible}
           testID="chat-empty-state"
         />
       }
@@ -312,7 +251,6 @@ export const ChatMessageList = ({
   );
 };
 
-/** Per-message recycling hint: user vs assistant bubbles have distinct layouts. */
 const getMessageType = (item: ChatUiMessage): string => item.role;
 
 const ItemSeparator = () => <View style={styles.separator} />;

@@ -125,6 +125,7 @@
     "session_unsaved": "Sitzung aus Gespeicherten entfernt",
     "session_saved": "Sitzung gespeichert",
     "empty_title": "Noch keine Gespräche",
+    "untitled": "Noch keine Nachrichten",
     "empty_saved": "Noch keine gespeicherten Sitzungen. Halten Sie eine Sitzung lange gedrückt, um sie zu speichern.",
     "empty_body": "Starten Sie ein neues Gespräch von der Startseite, um Ihre erste Sitzung zu erstellen.",
     "message_count": "Nachrichten: {{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "Schliessen",
       "noQuote": "Kein Zitat fur diese Quelle verfugbar."
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "Museumskatalog",
-        "reference-db": "Referenzdatenbank",
-        "web": "Web-Ergebnis",
-        "ai-knowledge": "KI-Wissen"
-      },
-      "confidence": {
-        "high": "Hohe Konfidenz",
-        "medium": "Mittlere Konfidenz",
-        "low": "Niedrig — nur KI"
-      },
-      "chip": {
-        "a11y_hint": "Tippen für Quelldetails"
-      },
-      "ai_only": {
-        "disclosure_title": "Nur-KI-Antwort",
-        "disclosure_body": "Diese Antwort basiert auf dem allgemeinen Wissen der KI. Es wurde keine Quelle abgerufen. Bitte vor dem Vertrauen überprüfen."
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "Anhänge öffnen",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "Werk ohne Titel",
       "a11y_label": "Werk: {{title}} von {{artist}}, antippen zum Vergrößern",
+      "a11y_label_no_artist": "Werk: {{title}}, antippen zum Vergrößern",
       "a11y_label_untitled": "Werk ohne Titel, antippen zum Vergrößern",
       "a11y_hint": "Öffnet Vollbild mit Pinch-Zoom",
       "expand": "Vergrößern",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "Identifikation läuft"
       },
@@ -569,6 +550,7 @@
       "empty": "Kein ähnliches Werk gefunden – versuche ein schärferes Foto",
       "viewArtist": "Künstler ansehen",
       "attribution": "Quelle: Wikimedia Commons",
+      "card_a11y": "Ähnliches Werk: {{credit}}, {{rationale}}",
       "rationale": {
         "fallback": "Ähnliches Werk"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "Geführte Tour",
       "suggestionsLabel": "Vorschläge für die Tour",
       "suggestionHint": "Schickt diesen Vorschlag als Ihre nächste Eingabe"
-    },
-    "askMore": {
-      "a11y_label": "Folgefrage: {{text}}",
-      "a11y_hint": "Tippen, um diese Frage zu stellen"
     },
     "sottoVoce": {
       "a11y_label": "Sotto-voce-Modus",
@@ -648,7 +626,7 @@
     "placeholder": "Fragen Sie zu einem Kunstwerk, Denkmal, oder senden Sie Sprache/Foto...",
     "send": "Senden"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "Einsteiger",
     "intermediate": "Fortgeschritten",
     "expert": "Experte"
@@ -1059,6 +1037,7 @@
     },
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, Besuch öffnen",
+      "session_card_no_date": "{{title}}, {{museum}}, Besuch öffnen",
       "continue_hint": "Öffnet diesen vergangenen Besuch zum Lesen"
     },
     "bottomSheet": {
@@ -1114,7 +1093,7 @@
     "save": "Speichern",
     "skip": "Überspringen",
     "saved": "Gespeichert!",
-    "by": "von",
+    "by": "von {{artist}}",
     "fun_fact": "Wussten Sie schon?",
     "swipeToSave": "Speichern"
   },
@@ -1125,7 +1104,8 @@
     "description": "Beschreibung",
     "priority": "Priorität",
     "status": "Status",
-    "messages": "Nachrichten",
+    "messageCount_one": "{{count}} Nachricht",
+    "messageCount_other": "{{count}} Nachrichten",
     "noTickets": "Noch keine Tickets",
     "noTicketsDesc": "Erstellen Sie ein Ticket, um Hilfe von unserem Support-Team zu erhalten.",
     "createFirst": "Erstellen Sie Ihr erstes Ticket",
@@ -1134,7 +1114,7 @@
     "replyPlaceholder": "Geben Sie Ihre Nachricht ein...",
     "send": "Senden",
     "sending": "Wird gesendet...",
-    "created": "Erstellt",
+    "createdOn": "Erstellt am {{date}}",
     "noMessages": "Noch keine Nachrichten",
     "submitTicket": "Ticket absenden",
     "subjectPlaceholder": "Kurze Zusammenfassung Ihres Problems",
@@ -1174,7 +1154,14 @@
     "alreadyReviewed": "Du hast bereits eine Bewertung abgegeben",
     "empty": "Noch keine Bewertungen. Sei der Erste!",
     "reviewCount": "{{count}} Bewertungen",
-    "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen."
+    "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen.",
+    "age": {
+      "today": "Heute",
+      "yesterday": "Gestern",
+      "days": "{{count}} T.",
+      "months": "{{count}} Mon.",
+      "years": "{{count}} J."
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1219,7 @@
     "error": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "dismiss": "Schließen",
     "consent": "Ich stimme zu, eine E-Mail beim Premium-Start zu erhalten.",
-    "resetsOn": "Setzt zurück am",
+    "resetsOn": "Setzt zurück am {{date}}",
     "analyticsConsent": {
       "title": "Hilf uns, Musaium zu verbessern",
       "description": "Mit deiner Zustimmung messen wir anonym, wie die App genutzt wird (aufgerufene Seiten, verwendete Funktionen). Keine personenbezogenen Daten, keine Werbetracker — nur aggregierte Zähler, die uns helfen zu verstehen, was funktioniert.",

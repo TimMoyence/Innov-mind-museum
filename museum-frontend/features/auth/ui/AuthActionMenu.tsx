@@ -8,17 +8,10 @@ import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { authStyles as styles } from './authStyles';
 
 interface AuthActionMenuProps {
-  /** Toggle between login and register modes. */
   onToggleMode: () => void;
-  /** Trigger the forgot-password flow. */
   onForgotPassword: () => void;
 }
 
-/**
- * Floating action menu shown above the auth card: provides quick
- * access to mode toggle, the onboarding guide, and the forgot-password
- * flow. Purely presentational wiring around `FloatingContextMenu`.
- */
 export function AuthActionMenu({ onToggleMode, onForgotPassword }: AuthActionMenuProps) {
   const { t } = useTranslation();
 

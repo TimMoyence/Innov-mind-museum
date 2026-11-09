@@ -173,15 +173,6 @@ describe('image-storage.s3', () => {
       '/museum-private/staging/chat-images/2026/02/user-42/session-abc/custom.png',
     );
     expect(received.headers['content-type']).toBe('image/png');
-    // Regression INC-2026-06-14: SigV4 Authorization MUST be
-    // "AWS4-HMAC-SHA256 Credential=...,SignedHeaders=...,Signature=..." — a SPACE
-    // separates the algorithm from the comma-joined params. The old `.join(', ')`
-    // emitted a COMMA after the algorithm ("AWS4-HMAC-SHA256, Credential=...");
-    // AWS S3 tolerated it but OVH/Swift's stricter parser rejected EVERY upload
-    // with a misleading "AWS authentication requires a valid Date or x-amz-date
-    // header" 403. The previous `.toContain('AWS4-HMAC-SHA256')` passed for BOTH
-    // forms — so it never caught the bug. Assert the exact prefix + the absence
-    // of the comma form.
     expect(received.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=/);
     expect(received.headers.authorization).not.toContain('AWS4-HMAC-SHA256,');
     expect(received.headers['x-amz-date']).toEqual(expect.any(String));
@@ -195,8 +186,6 @@ describe('image-storage.s3', () => {
 
   describe('listObjectsByPrefix', () => {
     it('parses ListObjectsV2 XML response and extracts objects (key + lastModifiedMs)', async () => {
-      // No <LastModified> in these blocks → parser falls back to lastModifiedMs:0
-      // (treated as "old enough"; the DB-reference net stays authoritative).
       const listXml = `<?xml version="1.0" encoding="UTF-8"?>
         <ListBucketResult>
           <IsTruncated>false</IsTruncated>
@@ -269,7 +258,6 @@ describe('image-storage.s3', () => {
     });
 
     it('is a no-op for empty key list', async () => {
-      // Should not throw or make any request
       await deleteObjectsBatch(config, []);
     });
   });
@@ -283,7 +271,6 @@ describe('image-storage.s3', () => {
       now,
     });
 
-    // The URL should contain the encoded special characters
     expect(result.url).toContain('file');
     expect(result.url).not.toContain("'");
     expect(result.url).not.toContain('!');
@@ -299,14 +286,8 @@ describe('image-storage.s3', () => {
   });
 
   describe('deleteByPrefix integration', () => {
-    // Sprint 1 S3 agent: signature is now (userId: number | string, legacyFetcher?).
-    // Implementation scans the native `chat-images/user-<id>/` prefix then calls
-    // the optional legacy fetcher for pre-user-scoped records.
     it('lists and deletes only matching user keys via native prefix scan', async () => {
       const requests: Array<{ method: string; path: string; body: string }> = [];
-      // Only user-42 keys surface because the S3 LIST is already scoped to
-      // `chat-images/user-42/` by the implementation — the mock server does not
-      // have to filter. This mirrors the real S3 contract.
       const listXml = `<?xml version="1.0" encoding="UTF-8"?>
         <ListBucketResult>
           <IsTruncated>false</IsTruncated>
@@ -331,7 +312,6 @@ describe('image-storage.s3', () => {
               body: Buffer.concat(chunks).toString('utf8'),
             });
             res.statusCode = 200;
-            // Return list XML for GET, empty for POST
             res.end(req.method === 'GET' ? listXml : '');
           });
         });
@@ -357,11 +337,8 @@ describe('image-storage.s3', () => {
         });
       });
 
-      // Native scan (GET) + native delete (POST) + legacy delete (POST) = 3 requests
       expect(requests.length).toBe(3);
       expect(requests[0].method).toBe('GET');
-      // B4: native list scopes to the whole chat-images/ prefix (the user segment
-      // is mid-key in the production layout); keys are then filtered by /user-42/.
       expect(requests[0].path).toContain('prefix=chat-images%2F');
 
       expect(requests[1].method).toBe('POST');
@@ -369,10 +346,8 @@ describe('image-storage.s3', () => {
       expect(requests[1].body).toContain('chat-images/user-42/2026/03/s1/a.png');
       expect(requests[1].body).toContain('chat-images/user-42/2026/03/s2/b.jpg');
 
-      // Legacy fetcher called with numeric userId
       expect(legacyFetcher).toHaveBeenCalledWith(42);
 
-      // Legacy delete carries the legacy-key extracted from the s3://… ref
       expect(requests[2].method).toBe('POST');
       expect(requests[2].body).toContain('chat-images/2026/02/legacy-key.png');
     });
@@ -413,7 +388,6 @@ describe('image-storage.s3', () => {
         });
       });
 
-      // Only the GET list is issued — nothing to delete, no legacy fetcher.
       expect(requests.length).toBe(1);
       expect(requests[0].method).toBe('GET');
       expect(requests[0].path).toContain('prefix=chat-images%2F');
@@ -428,7 +402,6 @@ interface CapturedRequest {
   body: string;
 }
 
-/** Helper: spins up a local HTTP server that responds with the given body. */
 async function withTestServer<T>(
   responseBody: string,
   fn: (port: number) => Promise<T>,

@@ -34,7 +34,6 @@ import type {
   StorageDriver,
 } from './env.types';
 
-// Skip in jest runs so .env doesn't contaminate controlled-env tests.
 if (process.env.NODE_ENV !== 'test') {
   dotenv.config();
 }
@@ -65,18 +64,10 @@ const env: AppEnv = {
   corsOrigins: toList(process.env.CORS_ORIGINS),
   jsonBodyLimit: process.env.JSON_BODY_LIMIT || '1mb',
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
-  // Idempotency-Key dedup window (2026-06-01, D2). Short TTL bounds the replay
-  // memory: long enough to absorb an offline-flush double-fire / a flapping
-  // reconnect, short enough that the key is not a long-lived dedup oracle.
-  // Bounded [1s, 1h] so a fat-fingered env can't make it 0 (no dedup) or huge.
   idempotencyTtlMs: Math.min(
     3_600_000,
     Math.max(1_000, toNumber(process.env.IDEMPOTENCY_TTL_MS, 600_000)),
   ),
-  // L2 network-fault injector (TEST-ONLY, D3). `resolveNetFaultEnabled` coerces
-  // false UNCONDITIONALLY in prod with NO escape hatch (stricter than
-  // resolveChaosRate). Default OFF. `validateProductionEnv` additionally
-  // boot-throws if the raw flag is truthy in prod (belt-and-braces).
   netFaultInjectionEnabled: resolveNetFaultEnabled(
     process.env.NET_FAULT_INJECTION_ENABLED,
     process.env.NODE_ENV,
@@ -93,9 +84,6 @@ const env: AppEnv = {
     poolMax: toNumber(process.env.DB_POOL_MAX, 50),
   },
   auth: {
-    // SEC-HARDENING (H12): prod BANS legacy JWT_SECRET fallback; explicit
-    // JWT_ACCESS_SECRET + JWT_REFRESH_SECRET required. Dev/test still honour
-    // JWT_SECRET. Length/legacy assertions in env.production-validation.ts.
     jwtSecret: isDev
       ? toOptionalString(process.env.JWT_ACCESS_SECRET) ||
         process.env.JWT_SECRET ||
@@ -112,45 +100,27 @@ const env: AppEnv = {
         'local-dev-refresh-jwt-secret'
       : required('JWT_REFRESH_SECRET', toOptionalString(process.env.JWT_REFRESH_SECRET)),
     accessTokenTtl: process.env.JWT_ACCESS_TTL || '15m',
-    // F8 (2026-04-30) — refresh TTL tightened 30d -> 14d absolute. Existing
-    // 30d-minted tokens remain valid until natural expiry (JWT carries own exp).
     refreshTokenTtl: process.env.JWT_REFRESH_TTL || '14d',
-    // F8 — sliding idle window tightened 14d -> 24h. Server-side check on
-    // last_rotated_at: any user idle >24h re-authenticates on next refresh.
     refreshIdleWindowSeconds: toNumber(process.env.JWT_REFRESH_IDLE_WINDOW_SECONDS, 24 * 60 * 60),
     appleClientId: process.env.APPLE_CLIENT_ID || 'com.musaium.mobile',
     googleClientIds: (() => {
-      // Mobile audience IDs from comma-separated GOOGLE_OAUTH_CLIENT_ID.
-      // Web client ID (F11 redirect flow) auto-merged so JWT-audience check in
-      // social-token-verifier accepts id_tokens minted for web app without
-      // forcing operators to keep two env vars in sync.
       const fromList = toList(process.env.GOOGLE_OAUTH_CLIENT_ID);
       const webId = toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_ID);
       return webId && !fromList.includes(webId) ? [...fromList, webId] : fromList;
     })(),
     appleJwksUrl: process.env.APPLE_OIDC_JWKS_URL || 'https://appleid.apple.com/auth/keys',
     googleJwksUrl: process.env.GOOGLE_OIDC_JWKS_URL || 'https://www.googleapis.com/oauth2/v3/certs',
-    // F3 — default false during mobile rollout. Flip to true once every
-    // supported mobile build ships the OIDC nonce flow.
     oidcNonceEnforce: toBoolean(process.env.OIDC_NONCE_ENFORCE, false),
-    // F11 (2026-05) — Server-driven Google OAuth for museum-web admin. All
-    // three values required together; otherwise routes return 503. Mobile unaffected.
     googleWebOauth: {
       clientId: toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_ID),
       clientSecret: toOptionalString(process.env.GOOGLE_OAUTH_WEB_CLIENT_SECRET),
       redirectUri: toOptionalString(process.env.GOOGLE_OAUTH_REDIRECT_URI),
     },
-    // F7 — HMAC key for CSRF double-submit tokens. Required in prod, distinct
-    // from every other signing secret (env.production-validation.ts).
     csrfSecret: isDev
       ? toOptionalString(process.env.CSRF_SECRET) || 'local-dev-csrf-secret-32chars-minimum'
       : required('CSRF_SECRET', toOptionalString(process.env.CSRF_SECRET)),
-    // Phase 5 — 'test' enables in-memory capture for e2e. Prod rejects 'test'
-    // (env.production-validation.ts). Default 'brevo'.
     emailServiceKind:
       (process.env.AUTH_EMAIL_SERVICE_KIND as 'test' | 'brevo' | 'noop' | undefined) ?? 'brevo',
-    // JUSTIFIED: e2e harness skips HIBP API to avoid blocking test suite on
-    // every register call. Prod sentinel rejects false. Pre-launch V1 doctrine.
     passwordBreachCheckEnabled: toBoolean(process.env.PASSWORD_BREACH_CHECK_ENABLED, true),
   },
   llm: {
@@ -169,18 +139,11 @@ const env: AppEnv = {
     maxImageBytes: toNumber(process.env.LLM_MAX_IMAGE_BYTES, 3 * 1024 * 1024),
     maxAudioBytes: toNumber(process.env.LLM_MAX_AUDIO_BYTES, 12 * 1024 * 1024),
     maxOutputTokens: toNumber(process.env.LLM_MAX_OUTPUT_TOKENS, 800),
-    // F13 (2026-04-30) — diagnostics ONLY in strict `development`. Staging/test
-    // default false, prod hard-disabled. Guards against NODE_ENV typo silently
-    // exposing model internals / prompt fragments.
     includeDiagnostics:
       nodeEnv === 'development' ? toBoolean(process.env.LLM_INCLUDE_DIAGNOSTICS, true) : false,
     openAiApiKey: process.env.OPENAI_API_KEY,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     googleApiKey: process.env.GOOGLE_API_KEY,
-    // P0-4 (audit 2026-05-12) — operational kill-switch + per-user daily USD
-    // ceiling. NOT a feature flag: `killSwitch` = global panic button (env
-    // reload + restart, fail-CLOSED). Wired through `LlmCostGuard` at the HTTP
-    // seam. Rollback = `git revert` (pre-launch V1 doctrine).
     costGuard: {
       killSwitch: toBoolean(process.env.LLM_KILL_SWITCH, false),
       userDailyCapUsd: toNumber(process.env.OPENAI_USER_DAILY_USD_CAP, 0.5),
@@ -191,8 +154,6 @@ const env: AppEnv = {
     sessionLimit: toNumber(process.env.RATE_LIMIT_SESSION, 120),
     userLimit: toNumber(process.env.RATE_LIMIT_USER, 200),
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 60000),
-    // F2 — fail-closed when Redis configured-but-down. True in prod, false in
-    // dev/test so local stacks without Redis are unaffected.
     failClosed: toBoolean(process.env.RATE_LIMIT_FAIL_CLOSED, isProduction),
   },
   upload: {
@@ -213,7 +174,6 @@ const env: AppEnv = {
           'audio/aac',
         ],
   },
-  // TTS_ENABLED retired V1 2026-04 — voice pipeline always on. See docs/AI_VOICE.md.
   tts: {
     model: process.env.TTS_MODEL || 'gpt-4o-mini-tts',
     voice: process.env.TTS_VOICE || 'alloy',
@@ -221,8 +181,6 @@ const env: AppEnv = {
     maxTextLength: toNumber(process.env.TTS_MAX_TEXT_LENGTH, 4096),
     cacheTtlSeconds: toNumber(process.env.TTS_CACHE_TTL_SECONDS, 86400),
   },
-  // Pre-launch V1: cache active when REDIS_URL set, otherwise undefined (no
-  // separate CACHE_ENABLED flag). Prod validation enforces REDIS_URL presence.
   cache: toOptionalString(process.env.REDIS_URL)
     ? {
         enabled: true,
@@ -230,8 +188,6 @@ const env: AppEnv = {
         password: parseRedisUrlFallback().password,
         sessionTtlSeconds: toNumber(process.env.CACHE_SESSION_TTL_SECONDS, 3600),
         listTtlSeconds: toNumber(process.env.CACHE_LIST_TTL_SECONDS, 300),
-        // LLM TTL constants live in `llm-cache.service.ts` (ADR-036) — env
-        // knobs feeding deleted L2 decorator removed (PR-B 2026-05-08).
         lowDataPackMaxEntries: toNumber(process.env.LOW_DATA_PACK_MAX_ENTRIES, 30),
       }
     : undefined,
@@ -244,7 +200,6 @@ const env: AppEnv = {
         profileSessionSampleRate: toNumber(process.env.SENTRY_PROFILE_SESSION_SAMPLE_RATE, 0),
       }
     : undefined,
-  // JUSTIFIED: OTel heavy in local dev without collector — explicit opt-in.
   otel: toBoolean(process.env.OTEL_ENABLED, false)
     ? {
         enabled: true,
@@ -252,8 +207,6 @@ const env: AppEnv = {
         serviceName: process.env.OTEL_SERVICE_NAME || 'museum-backend',
       }
     : undefined,
-  // 2026-04-22: all feature flags retired — every feature is always-on.
-  // Required infra (Redis, OpenAI key) must be provided in prod.
   freeTierDailyChatLimit: toNumber(process.env.FREE_TIER_DAILY_CHAT_LIMIT, 100),
   freeTierMonthlySessionLimit: toNumber(process.env.FREE_TIER_MONTHLY_SESSION_LIMIT, 3),
   overpassCacheTtlSeconds: toNumber(process.env.OVERPASS_CACHE_TTL_SECONDS, 86400),
@@ -262,14 +215,11 @@ const env: AppEnv = {
     negativeCacheTtlSeconds: toNumber(process.env.OVERPASS_NEGATIVE_CACHE_TTL_SECONDS, 3_600),
   },
   chatPurgeRetentionDays: toNumber(process.env.CHAT_PURGE_RETENTION_DAYS, 180),
-  // B5 (D5) — orphan-purge retention window. Separate from chatPurgeRetentionDays
-  // so the two windows can diverge. Config value, not a feature flag (UFR-015).
   s3OrphanPurgeRetentionDays: toNumber(process.env.S3_ORPHAN_PURGE_RETENTION_DAYS, 180),
   knowledgeBase: {
     timeoutMs: toNumber(process.env.KB_TIMEOUT_MS, 500),
     cacheTtlSeconds: toNumber(process.env.KB_CACHE_TTL_SECONDS, 3600),
     cacheMaxEntries: toNumber(process.env.KB_CACHE_MAX_ENTRIES, 500),
-    // C5.1 Wikidata circuit-breaker — no *_ENABLED switch (pre-launch V1).
     breaker: {
       timeoutMs: toNumber(process.env.WIKIDATA_CB_TIMEOUT_MS, 5000),
       errorThresholdPercentage: toNumber(process.env.WIKIDATA_CB_ERROR_THRESHOLD_PCT, 50),
@@ -277,7 +227,6 @@ const env: AppEnv = {
       volumeThreshold: toNumber(process.env.WIKIDATA_CB_VOLUME_THRESHOLD, 5),
       capacity: toNumber(process.env.WIKIDATA_CB_CAPACITY, 5),
     },
-    // C5.3 cascade — soak window before falling back to local dump.
     localDumpFallbackAfterMs: toNumber(process.env.LOCAL_DUMP_FALLBACK_AFTER_MS, 60_000),
   },
   wikidata: {
@@ -285,10 +234,6 @@ const env: AppEnv = {
       toOptionalString(process.env.WIKIDATA_USER_AGENT) ||
       'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
   },
-  // C4.1 (2026-05-11) — KnowledgeRouter. TUNING-ONLY: no `*_ENABLED` flag may
-  // be added (D11 / pre-launch V1 doctrine). Rollback = `git revert`.
-  // `KNOWLEDGE_ROUTER_*` namespace avoids colliding with `KB_TIMEOUT_MS` (500ms,
-  // outer cache wrapper). Router enforces per-leg budget on top (200ms, design D4).
   knowledgeRouter: {
     threshold: toNumber(process.env.WEBSEARCH_FALLBACK_THRESHOLD, 0.7),
     kbTimeoutMs: toNumber(process.env.KNOWLEDGE_ROUTER_KB_TIMEOUT_MS, 200),
@@ -308,8 +253,6 @@ const env: AppEnv = {
     fetchTimeoutMs: toNumber(process.env.IMAGE_ENRICHMENT_FETCH_TIMEOUT_MS, 3000),
     maxImagesPerResponse: toNumber(process.env.IMAGE_ENRICHMENT_MAX_IMAGES, 5),
   },
-  // C3 (2026-05) — visual similarity engine. Additive, no impact until
-  // `/chat/compare` ships (Phase 6 wiring).
   visualSimilarity: {
     provider: embeddingsProvider,
     siglipOnnxModelPath:
@@ -325,11 +268,6 @@ const env: AppEnv = {
     embeddingsCacheTtlMs: toNumber(process.env.EMBEDDINGS_CACHE_TTL_MS, 3_600_000),
     encodeTimeoutMs: toNumber(process.env.EMBEDDINGS_ENCODE_TIMEOUT_MS, 3000),
   },
-  // C9.13 (2026-05-18) — cross-encoder reranker. Defaults select the no-op
-  // `NullRerankerAdapter` (V1 prod default, zero behavior change). Flip
-  // `RERANK_PROVIDER=bge-reranker-v2-m3` to activate the scaffold (still
-  // fail-open in V1, real inference lands in C9.13.1). Rollback = `git revert`
-  // or `RERANK_PROVIDER=null`. No `*_ENABLED` flag (UFR-015 / pre-launch V1).
   rerank: {
     provider: rerankerProvider,
     modelPath:
@@ -344,10 +282,8 @@ const env: AppEnv = {
   webSearch: {
     tavilyApiKey: toOptionalString(process.env.TAVILY_API_KEY),
     braveSearchApiKey: toOptionalString(process.env.BRAVE_SEARCH_API_KEY),
-    // Google Programmable Search (CSE) — needs BOTH key and engine id (`cx`) to wire.
     googleCseApiKey: toOptionalString(process.env.GOOGLE_CSE_API_KEY),
     googleCseId: toOptionalString(process.env.GOOGLE_CSE_ID),
-    // SearXNG metasearch — CSV of operator-vetted instance base URLs → string[].
     searxngInstances: (toOptionalString(process.env.SEARXNG_INSTANCES) ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -366,14 +302,7 @@ const env: AppEnv = {
     confidenceThreshold: toNumber(process.env.EXTRACTION_CONFIDENCE_THRESHOLD, 0.7),
     reviewThreshold: toNumber(process.env.EXTRACTION_REVIEW_THRESHOLD, 0.4),
   },
-  // JUSTIFIED: e2e harness opts out (no Redis) to avoid BullMQ/ioredis
-  // ECONNREFUSED log floods. Prod sentinel rejects false. Pre-launch V1.
   extractionWorkerEnabled: toBoolean(process.env.EXTRACTION_WORKER_ENABLED, true),
-  // JUSTIFIED: the on-demand `MuseumEnrichmentWorker` consumer is now wired at
-  // boot (index.ts startEnrichmentWorker, task #16) so cache-miss enqueues drain.
-  // This flag gates only the SEPARATE periodic stale-rescan scheduler (its own
-  // `museum-enrichment-scheduler` queue) — deferred by product decision, stays
-  // default-FALSE for V1. Pre-launch V1 carry-over.
   museumEnrichmentSchedulerEnabled: toBoolean(
     process.env.MUSEUM_ENRICHMENT_SCHEDULER_ENABLED,
     false,
@@ -399,8 +328,6 @@ const env: AppEnv = {
       openDurationMs: toNumber(process.env.COST_CB_OPEN_DURATION_MS, 300_000),
     },
   },
-  // Pre-launch V1: retention crons always-on; `env.cache?.enabled` upstream
-  // gate (Redis required) is the skip path for tests/dev without Redis.
   retention: {
     cronPattern: process.env.RETENTION_CRON_PATTERN || '15 3 * * *',
     batchLimit: toNumber(process.env.RETENTION_BATCH_LIMIT, 1000),
@@ -410,11 +337,6 @@ const env: AppEnv = {
     artKeywordsDays: toNumber(process.env.RETENTION_ART_KEYWORDS_DAYS, 90),
     artKeywordsHitThreshold: toNumber(process.env.RETENTION_ART_KEYWORDS_HIT_THRESHOLD, 1),
   },
-  // Cycle B (« Aucun lead perdu ») — async redelivery + retention for the
-  // persisted `leads` table. Config values, NOT feature flags (UFR-015): the
-  // cron is always-on pre-launch, structurally skipped only when Redis is
-  // absent (mirror `retention`). Default tick every 5 min; backoff
-  // exponential 60s→1h; terminal cap 5 attempts; delivered purge after 90 days.
   leads: {
     redeliveryCronPattern: process.env.LEADS_REDELIVERY_CRON_PATTERN || '*/5 * * * *',
     maxAttempts: toNumber(process.env.LEADS_MAX_ATTEMPTS, 5),
@@ -424,52 +346,25 @@ const env: AppEnv = {
     backoffCapMs: toNumber(process.env.LEADS_BACKOFF_CAP_MS, 3_600_000),
   },
   review: {
-    // NPS scale-epoch (F3). The review rating scale switched 1-5 (legacy stars)
-    // → 0-10 (NPS) in this release. A legacy "5" is indistinguishable by value
-    // from an NPS "5" yet would now be miscounted as a detractor (≤6), poisoning
-    // the score on historical data. `aggregateNps` therefore counts ONLY reviews
-    // created AT/AFTER this epoch. Default = the 0-10 deploy date; overridable
-    // via NPS_SCALE_EPOCH (ISO-8601) for staging back-tests / future re-baselines.
-    // Invalid values degrade to the default (toIsoTimestamp warns, never throws).
-    // Mirrors the repository resolver (`nps-scale-epoch.ts`) — same default
-    // literal + parser. The repository reads its own lightweight resolver (to
-    // avoid pulling the DB-coupled env singleton into its static import graph);
-    // this field exposes the value for the AppEnv contract / prod validation.
-    // Keep the default literal in sync with `NPS_SCALE_EPOCH_DEFAULT`.
     npsScaleEpoch: toIsoTimestamp(process.env.NPS_SCALE_EPOCH, '2026-05-27T00:00:00.000Z'),
   },
   brevoApiKey: toOptionalString(process.env.BREVO_API_KEY),
   supportInboxEmail: toOptionalString(process.env.SUPPORT_INBOX_EMAIL) || 'support@musaium.com',
-  // R4 W4.3 — B2B leads inbox. Config value, not a feature flag. Falls back
-  // to supportInboxEmail in dev so no env churn for solo contributors.
   b2bInboxEmail: toOptionalString(process.env.B2B_INBOX_EMAIL),
-  // R3 W4.2 — Brevo contact-list ID for public beta waitlist. Config value,
-  // NOT a feature flag. Empty/non-numeric → composition root wires
-  // NoopBetaSignupNotifier; route stays 202 with structured warn log.
   brevoBetaListId: (() => {
     const raw = toOptionalString(process.env.BREVO_BETA_LIST_ID);
     if (!raw) return;
     const parsed = Number(raw);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
   })(),
-  // R2 W3.4 — Salt for admin CSV export pseudonymization. Config value, NOT a
-  // feature flag. Empty → composition root falls back to legacy literal.
-  // Rotate manually after a breach.
   exportPseudonymSalt: toOptionalString(process.env.EXPORT_PSEUDONYM_SALT),
   storage: {
     driver: storageDriver,
-    // Resolved at parse time so downstream always sees absolute path,
-    // independent of `process.cwd()` at call site. Mirrors `LocalImageStorage`
-    // default (`<cwd>/tmp/uploads`) so harness — which constructs
-    // `new LocalImageStorage()` without override — stays compatible.
     localUploadsDir: path.resolve(
       process.cwd(),
       toOptionalString(process.env.LOCAL_UPLOADS_DIR) ?? path.join('tmp', 'uploads'),
     ),
     signedUrlTtlSeconds: toNumber(process.env.S3_SIGNED_URL_TTL_SECONDS, 900),
-    // SEC-HARDENING (L3): prod MUST set MEDIA_SIGNING_SECRET explicitly — no
-    // silent fallback to JWT_ACCESS_SECRET / JWT_SECRET. Sharing a single
-    // secret across signing domains means rotation/leak of one defeats other.
     signingSecret:
       nodeEnv === 'production'
         ? toOptionalString(process.env.MEDIA_SIGNING_SECRET) || ''
@@ -488,10 +383,6 @@ const env: AppEnv = {
       objectKeyPrefix: toOptionalString(process.env.S3_OBJECT_KEY_PREFIX),
     },
   },
-  // Wave C5 (D-C5) — Plausible funnel analytics. Both vars OPTIONAL : if
-  // either is unset, the PlausibleAdapter no-ops (silent fallback) so dev /
-  // test envs don't accidentally emit. Production validation is delegated to
-  // `validateProductionEnv` (warn only — analytics outage MUST NOT block boot).
   plausible: {
     domain: toOptionalString(process.env.PLAUSIBLE_DOMAIN),
     endpointUrl: toOptionalString(process.env.PLAUSIBLE_ENDPOINT_URL),

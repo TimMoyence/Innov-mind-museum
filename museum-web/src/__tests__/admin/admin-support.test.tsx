@@ -1,6 +1,3 @@
-/**
- * Admin support page tests — no-ticket state, ticket detail, messages thread, reply form, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -8,8 +5,6 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminSupportPage from '@/app/[locale]/admin/support/page';
 import type { TicketDetail } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 const mockSearchParamsGet = vi.fn();
 
@@ -37,8 +32,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 const mockApiPost = vi.fn();
 
@@ -48,8 +41,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -57,8 +48,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 const mockTicketDetail: TicketDetail = {
   id: 'ticket-1',
@@ -91,16 +80,10 @@ const mockTicketDetail: TicketDetail = {
   ],
 };
 
-// ============================================================================
-// Support page
-// ============================================================================
-
 describe('AdminSupportPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  // ── No ticket selected ────────────────────────────────────────────────────
 
   describe('when no ticket is selected', () => {
     beforeEach(() => {
@@ -140,8 +123,6 @@ describe('AdminSupportPage', () => {
     });
   });
 
-  // ── Ticket loading ────────────────────────────────────────────────────────
-
   describe('when ticket is loading', () => {
     beforeEach(() => {
       mockSearchParamsGet.mockImplementation((key: string) =>
@@ -150,11 +131,7 @@ describe('AdminSupportPage', () => {
     });
 
     it('shows loading spinner while fetching ticket', () => {
-      mockApiGet.mockReturnValue(
-        new Promise(() => {
-          /* pending */
-        }),
-      );
+      mockApiGet.mockReturnValue(new Promise(() => {}));
 
       render(
         <Providers>
@@ -166,8 +143,6 @@ describe('AdminSupportPage', () => {
       expect(spinner).toBeInTheDocument();
     });
   });
-
-  // ── Ticket loaded ─────────────────────────────────────────────────────────
 
   describe('when ticket is loaded', () => {
     beforeEach(() => {
@@ -379,14 +354,11 @@ describe('AdminSupportPage', () => {
       );
 
       await waitFor(() => {
-        // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
         expect(mockApiGet).toHaveBeenCalled();
         expect(mockApiGet.mock.calls[0]?.[0]).toBe('/api/support/tickets/ticket-1');
       });
     });
   });
-
-  // ── Error states ──────────────────────────────────────────────────────────
 
   describe('error handling', () => {
     beforeEach(() => {

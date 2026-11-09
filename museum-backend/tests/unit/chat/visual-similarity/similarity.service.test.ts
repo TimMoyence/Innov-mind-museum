@@ -1,22 +1,3 @@
-/**
- * RED — T5.3 — orchestrator service `VisualSimilarityService`.
- *
- * Locks down tasks.md T5.3 + design.md §1 (pipeline) + spec R1, R3, R4, R5,
- * R10, R11:
- *   - encode → repo.findNearest(topN) → enricher.enrichBatch → fuse → template
- *     → tronquer top-K → CompareResult,
- *   - empty-neighbour set → `matches: []` + `fallbackReason: 'no_visual_neighbor'`,
- *   - encoder throws `EncoderUnavailableError` → `matches: []` +
- *     `fallbackReason: 'encoder_unavailable'`,
- *   - museumQids filter is forwarded to the repository,
- *   - top-K bound respected (and `topN ≥ max(20, 4*topK)` per R3),
- *   - matches' `visualScore` lives in `[0, 1]` (R10 contract),
- *   - top-K result cache short-circuits encoder + repo on the second call.
- *
- * SUT does not yet exist (Phase 5). Tests are RED until the editor lands
- * `similarity.service.ts`.
- */
-
 import { makeCache } from '../../../helpers/chat/cache.fixtures';
 import { makeArtworkFacts } from '../../../helpers/chat/visual-similarity/artwork-facts.fixtures';
 import { makeSiglipJpegBuffer } from '../../../helpers/chat/visual-similarity/image-fixtures';
@@ -41,11 +22,6 @@ import type {
 } from '@modules/chat/domain/visual-similarity/compare-result.types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-// ---------------------------------------------------------------------------
-// SUT — Phase 5 file, must not yet exist. Loaded dynamically so the suite
-// produces a "Cannot find module …" RED rather than a compile failure.
-// ---------------------------------------------------------------------------
-
 interface VisualSimilarityServiceCtorArgs {
   encoder: EmbeddingsPort;
   repo: ArtworkEmbeddingRepository;
@@ -62,7 +38,6 @@ interface CompareInput {
   topK: number;
   locale: 'fr' | 'en';
   museumQids?: string[];
-  /** OWASP LLM08 — internal tenant scope (`museums.id`); see SUT contract. */
   museumId?: number | null;
 }
 
@@ -73,14 +48,6 @@ const { VisualSimilarityService } =
     };
   };
 
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Build a deterministic neighbour list (descending visualScore) of size `n`.
- * @param n
- */
 function makeNeighbours(n: number): NearestResult[] {
   return Array.from({ length: n }, (_, i) =>
     makeNearestResult({
@@ -94,11 +61,6 @@ function makeNeighbours(n: number): NearestResult[] {
   );
 }
 
-/**
- * Build a `Map<qid, ArtworkFacts>` mirroring a neighbour list — one fact per
- * qid, all sharing the default Mona-Lisa metadata so fusion is deterministic.
- * @param neighbours
- */
 function makeFactsMap(neighbours: NearestResult[]): Map<string, ArtworkFacts> {
   const out = new Map<string, ArtworkFacts>();
   for (const n of neighbours) {
@@ -107,11 +69,6 @@ function makeFactsMap(neighbours: NearestResult[]): Map<string, ArtworkFacts> {
   return out;
 }
 
-/**
- * Build the four mocks used by every test, with sensible defaults the
- * individual tests override per-scenario.
- * @param neighbours
- */
 function buildMocks(neighbours: NearestResult[] = makeNeighbours(20)): {
   encoder: jest.Mocked<EmbeddingsPort>;
   repo: jest.Mocked<ArtworkEmbeddingRepository>;
@@ -129,7 +86,6 @@ function buildMocks(neighbours: NearestResult[] = makeNeighbours(20)): {
       .mockResolvedValue(neighbours),
     upsertBatch: jest.fn(),
     findByQid: jest.fn(),
-    count: jest.fn(),
   };
   const enricher = {
     enrichBatch: jest
@@ -175,14 +131,12 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
     expect(result.matches.length).toBeLessThanOrEqual(DEFAULT_INPUT.topK);
     expect(result.modelVersion).toBe(DEFAULT_MODEL_VERSION);
 
-    // Sorted by finalScore descending.
     for (let i = 1; i < result.matches.length; i += 1) {
       const prev = result.matches[i - 1];
       const curr = result.matches[i];
       expect(prev?.finalScore).toBeGreaterThanOrEqual(curr?.finalScore ?? 0);
     }
 
-    // Each match has a templated rationale and bounded scores.
     for (const m of result.matches) {
       expect(typeof m.rationale).toBe('string');
       expect(m.rationale.length).toBeGreaterThan(0);
@@ -221,7 +175,7 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
     await service.compare({ ...DEFAULT_INPUT, buffer, topK: 10 });
 
     const [, topN] = repo.findNearest.mock.calls[0] ?? [];
-    expect(topN).toBeGreaterThanOrEqual(40); // max(20, 4*10) = 40
+    expect(topN).toBeGreaterThanOrEqual(40);
   });
 
   it('R4 — forwards the museumQids filter to repo.findNearest', async () => {
@@ -270,9 +224,6 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
     await service.compare({ ...DEFAULT_INPUT, buffer });
 
     const [, , opts] = repo.findNearest.mock.calls[0] ?? [];
-    // The opts object is allowed to exist (uniform shape) but MUST NOT carry
-    // a museumId key when none was passed — the repo would then log the
-    // "unscoped global read" warn (legacy V1 behaviour).
     expect(opts ?? {}).not.toHaveProperty('museumId');
   });
 
@@ -302,12 +253,9 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
       weights: { wVisual: 0.7, wMeta: 0.3 },
     });
 
-    // Tenant A hits — populates the cache under tenant A's key.
     await service.compare({ ...DEFAULT_INPUT, buffer, museumId: 1 });
-    // Tenant B hits with the IDENTICAL image — must NOT hit the cache from A.
     await service.compare({ ...DEFAULT_INPUT, buffer, museumId: 2 });
 
-    // Both runs went through the encoder + repo: no cross-tenant cache reuse.
     expect(encoder.encode).toHaveBeenCalledTimes(2);
     expect(repo.findNearest).toHaveBeenCalledTimes(2);
   });
@@ -327,7 +275,6 @@ describe('VisualSimilarityService.compare (T5.3 — orchestrator)', () => {
     const encodeOutput = await encoder.encode.mock.results[0]?.value;
     expect(encodeOutput).toBeDefined();
     const vec = (encodeOutput as EncodeOutput).vector;
-    // L2 norm ≈ 1 (vector is one-hot, norm = 1 by construction).
     let sumSquares = 0;
     for (let i = 0; i < vec.length; i += 1) {
       sumSquares += (vec[i] ?? 0) ** 2;

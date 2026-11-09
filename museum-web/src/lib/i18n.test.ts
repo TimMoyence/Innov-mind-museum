@@ -37,7 +37,6 @@ describe('i18n.ts', () => {
   });
 
   it('Locale type only allows fr or en', () => {
-    // TypeScript compile-time check — at runtime just verify the array
     const validLocales: Locale[] = ['fr', 'en'];
     expect(validLocales).toHaveLength(2);
   });

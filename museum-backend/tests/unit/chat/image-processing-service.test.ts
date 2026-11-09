@@ -93,7 +93,6 @@ describe('ImageProcessingService', () => {
   });
 
   describe('processImage — upload source', () => {
-    // Minimum 12 bytes needed for magic byte detection; starts with JPEG signature FF D8 FF
     const validJpegBase64 = Buffer.from([
       0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
     ]).toString('base64');
@@ -119,12 +118,6 @@ describe('ImageProcessingService', () => {
       expect(saveArg.mimeType).toBe('image/jpeg');
     });
 
-    // Regression (prod incident 2026-06-14): /chat/compare passes
-    // { skipStorage: true } because it only needs the EXIF-stripped buffer to
-    // encode and DISCARDS the imageRef. The compare 500'd in prod because the
-    // shared pipeline always uploaded to a misconfigured object store
-    // (`S3 upload failed (403)`) BEFORE the encoder ever ran. skipStorage
-    // removes that useless upload, so the object store can never 500 compare.
     it('skips the S3 upload when { skipStorage: true } (compare path) and returns an empty imageRef', async () => {
       const storage = makeMockImageStorage();
       const service = new ImageProcessingService({ imageStorage: storage });
@@ -140,13 +133,11 @@ describe('ImageProcessingService', () => {
 
       expect(storage.save).not.toHaveBeenCalled();
       expect(result.imageRef).toBe('');
-      // The buffer the compare actually needs still comes back.
       expect(result.orchestratorImage.value.length).toBeGreaterThan(0);
     });
 
     it('does NOT throw on the compare path when the object store is down (skipStorage avoids it)', async () => {
       const storage = makeMockImageStorage();
-      // Object store unavailable, exactly like the prod OVH S3 403.
       storage.save.mockRejectedValue(new Error('S3 upload failed (403): AccessDenied'));
       const service = new ImageProcessingService({ imageStorage: storage });
 
@@ -157,8 +148,6 @@ describe('ImageProcessingService', () => {
         sizeBytes: 100,
       };
 
-      // MUST resolve — the prod 500 was this exact throw propagating out of the
-      // pipeline and out of /chat/compare.
       await expect(
         service.processImage(image, 'session-1', 42, { skipStorage: true }),
       ).resolves.toMatchObject({ imageRef: '' });
@@ -198,7 +187,6 @@ describe('ImageProcessingService', () => {
   });
 
   describe('processImage — legacy base64 source', () => {
-    // 12+ bytes JPEG for magic byte detection
     const jpegBytes = Buffer.from([
       0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
     ]);
@@ -283,7 +271,6 @@ describe('ImageProcessingService', () => {
 
       const evaluateGuardrail = jest.fn();
 
-      // Should NOT throw
       await service.runOcrGuard(
         { source: 'upload', value: 'base64data', mimeType: 'image/jpeg' },
         evaluateGuardrail,

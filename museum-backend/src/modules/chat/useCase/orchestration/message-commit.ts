@@ -19,19 +19,9 @@ interface CommitDeps {
   repository: ChatRepository;
   cache?: CacheService;
   userMemory?: UserMemoryService;
-  /**
-   * C4 — left undefined at V1 root; per-URL ≤800ms is additive to p99.
-   * V1.1 rollout after baking. NFR8: undefined → skip silently.
-   */
   urlHeadProbe?: UrlHeadProbe;
 }
 
-/**
- * C4 — post-LLM grounding gate. Mutates `metadata.sources` in place to retain
- * only citations whose `quote` is verbatim substring of router-supplied facts.
- * No-op when LLM emitted no sources OR no fact context. Validator is pure
- * (<1ms p99); urlHeadProbe gated separately (NFR2 cost).
- */
 async function applyAntiHallucinationFilters(
   metadata: ReturnType<typeof buildCommitPayload>['assistantMetadata'],
   grounding: {
@@ -42,18 +32,15 @@ async function applyAntiHallucinationFilters(
   urlHeadProbe: UrlHeadProbe | undefined,
 ): Promise<void> {
   const { allowed, routerFacts, routerSources } = grounding;
-  // R4 — drop hallucinated quotes.
   if (metadata.sources && metadata.sources.length > 0 && routerFacts && routerFacts.length > 0) {
     const { valid } = validateSources(metadata.sources, [...routerFacts]);
     metadata.sources = valid.length > 0 ? valid : undefined;
   }
 
-  // An answer grounded on web pages shows them even when the model cited none.
   if (allowed && !metadata.sources?.length && routerSources?.length) {
     metadata.sources = [...routerSources];
   }
 
-  // R5 — drop unreachable URLs. Injected only where latency cost accepted.
   if (metadata.sources && metadata.sources.length > 0 && urlHeadProbe) {
     const probeMap = await urlHeadProbe.probeBatch(metadata.sources.map((s) => s.url));
     const reachable = metadata.sources.filter((s) => probeMap.get(s.url)?.reachable === true);
@@ -116,18 +103,10 @@ export async function postCommitSideEffects(
   if (deps.userMemory && ownerId && sessionUpdates?.visitContext) {
     deps.userMemory
       .updateAfterSession(ownerId, sessionUpdates.visitContext, sessionId, locale ?? 'en')
-      .catch(() => {
-        // swallowed — user memory is non-critical
-      });
+      .catch(() => undefined);
   }
 }
 
-/**
- * Optimistic-lock policy: surface 409, do NOT auto-retry — reply was generated
- * against older session snapshot; retrying would silently commit a reply that
- * disagrees with current session state. Client must refresh + re-prompt.
- * (Admin C.1 auto-retries because edits are a single short tx.)
- */
 async function persistAssistantMessage(
   repository: ChatRepository,
   sessionId: string,
@@ -136,7 +115,6 @@ async function persistAssistantMessage(
     assistantMetadata: ReturnType<typeof buildCommitPayload>['assistantMetadata'];
     sessionUpdates: ReturnType<typeof buildCommitPayload>['sessionUpdates'];
     artworkMatch: ReturnType<typeof buildCommitPayload>['artworkMatch'];
-    /** PR-P0-1 (2026-05-23) — LLM-cache-invalidation cookie. Null when not cached. */
     cacheKey?: string | null;
   },
 ): Promise<Awaited<ReturnType<ChatRepository['persistMessage']>>> {
@@ -158,7 +136,6 @@ async function persistAssistantMessage(
   }
 }
 
-/** Commits an assistant response (guardrail + persist + cache + memory). */
 export async function commitAssistantResponse(
   deps: CommitDeps,
   sessionId: string,
@@ -170,17 +147,8 @@ export async function commitAssistantResponse(
     enrichedImages?: EnrichedImage[];
     requestId?: string;
     ip?: string;
-    /** Absent → grounding gate skipped (NFR8 backward-compat). */
     routerFacts?: readonly string[];
-    /** Web pages the router grounded the answer on (empty unless source = web). */
     routerSources?: readonly CitationSource[];
-    /**
-     * PR-P0-1 (2026-05-23) — exact `llm:{KEY_VERSION}:*` Redis key emitted by
-     * `LlmCacheServiceImpl.computeKey` when the assistant response was
-     * cached. Null/absent for non-cached paths (image-only, no llmCache,
-     * image present but no visual signature, etc.). Stamped on the
-     * persisted message row for targeted feedback-driven invalidation.
-     */
     cacheKey?: string | null;
   },
 ): Promise<PostMessageResult> {
@@ -206,8 +174,6 @@ export async function commitAssistantResponse(
     enrichedImages,
   );
 
-  // C4 — run after guardrail so dropped sources never reach persisted row or
-  // API response. In-place mutation matches rest of commit flow.
   const grounding = { ...options, allowed: outputCheck.allowed };
   await applyAntiHallucinationFilters(assistantMetadata, grounding, deps.urlHeadProbe);
 
@@ -241,10 +207,7 @@ export async function commitAssistantResponse(
     .filter((s) => s.length > 0);
   const sanitizedSuggestions = mapped.length > 0 ? mapped : undefined;
 
-  // A5 R1 — `done` = pipeline ran E2E (success path). Refusal path owned by
-  // guardrail-evaluation.service decides its own phase.
   assistantMetadata.phase = 'done';
-  // A5 R9 — terminal Langfuse span (fail-open via safeTrace).
 
   return {
     sessionId,

@@ -4,7 +4,6 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { logger: mockedLogger } = require('@shared/logger/logger') as {
   logger: { warn: jest.Mock; info: jest.Mock; error: jest.Mock };
 };
@@ -115,13 +114,12 @@ describe('queryOverpassMuseums', () => {
   });
 
   it('returns empty array when all endpoints fail with network error', async () => {
-    // Both main + Kumi mirror fail
     fetchSpy.mockRejectedValue(new Error('Network failure'));
 
     const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 });
 
     expect(results).toEqual([]);
-    expect(fetchSpy).toHaveBeenCalledTimes(3); // main + kumi + private.coffee
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
   it('returns empty array when all endpoints time out', async () => {
@@ -134,10 +132,7 @@ describe('queryOverpassMuseums', () => {
         }),
     );
 
-    const results = await queryOverpassMuseums(
-      { lat: 48.86, lng: 2.34, radiusMeters: 5000 },
-      10, // very short timeout
-    );
+    const results = await queryOverpassMuseums({ lat: 48.86, lng: 2.34, radiusMeters: 5000 }, 10);
 
     expect(results).toEqual([]);
   });
@@ -166,7 +161,6 @@ describe('queryOverpassMuseums', () => {
   });
 
   it('falls back to second endpoint when first returns non-OK', async () => {
-    // Main instance 504, Kumi returns data
     fetchSpy
       .mockResolvedValueOnce({ ok: false, status: 504, statusText: 'Gateway Timeout' })
       .mockResolvedValueOnce({
@@ -254,7 +248,6 @@ describe('queryOverpassMuseums', () => {
             id: 3,
             lat: 48.87,
             lon: 2.29,
-            // no tags at all
           },
         ]),
     });
@@ -443,7 +436,6 @@ describe('queryOverpassMuseums', () => {
         museumType: 'general',
       });
 
-      // Verify the body POSTed to Overpass contains the bbox filter, not the radius filter.
       const firstCallArgs = fetchSpy.mock.calls[0] as [string, RequestInit];
       const body = (firstCallArgs[1].body as string) ?? '';
       const decoded = decodeURIComponent(body);
@@ -495,7 +487,6 @@ describe('queryOverpassMuseums', () => {
       expect(results).toHaveLength(1);
       expect(results[0].name).toBe('Recovered Museum');
 
-      // The catch-branch warn must include the exact message string + full context shape.
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Overpass endpoint query failed — trying next',
         expect.objectContaining({
@@ -510,11 +501,7 @@ describe('queryOverpassMuseums', () => {
     });
 
     it('stringifies non-Error throwables in the catch-branch warn context', async () => {
-      // First two endpoints reject with non-Error values, third succeeds — exercises the
-      // `error instanceof Error ? msg : String(error)` ternary in the catch branch.
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- non-Error rejection IS the behavior under test (ternary false branch / String(error) fallback)
       fetchSpy.mockReturnValueOnce(Promise.reject('string-error'));
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- non-Error rejection IS the behavior under test (ternary false branch / String(error) fallback)
       fetchSpy.mockReturnValueOnce(Promise.reject({ weird: 'object' }));
       fetchSpy.mockResolvedValueOnce({
         ok: true,
@@ -628,15 +615,13 @@ describe('queryOverpassOpeningHours', () => {
         makeTagsResponse([
           { type: 'node', id: 31, tags: { name: 'No Hours Museum' } },
           { type: 'node', id: 32, tags: {} },
-          { type: 'node', id: 33 }, // no tags at all → optional chaining branch
+          { type: 'node', id: 33 },
         ]),
     });
 
     const value = await queryOverpassOpeningHours({ lat: 48.86, lng: 2.34 });
 
     expect(value).toBeNull();
-    // Endpoint chain MUST short-circuit once a non-OK -> null answer comes back
-    // (we returned null, not continued).
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -649,7 +634,6 @@ describe('queryOverpassOpeningHours', () => {
     const value = await queryOverpassOpeningHours({ lat: 48.86, lng: 2.34 });
 
     expect(value).toBeNull();
-    // Falls through all endpoints (no elements means continue chain).
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
@@ -670,11 +654,6 @@ describe('queryOverpassOpeningHours', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  // Kills L53 `if (!response.ok) continue;` ConditionalExpression by making the
-  // non-OK first endpoint return DIFFERENT data than the second. Original
-  // skips to second (returns 'right'); mutation processes first (returns
-  // 'wrong'). Without this distinguishing payload, both paths reach
-  // 'right' through different routes and the mutation survives.
   it('does NOT read the non-OK response body even when it parses (continue gates body access)', async () => {
     fetchSpy
       .mockResolvedValueOnce({
@@ -695,9 +674,6 @@ describe('queryOverpassOpeningHours', () => {
     expect(value).toBe('right-from-second');
   });
 
-  // Kills L55 `if (!Array.isArray(data.elements)) continue;`: first endpoint
-  // returns OK but with a NON-ARRAY `elements`. Original skips; mutation tries
-  // to iterate and either throws or yields wrong data.
   it('skips to next endpoint when elements is not an array', async () => {
     fetchSpy
       .mockResolvedValueOnce({
@@ -726,7 +702,6 @@ describe('queryOverpassOpeningHours', () => {
     expect(value).toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(3);
 
-    // Catch-branch warn: must use the exact message + full context shape.
     expect(mockedLogger.warn).toHaveBeenCalledWith(
       'Overpass opening_hours query failed — trying next',
       expect.objectContaining({
@@ -737,7 +712,6 @@ describe('queryOverpassOpeningHours', () => {
       }),
     );
 
-    // Final all-failed warn: exact message + exact context shape.
     expect(mockedLogger.warn).toHaveBeenCalledWith(
       'All Overpass endpoints failed for opening_hours',
       { lat: 12.5, lng: -3.25 },
@@ -745,7 +719,6 @@ describe('queryOverpassOpeningHours', () => {
   });
 
   it('stringifies non-Error throwables in the catch-branch warn context', async () => {
-    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- non-Error rejection IS the behavior under test (ternary false branch / String(error) fallback)
     fetchSpy.mockReturnValue(Promise.reject('oh-no'));
 
     const value = await queryOverpassOpeningHours({ lat: 0, lng: 0 });

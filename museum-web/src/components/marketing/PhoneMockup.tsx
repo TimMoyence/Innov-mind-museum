@@ -6,21 +6,15 @@ import { motion, useScroll, useTransform } from 'motion/react';
 interface PhoneMockupProps {
   children: ReactNode;
   className?: string;
-  /** Enable subtle parallax on scroll */
   parallax?: boolean;
-  /** 'default' = standard, 'floating' = adds shadow + glow */
   variant?: 'default' | 'floating';
-  /** Scale multiplier for the phone (default 1) */
   scale?: number;
-  /** Device camera style: 'iphone' = Dynamic Island, 'android' = hole-punch */
   device?: 'iphone' | 'android';
-  /** Show iOS-style status bar overlay (time + signal/wifi/battery) */
   showStatusBar?: boolean;
 }
 
-/** iPhone 16 Pro Max proportions: 300px wide, ~652px tall (19.5:9 aspect) */
 const PHONE_WIDTH = 300;
-const PHONE_HEIGHT = Math.round(PHONE_WIDTH * (19.5 / 9)); // ~652
+const PHONE_HEIGHT = Math.round(PHONE_WIDTH * (19.5 / 9));
 const BEZEL_WIDTH = 8;
 const OUTER_RADIUS = 55;
 const INNER_RADIUS = 47;
@@ -50,7 +44,7 @@ export default function PhoneMockup({
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const yPos = (e.clientY - rect.top) / rect.height - 0.5;
     setTilt({
-      rotateY: x * 16, // max +/-8deg
+      rotateY: x * 16,
       rotateX: -yPos * 16,
     });
   }, []);
@@ -75,7 +69,6 @@ export default function PhoneMockup({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Floating glow for 'floating' variant */}
       {variant === 'floating' && (
         <div
           className="pointer-events-none absolute inset-0 z-0"
@@ -89,7 +82,6 @@ export default function PhoneMockup({
         />
       )}
 
-      {/* Phone body with 3D tilt */}
       <motion.div
         className="relative z-10"
         style={{
@@ -110,7 +102,6 @@ export default function PhoneMockup({
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
-        {/* Inner screen */}
         <div
           className="relative overflow-hidden"
           style={{
@@ -120,13 +111,10 @@ export default function PhoneMockup({
             background: 'var(--sem-device-chrome-bezel)',
           }}
         >
-          {/* Screenshot content fills the full screen */}
           <div className="absolute inset-0">{children}</div>
 
-          {/* iOS Status Bar overlay (above the camera notch) */}
           {showStatusBar && <StatusBar scale={scale} />}
 
-          {/* Camera notch — Dynamic Island (iPhone) or hole-punch (Android) */}
           {device === 'iphone' ? (
             <div
               className="absolute left-1/2 z-20"
@@ -157,7 +145,6 @@ export default function PhoneMockup({
           )}
         </div>
 
-        {/* Glass shine overlay */}
         <div
           className="pointer-events-none absolute inset-0 z-30"
           style={{
@@ -168,7 +155,6 @@ export default function PhoneMockup({
           aria-hidden="true"
         />
 
-        {/* Bezel edge highlight (top) */}
         <div
           className="pointer-events-none absolute left-[10%] right-[10%] top-0 z-30 h-px"
           style={{
@@ -192,8 +178,6 @@ export default function PhoneMockup({
   return <div ref={ref}>{content}</div>;
 }
 
-/* ── iOS Status Bar overlay ── */
-
 function StatusBar({ scale }: { scale: number }) {
   const fontSize = 13 * scale;
   const iconHeight = 11 * scale;
@@ -203,7 +187,6 @@ function StatusBar({ scale }: { scale: number }) {
 
   return (
     <>
-      {/* Left: time (Apple's canonical 9:41) */}
       <div
         className="absolute z-20"
         style={{
@@ -223,7 +206,6 @@ function StatusBar({ scale }: { scale: number }) {
         9:41
       </div>
 
-      {/* Right: signal + wifi + battery */}
       <div
         className="absolute z-20 flex items-center"
         style={{
@@ -235,7 +217,6 @@ function StatusBar({ scale }: { scale: number }) {
         }}
         aria-hidden="true"
       >
-        {/* Signal — 4 bars */}
         <svg width={iconHeight + 6} height={iconHeight} viewBox="0 0 18 12" fill="currentColor">
           <rect x={0} y={8} width={3} height={4} rx={0.5} />
           <rect x={5} y={5} width={3} height={7} rx={0.5} />
@@ -243,7 +224,6 @@ function StatusBar({ scale }: { scale: number }) {
           <rect x={15} y={0} width={3} height={12} rx={0.5} />
         </svg>
 
-        {/* Wifi — 3 arcs + dot */}
         <svg
           width={iconHeight + 4}
           height={iconHeight}
@@ -259,7 +239,6 @@ function StatusBar({ scale }: { scale: number }) {
           <circle cx={8} cy={11} r={0.6} fill="currentColor" />
         </svg>
 
-        {/* Battery — outline + fill + nub */}
         <svg width={iconHeight + 13} height={iconHeight} viewBox="0 0 25 12" fill="none">
           <rect
             x={0.6}

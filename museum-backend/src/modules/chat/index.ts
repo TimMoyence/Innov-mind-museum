@@ -1,10 +1,3 @@
-/**
- * Chat module barrel — lifecycle API.
- *
- * Builds and tears down the chat module singleton. Runtime accessors used at
- * request time (`getImageStorage`, `getChatRepository`, etc.) are also exported
- * from `./chat-module`.
- */
 import { getActiveChatModule } from './chat-module';
 
 import type { BuiltChatModule } from './chat-module';
@@ -16,30 +9,22 @@ import type { DataSource } from 'typeorm';
 
 export type { BuiltChatModule };
 
-/** Wires the chat module and returns a configured ChatService. */
 export const buildChatService = (
   dataSource: DataSource,
   cache?: CacheService,
   museumRepository?: IMuseumRepository,
 ): ChatService => getActiveChatModule().build(dataSource, cache, museumRepository).chatService;
 
-/** Returns the shared OCR service instance. Throws if module is not built. */
 export const getOcrService = (): OcrService => getActiveChatModule().getBuilt().ocrService;
 
-/** Stops the periodic art-keywords refresh timer. Call during graceful shutdown. */
 export const stopArtKeywordsRefresh = (): void => {
   getActiveChatModule().stopArtKeywordsRefresh();
 };
 
-/** Gracefully shuts down the knowledge extraction BullMQ worker. */
 export const stopKnowledgeExtraction = async (): Promise<void> => {
   await getActiveChatModule().stopKnowledgeExtraction();
 };
 
-/**
- * TD-OP-01 — disposes the Wikidata circuit breaker (releases the opossum
- * rolling-stats timer). Call during graceful shutdown.
- */
 export const stopWikidataBreaker = (): void => {
   getActiveChatModule().stopWikidataBreaker();
 };

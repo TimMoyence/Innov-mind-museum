@@ -5,7 +5,9 @@ import { isIPv4 } from 'node:net';
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
+import { nonEmpty } from '@shared/utils/defaults';
 
 import type {
   ScrapedPage,
@@ -22,10 +24,6 @@ const ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
 const USER_AGENT = 'MusaiumBot/1.0 (+https://musaium.com; museum-knowledge-enrichment)';
 const MAX_REDIRECTS = 5;
 
-/**
- * SEC: cloud-provider metadata endpoints. The 169.254.0.0/16 IPv4 check already
- * blocks them; reject the DNS name pre-lookup to surface policy violations in logs.
- */
 const BLOCKED_HOSTNAMES = new Set([
   'metadata.google.internal',
   'metadata.goog',
@@ -34,13 +32,6 @@ const BLOCKED_HOSTNAMES = new Set([
   'instance-data',
 ]);
 
-/**
- * SEC: decodes IPv4-mapped IPv6 in both wire shapes (decimal `::ffff:127.0.0.1`
- * and WHATWG hex `::ffff:7f00:1` emitted by Node URL parser). Returns null for
- * non-mapped addresses. Why: prior `normalizeIp` only stripped `::ffff:` prefix —
- * hex form bypassed all IPv4 range checks, opening SSRF path. W1.T2-followup,
- * ssrf-matrix tests cases 10-11.
- */
 function ipv6MappedToIpv4(address: string): string | null {
   const HEX_FORM = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/;
   const hexMatch = HEX_FORM.exec(address);
@@ -69,10 +60,6 @@ function ipv6MappedToIpv4(address: string): string | null {
   return null;
 }
 
-/**
- * Strips IPv6 URL brackets, unwraps IPv4-mapped IPv6 (both wire shapes), lowercases hex.
- * Output: range checks below see a single canonical form.
- */
 function normalizeIp(address: string): string {
   let value = address.toLowerCase();
   if (value.startsWith('[') && value.endsWith(']')) {
@@ -88,7 +75,6 @@ function normalizeIp(address: string): string {
 function isPrivateIpv4(ip: string): boolean {
   if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('0.')) return true;
   if (ip.startsWith('192.168.')) return true;
-  // SEC: 169.254.0.0/16 covers AWS/Azure/GCP IMDS at 169.254.169.254
   if (ip.startsWith('169.254.')) return true;
   if (ip.startsWith('172.')) {
     const second = Number.parseInt(ip.split('.')[1] ?? '', 10);
@@ -98,7 +84,6 @@ function isPrivateIpv4(ip: string): boolean {
 }
 
 function isPrivateIpv6(ip: string): boolean {
-  // loopback (::1), ULA (fc00::/7), link-local (fe80::/10)
   return ip === '::1' || ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80');
 }
 
@@ -115,23 +100,12 @@ type HostnameCheck =
       address?: string;
     };
 
-/**
- * Four fixed octet groups (no nested quantifier) to avoid
- * `eslint-plugin-security/detect-unsafe-regex` false-positive.
- */
 const IPV4_LITERAL = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
-/**
- * SEC: classifies hostname safe/unsafe (SSRF). Called at every redirect hop
- * to block `302 → internal IP` bypasses. Skips DNS lookup for IP literals
- * (would self-resolve + closes a bypass where `169.254.169.254` literal
- * could hit a misconfigured system resolver).
- */
 async function validateHostname(hostname: string): Promise<HostnameCheck> {
   if (BLOCKED_HOSTNAMES.has(hostname.toLowerCase())) {
     return { ok: false, reason: 'blocked_hostname' };
   }
-  // IPv6 literals come out of URL.hostname without brackets.
   const isIpLiteral = IPV4_LITERAL.test(hostname) || hostname.includes(':');
   if (isIpLiteral) {
     const normalized = normalizeIp(hostname);
@@ -152,31 +126,16 @@ async function validateHostname(hostname: string): Promise<HostnameCheck> {
   }
 }
 
-/** Drains body so keep-alive TCP can be reused. Silent on error. */
 async function drainResponseBody(response: Response): Promise<void> {
   try {
     await response.arrayBuffer();
-  } catch {
-    // best-effort
-  }
+  } catch {}
 }
 
 type RedirectOutcome =
   | { blocked: true; reason: string; hop: number }
   | { blocked: false; response: Response; finalUrl: string };
 
-/**
- * C4 I-SEC10 (spec R8/R9) — bounded body reader.
- *
- * Two-layer cap so RAM consumption stays O(maxContentBytes), not O(payload):
- *  1. Pre-fetch Content-Length check: reject before consuming the body.
- *  2. Streamed cumulative-bytes cap: abort `reader.cancel()` past the cap.
- *
- * Defense-in-depth (design D8): a malicious server can lie about
- * Content-Length, but cannot bypass both layers. Returns `null` on either
- * rejection (logging the appropriate event), or the decoded UTF-8 body on
- * success. Caller checks for null before passing to extractContent().
- */
 type StreamedBodyResult = { ok: true; html: string } | { ok: false };
 
 async function readBodyWithCap(
@@ -184,7 +143,6 @@ async function readBodyWithCap(
   url: string,
   maxContentBytes: number,
 ): Promise<StreamedBodyResult> {
-  // Layer 1 — Content-Length pre-guard.
   const contentLengthHeader = response.headers.get('content-length');
   if (contentLengthHeader !== null) {
     const declared = Number.parseInt(contentLengthHeader, 10);
@@ -198,18 +156,11 @@ async function readBodyWithCap(
     }
   }
 
-  // Layer 2 — streamed cap with early abort. `response.body` is a Web
-  // ReadableStream in Node 22 fetch. TextDecoder fatal:false so a
-  // mid-codepoint truncation never throws (partial result is abandoned).
   const body = response.body;
   if (!body) {
     logger.warn('scraper_no_body', { url });
     return { ok: false };
   }
-  // Cast: in some TS lib configs (mix of @types/node + dom), `body.getReader()`
-  // returns ReadableStreamDefaultReader<any> instead of <Uint8Array>. Narrowing
-  // here keeps the rest of the function strictly typed without an
-  // eslint-disable.
   const reader = body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
   const decoder = new TextDecoder('utf-8', { fatal: false });
   let bytesRead = 0;
@@ -235,18 +186,13 @@ async function readBodyWithCap(
   } catch (streamErr) {
     logger.warn('scraper_stream_error', {
       url,
-      error: streamErr instanceof Error ? streamErr.message : String(streamErr),
+      error: errorMessage(streamErr),
     });
     return { ok: false };
   }
   return { ok: true, html };
 }
 
-/**
- * SEC: manual redirect loop so every `Location` is re-validated. Closes DNS
- * rebinding + cloud metadata + scheme-downgrade bypasses missed by a single
- * pre-fetch check.
- */
 async function fetchWithSafeRedirects(
   initialUrl: string,
   init: RequestInit,
@@ -286,14 +232,9 @@ async function fetchWithSafeRedirects(
   return { blocked: true, reason: 'too_many_redirects', hop: MAX_REDIRECTS };
 }
 
-/**
- * Mozilla Readability for articles, linkedom body-text fallback otherwise.
- * Public methods never throw — errors return null (caller fails open).
- */
 export class HtmlScraper implements ScraperPort {
   constructor(private readonly config: HtmlScraperConfig) {}
 
-  /** SEC: validates initial URL. Redirect hops re-validated in {@link fetchWithSafeRedirects}. */
   private async validateUrl(url: string): Promise<boolean> {
     let parsed: URL;
     try {
@@ -373,9 +314,6 @@ export class HtmlScraper implements ScraperPort {
           return null;
         }
 
-        // C4 I-SEC10 (spec R8 + R9) — bounded body read. Defense-in-depth
-        // Content-Length pre-guard + streamed cumulative-bytes cap; see
-        // readBodyWithCap() above for the rationale.
         const bodyResult = await readBodyWithCap(response, url, this.config.maxContentBytes);
         if (!bodyResult.ok) return null;
         return this.extractContent(finalUrl, bodyResult.html);
@@ -385,7 +323,7 @@ export class HtmlScraper implements ScraperPort {
     } catch (err) {
       logger.warn('scraper_exception', {
         url,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     }
@@ -393,18 +331,11 @@ export class HtmlScraper implements ScraperPort {
 
   private extractContent(url: string, html: string): ScrapedPage | null {
     const { document } = parseHTML(html);
-    // TD-LINK-01 — Readability mutates the document during `parse()`. Cloning
-    // once means the fallback branch below can re-parse from the same source
-    // without paying a second `parseHTML(html)` CPU cost
-    // (lib-docs/@mozilla/readability/PATTERNS.md §3). `cloneNode(true)` returns
-    // a typed Node from linkedom — Readability accepts it structurally.
     const clone = document.cloneNode(true);
     const reader = new Readability(clone);
     const article = reader.parse();
 
     if (!article?.textContent) {
-      // Fallback: linkedom DOM body extraction for non-article pages.
-      // Re-parse because Readability mutates the original document during `parse()`.
       const { document: fallbackDoc } = parseHTML(html);
       for (const el of fallbackDoc.querySelectorAll('script, style, nav, footer, header')) {
         el.remove();
@@ -413,8 +344,7 @@ export class HtmlScraper implements ScraperPort {
       if (!text) return null;
 
       const truncated = text.slice(0, this.config.maxContentBytes);
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentionally treating empty string as falsy
-      const title = fallbackDoc.querySelector('title')?.textContent?.trim() || url;
+      const title = nonEmpty(fallbackDoc.querySelector('title')?.textContent?.trim()) ?? url;
       return {
         url,
         title,
@@ -430,8 +360,7 @@ export class HtmlScraper implements ScraperPort {
 
     return {
       url,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- intentionally treating empty string as falsy
-      title: article.title || url,
+      title: nonEmpty(article.title) ?? url,
       textContent,
       contentHash: createHash('sha256').update(textContent).digest('hex').slice(0, 16),
     };

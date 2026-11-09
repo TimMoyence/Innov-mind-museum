@@ -1,6 +1,5 @@
-import { getDictionary, type Locale } from '@/lib/i18n';
-import { getAlternates, getOpenGraph } from '@/lib/seo';
-import type { Metadata } from 'next';
+import { getDictionary } from '@/lib/i18n';
+import { footerPageMetadata } from '@/lib/seo';
 
 interface CookiesPageProps {
   params: Promise<{ locale: string }>;
@@ -109,15 +108,7 @@ function pickLocale(locale: string): LegalLocale {
   return locale === 'fr' ? 'fr' : 'en';
 }
 
-export async function generateMetadata({ params }: CookiesPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const dict = await getDictionary(locale as Locale);
-  return {
-    title: dict.footer.links.cookies,
-    alternates: getAlternates(locale, '/cookies'),
-    openGraph: getOpenGraph(locale),
-  };
-}
+export const generateMetadata = footerPageMetadata('cookies', '/cookies');
 
 export default async function CookiesPage({ params }: CookiesPageProps) {
   const { locale } = await params;

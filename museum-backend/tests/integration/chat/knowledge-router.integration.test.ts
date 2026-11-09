@@ -1,33 +1,3 @@
-/**
- * C4.1 T6.2 — `KnowledgeRouter` end-to-end integration test (full chat pipeline).
- *
- * Whereas T3.3 (`knowledge-router-wiring.test.ts`) verifies that `ChatModule.build()`
- * wires the router with the correct Wikidata / judge / WebSearch providers, T6.2
- * exercises the **full chat pipeline** — `ChatService.postMessage()` → prepare-
- * pipeline → `KnowledgeRouter.resolve()` → orchestrator (mocked) → response shape —
- * and asserts that the router's `facts` + `source` propagate end-to-end into the
- * `OrchestratorInput` the LLM sees, and that fail-open semantics survive a router
- * leg throwing (R10).
- *
- * Mock strategy : we inject a custom `KnowledgeRouterPort` stub through
- * `buildChatTestService({ knowledgeRouter, orchestrator })`. This isolates the
- * test from the Wikidata / Brave / Tavily HTTP graph while still exercising the
- * real `PrepareMessagePipeline` + `ChatMessageService` glue.
- *
- * Spec : `team-state/2026-05-11-c4-anti-hallucination/spec.md` §R6 / R9 / R10.
- * Design : `team-state/2026-05-11-c4-anti-hallucination/design.md` §D4.
- * Plan : `docs/plans/2026-05-10-c4-launch-prompt.md` §J Phase 6 Step 6.2.
- *
- * testcontainers : **NOT used** — the integration surface this test exercises
- * is pure use-case orchestration (no SQL, no Redis path). The in-memory
- * repository from `chatTestApp.ts` suffices. Persistence / cache integration
- * lives in `chat-repository-typeorm.integration.test.ts` (Postgres testcontainer)
- * and `chat-pipeline-spans.integration.test.ts` (metrics).
- *
- * Doctrine : NO `*_ENABLED` flag is asserted or introduced (D11 / pré-launch V1,
- * `feedback_no_feature_flags_prelaunch`).
- */
-
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 
 import type {
@@ -40,15 +10,6 @@ import type {
   KnowledgeRouterResult,
 } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 
-/**
- * Build an orchestrator that records every `OrchestratorInput` it sees so tests
- * can assert what the LLM would have received (facts + factsSource threaded by
- * the prepare pipeline). Optional `overrideOutput` lets callers customise the
- * synthetic LLM response per case.
- * @param overrideOutput - Optional partial `OrchestratorOutput` to override the
- *                         synthetic defaults (e.g. inject `metadata.sources[]`).
- * @returns Tuple of the orchestrator stub + the captured-inputs array.
- */
 function makeRecordingOrchestrator(overrideOutput?: Partial<OrchestratorOutput>): {
   orchestrator: ChatOrchestrator;
   capturedInputs: OrchestratorInput[];
@@ -68,8 +29,6 @@ function makeRecordingOrchestrator(overrideOutput?: Partial<OrchestratorOutput>)
   };
   return { orchestrator, capturedInputs };
 }
-
-/* ─────────────────────────────────────────────────────────────────────── */
 
 describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
   it('case 1 — KB hit: source=wikidata, fallback=false, latencyMs.kb measured', async () => {
@@ -99,9 +58,6 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
     expect(captured?.result.fallback_triggered).toBe(false);
     expect(captured?.result.metadata?.latencyMs.kb).toBeGreaterThanOrEqual(0);
 
-    // End-to-end propagation : the orchestrator input MUST carry the verified
-    // facts + the provenance label so the Spotlighting envelope (T3.4) wraps
-    // them as the 2nd SystemMessage.
     expect(capturedInputs).toHaveLength(1);
     expect(capturedInputs[0].facts).toEqual(routerResult.facts);
     expect(capturedInputs[0].factsSource).toBe('wikidata');
@@ -154,24 +110,12 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
     const session = await service.createSession({ locale: 'en-US', museumMode: true });
     await service.postMessage(session.id, { text: 'whatever question' });
 
-    // judge confident → no facts, source=none, fallback NOT triggered.
     expect(capturedInputs[0].facts).toEqual([]);
     expect(capturedInputs[0].factsSource).toBe('none');
     expect(routerResult.judge_confidence ?? 0).toBeGreaterThanOrEqual(0.7);
   });
 
   it('case 4 — WebSearch fails-open (source=none): pipeline does not throw', async () => {
-    // The router contract (port docstring) says implementations MUST NOT throw —
-    // they return `source: 'none'` on any leg failure (R10 fail-open). We model
-    // that contract here by stubbing a router that catches its own WebSearch
-    // failure and returns the neutral result. The crucial integration claim is
-    // that the chat pipeline does NOT surface a 503 in this scenario : facts is
-    // empty and factsSource is 'none', the orchestrator runs, and a normal
-    // response comes back.
-    //
-    // The "router throwing despite the contract" path is asserted by the
-    // unit-level `knowledge-router.spec.ts` (cases 5-7 — fail-open on KB / judge
-    // / WS exception) — that scenario is NOT this integration test's surface.
     const router: KnowledgeRouterPort = {
       async resolve() {
         return {
@@ -193,8 +137,6 @@ describe('chat pipeline — KnowledgeRouter integration (T6.2)', () => {
 
     const session = await service.createSession({ locale: 'en-US', museumMode: true });
 
-    // The crucial assertion : the pipeline does not throw even when every
-    // router leg has failed (modelled as a `source: 'none'` result).
     await expect(
       service.postMessage(session.id, { text: 'unreachable web' }),
     ).resolves.toBeDefined();

@@ -1,13 +1,3 @@
-/**
- * halluc-assertions.spec.ts — T4.3 unit tests for the Promptfoo custom assertions.
- *
- * Importing from `security/promptfoo/lib/halluc-assertions.ts` is intentional: the
- * file lives outside `src/` because it executes inside Promptfoo's `javascript`
- * assertion worker (no `@modules/*` path aliases, no Express types). We test it
- * here so the BE Jest pipeline catches regressions on the same `pnpm test`
- * invocation that gates the rest of the chat module.
- */
-
 import {
   citeRealUrl,
   DEFAULT_URL_ALLOWLIST,
@@ -18,7 +8,6 @@ import {
 
 describe('halluc-assertions / normalizeForMatch', () => {
   it('NFKC-normalizes width variants, collapses whitespace, lowercases, trims', () => {
-    // Fullwidth A (U+FF21) → A ; non-breaking space U+00A0 + tab + LF → single space.
     const input = '   Ｌéonard\tde\nVinci  ';
     expect(normalizeForMatch(input)).toBe('léonard de vinci');
   });
@@ -65,8 +54,18 @@ describe('halluc-assertions / quoteInFacts', () => {
   it('passes when every quote is a substring of facts (case + width-insensitive)', () => {
     const output = {
       sources: [
-        { url: 'https://x', title: 't', type: 'wikidata', quote: 'Leonardo da Vinci painted the Mona Lisa' },
-        { url: 'https://y', title: 't2', type: 'web', quote: 'currently held at the Louvre Museum' },
+        {
+          url: 'https://x',
+          title: 't',
+          type: 'wikidata',
+          quote: 'Leonardo da Vinci painted the Mona Lisa',
+        },
+        {
+          url: 'https://y',
+          title: 't2',
+          type: 'web',
+          quote: 'currently held at the Louvre Museum',
+        },
       ],
     };
     expect(quoteInFacts(output, { facts })).toEqual({ pass: true });
@@ -80,7 +79,12 @@ describe('halluc-assertions / quoteInFacts', () => {
   it('fails when a quote is not in facts', () => {
     const output = {
       sources: [
-        { url: 'https://x', title: 't', type: 'wikidata', quote: 'Mona Lisa was painted by Picasso' },
+        {
+          url: 'https://x',
+          title: 't',
+          type: 'wikidata',
+          quote: 'Mona Lisa was painted by Picasso',
+        },
       ],
     };
     const r = quoteInFacts(output, { facts });
@@ -110,9 +114,10 @@ describe('halluc-assertions / quoteInFacts', () => {
   });
 
   it('treats NFKC equivalence and whitespace collapse as a match', () => {
-    const factsFancy =
-      'Léonard de Vinci\ta peint la Joconde au début du XVIe siècle.';
-    const output = { sources: [{ url: 'https://x', title: 't', quote: 'Léonard de Vinci a peint la Joconde' }] };
+    const factsFancy = 'Léonard de Vinci\ta peint la Joconde au début du XVIe siècle.';
+    const output = {
+      sources: [{ url: 'https://x', title: 't', quote: 'Léonard de Vinci a peint la Joconde' }],
+    };
     expect(quoteInFacts(output, { facts: factsFancy })).toEqual({ pass: true });
   });
 });
@@ -121,9 +126,24 @@ describe('halluc-assertions / citeRealUrl', () => {
   it('passes for Wikidata, Wikipedia subdomains, Wikimedia Commons', () => {
     const output = {
       sources: [
-        { url: 'https://www.wikidata.org/wiki/Q12418', quote: 'qqqqqqqqqq', title: 't', type: 'wikidata' },
-        { url: 'https://fr.wikipedia.org/wiki/La_Joconde', quote: 'qqqqqqqqqq', title: 't', type: 'web' },
-        { url: 'https://commons.wikimedia.org/wiki/File:X.jpg', quote: 'qqqqqqqqqq', title: 't', type: 'commons' },
+        {
+          url: 'https://www.wikidata.org/wiki/Q12418',
+          quote: 'qqqqqqqqqq',
+          title: 't',
+          type: 'wikidata',
+        },
+        {
+          url: 'https://fr.wikipedia.org/wiki/La_Joconde',
+          quote: 'qqqqqqqqqq',
+          title: 't',
+          type: 'web',
+        },
+        {
+          url: 'https://commons.wikimedia.org/wiki/File:X.jpg',
+          quote: 'qqqqqqqqqq',
+          title: 't',
+          type: 'commons',
+        },
       ],
     };
     expect(citeRealUrl(output)).toEqual({ pass: true });
@@ -133,7 +153,11 @@ describe('halluc-assertions / citeRealUrl', () => {
     const output = {
       sources: [
         { url: 'https://www.louvre.fr/en/works', quote: 'qqqqqqqqqq', title: 't' },
-        { url: 'https://www.metmuseum.org/art/collection/search/123', quote: 'qqqqqqqqqq', title: 't' },
+        {
+          url: 'https://www.metmuseum.org/art/collection/search/123',
+          quote: 'qqqqqqqqqq',
+          title: 't',
+        },
         { url: 'https://www.tate.org.uk/art/artworks/x', quote: 'qqqqqqqqqq', title: 't' },
       ],
     };
@@ -141,17 +165,19 @@ describe('halluc-assertions / citeRealUrl', () => {
   });
 
   it('fails for an off-allowlist host', () => {
-    const output = { sources: [{ url: 'https://attacker.example/leak', quote: 'qqqqqqqqqq', title: 't' }] };
+    const output = {
+      sources: [{ url: 'https://attacker.example/leak', quote: 'qqqqqqqqqq', title: 't' }],
+    };
     const r = citeRealUrl(output);
     expect(r.pass).toBe(false);
     expect(r.reason).toMatch(/not on allowlist/);
   });
 
   it('rejects a homograph attempt where allowlist is a substring not a suffix', () => {
-    // evil.wikipedia.org.attacker.com should be REJECTED — `endsWith('.wikipedia.org')`
-    // boundary check protects us.
     const output = {
-      sources: [{ url: 'https://evil.wikipedia.org.attacker.com/leak', quote: 'qqqqqqqqqq', title: 't' }],
+      sources: [
+        { url: 'https://evil.wikipedia.org.attacker.com/leak', quote: 'qqqqqqqqqq', title: 't' },
+      ],
     };
     const r = citeRealUrl(output);
     expect(r.pass).toBe(false);
@@ -170,9 +196,10 @@ describe('halluc-assertions / citeRealUrl', () => {
   });
 
   it('honors caller-supplied allowlist override', () => {
-    const output = { sources: [{ url: 'https://internal.musaium.test/x', quote: 'qqqqqqqqqq', title: 't' }] };
+    const output = {
+      sources: [{ url: 'https://internal.musaium.test/x', quote: 'qqqqqqqqqq', title: 't' }],
+    };
     expect(citeRealUrl(output, { allowlist: ['musaium.test'] })).toEqual({ pass: true });
-    // default allowlist rejects it
     expect(citeRealUrl(output).pass).toBe(false);
   });
 

@@ -1,13 +1,3 @@
-/**
- * Golden-input / golden-output identity test for the canonical Sentry scrubber.
- *
- * Any future regression that changes WHAT the scrubber redacts will flip this
- * test — including silent regex tweaks, a forgotten field, or a recursion-depth
- * bug. Pair this with the `sentry-scrubber-parity.mjs` sentinel which guards
- * against per-app reimplementation.
- *
- * Runs under `node --test`. Stays SDK-free.
- */
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
@@ -29,11 +19,6 @@ import type {
   ScrubberDeps,
 } from './sentry-scrubber.ts';
 
-/**
- * Deterministic stub — never calls real crypto. The host injects either Node
- * crypto SHA-256 (backend) or a 32-bit fold (FE/Web) in production; the
- * scrubber itself only requires determinism, which this stub provides.
- */
 const stubDeps: ScrubberDeps = {
   hashEmail: (email) => (email ? `H_${email.length.toString(16).padStart(2, '0')}` : undefined),
 };
@@ -62,10 +47,6 @@ describe('constants are frozen / well-formed', () => {
   });
 
   it('SENSITIVE_QUERY_KEYS contains exactly the 16 expected entries (R1 + cycle-10 S3/signature)', () => {
-    // R1 — 7 original keys + 4 (code, email, phone, state) for magic-link / OAuth / signup.
-    // Cycle 10 (A-02, 2026-05-26) — +5 (x-amz-signature, x-amz-credential,
-    // x-amz-security-token, sig, signature) to close the presigned-S3 / signed-URL
-    // signature leak. FAILS on the 11-key canonical, PASSES after extension.
     assert.deepEqual(
       [...SENSITIVE_QUERY_KEYS].sort(),
       [
@@ -165,9 +146,6 @@ describe('scrubUrl', () => {
     assert.equal(scrubUrl('https://api.example.com/?page=2'), 'https://api.example.com/?page=2');
   });
 
-  // R1 — new keys (code, state, email, phone) added 2026-05-21 to close the
-  // magic-link / OAuth / signup query-string leak. These FAIL on the 7-key
-  // canonical and PASS after `SENSITIVE_QUERY_KEYS` extension.
   it('scrubUrl redacts code/state/email/phone query-params (R1)', () => {
     assert.equal(
       scrubUrl(
@@ -184,9 +162,6 @@ describe('scrubUrl', () => {
     );
   });
 
-  // Cycle 10 (A-02, 2026-05-26) — presigned-S3 / signed-URL signature params.
-  // These FAIL on the 11-key canonical (params survive verbatim) and PASS once
-  // x-amz-signature/credential/security-token + sig/signature join the set.
   it('scrubUrl redacts presigned-S3 X-Amz-Signature, keeps X-Amz-Expires (cycle 10)', () => {
     assert.equal(
       scrubUrl(
@@ -212,7 +187,6 @@ describe('scrubUrl', () => {
     );
   });
 
-  // D4 — `key` / `author` must NOT be redacted (too generic → false positives).
   it('scrubUrl leaves generic ?key= / ?author= untouched (D4 — no over-masking)', () => {
     assert.equal(
       scrubUrl('https://x.tld/art?key=joconde&author=davinci'),
@@ -222,10 +196,6 @@ describe('scrubUrl', () => {
 });
 
 describe('scrubEvent — tags traversal (R2)', () => {
-  // R2 — scrubEvent today only walks request/user/extra. Sentry tags carry
-  // path / authorization / method etc and are indexed; they MUST be scrubbed.
-  // These tests FAIL on the 2026-05-21 canonical (tags untouched) and PASS
-  // once `scrubEvent` traverses event.tags.
 
   it('scrubEvent traverses event.tags via scrubRecord (sensitive keys → REDACTED)', () => {
     const event = {
@@ -255,11 +225,8 @@ describe('scrubEvent — tags traversal (R2)', () => {
   });
 
   it('scrubEvent handles missing/undefined tags gracefully', () => {
-    // No tags key at all.
     assert.doesNotThrow(() => scrubEvent({}, stubDeps));
-    // tags: undefined.
     assert.doesNotThrow(() => scrubEvent({ tags: undefined } as ScrubbableEvent, stubDeps));
-    // Empty tags object.
     const emptyTagsOut = scrubEvent({ tags: {} } as ScrubbableEvent, stubDeps);
     assert.deepEqual((emptyTagsOut as ScrubbableEvent).tags, {});
   });
@@ -278,12 +245,6 @@ describe('scrubEvent — tags traversal (R2)', () => {
 });
 
 describe('scrubEvent — extra/data URL traversal (TD-68 / SCRUB-01)', () => {
-  // TD-68 — a URL carrying a sensitive token in its query-string, stored under a
-  // NON-sensitive key inside `extra` or `request.data`, used to survive verbatim
-  // into Sentry: scrubRecord only redacted by sensitive KEY name and returned
-  // string values as-is, so scrubUrl never ran on URL-like values nested there
-  // (only `tags` and `request.url` got scrubUrl). These FAIL on the pre-TD-68
-  // canonical and PASS once scrubRecord applies scrubUrl to URL-like values.
 
   it('scrubs a sensitive query-string in a URL nested under extra (non-sensitive key)', () => {
     const event: ScrubbableEvent = {
@@ -326,11 +287,6 @@ describe('scrubEvent — extra/data URL traversal (TD-68 / SCRUB-01)', () => {
 });
 
 describe('scrubEvent — request.query_string (TD-71)', () => {
-  // TD-71 — scrubRequest scrubbed headers / data / url but NOT the dedicated
-  // request.query_string field (raw query, no leading '?'), so a query carrying
-  // ?token=… / ?code=… reached Sentry verbatim. The first test FAILS on the
-  // pre-TD-71 canonical (query_string left untouched) and PASSES once scrubRequest
-  // runs scrubUrl on it.
 
   it('scrubs sensitive params in request.query_string (no leading ?)', () => {
     const event: ScrubbableEvent = {
@@ -358,8 +314,6 @@ describe('scrubEvent — request.query_string (TD-71)', () => {
   });
 
   it('strips a leading ? before scrubbing (defensive — non-canonical input)', () => {
-    // Without the leading-? strip, the first key would be '?token' (not in
-    // SENSITIVE_QUERY_KEYS) and the value would leak. FAILS on the un-hardened fix.
     const event: ScrubbableEvent = { request: { query_string: '?token=secret&page=2' } };
     const out = scrubEvent(event, stubDeps);
     assert.equal(
@@ -370,8 +324,6 @@ describe('scrubEvent — request.query_string (TD-71)', () => {
 });
 
 describe('scrubEvent — golden fixture', () => {
-  // Single comprehensive fixture exercising every code path. The expected
-  // output below is the GOLDEN that any future regression will diff against.
   const goldenInput: ScrubbableEvent = {
     request: {
       headers: {
@@ -379,7 +331,7 @@ describe('scrubEvent — golden fixture', () => {
         cookie: 'session=abc',
         'x-api-key': 'k_live_1',
         'x-auth-token': 't_2',
-        'x-musaium-session': 'should-NOT-be-redacted', // not in regex
+        'x-musaium-session': 'should-NOT-be-redacted',
         'user-agent': 'curl/8',
         accept: 'application/json',
       },
@@ -418,7 +370,6 @@ describe('scrubEvent — golden fixture', () => {
       query_string: 'left-untouched',
     },
     user: {
-      // raw email gone, id stamped from fingerprint, email_hash added
       username: 'dave',
       id: 'H_10',
       email_hash: 'H_10',

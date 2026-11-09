@@ -1,30 +1,10 @@
-/**
- * R4 — End-to-end error-middleware → Sentry tags scrubbing.
- *
- * Chains a real Express app through errorHandler → logServerError →
- * captureExceptionWithContext → withScope/setTag, asserting the final tag
- * value reaching Sentry has its sensitive query-string params scrubbed.
- *
- * Tier signature note: this test does NOT spin up a Postgres testcontainer —
- * the path under test is HTTP middleware only (no DB). Lives in
- * tests/integration/observability/ per design.md §6. Sentinel baseline
- * exemption flagged in editor deviations (the test IS the network boundary —
- * supertest fires real HTTP through the middleware stack).
- *
- * RED: today error.middleware → captureExceptionWithContext → setTag('path',
- * req.originalUrl) without scrub → tag value is raw URL → test FAILS.
- * GREEN: R3 scrub wired → URL-like tag values scrubbed before setTag.
- */
-
 import express from 'express';
 import request from 'supertest';
 
-// Silence logger during the test.
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-// Mock env so initSentry has a configured DSN.
 jest.mock('@src/config/env', () => ({
   env: {
     sentry: {
@@ -38,7 +18,6 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-// Mock @sentry/node — capture withScope callback + setTag invocations.
 jest.mock('@sentry/node', () => {
   const setTag = jest.fn();
   const captureException = jest.fn();
@@ -90,16 +69,13 @@ describe('error-middleware → Sentry tags scrubbing — R4 integration', () => 
     const app = buildApp();
     await request(app).get('/api/test-error-500?code=ABC&password=secret&state=XYZ&email=u@x.tld');
 
-    // captureException invoked once with the original Error
     expect(sentryMocks.captureException).toHaveBeenCalledTimes(1);
 
-    // path tag: scrubbed (every sensitive key redacted)
     expect(sentryMocks.setTag).toHaveBeenCalledWith(
       'path',
       '/api/test-error-500?code=[redacted]&password=[redacted]&state=[redacted]&email=[redacted]',
     );
 
-    // method tag preserved (GET is not URL-like)
     expect(sentryMocks.setTag).toHaveBeenCalledWith('method', 'GET');
   });
 
@@ -107,7 +83,6 @@ describe('error-middleware → Sentry tags scrubbing — R4 integration', () => 
     const app = buildApp();
     await request(app).get('/api/test-error-500');
 
-    // path tag still set but value is the clean URL (no query-string).
     expect(sentryMocks.setTag).toHaveBeenCalledWith('path', '/api/test-error-500');
     expect(sentryMocks.setTag).toHaveBeenCalledWith('method', 'GET');
   });

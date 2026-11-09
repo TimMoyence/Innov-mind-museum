@@ -1,11 +1,8 @@
 export type OrchestratorErrorKind = 'llm-provider-error' | 'timeout' | 'quota-exceeded';
 
 export interface StubLLMOrchestratorOptions {
-  /** Number of consecutive calls that throw before returning fallback. Default: never throws. */
   failuresBeforeFallback?: number;
-  /** Throw type. Default: 'llm-provider-error'. */
   errorKind?: OrchestratorErrorKind;
-  /** When set, every call returns this fallback text instead of attempting. */
   forceFallbackText?: string;
 }
 
@@ -15,13 +12,6 @@ interface OrchestratorGenerateResult {
   degraded: boolean;
 }
 
-/**
- * Test-only ChatOrchestrator that injects failures.
- *
- * Matches the shape used by the existing e2e harness (inline orchestrator
- * with generate() + generateStream()). Used in Phase 6 chaos e2e tests to
- * exercise the LLM-provider-down + circuit-breaker contracts.
- */
 export class StubLLMOrchestrator {
   private callCount = 0;
 
@@ -51,7 +41,11 @@ export class StubLLMOrchestrator {
   private async next(): Promise<OrchestratorGenerateResult> {
     this.callCount += 1;
     if (this.opts.forceFallbackText) {
-      return { text: this.opts.forceFallbackText, metadata: { stub: 'force-fallback' }, degraded: true };
+      return {
+        text: this.opts.forceFallbackText,
+        metadata: { stub: 'force-fallback' },
+        degraded: true,
+      };
     }
     const limit = this.opts.failuresBeforeFallback ?? Number.MAX_SAFE_INTEGER;
     if (this.callCount <= limit) {

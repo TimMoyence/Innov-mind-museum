@@ -62,10 +62,6 @@ function makeInput(overrides: Partial<OrchestratorInput> = {}): OrchestratorInpu
   };
 }
 
-/**
- * Fake model that captures messages passed to it and returns a walk-structured output.
- * Implements `withStructuredOutput()` so the walk path can call it.
- */
 class FakeWalkModel {
   capturedMessages: unknown[] = [];
   private readonly returnValue: { answer: string; suggestions: string[] };
@@ -83,7 +79,6 @@ class FakeWalkModel {
     };
   }
 
-  // Standard invoke for the non-walk path
   invoke = jest.fn().mockResolvedValue({
     content: JSON.stringify({ answer: 'Non-walk answer', citations: [] }),
   });
@@ -95,10 +90,6 @@ class FakeWalkModel {
   );
 }
 
-/**
- * Fake model for default (non-walk) path: captures messages from standard invoke,
- * does NOT implement withStructuredOutput (would throw if called on walk path).
- */
 class FakeDefaultModel {
   capturedMessages: unknown[] = [];
 
@@ -124,7 +115,6 @@ describe('LangChainChatOrchestrator — walk intent', () => {
 
       await orchestrator.generate(makeInput({ intent: 'walk' }));
 
-      // capturedMessages should include a SystemMessage whose content contains the walk section marker
       const messages = model.capturedMessages as {
         _getType?: () => string;
         content?: unknown;
@@ -141,9 +131,6 @@ describe('LangChainChatOrchestrator — walk intent', () => {
       );
       const humanIdx = messages.findIndex((m) => m instanceof HumanMessage);
 
-      // Walk section must be present, located after at least one prior system message,
-      // and BEFORE the user's HumanMessage. This catches the regression where the
-      // section was mis-spliced between HumanMessage and the trailing reminder.
       expect(walkIdx).toBeGreaterThan(0);
       expect(humanIdx).toBeGreaterThan(walkIdx);
     });
@@ -166,10 +153,8 @@ describe('LangChainChatOrchestrator — walk intent', () => {
 
       const result = await orchestrator.generate(makeInput({ intent: 'default' }));
 
-      // suggestions should be absent for default path
       expect(result.suggestions).toBeUndefined();
 
-      // captured messages should NOT contain the walk section marker
       const messages = model.capturedMessages as {
         content?: unknown;
         lc_kwargs?: { content?: unknown };

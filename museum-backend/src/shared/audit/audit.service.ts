@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import * as Sentry from '@sentry/node';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
@@ -10,24 +11,6 @@ import { BREACH_EVENT_SET, type BreachEventName } from './breach-event-types';
 import type { IAuditLogRepository } from './audit.repository.interface';
 import type { AuditLogEntry } from './audit.types';
 
-/**
- * Awaitable audit logging service. SOC2 CC7.2 / GDPR Art. 30: row MUST exist
- * before privileged action HTTP response observable. Repository serialises
- * writes via `pg_advisory_xact_lock` for chain integrity (~5–100 ms/call).
- *
- * Internal errors caught and logged: audit-pipeline failure must never break
- * user request (the action already happened).
- */
-
-/**
- * Input for {@link AuditService.logActorAction}. Mirrors {@link AuditLogEntry}
- * minus `actorType` (helper forces `'user'`). `actorId` is required (an actor
- * action by definition has an authenticated actor); `targetType`/`targetId`/
- * `metadata`/`ip`/`requestId` remain optional and pass through verbatim.
- *
- * The exclusion of `actorType` is intentional (PR-7 R-2 mitigation): callers
- * MUST NOT be able to override the literal `'user'` via this helper.
- */
 export interface LogActorActionInput {
   action: string;
   actorId: number;
@@ -38,10 +21,8 @@ export interface LogActorActionInput {
   requestId?: string | null;
 }
 
-/** Severity. Mirrors `BREACH_PLAYBOOK.md` § 3. */
 export type BreachSeverity = 'P0' | 'P1' | 'P2';
 
-/** 1:1 with `.github/ISSUE_TEMPLATE/security-incident.yml`. */
 export type BreachDetectionSource =
   | 'sentry'
   | 'better_stack'
@@ -51,38 +32,25 @@ export type BreachDetectionSource =
   | 'user_report'
   | 'ci';
 
-/** Personal-data classes per `BREACH_PLAYBOOK.md` § 1.3. */
 export type BreachDataClass = 'account' | 'chat_text' | 'voice' | 'image' | 'geo' | 'ip' | 'none';
 
 export type BreachContainmentStatus = 'not_started' | 'in_progress' | 'contained';
 
-/**
- * GDPR Art 33-34 audit row input. ALWAYS route through
- * {@link AuditService.auditCriticalSecurityEvent}; do NOT call
- * {@link AuditService.log} with `breach_*` actions — that path skips Sentry
- * tagging + CNIL deadline + runbook contract.
- */
 export interface BreachAuditEvent {
-  /** Canonical name from `BREACH_EVENTS` (breach-event-types.ts). */
   eventName: BreachEventName;
   severity: BreachSeverity;
-  /** T+0 — moment on-call became aware. */
   detectedAt: Date;
   detectionSource: BreachDetectionSource;
   affectedDataClasses: readonly BreachDataClass[];
   containmentStatus: BreachContainmentStatus;
-  /** null when system-detected. */
   reporterUserId?: number | null;
-  /** MUST be pre-redacted (no secrets, no raw PII). */
   description: string;
   requestId?: string | null;
-  /** Anonymized after 13 months. */
   ip?: string | null;
 }
 
 export interface BreachAuditResult {
   auditId: string;
-  /** GDPR Art 33 deadline = `detectedAt + 72h`, ISO-8601 UTC. */
   cnilDeadline: string;
 }
 
@@ -94,10 +62,7 @@ const computeCnilDeadline = (detectedAt: Date): string =>
 export class AuditService {
   constructor(private readonly repository: IAuditLogRepository) {}
 
-  /** Awaits insert; never throws. */
   async log(entry: AuditLogEntry): Promise<void> {
-    // Guard: `breach_*` MUST go through `auditCriticalSecurityEvent` (Sentry
-    // tag + CNIL deadline). Runtime check — TS can't statically ban prefix.
     if (BREACH_EVENT_SET.has(entry.action)) {
       logger.error('audit_log_breach_misuse', {
         action: entry.action,
@@ -112,22 +77,15 @@ export class AuditService {
     } catch (error) {
       logger.error('audit_log_failed', {
         action: entry.action,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
-      // R4 (Cycle D) — a swallowed insert failure on a real privileged action
-      // (e.g. ACCOUNT_DELETED) would otherwise be a forensic black hole: the
-      // action happened, no trace persisted. Route it to Sentry so a silent
-      // failure is detectable. Context carries only the action (no PII).
       captureExceptionWithContext(error, { action: entry.action, kind: 'audit_log_failed' });
-      // Do NOT rethrow — audit failure must not break the user request.
     }
   }
 
-  /** Awaits batch insert; never throws. */
   async logBatch(entries: AuditLogEntry[]): Promise<void> {
     if (entries.length === 0) return;
 
-    // Refuse entire batch if any row would bypass breach-recording contract.
     const offending = entries.find((e) => BREACH_EVENT_SET.has(e.action));
     if (offending) {
       logger.error('audit_log_breach_misuse_batch', {
@@ -143,25 +101,11 @@ export class AuditService {
     } catch (error) {
       logger.error('audit_log_batch_failed', {
         count: entries.length,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
-      // Do NOT rethrow — audit failure must not break the user request.
     }
   }
 
-  /**
-   * Convenience helper for actor-action audit rows: forces `actorType:'user'`
-   * (no caller override possible — see {@link LogActorActionInput}) and
-   * null-coerces `ip`/`requestId` so route handlers can pass `req.ip` /
-   * `req.id` straight through without inline `?? null`.
-   *
-   * Delegates to {@link AuditService.log} → inherits the `breach_*` guard,
-   * the swallow-on-repo-error semantics, and the chain-hash contract.
-   *
-   * Wire-format identity (PR-7 R3): row hash is unchanged vs the pre-sweep
-   * inline shape because `computeRowHash` does NOT hash `actorType`, `ip`, or
-   * `requestId` (cf. `audit-chain.ts:39-60`).
-   */
   async logActorAction(input: LogActorActionInput): Promise<void> {
     await this.log({
       action: input.action,
@@ -175,19 +119,7 @@ export class AuditService {
     });
   }
 
-  /**
-   * GDPR Art 33-34. Single source of truth for breach events:
-   *   - Writes hash-chained row to `audit_logs` (`action=event.eventName`,
-   *     payload under `metadata.breach`, 13-month retention per audit §5.4).
-   *   - Tags Sentry (`severity=breach`, `event=`, `auditId=`) for alerting.
-   *   - Returns `auditId` (for GitHub incident issue) + CNIL 72h deadline.
-   *
-   * Hash chain unaffected by IP anonymization (IP excluded from hash payload).
-   * Never throws on audit/Sentry failure — runbook must not block on infra
-   * hiccups. `cnilDeadline` returned even if persistence fails.
-   */
   async auditCriticalSecurityEvent(event: BreachAuditEvent): Promise<BreachAuditResult> {
-    // Belt-and-braces against unsafe-cast callers.
     if (!BREACH_EVENT_SET.has(event.eventName)) {
       throw new TypeError(
         `auditCriticalSecurityEvent: unknown breach event "${event.eventName}". ` +
@@ -221,20 +153,16 @@ export class AuditService {
       requestId: event.requestId ?? null,
     };
 
-    // Persist first — audit row is legally-binding artefact; Sentry tagging
-    // is observability glue and must not block the write.
     try {
       await this.repository.insert(entry);
     } catch (error) {
       logger.error('audit_breach_insert_failed', {
         action: event.eventName,
         severity: event.severity,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
-      // Continue: emit Sentry anyway so on-call still gets paged.
     }
 
-    // Tag Sentry for alerting. Safe no-op when Sentry not initialized.
     try {
       Sentry.withScope((scope) => {
         scope.setTag('severity', 'breach');
@@ -256,10 +184,9 @@ export class AuditService {
         Sentry.captureMessage(`[BREACH ${event.severity}] ${event.eventName} — auditId=${auditId}`);
       });
     } catch (error) {
-      // Defensive: Sentry hiccup must not obscure the breach itself.
       logger.error('audit_breach_sentry_failed', {
         action: event.eventName,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
 

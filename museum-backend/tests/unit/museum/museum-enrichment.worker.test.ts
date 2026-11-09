@@ -14,7 +14,6 @@ import type {
 
 import { InMemoryMuseumRepository } from '../../helpers/museum/inMemoryMuseumRepository';
 
-/** Minimal in-memory cache double — mirrors the use-case helper. */
 class RecordingCache implements MuseumEnrichmentCachePort {
   private readonly rows = new Map<string, MuseumEnrichmentView>();
 
@@ -227,7 +226,6 @@ describe('processMuseumEnrichmentJob', () => {
 
   it('skips opening-hours fetch when museum has no coordinates', async () => {
     await museumRepo.create({ name: 'Virtual Museum', slug: 'virtual' });
-    // Reset mocks: the newly created museum gets id 2
     const wikidata = makeWikidataClient();
     (wikidata.findMuseumQid as jest.Mock).mockResolvedValue(null);
     const wikipedia = makeWikipediaClient();
@@ -271,13 +269,6 @@ describe('processMuseumEnrichmentJob', () => {
   });
 });
 
-/**
- * Fix #1 from 2026-04-25 code review — the worker's failed-event handler
- * (extracted as `onMuseumEnrichmentJobFailed`) had zero coverage. Pre-refactor
- * it called `captureExceptionWithContext` on every retry, paging Sentry on
- * intermediate failures. The shared DLQ policy now restricts paging to the
- * final attempt; lock that contract in.
- */
 describe('onMuseumEnrichmentJobFailed — DLQ policy wiring', () => {
   const sentryModule = '@shared/observability/sentry';
 
@@ -291,10 +282,8 @@ describe('onMuseumEnrichmentJobFailed — DLQ policy wiring', () => {
       logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     }));
 
-    /* eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.doMock requires require */
     const { onMuseumEnrichmentJobFailed } =
       require('@modules/museum/adapters/primary/museum-enrichment.worker') as typeof import('@modules/museum/adapters/primary/museum-enrichment.worker');
-    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
     const { captureExceptionWithContext } = require('@shared/observability/sentry') as {
       captureExceptionWithContext: jest.Mock;
     };
@@ -317,10 +306,8 @@ describe('onMuseumEnrichmentJobFailed — DLQ policy wiring', () => {
       logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
     }));
 
-    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
     const { onMuseumEnrichmentJobFailed } =
       require('@modules/museum/adapters/primary/museum-enrichment.worker') as typeof import('@modules/museum/adapters/primary/museum-enrichment.worker');
-    /* eslint-disable-next-line @typescript-eslint/no-require-imports */
     const { captureExceptionWithContext } = require('@shared/observability/sentry') as {
       captureExceptionWithContext: jest.Mock;
     };

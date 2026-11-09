@@ -1,15 +1,9 @@
-/**
- * Screen-specific mocks for ConversationsScreen.
- * Import AFTER test-utils (which provides global mocks for theme, router, etc.).
- */
-
 const mockChatApiCreateSession = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: { createSession: mockChatApiCreateSession },
 }));
 
-/** Exported handle for test files that import this setup. */
 export const convoScreenApiMocks = { createSession: mockChatApiCreateSession };
 
 export const mockUseConversationsData = jest.fn();
@@ -51,7 +45,6 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
 
 jest.mock('@/features/settings/runtimeSettings', () => ({
   loadRuntimeSettings: jest.fn().mockResolvedValue({
-    defaultLocale: 'en-US',
     defaultMuseumMode: false,
   }),
 }));

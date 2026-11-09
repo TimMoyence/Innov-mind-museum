@@ -78,10 +78,6 @@ describe('NoopReviewModerationNotifier', () => {
   });
 
   it('logs a structured warn with the literal event name "review_moderation_notifier_noop"', async () => {
-    // Kills L34:17 StringLiteral survivor — event name mutated to "" would
-    // strip the searchable log key used by Grafana/Sentry to surface
-    // dev-only no-op deliveries. Logger pipes structured JSON through
-    // console.warn, so spying there is sufficient.
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const notifier = new NoopReviewModerationNotifier();

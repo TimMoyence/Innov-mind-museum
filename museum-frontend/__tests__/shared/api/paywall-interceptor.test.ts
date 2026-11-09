@@ -1,29 +1,4 @@
-/**
- * R1 RED — Axios 402 paywall interceptor (T1.10 axiom — Q in brief).
- *
- * Pins R1 §1 R24 + §3.7 D7 down BEFORE implementation : the response error
- * interceptor on `httpClient` MUST intercept 402 responses with body
- * `{ code: 'QUOTA_EXCEEDED' }` and invoke the handler registered via
- * `setPaywallHandler(fn)` (setter-injection mirror of
- * `setUnauthorizedHandler` / `setAuthRefreshHandler`).
- *
- * Contract pinned :
- *  - 402 + `code: 'QUOTA_EXCEEDED'` → handler called once with
- *    `{ tier, currentCount, limit, resetAt }`.
- *  - 402 without the `QUOTA_EXCEEDED` code → handler NOT called.
- *  - Non-402 errors → handler NOT called.
- *  - When handler is `null` (unregistered) → no throw, error still rejected.
- *  - The 402 error STILL propagates to `.catch()` after the handler runs
- *    (R24 — "Don't swallow the error" so chat-session-create flow can also
- *    surface a fallback).
- *
- * MUST FAIL at baseline `cd7e22bc` — `setPaywallHandler` does not exist
- * (verified : only `setUnauthorizedHandler`, `setAuthRefreshHandler`,
- * `setTokenProvider` are exported today).
- */
 import '@/__tests__/helpers/test-utils';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 jest.mock('@/shared/infrastructure/requestId', () => ({
   generateRequestId: () => 'mock-request-id',
@@ -63,12 +38,6 @@ const QUOTA_BODY: QuotaInfo & { code: string } = {
   resetAt: '2026-06-01T00:00:00.000Z',
 };
 
-/**
- * Sends a request via the configured `httpClient` whose mock adapter
- * synthesises a response w/ the given status + body. We use the axios
- * adapter override (already used by the existing httpClient.test.ts) so
- * the interceptor logic under test runs against the synthetic response.
- */
 class SyntheticAxiosError extends Error {
   response: { status: number; data: unknown };
   config: { url: string; method: string };
@@ -100,8 +69,6 @@ describe('httpClient — 402 paywall interceptor (R1 §1 R24 + §3.7 D7)', () =>
     setPaywallHandler(null);
   });
 
-  // ── R24 — 402 + QUOTA_EXCEEDED triggers handler ─────────────────────
-
   it('R24: 402 + code=QUOTA_EXCEEDED → registered handler called once with payload', async () => {
     const handler = jest.fn();
     setPaywallHandler(handler);
@@ -125,11 +92,7 @@ describe('httpClient — 402 paywall interceptor (R1 §1 R24 + §3.7 D7)', () =>
 
     const err = await requestWithStubbedResponse(402, QUOTA_BODY);
     expect(err).toBeTruthy();
-    // The mapped error MUST surface so calling code's mutation `.catch()`
-    // can still react — additive, not exclusive (R1 §3.7 D7 rationale).
   });
-
-  // ── 402 WITHOUT QUOTA_EXCEEDED code → handler ignored ───────────────
 
   it('402 with different code (e.g. PAYMENT_REQUIRED_OTHER) → handler NOT called', async () => {
     const handler = jest.fn();
@@ -142,8 +105,6 @@ describe('httpClient — 402 paywall interceptor (R1 §1 R24 + §3.7 D7)', () =>
 
     expect(handler).not.toHaveBeenCalled();
   });
-
-  // ── Non-402 errors → handler ignored ─────────────────────────────────
 
   it('500 → handler NOT called', async () => {
     const handler = jest.fn();
@@ -159,13 +120,9 @@ describe('httpClient — 402 paywall interceptor (R1 §1 R24 + §3.7 D7)', () =>
     expect(handler).not.toHaveBeenCalled();
   });
 
-  // ── No handler registered → no throw ─────────────────────────────────
-
   it('handler=null → 402 response does not throw / no crash', async () => {
     setPaywallHandler(null);
     const err = await requestWithStubbedResponse(402, QUOTA_BODY);
     expect(err).toBeTruthy();
-    // The interceptor must short-circuit when handler is null — no
-    // ReferenceError / TypeError surfacing.
   });
 });

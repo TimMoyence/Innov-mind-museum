@@ -14,12 +14,6 @@ import type {
 } from '@modules/museum/domain/museum/museum.types';
 import type { DataSource, Repository } from 'typeorm';
 
-/**
- * Cached at module level (set by `MuseumRepositoryPg.detectGeofenceMode()` on
- * first `findByCoords` call). Avoids `information_schema.columns` lookup on
- * every detect request. Module-level singleton is safe because the underlying
- * schema is immutable at runtime (migration-driven).
- */
 type GeofenceMode = 'postgis' | 'jsonb-bbox' | 'absent';
 let cachedGeofenceMode: GeofenceMode | null = null;
 
@@ -78,7 +72,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     }
   }
 
-  /** Mutates `entity`. */
   private applyUpdates(entity: Museum, input: UpdateMuseumInput): void {
     if (input.name !== undefined) entity.name = input.name;
     if (input.slug !== undefined) entity.slug = input.slug;
@@ -107,10 +100,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     });
   }
 
-  /**
-   * Simple BETWEEN filters on lat/lng — no PostGIS dependency. Antimeridian
-   * crossing (minLng > maxLng) intentionally not supported.
-   */
   async findInBoundingBox(bbox: BoundingBox): Promise<Museum[]> {
     const [minLng, minLat, maxLng, maxLat] = bbox;
     return await this.repo.find({
@@ -127,18 +116,12 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     await this.repo.delete(id);
   }
 
-  /**
-   * W3 geofence-containment lookup. Bootstrap-cached mode pick (introspects
-   * `information_schema.columns` once at first call). Returns `null` if no
-   * geofence column is present (e.g. migrations not yet run on this DB).
-   */
   async findByCoords(lat: number, lng: number): Promise<Museum | null> {
     const mode = await this.detectGeofenceMode();
 
     if (mode === 'absent') return null;
 
     if (mode === 'postgis') {
-      // ST_Contains uses the GIST index — sub-millisecond at V1 scale.
       const rows: { id: number }[] = await this.dataSource.query(
         `SELECT id FROM "museums"
          WHERE "is_active" = true
@@ -151,9 +134,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
       return await this.findById(rows[0].id);
     }
 
-    // jsonb-bbox path — load all museums with a bbox and filter in-app.
-    // V1 caps at < 100 museums so the scan is cheap ; no GiST equivalent
-    // for jsonb-stored rectangles without PostGIS.
     const rows: {
       id: number;
       geofence_bbox: { north: number; south: number; east: number; west: number } | null;
@@ -170,19 +150,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
     return null;
   }
 
-  /**
-   * One-shot column introspection — cached at module level so subsequent
-   * detect calls don't hit `information_schema`. Returns `'absent'` when
-   * neither column exists (defensive against partially-applied migrations).
-   *
-   * TD-42 — the cache is INTENTIONALLY boot-permanent, not TTL'd. In the prod
-   * deploy model migrations run to completion BEFORE the app boots, so the
-   * `museums` column set is fixed for the process lifetime; a TTL would re-hit
-   * `information_schema` on the hot detect path for a runtime-schema-change
-   * scenario that this deploy model never produces. The one case where the cache
-   * must be cleared is tests that apply the geofence migration mid-suite — use
-   * `_resetGeofenceModeCacheForTests()` (wired into the repo test `beforeEach`).
-   */
   private async detectGeofenceMode(): Promise<GeofenceMode> {
     if (cachedGeofenceMode !== null) return cachedGeofenceMode;
     const cols: { column_name: string }[] = await this.dataSource.query(
@@ -198,7 +165,6 @@ export class MuseumRepositoryPg implements IMuseumRepository {
   }
 }
 
-/** Test seam — clears the bootstrap-cached geofence mode. Do NOT use in prod. */
 export function _resetGeofenceModeCacheForTests(): void {
   cachedGeofenceMode = null;
 }

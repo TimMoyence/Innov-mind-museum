@@ -26,7 +26,9 @@ export function AdminPagination({ page, totalPages, total, onPageChange }: Admin
         <button
           type="button"
           disabled={page <= 1}
-          onClick={() => { onPageChange(page - 1); }}
+          onClick={() => {
+            onPageChange(page - 1);
+          }}
           className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           {adminDict.common.previous}
@@ -34,7 +36,9 @@ export function AdminPagination({ page, totalPages, total, onPageChange }: Admin
         <button
           type="button"
           disabled={page >= totalPages}
-          onClick={() => { onPageChange(page + 1); }}
+          onClick={() => {
+            onPageChange(page + 1);
+          }}
           className="rounded-md border border-primary-200 px-3 py-1 text-sm font-medium text-text-secondary hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           {adminDict.common.next}

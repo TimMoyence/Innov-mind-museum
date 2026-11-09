@@ -5,7 +5,6 @@ import type { GuideLevel } from '@/features/settings/runtimeSettings.pure';
 import { chatApi } from '../infrastructure/chatApi';
 import { sortByTime, mapApiMessageToUiMessage, type ChatUiMessage } from './chatSessionLogic.pure';
 
-/** Pluggable retry runner — swapped with a passthrough in tests to avoid real backoff delays. */
 export type OfflineSyncRetryRunner = <T>(op: () => Promise<T>) => Promise<T>;
 
 const DEFAULT_RETRY: OfflineSyncRetryRunner = (op) =>
@@ -21,19 +20,10 @@ interface UseOfflineSyncParams {
   peek: () => { id: string; sessionId: string; text?: string; imageUri?: string } | undefined;
   dequeue: () => void;
   setMessages: React.Dispatch<React.SetStateAction<ChatUiMessage[]>>;
-  /** Injected in tests to bypass real backoff delays. Defaults to {@link DEFAULT_RETRY}. */
   retry?: OfflineSyncRetryRunner;
-  /** Injected in tests for deterministic error classification. Defaults to {@link isRetryableError}. */
   isRetryable?: (error: unknown) => boolean;
 }
 
-/**
- * Flushes queued offline messages when connectivity is restored,
- * then re-fetches the session to merge assistant replies.
- *
- * Non-retryable errors (e.g. 400 validation) drop the poison item and continue.
- * Retryable errors (network, 5xx) stop the cycle — item stays queued for the next tick.
- */
 export const useOfflineSync = ({
   sessionId,
   isConnected,
@@ -65,8 +55,6 @@ export const useOfflineSync = ({
               location,
               guideLevel,
               locale,
-              // D2 — the queued item's stable id is the dedup key so a
-              // double-flush (flapping reconnect) collapses to one message.
               idempotencyKey: currentItem.id,
             }),
           );
@@ -74,10 +62,8 @@ export const useOfflineSync = ({
           flushedAny = true;
         } catch (err) {
           if (isRetryable(err)) {
-            // Retries exhausted — keep item queued for next connectivity tick
             break;
           }
-          // Non-retryable (e.g. 400 validation) — drop the poison item and continue
           dequeue();
           flushedAny = true;
         }
@@ -88,9 +74,7 @@ export const useOfflineSync = ({
         try {
           const response = await chatApi.getSession(sessionId);
           setMessages(sortByTime(response.messages.map(mapApiMessageToUiMessage)));
-        } catch {
-          // Sync failure is non-critical; user can pull-to-refresh
-        }
+        } catch {}
       }
     };
 

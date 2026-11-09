@@ -13,10 +13,6 @@ export const registerSchema = z.object({
   firstname: textField(TEXT_LIMITS.personName).optional(),
   lastname: textField(TEXT_LIMITS.personName).optional(),
   locale: z.enum(SUPPORTED_LOCALES as readonly [string, ...string[]]).optional(),
-  // CNIL Délibération 2021-018 — digital majority 15y. REQUIRED (A2): a missing or
-  // malformed DOB is rejected with 400 so the age gate cannot be bypassed. Below 15
-  // → BE returns MINOR_PARENTAL_CONSENT_REQUIRED. Use case parses + computes age
-  // server-side. Zod v4 — no `required_error` (lib-docs/zod/LESSONS.md).
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD'),
 });
 
@@ -36,12 +32,9 @@ export const logoutSchema = z.object({
 export const socialLoginSchema = z.object({
   provider: z.enum(['apple', 'google']),
   idToken: z.string().min(1),
-  // F3 — optional during mobile rollout; rejected when `OIDC_NONCE_ENFORCE=true`.
-  // 16 chars floor (~96 bits), 256 ceiling for client-hashed variants (no DoS).
   nonce: z.string().min(16).max(256).optional(),
 });
 
-// F11-mobile — bounds match OTC issuer: 22 chars (16 raw bytes) to 64 (entropy headroom).
 export const socialRedeemSchema = z.object({
   code: z
     .string()
@@ -85,16 +78,12 @@ export const updateContentPreferencesSchema = z.object({
     .max(CONTENT_PREFERENCES.length),
 });
 
-// Spec C T2.4 — `null` resets to env default. Unknown voice / non-string / missing → 400.
 export const updateTtsVoiceSchema = z.object({
   voice: z.enum(TTS_VOICES).nullable(),
 });
 
-// TD-2 — All fields optional; `.refine` blocks empty body. `defaultLocale`
-// permissive 2..8 char (BCP-47-ish) — FE keeps canonical whitelist.
 export const updateProfilePreferencesSchema = z
   .object({
-    defaultLocale: z.string().min(2).max(8).optional(),
     defaultMuseumMode: z.boolean().optional(),
     guideLevel: z.enum(['beginner', 'intermediate', 'expert']).optional(),
     dataMode: z.enum(['auto', 'low', 'normal']).optional(),

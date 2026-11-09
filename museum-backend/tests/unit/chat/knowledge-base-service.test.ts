@@ -7,14 +7,9 @@ import type {
   KnowledgeBaseServiceConfig,
 } from '@modules/chat/domain/ports/knowledge-base.port';
 
-// Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-
-// ---------------------------------------------------------------------------
-// Fake provider
-// ---------------------------------------------------------------------------
 
 class FakeProvider implements KnowledgeBaseProvider {
   public callCount = 0;
@@ -34,10 +29,6 @@ class FakeProvider implements KnowledgeBaseProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 const defaultConfig: KnowledgeBaseServiceConfig = {
   timeoutMs: 5_000,
   cacheTtlSeconds: 300,
@@ -50,16 +41,11 @@ const makeService = (
   cache = makeMockCache(),
 ) => ({ service: new KnowledgeBaseService(provider, config, cache), provider, cache });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('KnowledgeBaseService', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  // 1. Returns prompt block for valid lookup
   it('returns a prompt block for a valid lookup', async () => {
     const { service } = makeService();
 
@@ -70,7 +56,6 @@ describe('KnowledgeBaseService', () => {
     expect(result).toContain('Leonardo da Vinci');
   });
 
-  // 2. Returns '' when provider returns null
   it('returns empty string when provider returns null', async () => {
     const provider = new FakeProvider();
     provider.result = null;
@@ -81,7 +66,6 @@ describe('KnowledgeBaseService', () => {
     expect(result).toBe('');
   });
 
-  // 3. Returns '' on timeout (provider delays 600ms, config timeout 100ms)
   it('returns empty string on timeout', async () => {
     const provider = new FakeProvider();
     provider.delay = 600;
@@ -92,7 +76,6 @@ describe('KnowledgeBaseService', () => {
     expect(result).toBe('');
   }, 10_000);
 
-  // 4. Caches results (2 calls same term, provider called once)
   it('caches results — second call does not hit provider', async () => {
     const { service, provider, cache } = makeService();
 
@@ -100,11 +83,9 @@ describe('KnowledgeBaseService', () => {
     await service.lookup('Mona Lisa');
 
     expect(provider.callCount).toBe(1);
-    // Verify cache was populated
     expect(cache.store.has('kb:wikidata:mona lisa')).toBe(true);
   });
 
-  // 5. Cache key is normalized (case-insensitive)
   it('normalises cache key (case-insensitive, trimmed)', async () => {
     const { service, provider } = makeService();
 
@@ -114,7 +95,6 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(1);
   });
 
-  // 6. Cache TTL is passed to CacheService
   it('passes TTL to cache service on store', async () => {
     const cache = makeMockCache();
     const setSpy = jest.spyOn(cache, 'set');
@@ -133,7 +113,6 @@ describe('KnowledgeBaseService', () => {
     );
   });
 
-  // 7. Does not throw on provider error
   it('does not throw on provider error — returns empty string', async () => {
     const provider = new FakeProvider();
     provider.shouldThrow = true;
@@ -144,7 +123,6 @@ describe('KnowledgeBaseService', () => {
     expect(result).toBe('');
   });
 
-  // 8. Returns '' for empty search term
   it('returns empty string for empty search term', async () => {
     const { service, provider } = makeService();
 
@@ -153,10 +131,9 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(0);
   });
 
-  // 9. Works without cache service (no-cache fallback)
   it('works without cache service — always hits provider', async () => {
     const provider = new FakeProvider();
-    const service = new KnowledgeBaseService(provider, defaultConfig); // no cache
+    const service = new KnowledgeBaseService(provider, defaultConfig);
 
     await service.lookup('Mona Lisa');
     await service.lookup('Mona Lisa');
@@ -164,10 +141,8 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(2);
   });
 
-  // 10. Cache read failure falls through to provider (fail-open)
   it('falls through to provider when cache read fails', async () => {
     const cache = makeMockCache();
-    // Make cache.get throw on read
     cache.get = jest.fn().mockRejectedValue(new Error('Redis down'));
     const provider = new FakeProvider();
     const service = new KnowledgeBaseService(provider, defaultConfig, cache);
@@ -178,7 +153,6 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(1);
   });
 
-  // 11. Cache write failure does not affect response (fail-open)
   it('returns result even when cache write fails', async () => {
     const cache = makeMockCache();
     cache.set = jest.fn().mockRejectedValue(new Error('Redis full'));
@@ -191,7 +165,6 @@ describe('KnowledgeBaseService', () => {
     expect(provider.callCount).toBe(1);
   });
 
-  // 12. lookupFacts returns raw data from cache
   it('lookupFacts returns cached facts on cache hit', async () => {
     const cache = makeMockCache();
     const expectedFacts: ArtworkFacts = {
@@ -199,7 +172,6 @@ describe('KnowledgeBaseService', () => {
       title: 'Mona Lisa',
       artist: 'Leonardo da Vinci',
     };
-    // Pre-populate cache
     await cache.set('kb:wikidata:mona lisa', { facts: expectedFacts });
 
     const provider = new FakeProvider();
@@ -208,6 +180,6 @@ describe('KnowledgeBaseService', () => {
     const result = await service.lookupFacts('Mona Lisa');
 
     expect(result).toEqual(expectedFacts);
-    expect(provider.callCount).toBe(0); // Should not hit provider
+    expect(provider.callCount).toBe(0);
   });
 });

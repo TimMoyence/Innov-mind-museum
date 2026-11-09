@@ -54,19 +54,11 @@ import { makeMessage } from 'tests/helpers/chat/message.fixtures';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
-/**
- * C9.17 — orchestrator default path now goes exclusively through
- * `model.withStructuredOutput(schema).invoke()`. Test fakes that previously
- * returned a plain `invoke({ content })` payload were migrated to also expose
- * `withStructuredOutput`, which returns the parsed `MainAssistantOutput`
- * shape directly.
- */
 function makeFakeModel(answer: string, extra: Record<string, unknown> = {}) {
   const structuredInvoke = jest.fn().mockResolvedValue({
     text: answer,
     deeperContext: null,
     openQuestion: null,
-    suggestedFollowUp: null,
     imageDescription: null,
     suggestedImages: null,
     detectedArtwork: null,
@@ -181,15 +173,12 @@ describe('LangChainChatOrchestrator', () => {
         circuitBreaker,
       });
 
-      // generate() catches section errors and returns fallback,
-      // but the circuit breaker still records failures internally.
       const result1 = await orchestrator.generate(makeInput({ requestId: 'r1' }));
-      expect(result1.text).toBeTruthy(); // fallback text
+      expect(result1.text).toBeTruthy();
 
       const result2 = await orchestrator.generate(makeInput({ requestId: 'r2' }));
       expect(result2.text).toBeTruthy();
 
-      // After 2 failures the breaker should be OPEN
       expect(circuitBreaker.getState().state).toBe('OPEN');
       expect(circuitBreaker.getState().failureCount).toBeGreaterThanOrEqual(2);
     });
@@ -201,7 +190,6 @@ describe('LangChainChatOrchestrator', () => {
         openDurationMs: 60000,
       });
 
-      // Manually trip the breaker
       circuitBreaker.recordFailure();
 
       expect(circuitBreaker.getState().state).toBe('OPEN');
@@ -212,10 +200,6 @@ describe('LangChainChatOrchestrator', () => {
     });
 
     it('orchestrator.generate() fast-fails CircuitOpenError when breaker is OPEN at entry', async () => {
-      // Banking-grade contract: once the breaker is OPEN, generate() must
-      // surface 503/CIRCUIT_BREAKER_OPEN immediately without ever invoking
-      // the model — otherwise the section-level fallback would mask the
-      // degraded-dependency state behind a synthetic 201 response.
       const circuitBreaker = new LLMCircuitBreaker({
         failureThreshold: 1,
         windowMs: 60000,
@@ -249,7 +233,6 @@ describe('LangChainChatOrchestrator', () => {
           text: 'response',
           deeperContext: null,
           openQuestion: null,
-          suggestedFollowUp: null,
           imageDescription: null,
           suggestedImages: null,
           detectedArtwork: null,
@@ -271,7 +254,6 @@ describe('LangChainChatOrchestrator', () => {
         semaphore,
       });
 
-      // Fire two concurrent requests
       const [r1, r2] = await Promise.all([
         orchestrator.generate(makeInput({ requestId: 'req-1' })),
         orchestrator.generate(makeInput({ requestId: 'req-2' })),
@@ -279,7 +261,6 @@ describe('LangChainChatOrchestrator', () => {
 
       expect(r1.text).toBeTruthy();
       expect(r2.text).toBeTruthy();
-      // Semaphore with limit 1 should serialize requests
       expect(maxConcurrent).toBe(1);
     });
   });

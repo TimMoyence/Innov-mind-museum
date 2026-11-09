@@ -4,52 +4,26 @@ import type { OverpassMuseumResult } from '@shared/http/overpass.client';
 import type { NominatimGeocodingResult } from '@shared/http/nominatim.client';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/* ------------------------------------------------------------------ */
-/*  Mock: Overpass client                                              */
-/* ------------------------------------------------------------------ */
 type OverpassQueryArgs = [{ bbox?: number[]; lat?: number; lng?: number; radiusMeters?: number }];
 const mockQueryOverpassMuseums = jest.fn<Promise<OverpassMuseumResult[]>, OverpassQueryArgs>();
 
 jest.mock('@shared/http/overpass.client', () => ({
   queryOverpassMuseums: (...args: OverpassQueryArgs) => mockQueryOverpassMuseums(...args),
-  // The use case calls `createCachedOverpassClient(cache)` when a cache is
-  // injected; we stub it to return a thin wrapper that still forwards to the
-  // mocked raw fn, so all existing call-count assertions keep working without
-  // caring about the sentinel envelope or TTL semantics (those live in the
-  // cached-client unit tests).
   createCachedOverpassClient: () => mockQueryOverpassMuseums,
 }));
 
-/* ------------------------------------------------------------------ */
-/*  Mock: Nominatim client                                             */
-/* ------------------------------------------------------------------ */
 const mockGeocodeWithNominatim = jest.fn<Promise<NominatimGeocodingResult | null>, []>();
 
 jest.mock('@shared/http/nominatim.client', () => ({
   geocodeWithNominatim: (...args: unknown[]) => mockGeocodeWithNominatim(...(args as [])),
 }));
 
-/* ------------------------------------------------------------------ */
-/*  Mock: env (needed for cache TTL)                                   */
-/* ------------------------------------------------------------------ */
 jest.mock('@src/config/env', () => ({
   env: { overpassCacheTtlSeconds: 3600 },
 }));
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-/** Paris coordinates (reference point for all tests). */
 const PARIS = { lat: 48.8566, lng: 2.3522 };
 
-/**
- * Creates an OSM result near a given offset from Paris.
- * @param name
- * @param latOffset
- * @param lonOffset
- * @param osmId
- */
 const makeOsmResult = (
   name: string,
   latOffset: number,
@@ -64,7 +38,6 @@ const makeOsmResult = (
   museumType: 'general',
 });
 
-/** Creates a minimal in-memory cache for testing. */
 function createMockCache(): CacheService {
   const store = new Map<string, unknown>();
   return {
@@ -83,10 +56,6 @@ function createMockCache(): CacheService {
     ztop: jest.fn(async () => []),
   };
 }
-
-/* ------------------------------------------------------------------ */
-/*  Tests                                                              */
-/* ------------------------------------------------------------------ */
 
 describe('SearchMuseumsUseCase', () => {
   let repo: InMemoryMuseumRepository;
@@ -124,7 +93,6 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   it('deduplicates by proximity — prefers local when within 100m', async () => {
-    // Local museum at exact coords
     await repo.create({
       name: 'Louvre (local)',
       slug: 'louvre-local',
@@ -132,7 +100,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: 2.3376,
     });
 
-    // OSM result within ~10m of the local museum
     mockQueryOverpassMuseums.mockResolvedValueOnce([
       {
         name: 'Louvre (osm)',
@@ -146,15 +113,12 @@ describe('SearchMuseumsUseCase', () => {
 
     const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
 
-    // Only the local version should survive
     expect(result.museums).toHaveLength(1);
     expect(result.museums[0].name).toBe('Louvre (local)');
     expect(result.museums[0].source).toBe('local');
   });
 
   it('calculates distance correctly (haversine)', async () => {
-    // Place museum ~1km north of PARIS center
-    // ~0.009 degrees latitude is approximately 1km
     await repo.create({
       name: 'Nearby Museum',
       slug: 'nearby',
@@ -165,13 +129,11 @@ describe('SearchMuseumsUseCase', () => {
     const result = await useCase.execute({ ...PARIS, radiusMeters: 5000 });
 
     expect(result.museums).toHaveLength(1);
-    // Distance should be ~1000m (haversine allows some tolerance)
     expect(result.museums[0].distance).toBeGreaterThan(900);
     expect(result.museums[0].distance).toBeLessThan(1100);
   });
 
   it('sorts results by distance ascending', async () => {
-    // Far museum
     await repo.create({
       name: 'Far Museum',
       slug: 'far',
@@ -179,7 +141,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Close museum
     await repo.create({
       name: 'Close Museum',
       slug: 'close',
@@ -187,7 +148,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Medium museum
     await repo.create({
       name: 'Medium Museum',
       slug: 'medium',
@@ -205,7 +165,6 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   it('respects max radius (caps at 50km)', async () => {
-    // Museum at ~60km away (~0.54 degrees latitude)
     await repo.create({
       name: 'Very Far Museum',
       slug: 'very-far',
@@ -213,7 +172,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Museum within 50km
     await repo.create({
       name: 'Within Range',
       slug: 'within-range',
@@ -221,7 +179,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Request radius of 100km — should be capped to 50km
     const result = await useCase.execute({ ...PARIS, radiusMeters: 100_000 });
 
     expect(result.museums).toHaveLength(1);
@@ -236,7 +193,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: 2.3376,
     });
 
-    // Overpass returns empty on failure (the client catches errors internally)
     mockQueryOverpassMuseums.mockResolvedValueOnce([]);
 
     const result = await useCase.execute({ ...PARIS, radiusMeters: 10_000 });
@@ -247,9 +203,6 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   it('delegates Overpass lookups to the injected cached search fn (one call per execute)', async () => {
-    // Direct-inject a cached search fn via the deps bag. The use case must
-    // call it exactly once per execute and merge its results — no DB cache
-    // key arithmetic leaks back into the use case.
     const overpassSearch = jest.fn().mockResolvedValue([makeOsmResult('Injected', 0.001, 0.001)]);
     const cachedUseCase = new SearchMuseumsUseCase(repo, { overpassSearch });
 
@@ -263,7 +216,6 @@ describe('SearchMuseumsUseCase', () => {
 
     await cachedUseCase.execute({ ...PARIS, radiusMeters: 10_000 });
     expect(overpassSearch).toHaveBeenCalledTimes(2);
-    // The raw mock is NEVER hit when overpassSearch is directly injected.
     expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
   });
 
@@ -312,7 +264,6 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   it('uses default radius of 30km when not provided', async () => {
-    // Museum at ~8km (within default 30km radius)
     await repo.create({
       name: 'Within Default',
       slug: 'within-default',
@@ -320,7 +271,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Museum at ~25km (within default 30km radius)
     await repo.create({
       name: 'Also Within Default',
       slug: 'also-within-default',
@@ -328,7 +278,6 @@ describe('SearchMuseumsUseCase', () => {
       longitude: PARIS.lng,
     });
 
-    // Museum at ~40km (outside default 30km radius)
     await repo.create({
       name: 'Outside Default',
       slug: 'outside-default',
@@ -349,7 +298,6 @@ describe('SearchMuseumsUseCase', () => {
     await repo.create({
       name: 'No Coords Museum',
       slug: 'no-coords',
-      // no latitude/longitude
     });
 
     await repo.create({
@@ -366,7 +314,6 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   it('geocodes text-only search via Nominatim then searches Overpass', async () => {
-    // Nominatim resolves "Lyon" to Lyon coordinates
     const LYON = { lat: 45.764, lng: 4.8357 };
     mockGeocodeWithNominatim.mockResolvedValueOnce(LYON);
 
@@ -400,7 +347,6 @@ describe('SearchMuseumsUseCase', () => {
 
     const result = await useCase.execute({});
 
-    // No coordinates → no Overpass call, no Nominatim call
     expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
     expect(mockGeocodeWithNominatim).not.toHaveBeenCalled();
 
@@ -429,10 +375,8 @@ describe('SearchMuseumsUseCase', () => {
 
     const result = await useCase.execute({ q: 'Lyon' });
 
-    // Nominatim failed → no coordinates → no Overpass
     expect(mockQueryOverpassMuseums).not.toHaveBeenCalled();
 
-    // Should filter local museums by q
     expect(result.museums).toHaveLength(1);
     expect(result.museums[0].name).toBe('Musee de Lyon');
   });
@@ -447,12 +391,7 @@ describe('SearchMuseumsUseCase', () => {
     expect(result.museums).toHaveLength(0);
   });
 
-  /* ---------------------------------------------------------------- */
-  /*  Bbox search branch                                              */
-  /* ---------------------------------------------------------------- */
-
   describe('bbox search', () => {
-    /** Lisbon-ish bbox: ~5km square around 38.72/-9.14. */
     const LISBON_BBOX: [number, number, number, number] = [-9.18, 38.69, -9.1, 38.75];
 
     it('returns local museums whose coordinates fall inside the bbox', async () => {
@@ -491,7 +430,6 @@ describe('SearchMuseumsUseCase', () => {
 
       await useCase.execute({ ...PARIS, radiusMeters: 5_000, bbox: LISBON_BBOX });
 
-      // Only the bbox query path should be used; the radius path uses a different cache key.
       expect(mockQueryOverpassMuseums).toHaveBeenCalledTimes(1);
       const [callArgs] = mockQueryOverpassMuseums.mock.calls[0];
       expect(callArgs.bbox).toEqual(LISBON_BBOX);
@@ -507,7 +445,6 @@ describe('SearchMuseumsUseCase', () => {
     });
 
     it('measures distance from the bbox center', async () => {
-      // bbox center ≈ (38.72, -9.14)
       await repo.create({
         name: 'Centro',
         slug: 'centro',
@@ -519,25 +456,11 @@ describe('SearchMuseumsUseCase', () => {
       const result = await useCase.execute({ bbox: LISBON_BBOX });
 
       expect(result.museums).toHaveLength(1);
-      // Distance from centro to bbox center should be small (<300m given rounding).
       expect(result.museums[0].distance).toBeLessThan(300);
     });
   });
 
-  /* ---------------------------------------------------------------- */
-  /*  OSM deduplication with name similarity                          */
-  /* ---------------------------------------------------------------- */
-
-  /* ---------------------------------------------------------------- */
-  /*  Overpass cached-client DI wiring                                 */
-  /* ---------------------------------------------------------------- */
-
   describe('Overpass cached-client DI wiring', () => {
-    // The TTLs, cache-key shape and sentinel envelope are the cached-client's
-    // contract — exercised in tests/unit/shared/overpass-cached-client.test.ts.
-    // Here we only verify the use case's DI contract: when a cache is injected,
-    // the search call funnels through the cached client instead of the raw fn.
-
     it('forwards a radius search via the cached client factory wired from the injected cache', async () => {
       const cache = createMockCache();
       const cachedUseCase = new SearchMuseumsUseCase(repo, cache);
@@ -575,11 +498,9 @@ describe('SearchMuseumsUseCase', () => {
   });
 
   describe('OSM deduplication with name similarity', () => {
-    /** Bordeaux CAPC coordinates (reference for CAPC dedup scenarios). */
     const CAPC = { lat: 44.8497, lng: -0.5714 };
 
     it('collapses duplicate OSM entries for CAPC when a local CAPC exists (short vs long name, >100m apart)', async () => {
-      // Local CAPC at exact museum coords.
       await repo.create({
         name: 'CAPC',
         slug: 'capc',
@@ -587,10 +508,6 @@ describe('SearchMuseumsUseCase', () => {
         longitude: CAPC.lng,
       });
 
-      // Two OSM duplicates:
-      //   A: co-located with local → dropped by pure-distance rule (<100m).
-      //   B: ~164m away with a similar but longer name → dropped by
-      //      name-gated rule (<500m AND similar names).
       mockQueryOverpassMuseums.mockResolvedValueOnce([
         {
           name: "CAPC musée d'art contemporain",
@@ -618,8 +535,6 @@ describe('SearchMuseumsUseCase', () => {
     });
 
     it('collapses two OSM entries 50m apart into one (Louvre duplicate nodes)', async () => {
-      // No local museum — we want to see that OSM<->OSM dedup happens
-      // before merging with locals.
       mockQueryOverpassMuseums.mockResolvedValueOnce([
         {
           name: 'Musée du Louvre',
@@ -644,7 +559,6 @@ describe('SearchMuseumsUseCase', () => {
       expect(result.count).toBe(1);
       expect(result.museums[0].name).toBe('Musée du Louvre');
       expect(result.museums[0].source).toBe('osm');
-      // Representative pick should be the one with the richer address.
       expect(result.museums[0].address).toBe('Rue de Rivoli');
     });
 
@@ -675,8 +589,6 @@ describe('SearchMuseumsUseCase', () => {
     });
 
     it('keeps two distinct OSM museums 200m apart when their names differ', async () => {
-      // Picasso + Carnavalet: real Paris-Marais neighbours, ~200m apart,
-      // NOT the same museum. Name similarity must save them.
       mockQueryOverpassMuseums.mockResolvedValueOnce([
         {
           name: 'Musée Picasso',

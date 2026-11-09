@@ -23,7 +23,6 @@ export default async function SupportPage({ params }: SupportPageProps) {
 
   return (
     <div className="bg-white">
-      {/* Header */}
       <section className="bg-gradient-to-b from-primary-50 to-white py-16 text-center sm:py-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <h1 className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
@@ -33,7 +32,6 @@ export default async function SupportPage({ params }: SupportPageProps) {
         </div>
       </section>
 
-      {/* FAQ */}
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="space-y-4">
           {dict.support.faq.map((item, i) => (
@@ -63,7 +61,6 @@ export default async function SupportPage({ params }: SupportPageProps) {
         </div>
       </section>
 
-      {/* Contact Form */}
       <section className="mx-auto max-w-xl px-4 pb-20 sm:px-6">
         <h2 className="mb-8 text-center text-2xl font-bold text-text-primary">
           {dict.support.contact.title}

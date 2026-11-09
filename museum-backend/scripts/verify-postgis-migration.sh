@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-# verify-postgis-migration.sh — One-shot verification of the PostGIS branch
-# of the hybrid AddMuseumGeofence migration (W3 IMP-2 follow-up).
-#
-# The dev stack uses pgvector/pgvector:pg16 which lacks PostGIS, so the
-# hybrid migration falls back to the JSONB branch in CI. This script spins
-# up a temporary postgis/postgis:16 container, points the migration CLI at
-# it, runs the forward + revert chain, and asserts the PostGIS column was
-# created. Tears down at the end.
-#
-# Usage: bash museum-backend/scripts/verify-postgis-migration.sh
-#
-# Exit codes:
-#   0 PostGIS branch verified end-to-end.
-#   1 Generic failure (logs printed verbatim).
-#   2 Schema assertion failed (column not `geometry` type).
 set -euo pipefail
 
 CONTAINER_NAME="${POSTGIS_VERIFY_CONTAINER:-museum-postgis-verify}"
@@ -22,8 +7,6 @@ DB_NAME="${POSTGIS_VERIFY_DB:-museum_pg_verify}"
 DB_USER="${POSTGIS_VERIFY_USER:-museum}"
 DB_PASS="${POSTGIS_VERIFY_PASS:-museum}"
 IMAGE="${POSTGIS_VERIFY_IMAGE:-postgis/postgis:16-3.5}"
-# Empty by default = native arch. On Apple Silicon (no upstream ARM64 manifest
-# for postgis/postgis), export POSTGIS_VERIFY_PLATFORM=linux/amd64.
 PLATFORM="${POSTGIS_VERIFY_PLATFORM:-}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -56,11 +39,6 @@ for i in $(seq 1 30); do
 done
 docker exec "$CONTAINER_NAME" pg_isready -U "$DB_USER" -d "$DB_NAME"
 
-# Install pgvector — postgis/postgis ships without it, but the migration chain
-# includes AddArtworkEmbeddings (CREATE EXTENSION vector). Without this step the
-# migration:run aborts before reaching AddMuseumGeofence (the target of this
-# verification). postgis/postgis:16-3.5 is Debian bullseye + postgres-apt repo
-# is pre-configured, so the package is available without adding sources.
 echo "--- installing postgresql-16-pgvector ---"
 docker exec "$CONTAINER_NAME" sh -c 'apt-get update -qq && apt-get install -y -qq postgresql-16-pgvector' >/dev/null
 

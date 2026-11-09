@@ -13,7 +13,6 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/** Renders the Terms of Service screen with versioned legal sections and navigation to Privacy Policy. */
 export default function TermsScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();

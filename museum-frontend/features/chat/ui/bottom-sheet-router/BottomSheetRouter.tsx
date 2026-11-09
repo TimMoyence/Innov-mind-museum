@@ -14,56 +14,19 @@ import { BottomSheetContainer, type BottomSheetContainerPhase } from './BottomSh
 import { ROUTES, type BottomSheetRouteId } from './routes';
 
 interface BottomSheetRouterProps {
-  /** Optional callback invoked once a route finishes closing. */
   onRouteClose?: (route: BottomSheetRouteId) => void;
 }
 
-/**
- * Single-mount router that hosts the active bottom-sheet route. Reads the
- * module-level store (`bottomSheetStore.ts`) so consumers do not need to wrap
- * their tree in a provider — `useBottomSheetRouter()` reaches the same state
- * from any depth.
- *
- * Behaviour:
- *   - The reducer holds the discrete phase (`opening | open | closing`);
- *     `<BottomSheetContainer>` plays the actual animation and dispatches the
- *     terminal `OPEN_DONE` / `CLOSE_DONE` events when each animation settles.
- *     This decoupling is the spec R12 sequencing — the next route only mounts
- *     once the exit anim has played.
- *   - Mounts the route's `Content` component inside a `<BottomSheetContainer>`
- *     that handles the visual shell, dialog a11y attributes, swipe-down
- *     dismiss (R8), and Android hardware-back wiring (R9).
- *   - Announces the route's `a11yAnnounceKey` (translated) via
- *     `AccessibilityInfo.announceForAccessibility` exactly once per mount
- *     (spec R17).
- *   - Restores screen-reader focus to the element that invoked `open()`
- *     after close, best-effort via `AccessibilityInfo.setAccessibilityFocus`
- *     (spec R15-R16). The call-site MUST supply the trigger node handle in
- *     the `open()` params (via `findNodeHandle(triggerRef.current)`); the
- *     router stores it and replays it after the route closes. When no handle
- *     is provided, the restore is a no-op — there is no automatic capture in
- *     RN 0.83 (no public `getCurrentlyFocusedField` for arbitrary views),
- *     this is documented honestly rather than faked.
- */
 export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
   const { t } = useTranslation();
   const state = useBottomSheetState();
   const onRouteCloseRef = useRef(onRouteClose);
-  // Sync the latest callback into the ref inside a layout effect — accessing
-  // `.current` during render is flagged by `react-hooks/refs`.
   useEffect(() => {
     onRouteCloseRef.current = onRouteClose;
   }, [onRouteClose]);
 
-  // Trigger node handle captured at the call-site (R15-R16). We store it
-  // alongside the active route so we can replay `setAccessibilityFocus` once
-  // the close animation settles. Best-effort: when the value is `null` the
-  // restore is skipped silently.
   const triggerTagRef = useRef<number | null>(null);
 
-  // The router state lives in a module-level store so the hook works without
-  // a provider tree. When the router itself unmounts (screen pops, e.g.
-  // navigation back), clear the store so a future remount starts fresh.
   useEffect(() => {
     return () => {
       resetBottomSheetState();
@@ -71,19 +34,12 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
     };
   }, []);
 
-  // Capture trigger handle — the hook publishes it before the OPEN event is
-  // dispatched (see `useBottomSheetRouter.open(...)`).
   useEffect(() => {
     return subscribeBottomSheetTriggerCapture((handle) => {
       triggerTagRef.current = handle;
     });
   }, []);
 
-  // Route-close subscription — `<BottomSheetContainer>` dispatches CLOSE_DONE
-  // when the exit animation settles; the store fan-outs to listeners with the
-  // route id of the just-closed sheet. We restore screen-reader focus here
-  // (R16) BEFORE invoking the call-site callback, so the call-site can run
-  // its own focus tweaks after if needed.
   useEffect(() => {
     const unsubscribe = subscribeBottomSheetClose((route) => {
       const tag = triggerTagRef.current;
@@ -96,7 +52,6 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
     return unsubscribe;
   }, []);
 
-  // Announce route on mount, exactly once until the route changes.
   const announcedRouteRef = useRef<BottomSheetRouteId | null>(null);
   useEffect(() => {
     if (state.kind === 'opening' || state.kind === 'open') {
@@ -113,23 +68,13 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
     }
   }, [state, t]);
 
-  const handleBackdropPress = useCallback(() => {
-    if (state.kind !== 'open' && state.kind !== 'opening') return;
-    if (state.blocking) return;
-    dispatchBottomSheetEvent({ type: 'CLOSE' });
-  }, [state]);
-
-  const handleHardwareBack = useCallback(() => {
+  const closeUnlessBlocking = useCallback(() => {
     if (state.kind !== 'open' && state.kind !== 'opening') return;
     if (state.blocking) return;
     dispatchBottomSheetEvent({ type: 'CLOSE' });
   }, [state]);
 
   const closeFromContent = useCallback(() => {
-    // CTA_CLOSE bypasses the `blocking: true` gate — the user is making an
-    // explicit in-sheet choice (e.g. "Accept all" on consent, "Acknowledge"
-    // on voice-intro, "Dismiss" on daily-limit). Backdrop/swipe/back keep
-    // dispatching plain CLOSE so the gate still applies to them.
     dispatchBottomSheetEvent({ type: 'CTA_CLOSE' });
   }, []);
 
@@ -142,26 +87,17 @@ export const BottomSheetRouter = ({ onRouteClose }: BottomSheetRouterProps) => {
     const phase: BottomSheetContainerPhase = state.kind;
     const enableSwipeDown = definition.presentation === 'sheet' && !definition.blocking;
     return (
-      // `key={state.route}` forces React to UNMOUNT the previous container and
-      // MOUNT a fresh one when the route id flips (chained replace via
-      // `closing(prev) → opening(queued)`). Without this key the same
-      // `<BottomSheetContainer>` instance is reused across the route swap, its
-      // mount-only entrance `useEffect` (deps `[]`) never re-fires, the stale
-      // Animated.Values stay at (opacity=0, translateY=40) from the exit anim,
-      // and `OPEN_DONE` is never dispatched — leaving the reducer wedged in
-      // `opening(queued)` with the new content invisible. See bug_010 (B4
-      // cartel-scanner flow) and `chained-replace.test.tsx`.
       <BottomSheetContainer
         key={state.route}
         presentation={definition.presentation}
         enableSwipeDown={enableSwipeDown}
         phase={phase}
         accessibilityLabel={t(definition.a11yAnnounceKey)}
-        onBackdropPress={handleBackdropPress}
-        onHardwareBack={handleHardwareBack}
+        onBackdropPress={closeUnlessBlocking}
+        onHardwareBack={closeUnlessBlocking}
       >
         <Content {...params} close={closeFromContent} />
       </BottomSheetContainer>
     );
-  }, [state, t, handleBackdropPress, handleHardwareBack, closeFromContent]);
+  }, [state, t, closeUnlessBlocking, closeFromContent]);
 };

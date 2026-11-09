@@ -1,3 +1,4 @@
+import { randomSource } from '@shared/utils/random';
 import {
   createCachedOverpassClient,
   type OverpassMuseumResult,
@@ -9,7 +10,6 @@ jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { logger: mockedLogger } = require('@shared/logger/logger') as {
   logger: { warn: jest.Mock; info: jest.Mock; error: jest.Mock };
 };
@@ -95,7 +95,6 @@ describe('createCachedOverpassClient', () => {
         { value: unknown; storedAtMs: number; ttlSeconds: number },
         number,
       ];
-      // Key rounded to 3 decimals for lat/lng and 1 decimal for radius km.
       expect(key).toBe('overpass:nearby:48.861:2.338:5.0');
       expect(stored.value).toHaveLength(1);
       expect(stored.ttlSeconds).toBe(86_400);
@@ -144,7 +143,7 @@ describe('createCachedOverpassClient', () => {
       global.fetch = jest
         .fn()
         .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
-      jest.spyOn(Math, 'random').mockReturnValue(0);
+      jest.spyOn(randomSource, 'unit').mockReturnValue(0);
       const ttlSeconds = 86_400;
       const cache = makeCache({
         get: jest.fn().mockResolvedValue({
@@ -210,16 +209,13 @@ describe('createCachedOverpassClient', () => {
       const cache = makeCache({
         get: jest.fn().mockResolvedValue(cachedEntry),
       });
-      // Force the coin flip to win.
-      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = jest.spyOn(randomSource, 'unit').mockReturnValue(0);
 
       const client = createCachedOverpassClient(cache);
       const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
 
-      // Cached value returned immediately.
       expect(result).toEqual([SAMPLE_PARSED]);
 
-      // Yield so the background refresh schedules and lands its cache.set.
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -238,7 +234,7 @@ describe('createCachedOverpassClient', () => {
       const cache = makeCache({
         get: jest.fn().mockResolvedValue(cachedEntry),
       });
-      const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+      const randomSpy = jest.spyOn(randomSource, 'unit').mockReturnValue(0);
       const client = createCachedOverpassClient(cache);
 
       await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
@@ -254,14 +250,11 @@ describe('createCachedOverpassClient', () => {
       const cache = makeCache();
       const client = createCachedOverpassClient(cache);
 
-      // No bbox and partial coords → buildOverpassCacheKey returns null.
       const result = await client({ lat: 48.86, lng: 2.34 });
 
       expect(result).toEqual([]);
       expect(cache.get).not.toHaveBeenCalled();
       expect(cache.set).not.toHaveBeenCalled();
-      // Live path is queryOverpassMuseums which also short-circuits on missing
-      // radius — and importantly must NOT have hit fetch.
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
@@ -290,12 +283,10 @@ describe('createCachedOverpassClient', () => {
 
       const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
 
-      // Live result MUST still be returned despite the cache write blowing up.
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ name: 'Louvre', museumType: 'art' });
       expect(cache.set).toHaveBeenCalledTimes(1);
 
-      // Exact message + context shape — pins the StringLiteral + ObjectLiteral mutants.
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Overpass cache write failed, serving live result',
         expect.objectContaining({
@@ -327,9 +318,6 @@ describe('createCachedOverpassClient', () => {
   });
 
   describe('cache.get failure path', () => {
-    // Kills L169 BlockStatement (catch body empty) + L170 StringLiteral
-    // ('Overpass cache read failed, falling back to live') on the cache.get
-    // try/catch. Original logs a warn with the exact message + cacheKey.
     it('falls back to live result and logs a warn when cache.get throws', async () => {
       const getError = new Error('redis read down');
       const cache = makeCache({
@@ -341,7 +329,6 @@ describe('createCachedOverpassClient', () => {
 
       const result = await client({ lat: 48.8606, lng: 2.3376, radiusMeters: 5_000 });
 
-      // Live fetch must still succeed.
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ name: 'Louvre', museumType: 'art' });
       expect(cache.get).toHaveBeenCalledTimes(1);

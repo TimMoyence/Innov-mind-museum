@@ -12,8 +12,6 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
-// TD-RNGH-04 — ReanimatedSwipeable is exported from a subpath ; mock it
-// separately so the post-migration import resolves under Jest.
 jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   const { View } = require('react-native');
   return {

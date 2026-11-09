@@ -10,14 +10,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO, NpsResponse, UserRole } from '@/lib/admin-types';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-/**
- * Roles allowed to pivot the NPS view across museums. `museum_manager` is
- * intentionally excluded (R25): the backend already forces a manager to its
- * own tenant (and 403s a NULL claim), but the UI must not even present a
- * cross-tenant selector. `super_admin` implicitly satisfies any admin check.
- */
 const SELECTOR_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
   'admin',
   'moderator',
@@ -25,41 +17,29 @@ const SELECTOR_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
 ]);
 
 interface NpsBucketPoint {
-  /** Bucket label, sourced from the admin dictionary. */
   name: string;
-  /** Response count for the bucket. */
   count: number;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+function withMuseumScope(path: string, museumId: string): string {
+  if (!museumId) return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}museumId=${encodeURIComponent(museumId)}`;
+}
 
 export default function NpsPage() {
   const adminDict = useAdminDict();
   const { user } = useAuth();
   const showSelector = user ? SELECTOR_ROLES.has(user.role) : false;
 
-  // Data state — the endpoint payload is consumed verbatim (R27, no
-  // client-side re-aggregation).
   const [nps, setNps] = useState<NpsResponse | null>(null);
   const [museums, setMuseums] = useState<MuseumDTO[]>([]);
 
-  // Filter state. '' = global (all museums) — only reachable by SELECTOR_ROLES.
   const [museumId, setMuseumId] = useState<string>('');
 
-  // UI state.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Append `?museumId=` only when a specific museum is selected; otherwise the
-  // endpoint returns the global aggregate (R13). Managers never reach this
-  // branch — the selector is hidden and `museumId` stays ''.
-  function withMuseumScope(path: string): string {
-    if (!museumId) return path;
-    const sep = path.includes('?') ? '&' : '?';
-    return `${path}${sep}museumId=${encodeURIComponent(museumId)}`;
-  }
-
-  // ── Fetch the NPS aggregate on mount + whenever the scope changes ─────────
   useEffect(() => {
     const tick = { cancelled: false };
 
@@ -67,15 +47,11 @@ export default function NpsPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiGet<NpsResponse>(withMuseumScope('/api/admin/nps'));
+        const data = await apiGet<NpsResponse>(withMuseumScope('/api/admin/nps', museumId));
         if (tick.cancelled) return;
         setNps(data);
       } catch (err) {
         if (tick.cancelled) return;
-        // F6 — a museum_manager with a NULL museumId claim still sees this page
-        // (the nav link is shown) but the backend 403s the read with
-        // `forbidden('No museum assigned')` / `'Museum scope required'`. Surface
-        // a clear, actionable message instead of the raw technical 403 text.
         if (err instanceof ApiError && err.status === 403) {
           setError(adminDict.npsPage.noMuseumAssigned);
         } else {
@@ -90,10 +66,8 @@ export default function NpsPage() {
     return () => {
       tick.cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + museumId-driven re-fetch; adminDict is stable per provider
-  }, [museumId]);
+  }, [museumId, adminDict.common.noData, adminDict.npsPage.noMuseumAssigned]);
 
-  // ── Load the museum list once for the selector (non-managers only) ────────
   useEffect(() => {
     if (!showSelector) return;
     const tick = { cancelled: false };
@@ -103,10 +77,7 @@ export default function NpsPage() {
         const data = await apiGet<{ museums?: MuseumDTO[]; data?: MuseumDTO[] }>('/api/museums');
         if (tick.cancelled) return;
         setMuseums(data.museums ?? data.data ?? []);
-      } catch {
-        // The selector still works with just the "all museums" option; if the
-        // list endpoint is unreachable we degrade to the global view only.
-      }
+      } catch {}
     }
 
     void loadMuseums();
@@ -115,7 +86,6 @@ export default function NpsPage() {
     };
   }, [showSelector]);
 
-  // ── Derived chart data (R27 — straight from the payload) ──────────────────
   const bucketData = useMemo<NpsBucketPoint[]>(() => {
     if (!nps) return [];
     return [
@@ -127,7 +97,6 @@ export default function NpsPage() {
 
   const hasResponses = !!nps && nps.count > 0;
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -157,17 +126,14 @@ export default function NpsPage() {
         )}
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Error */}
       {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
-      {/* KPI cards + distribution — only once we have a payload */}
       {nps && (
         <>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -211,11 +177,6 @@ export default function NpsPage() {
 
             <div className="mt-6">
               {hasResponses ? (
-                // recharts a11y (LESSONS F9): the SVG announces nothing on its
-                // own, so the chart wrapper carries role="img" + a dictionary
-                // aria-label. The bucket counts are already exposed verbatim by
-                // the KPI cards above, so no duplicate tabular mirror is needed
-                // (WCAG 1.1.1 / 1.3.1 satisfied by label + KPI text).
                 <div role="img" aria-label={adminDict.npsPage.chartAriaLabel}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={bucketData}>

@@ -36,11 +36,6 @@ interface MuseumMapViewProps {
   museums: MuseumWithDistance[];
   userLatitude: number | null;
   userLongitude: number | null;
-  /**
-   * Fired after the user pans the map. The `bbox` corresponds to the new
-   * visible area as `[minLng, minLat, maxLng, maxLat]` and is used by the
-   * "search in this area" button to query museums inside the viewport.
-   */
   onMapMoved?: (lat: number, lng: number, bbox: [number, number, number, number]) => void;
   onMuseumSelect?: (museum: MuseumWithDistance) => void;
 }
@@ -72,15 +67,6 @@ const userPositionToCollection = (lat: number, lng: number): FeatureCollection<P
   ],
 });
 
-/**
- * Renders an interactive MapLibre Native map with museum markers and the
- * user's current position. Tiles are OSM/CartoDB raster so offline packs
- * created via `OfflineManager.createPack` cache the same imagery the app
- * displays online.
- *
- * The component preserves the legacy Leaflet prop contract so
- * `app/(tabs)/museums.tsx` integration does not change.
- */
 export const MuseumMapView = ({
   museums,
   userLatitude,
@@ -110,16 +96,8 @@ export const MuseumMapView = ({
     [userLatitude, userLongitude],
   );
 
-  // Camera starts on the previously persisted view (last explicit user pan)
-  // when available, otherwise GPS, otherwise a world-centered default. The Map
-  // is rendered only after this resolves so we never paint the wrong region
-  // first and then jump.
   const initialViewState = useMapInitialViewState(museums, userLatitude, userLongitude);
 
-  // Fits the camera around museums + user position. Guards against the
-  // MapLibre Camera ref being populated asynchronously (the ref is set only
-  // after the native map view mounts, so the first effect invocation on new
-  // data can land before the ref is ready — we retry on load completion).
   const fitCameraToData = useCallback(() => {
     if (userPannedRef.current) return;
     const camera = cameraRef.current;
@@ -131,7 +109,6 @@ export const MuseumMapView = ({
       hasFittedRef.current = true;
       return;
     }
-    // First fit is always instant regardless of reduceMotion — no animation before first paint.
     const duration = !hasFittedRef.current || reduceMotion ? 0 : FIT_DURATION_MS;
     if (target.kind === 'flyTo') {
       camera.flyTo({ center: target.center, zoom: target.zoom, duration });
@@ -153,11 +130,6 @@ export const MuseumMapView = ({
     fitCameraToData();
   }, [fitCameraToData]);
 
-  // Render-start instrumentation depends on the museum dataset, NOT on the
-  // memoized fit callback. Splitting preserves the original dep set
-  // (`[museumCollection]`) — combining would widen the trigger to whatever
-  // `fitCameraToData` closes over (reduceMotion, GPS), causing extra dev-only
-  // perf marks on unrelated re-renders.
   useEffect(() => {
     if (__DEV__) {
       perfStore.markRenderStart();
@@ -171,8 +143,6 @@ export const MuseumMapView = ({
         userPannedRef.current = true;
       }
       const [lng, lat] = center;
-      // Persist only explicit user moves. Programmatic fits intentionally skip
-      // so the cached camera mirrors the user's last deliberate intent.
       mapCameraCache.save({ centerLng: lng, centerLat: lat, zoom }, userInteraction);
       if (!onMapMoved) return;
       onMapMoved(lat, lng, bounds);
@@ -226,8 +196,6 @@ export const MuseumMapView = ({
 
   const handleDidFinishLoadingMap = useCallback(() => {
     setHasLoadError(false);
-    // Skip retry if the data-driven effect already ran the fit once the camera
-    // was ready — otherwise we'd double-fit and the map would visibly jump.
     if (hasFittedRef.current) return;
     fitCameraToData();
   }, [fitCameraToData]);
@@ -241,9 +209,6 @@ export const MuseumMapView = ({
   const mapA11yLabel = t('museumDirectory.map_a11y_label', { count: visibleMuseumCount });
 
   if (initialViewState === null) {
-    // AsyncStorage lookup is async; holding the Map mount until we resolve the
-    // starting view prevents a flicker where the camera would render with
-    // defaults then jump to the cached/GPS position on the next frame.
     return (
       <View
         style={[styles.container, styles.loadingContainer]}

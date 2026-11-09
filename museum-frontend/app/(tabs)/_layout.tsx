@@ -8,13 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic } from '@/shared/ui/tokens';
 
-// Visual height of the floating pill, independent of the device's home
-// indicator inset. We add `insets.bottom` at render time to the marginBottom
-// so the tab bar floats correctly above the home indicator on every device.
 export const TAB_BAR_VISUAL_HEIGHT = 64;
 export const TAB_BAR_FLOATING_GAP = 12;
 
-/** Renders the bottom tab navigator with Dashboard and Home tabs using a frosted-glass tab bar. */
 export default function TabLayout() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -36,9 +32,6 @@ export default function TabLayout() {
             marginBottom: insets.bottom + TAB_BAR_FLOATING_GAP,
           },
         ],
-        // Apple-style liquid glass: on iOS use the native adaptive material
-        // (vibrant, picks up the colour of whatever it floats over) rather than
-        // the flat 'light'/'dark' frost. No solid fill — the glass stays pure.
         tabBarBackground: () => (
           <BlurView
             tint={
@@ -91,12 +84,13 @@ export default function TabLayout() {
   );
 }
 
+const TAB_BAR_BACKGROUND = 'transparent';
+
 const styles = StyleSheet.create({
-  // eslint-disable-next-line react-native/no-color-literals -- transparent is a standard value
   tabBar: {
     position: 'absolute',
     borderTopWidth: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: TAB_BAR_BACKGROUND,
     paddingBottom: semantic.card.gapSmall,
     paddingTop: semantic.card.gapSmall,
     marginHorizontal: semantic.form.gapLarge,

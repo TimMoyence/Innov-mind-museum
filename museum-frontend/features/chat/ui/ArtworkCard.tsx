@@ -11,23 +11,22 @@ interface ArtworkCardProps {
   museum?: string;
   room?: string;
   confidence?: number;
-  /**
-   * C9.18 (2026-05-17) — when provided alongside `onPress`, makes the card
-   * tappable for B2B deep-link to the artwork detail screen.
-   */
   artworkId?: string;
   onPress?: () => void;
 }
 
+export const artworkLocation = (
+  museum: string | null | undefined,
+  room: string | null | undefined,
+): string | null => [museum, room].filter(Boolean).join(' — ') || null;
+
 const confidenceKey = (value?: number): 'high' | 'medium' | 'low' | null => {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive null check
-  if (value === undefined || value === null) return null;
+  if (value === undefined) return null;
   if (value >= 0.8) return 'high';
   if (value >= 0.5) return 'medium';
   return 'low';
 };
 
-/** Displays a card with detected artwork metadata including title, artist, museum location, and recognition confidence level. */
 export const ArtworkCard = ({
   title,
   artist,
@@ -42,6 +41,7 @@ export const ArtworkCard = ({
   const badgeKey = confidenceKey(confidence);
   const badge = badgeKey ? t(`artworkCard.confidence.${badgeKey}`) : null;
   const isTappable = Boolean(artworkId && onPress);
+  const location = artworkLocation(museum, room);
 
   const content = (
     <GlassCard style={styles.card} intensity={44}>
@@ -55,9 +55,9 @@ export const ArtworkCard = ({
               {artist}
             </Text>
           ) : null}
-          {museum || room ? (
+          {location ? (
             <Text style={[styles.location, { color: theme.placeholderText }]} numberOfLines={1}>
-              {[museum, room].filter(Boolean).join(' — ')}
+              {location}
             </Text>
           ) : null}
         </View>

@@ -1,16 +1,3 @@
-/**
- * RED (W1-L1-09) — M2 enqueue-on-disconnect seam.
- *
- * Drives the REAL `pickSendStrategy` → 'offline' when the context is offline, then
- * the REAL `sendMessageOffline`, asserting it:
- *  - calls `context.enqueue` exactly ONCE, and
- *  - appends exactly ONE optimistic message via `setMessages` (spec R3),
- *  - returns `false` and appends NO optimistic message when the queue is full
- *    (`enqueue` resolves `null`).
- *
- * Fails RED because the `makeQueuedMessage` factory (DRY, `__tests__/helpers/factories`)
- * does not exist yet.
- */
 import { pickSendStrategy } from '@/features/chat/application/chatSessionStrategies.pure';
 import { sendMessageOffline } from '@/features/chat/application/sendStrategies/sendMessageOffline';
 import type { SendMessageContext } from '@/features/chat/application/sendStrategies/sendStrategy.types';

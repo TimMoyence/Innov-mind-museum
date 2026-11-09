@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -17,7 +18,6 @@ const TTL_GENERIC_S = 7 * 24 * 60 * 60;
 const TTL_MUSEUM_MODE_S = 24 * 60 * 60;
 const TTL_PERSONALIZED_S = 60 * 60;
 
-/** Exact-match key derivation; semantic similarity deferred to G Phase 2. */
 export class LlmCacheServiceImpl implements LlmCacheService {
   constructor(private readonly cache: CacheService) {}
 
@@ -31,23 +31,10 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return 'generic';
   }
 
-  /**
-   * PR-P0-1 (2026-05-23) — Public alias of the internal key derivation. Lets
-   * callers (notably `ChatMessageService.tryLlmCacheStore`) stamp the exact
-   * byte-string key on the assistant `ChatMessage` row at write time, so
-   * `ChatMediaService.invalidateCacheForFeedback` can later purge the EXACT
-   * entry on negative feedback — no reconstruction, no cartesian, no
-   * over-purge. Pure (no I/O), deterministic per input.
-   *
-   * Intended for persistence stamping ONLY — do NOT use to drive lookup/store
-   * (call those directly so TTL classification + metrics + fail-open stay on
-   * a single code path).
-   */
   computeKey(input: LlmCacheKeyInput): string {
     return this.buildKey(input, this.classify(input));
   }
 
-  /** Fail-open (ADR-036/R8): cache-layer exception → hit=false. */
   async lookup<T>(input: LlmCacheKeyInput): Promise<LlmCacheLookupResult<T>> {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
@@ -58,16 +45,14 @@ export class LlmCacheServiceImpl implements LlmCacheService {
       logger.warn('llm_cache_lookup_failed', {
         layer: 'l1',
         contextClass,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return { hit: false, value: null, contextClass };
     }
     return { hit: value !== null, value, contextClass };
   }
 
-  /** Fail-open (ADR-036/R8). */
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains the stored value shape
-  async store<T>(input: LlmCacheKeyInput, value: T): Promise<void> {
+  async store(input: LlmCacheKeyInput, value: unknown): Promise<void> {
     const contextClass = this.classify(input);
     const key = this.buildKey(input, contextClass);
     const ttl = this.ttlFor(contextClass);
@@ -77,15 +62,12 @@ export class LlmCacheServiceImpl implements LlmCacheService {
       logger.warn('llm_cache_store_failed', {
         layer: 'l1',
         contextClass,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     }
   }
 
-  /** Drops museum-mode + personalized entries; called from museum admin update. */
   async invalidateMuseum(museumId: number): Promise<void> {
-    // museumId BEFORE userId in key so delByPrefix can target a museum
-    // across all user namespaces.
     const contextClasses: LlmContextClass[] = ['museum-mode', 'personalized'];
     for (const ctxClass of contextClasses) {
       const prefix = `${KEY_PREFIX}:${KEY_VERSION}:${ctxClass}:${String(museumId)}:`;
@@ -96,7 +78,7 @@ export class LlmCacheServiceImpl implements LlmCacheService {
         logger.warn('llm_cache_invalidate_museum_failed', {
           museumId,
           prefix,
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
       }
     }
@@ -108,17 +90,6 @@ export class LlmCacheServiceImpl implements LlmCacheService {
     return TTL_PERSONALIZED_S;
   }
 
-  /**
-   * Key: `llm:v4:{contextClass}:{museumId|none}:{userId|anon}:{sha256}`.
-   * museumId BEFORE userId for `delByPrefix` invalidateMuseum pattern (inverts
-   * spec's conceptual order). F1 (2026-05-19) — canonical input now folds in
-   * `voiceMode` + `audioDescriptionMode` (truthy-only, mirror imageContentHash
-   * R8/AC6 contract) so the (voice / no-voice) and (audio-desc / no-audio-desc)
-   * cohorts get distinct scopes ; legacy entries are isolated by the v1→v2 bump.
-   * US-12.2 / INV-21 (2026-06-12) — canonical input also folds in `lowDataMode`
-   * (truthy-only) ; v2→v3 bump isolates the v2 namespace polluted by the
-   * pre-fix cohorts (FE used to resolve `low` for every metered connection).
-   */
   private buildKey(input: LlmCacheKeyInput, contextClass: LlmContextClass): string {
     const userIdSeg = input.userId === 'anon' ? 'anon' : String(input.userId);
     const museumIdSeg = input.museumContext?.museumId ?? 'none';
@@ -128,8 +99,6 @@ export class LlmCacheServiceImpl implements LlmCacheService {
 }
 
 function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
-  // R8/AC6 — imageContentHash only when present so legacy text-only entries
-  // produce the SAME canonical JSON (post-C3 backward-compat with pre-C3 entries).
   const canonical: Record<string, unknown> = {
     model: input.model,
     systemSection: input.systemSection,
@@ -141,35 +110,18 @@ function sha256OfCanonicalInput(input: LlmCacheKeyInput): string {
   if (input.imageContentHash !== undefined) {
     canonical.imageContentHash = input.imageContentHash;
   }
-  // F1 (2026-05-19) — truthy-only emit so legacy text-only entries WITHOUT
-  // voiceMode/audioDescriptionMode produce byte-identical canonical JSON
-  // (mirror R8/AC6 imageContentHash contract). v1→v2 KEY_VERSION bump isolates
-  // pre-F1 entries.
   if (input.audioDescriptionMode) {
     canonical.audioDescriptionMode = input.audioDescriptionMode;
   }
   if (input.voiceMode) {
     canonical.voiceMode = input.voiceMode;
   }
-  // I-FIX2 (2026-05-21) — truthy-only emit (mirror imageContentHash R8/AC6 +
-  // voiceMode F1). Identity of the current artwork already rendered in the
-  // system prompt MUST partition the cache so 2 visitors in the same museum
-  // looking at different artworks don't share a cache line. Absent / empty →
-  // field excluded from canonical JSON → byte-identical to pre-I-FIX2 entries
-  // (no KEY_VERSION bump needed).
   if (input.currentArtworkKey) {
     canonical.currentArtworkKey = input.currentArtworkKey;
   }
-  // US-12.2 / INV-21 (2026-06-12) — truthy-only emit (mirror voiceMode F1 /
-  // imageContentHash R8/AC6). `lowDataMode` flips `llm-prompt-builder.ts:152-156`
-  // to a 100-150-word concise answer — absent from the key, the (low, normal)
-  // cohorts cross-serve wrong-length responses. `false`/absent fold to the same
-  // canonical JSON so the majority `normal` cohort keeps hex-stable hashes ;
-  // the v2→v3 KEY_VERSION bump isolates the pre-fix polluted namespace.
   if (input.lowDataMode) {
     canonical.lowDataMode = true;
   }
-  // Sort keys for deterministic JSON (localeCompare = stable).
   const sortedJson = JSON.stringify(
     canonical,
     Object.keys(canonical).sort((a, b) => a.localeCompare(b)),

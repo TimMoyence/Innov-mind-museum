@@ -1,13 +1,3 @@
-/**
- * Conformité email RGPD — RED phase (UFR-022,
- * RUN_ID 2026-06-13-conformite-email-subprocessors), museum-web surfaces.
- *
- * Covers the web-side consumer of the canonical privacy/terms JSON
- * (`getPrivacyContent`) plus the cookies page user-facing COPY text (UC-A24/A25).
- *
- * OLD = `tim.moyence@gmail.com` (must be eliminated). NEW = `contact@musaium.com`.
- * Pre-impl state (RED): OLD still present → these tests FAIL. Tests only.
- */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -18,7 +8,6 @@ import { getPrivacyContent } from './privacy-content';
 const OLD = 'tim.moyence@gmail.com';
 const NEW = 'contact@musaium.com';
 
-// museum-web/src/lib/ -> repo root is three levels up from src/lib.
 const REPO_ROOT = path.resolve(__dirname, '../../../');
 const COOKIES_PAGE = path.join(REPO_ROOT, 'museum-web/src/app/[locale]/cookies/page.tsx');
 
@@ -47,7 +36,6 @@ describe('UC-A09 — web privacy content (via getPrivacyContent) email paragraph
 });
 
 describe('UC-A24 / UC-A25 — cookies page contactNote (EN + FR)', () => {
-  // COPY is module-internal (not exported), so we read the page source bytes.
   const src = readFileSync(COOKIES_PAGE, 'utf8');
 
   it('UC-A24 (happy, EN): cookies contactNote has NEW, not OLD', () => {

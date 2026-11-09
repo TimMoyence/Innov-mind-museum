@@ -25,7 +25,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 describe('biometricStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Clear the in-memory store between tests
     (AsyncStorage.removeItem as jest.Mock)('auth.biometricEnabled');
   });
 

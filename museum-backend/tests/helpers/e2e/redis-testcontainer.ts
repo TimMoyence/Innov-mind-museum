@@ -52,30 +52,15 @@ const waitForRedis = async (params: { host: string; port: number }): Promise<voi
   throw new Error('Redis test container was not ready in time');
 };
 
-/**
- * Test utility: handle for a running ephemeral Redis Docker container.
- * Each Jest worker boots its own ephemeral container so BullMQ + ioredis
- * adapter integration tests have a real Redis to talk to.
- */
 export interface StartedRedisTestContainer {
   containerName: string;
   host: string;
   port: number;
-  /** ioredis ConnectionOptions-shaped helper for direct injection. */
   connection: { host: string; port: number };
   stop: () => Promise<void>;
   scheduleStop: () => void;
 }
 
-/**
- * Test utility: starts an ephemeral Redis 7 Docker container on a random
- * loopback port and waits until it answers PING.
- *
- * Mirrors the Phase 1 Postgres testcontainer pattern (same lifecycle: `--rm`,
- * `127.0.0.1::6379` random port mapping, polling readiness, detached
- * cleanup process for `scheduleStop`).
- * @returns Handle with connection details + stop/scheduleStop methods.
- */
 export const startRedisTestContainer = async (): Promise<StartedRedisTestContainer> => {
   const suffix = randomUUID().replace(/-/g, '').slice(0, 12);
   const containerName = `museum-ia-redis-${suffix}`;
@@ -98,10 +83,6 @@ export const startRedisTestContainer = async (): Promise<StartedRedisTestContain
   };
 
   const scheduleStop = (): void => {
-    // Mirrors the Phase 1 postgres-testcontainer detached cleanup pattern.
-    // We use `/bin/sh` (absolute path, not the PATH-resolved binary) so the
-    // process invocation is bound to the system shell rather than depending
-    // on a writable PATH directory.
     const cleanupCommand = `sleep 30; docker stop --time 1 ${containerId} >/dev/null 2>&1 || docker rm -f ${containerId} >/dev/null 2>&1 || true`;
     const cleanupProcess = spawn('/bin/sh', ['-c', cleanupCommand], {
       detached: true,

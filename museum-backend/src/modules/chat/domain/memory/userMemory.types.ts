@@ -6,7 +6,6 @@ export interface NotableArtwork {
   discussedAt: string;
 }
 
-/** GDPR data export. */
 export interface UserMemoryExportData {
   preferredExpertise: string;
   favoritePeriods: string[];

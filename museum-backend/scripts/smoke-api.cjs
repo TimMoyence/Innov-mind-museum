@@ -1,9 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-// Shared, dependency-free audio byte validators (magic-byte container detection
-// + Ogg granulepos parsing). Extracted to a single source of truth so the smoke
-// and its unit tests assert the SAME logic — no more inline replicas.
 const {
   MIN_GRANULEPOS_2S_48KHZ,
   MIN_TTS_BYTE_LENGTH,
@@ -35,23 +32,15 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Cold-start resilience (post-deploy): a freshly-recreated backend has a brief
-// window where connection pools / the OpenAI client / BullMQ workers are still
-// warming, so a single functional call can hit a TRANSIENT 5xx, a gateway HTML
-// page, or a network blip (observed post-deploy: TTS `fetch failed`, DELETE
-// non-JSON `<html>`, POST 500). The health probe already retries 24×; the
-// functional checks did not. We bound-retry ONLY transient classes so a single
-// blip does not roll back a good deploy — a PERSISTENT failure (real bug) still
-// fails after exhausting the attempts (fail-loud preserved). NOT retried: 4xx,
-// redirects, or wrong-value assertions.
 const SMOKE_TRANSIENT_RETRIES = Math.max(1, Number(getEnv('SMOKE_TRANSIENT_RETRIES', '3')) || 3);
-const SMOKE_TRANSIENT_RETRY_DELAY_MS =
-  Math.max(0, Number(getEnv('SMOKE_TRANSIENT_RETRY_DELAY_MS', '2500')) || 2500);
+const SMOKE_TRANSIENT_RETRY_DELAY_MS = Math.max(
+  0,
+  Number(getEnv('SMOKE_TRANSIENT_RETRY_DELAY_MS', '2500')) || 2500,
+);
 
-/** True for network-level fetch failures + abort/timeout — always transient. */
 function isNetworkError(err) {
   if (!err) return false;
-  if (err.name === 'AbortError') return true; // request timed out (controller.abort)
+  if (err.name === 'AbortError') return true;
   const m = `${err.message || ''} ${err.cause && err.cause.message ? err.cause.message : ''}`;
   return /fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|socket hang up|network|terminated|other side closed/i.test(
     m,
@@ -62,24 +51,17 @@ function buildUrl(baseUrl, path) {
   return new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 }
 
-/**
- * Minimal 1×1 PNG, base-64 encoded — synthetic fixture for the C3 compare
- * smoke. Used when no real fixture is uploaded by the CI job. The pipeline
- * accepts it (passes magic-byte validation), but a brand-new test pixel will
- * not match any catalogued artwork — so the smoke asserts the endpoint
- * RESPONDS within the contract (200 + matches[] OR 503 + encoder fallback),
- * not that it returns specific neighbours. Real recall regression is the
- * Maestro flow's job (`.maestro/chat-compare.yaml`, T8.8).
- */
 const SMOKE_TEST_PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-/**
- * POST a multipart/form-data payload (used for `/api/chat/compare` which only
- * accepts a file + scalar fields, never JSON). Returns the same `{ status, json }`
- * shape as `fetchJson` so the call sites stay symmetrical.
- */
-async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+async function fetchMultipart({
+  baseUrl,
+  path,
+  token,
+  fields,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  expected,
+}) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -87,7 +69,6 @@ async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAUL
     const formData = new FormData();
     for (const [key, value] of Object.entries(fields)) {
       if (value && typeof value === 'object' && Buffer.isBuffer(value.buffer)) {
-        // File field: { buffer, filename, contentType } shape.
         formData.append(
           key,
           new Blob([value.buffer], { type: value.contentType || 'application/octet-stream' }),
@@ -132,31 +113,20 @@ async function fetchMultipart({ baseUrl, path, token, fields, timeoutMs = DEFAUL
   }
 }
 
-/**
- * POST/GET an endpoint that returns a binary body (used for `/messages/:id/tts`
- * which streams raw `audio/mpeg` per `createTtsHandler` in chat-media.route.ts).
- * Mirrors `fetchJson` but does NOT `JSON.parse` the response — that would throw
- * on MP3 magic-bytes. On non-expected status it surfaces the text body for
- * diagnostic (typical error envelope shape `{ error: { code, message } }`).
- *
- * Returns `{ status, buffer, contentType, json }` where `json` is the parsed
- * error envelope on failure (or `null` on success — binary path stays in
- * `buffer`).
- *
- * R5 (C7.1) — see docs/roadmap-night/specs/R5.md §3.6 (D5).
- */
-async function fetchBinaryOnce({ baseUrl, path, method = 'POST', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+async function fetchBinaryOnce({
+  baseUrl,
+  path,
+  method = 'POST',
+  token,
+  body,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  expected,
+}) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const headers = {
-      // Accept both binary (happy path) and JSON (error envelope) — the server
-      // chooses based on outcome, so we list both rather than forcing one.
-      // `audio/ogg` covers the OpenAI Opus/Ogg container the TTS service has
-      // emitted since C9.12a (2026-05-17, text-to-speech.openai.ts:46 —
-      // -40% bandwidth + -50-100ms first-byte vs MP3). `audio/mpeg` kept for
-      // legacy MP3 path in case the response_format is ever rolled back.
       Accept: 'audio/ogg, audio/mpeg, application/json',
     };
     if (body !== undefined) {
@@ -178,21 +148,16 @@ async function fetchBinaryOnce({ baseUrl, path, method = 'POST', token, body, ti
     const expectedCodes = Array.isArray(expected) ? expected : [expected];
 
     if (!expectedCodes.includes(response.status)) {
-      // Failure path — try to parse the body as JSON to surface error.code for
-      // R6/R7 caller diagnostics. If it's not JSON, fall back to truncated text.
       const text = await response.text();
       let json = null;
       if (text) {
         try {
           json = JSON.parse(text);
-        } catch (error) {
-          // Non-JSON error body — keep `json` null, caller falls back to status.
-        }
+        } catch (error) {}
       }
       return { status: response.status, buffer: Buffer.alloc(0), contentType, json, rawText: text };
     }
 
-    // Success path — binary buffer.
     const arrayBuffer = await response.arrayBuffer();
     return {
       status: response.status,
@@ -206,7 +171,15 @@ async function fetchBinaryOnce({ baseUrl, path, method = 'POST', token, body, ti
   }
 }
 
-async function fetchJsonOnce({ baseUrl, path, method = 'GET', token, body, timeoutMs = DEFAULT_TIMEOUT_MS, expected }) {
+async function fetchJsonOnce({
+  baseUrl,
+  path,
+  method = 'GET',
+  token,
+  body,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  expected,
+}) {
   const url = buildUrl(baseUrl, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -243,8 +216,6 @@ async function fetchJsonOnce({ baseUrl, path, method = 'GET', token, body, timeo
       try {
         json = JSON.parse(text);
       } catch (error) {
-        // A gateway/proxy HTML page (e.g. nginx 502/504) during the cold-start
-        // window — transient, retry-eligible.
         const e = new Error(`Non-JSON response from ${method} ${path}: ${text.slice(0, 300)}`);
         e.transient = true;
         throw e;
@@ -256,7 +227,6 @@ async function fetchJsonOnce({ baseUrl, path, method = 'GET', token, body, timeo
       const e = new Error(
         `Unexpected status for ${method} ${path}: ${response.status}. Body: ${text.slice(0, 500) || '<empty>'}`,
       );
-      // Only 5xx is transient; an unexpected 4xx is a real client-contract error.
       if (response.status >= 500) e.transient = true;
       throw e;
     }
@@ -267,13 +237,6 @@ async function fetchJsonOnce({ baseUrl, path, method = 'GET', token, body, timeo
   }
 }
 
-/**
- * Bound-retry wrapper around {@link fetchJsonOnce}. Retries ONLY transient
- * failures (`err.transient` — set on a 5xx unexpected status or a non-JSON
- * gateway page — or a network/abort error). A 4xx, a redirect, or a wrong-value
- * assertion is NOT retried and fails immediately. A persistent transient still
- * fails after `SMOKE_TRANSIENT_RETRIES` attempts, so fail-loud is preserved.
- */
 async function fetchJson(opts) {
   const retries = opts.retries ?? SMOKE_TRANSIENT_RETRIES;
   let lastErr;
@@ -298,11 +261,6 @@ async function fetchJson(opts) {
   throw lastErr;
 }
 
-/**
- * Bound-retry wrapper around {@link fetchBinaryOnce}. Unlike fetchJson, the
- * binary helper RETURNS on an unexpected status (the caller asserts), so we
- * retry when the returned status is an unexpected 5xx, or on a network error.
- */
 async function fetchBinary(opts) {
   const retries = opts.retries ?? SMOKE_TRANSIENT_RETRIES;
   const expectedCodes = Array.isArray(opts.expected) ? opts.expected : [opts.expected];
@@ -465,14 +423,6 @@ async function main() {
     timeoutMs,
     expected: 200,
   });
-  // M-SMOKE-HEALTH-REQUIRE-OK (INV-1) — strict-by-default. `status` is the only
-  // health field emitted in prod (checks.redis is redacted when NODE_ENV=
-  // production, api.router.ts:98/103) and it already collapses redis-down/db-down
-  // into 'degraded' (api.router.ts:85 `degraded = !dbUp || redisDown`). So we
-  // REQUIRE status==='ok' by default and reject 'degraded'. A DB-down or
-  // redis-down prod now fails the smoke loudly instead of passing GREEN.
-  // Explicit opt-out (SMOKE_ALLOW_DEGRADED_HEALTH=true) tolerates 'degraded' for
-  // intentional partial-outage runs; default never tolerates it.
   const allowDegradedHealth =
     getEnv('SMOKE_ALLOW_DEGRADED_HEALTH', 'false').toLowerCase() === 'true';
   const healthStatus = health.json?.status;
@@ -485,11 +435,6 @@ async function main() {
         'only for an intentional partial-outage run.',
     );
   }
-  // M-SMOKE-HEALTH-REQUIRE-OK — default SMOKE_REQUIRE_REDIS to 'true'. The redis
-  // gate fires by default, but only WHEN the health payload exposes checks.redis
-  // (non-prod; prod redacts it, in which case the status==='ok' gate above
-  // already covers a redis-down via 'degraded'). 'skipped' = cache not wired =
-  // a prod misconfiguration distinct from 'down'; surface both clearly.
   const requireRedis = getEnv('SMOKE_REQUIRE_REDIS', 'true').toLowerCase() === 'true';
   if (requireRedis) {
     const redisCheck = health.json?.checks?.redis;
@@ -506,8 +451,6 @@ async function main() {
           'the API returns 200 but the cache ping failed.',
       );
     }
-    // redisCheck === 'up' → OK. redisCheck === undefined → redacted in prod;
-    // the status==='ok' gate above already proves redis is not 'down'.
   }
   console.log('[smoke:api] health OK');
 
@@ -519,28 +462,6 @@ async function main() {
 
   const accessToken = session.accessToken;
 
-  // GDPR consent grants — REQUIRED before chat POST in V1.
-  //
-  // `consent-gate.ts:73` enforces `third_party_ai_text_openai` (text channel
-  // via provider-resolver.ts) on every text message. Without it, the chat
-  // service early-returns at `chat-message.service.ts:223` with a synthetic
-  // refusal carrying a `consent_refusal::<scope>` id (consent-gate.ts:108).
-  // That id is deliberately NOT a UUID — it must not collide with real
-  // `chat_message.id` rows — so the downstream TTS validator
-  // (`chat-media.service.ts:72` `isUuid()`) rejects with 400
-  // "Invalid message id format", auto-rollback fires on the smoke step,
-  // and the deploy reverts. Real users grant via the ConsentBanner before
-  // ever reaching the chat screen ; the smoke must mirror that flow.
-  //
-  // Audio scope also pre-granted in case TTS adds its own gate in V1.x —
-  // cheap belt-and-suspenders, no downside if unused.
-  //
-  // Image scope (`third_party_ai_image_openai`) is REQUIRED before POST
-  // /api/chat/compare: the visual-similarity endpoint sends the photo to the
-  // third-party image AI (provider-resolver.ts:69), and consent-gate enforcement
-  // returns 403 `consent_required` without it. Added 2026-06-05 after the prod
-  // smoke failed on compare (scope was introduced with the GDPR consent work
-  // 71f103b3/b2a2c53d but the smoke was never updated to mirror the user flow).
   for (const scope of [
     'third_party_ai_text_openai',
     'third_party_ai_audio_openai',
@@ -590,39 +511,12 @@ async function main() {
   }
   console.log('[smoke:api] list sessions OK');
 
-  // T9.3 — `/api/chat/compare` smoke (Phase 9 / C3 visual similarity).
-  //
-  // Default: ENABLED. The endpoint MUST exist and respond contractually in
-  // every smoke run — it's a public contract. Disable explicitly with
-  // `SMOKE_COMPARE_ENABLED=false` only when running against an environment
-  // where the SigLIP encoder is genuinely down (and you're in the middle of
-  // remediation). Skipping silently in normal operation would defeat the
-  // smoke's purpose.
   const compareEnabled = getEnv('SMOKE_COMPARE_ENABLED', 'true').toLowerCase() === 'true';
   if (compareEnabled) {
-    // H1-COMPARE-DEFAULT-200 (INC-2026-06-14 regression guard, INV-2).
-    //
-    // DEFAULT expected = [200]. A 503 from /api/chat/compare means the SigLIP
-    // encoder is dead (similarity.service.ts:432-438 returns the
-    // encoder_unavailable fallback → chat-compare.route.ts:216-223 maps it to
-    // 503 COMPARE_ENCODER_UNAVAILABLE). The previous smoke tolerated that 503 as
-    // "contractual", so a broken prod encoder passed the smoke GREEN — the exact
-    // INC-2026-06-14 incident. Now a 503 throws 'Unexpected status for POST
-    // /api/chat/compare: 503' (fetchMultipart) and exits 1, FAILING loudly.
-    //
-    // The 503 tolerance is gated behind an explicit, named opt-out env
-    // (SMOKE_COMPARE_ALLOW_ENCODER_DOWN, default 'false'). Only when truthy does
-    // the encoder-down 503 become acceptable AND the 503-envelope assertion run.
     const allowEncoderDown =
       getEnv('SMOKE_COMPARE_ALLOW_ENCODER_DOWN', 'false').toLowerCase() === 'true';
     const compareExpected = allowEncoderDown ? [200, 503] : [200];
 
-    // H1-COMPARE-MODELVERSION-PINNED (INV-3). A 200 must carry the EXACT model
-    // version the encoder catalogues (siglip-onnx.adapter.ts:30/151), not merely
-    // a non-empty string. The encoder-fallback stamps modelVersion='' (similarity
-    // .service.ts:436) — but that path is 503, never 200. Pinning the value
-    // proves the encoder actually ran the catalogued model on a healthy 200,
-    // not a silent fallback that leaked a 200.
     const expectedModelVersion = getEnv(
       'SMOKE_EXPECTED_MODEL_VERSION',
       'siglip2-base-patch16-224@v1',
@@ -652,8 +546,6 @@ async function main() {
           `Compare 200 response missing matches[]: ${JSON.stringify(compare.json).slice(0, 300)}`,
         );
       }
-      // Synthetic 1×1 PNG → matches[] may be empty (no neighbour in catalog),
-      // BUT a 200 MUST carry the catalogued modelVersion (proves the encoder ran).
       const modelVersion = compare.json?.modelVersion;
       if (modelVersion !== expectedModelVersion) {
         throw new Error(
@@ -667,8 +559,6 @@ async function main() {
         `[smoke:api] compare OK (status=200, matches=${matches.length}, modelVersion=${modelVersion})`,
       );
     } else {
-      // 503 — only reachable when SMOKE_COMPARE_ALLOW_ENCODER_DOWN is truthy.
-      // Verify the contractual fallback envelope before tolerating it.
       if (compare.json?.error?.code !== 'COMPARE_ENCODER_UNAVAILABLE') {
         throw new Error(
           `Compare 503 response not contractual (expected error.code=COMPARE_ENCODER_UNAVAILABLE): ${JSON.stringify(compare.json).slice(0, 300)}`,
@@ -682,16 +572,7 @@ async function main() {
     console.log('[smoke:api] compare SKIPPED (SMOKE_COMPARE_ENABLED=false)');
   }
 
-  // R5 (C7.1) — TTS voice round-trip (docs/roadmap-night/specs/R5.md).
-  //
-  // ALWAYS runs (no env flag per N1 + feedback_no_feature_flags_prelaunch).
-  // Sequenced AFTER compare so a compare regression does not mask TTS, and
-  // BEFORE the DELETE cleanup so the session still exists for the chat POST.
-  // The whole stage is wrapped in try/finally so the DELETE cleanup runs
-  // unconditionally even when TTS fails (R10 / AC8).
   try {
-    // 1. POST a fixed FR art prompt to drive an assistant reply (R1).
-    //    Textbook art topic so guardrails pass (V1 keyword + V2 LLM Guard).
     const chatPost = await fetchJson({
       baseUrl,
       path: `/api/chat/sessions/${createdSessionId}/messages`,
@@ -719,12 +600,6 @@ async function main() {
         `Chat POST 201 message.text empty: ${JSON.stringify(chatPost.json).slice(0, 300)}`,
       );
     }
-    // M-SMOKE-CHAT-TEXT-LENGTH — a real LLM art answer about la Joconde is far
-    // longer than 50 chars. A truncated/stub reply (e.g. a guardrail refusal,
-    // an empty-completion fallback, a degraded model) is caught here. We do NOT
-    // assert citations: it is .nullable() on the healthy path
-    // (main-assistant-output.schema.ts:146-149), so asserting it would false-fail
-    // healthy runs (INV-4).
     if (assistantText.trim().length <= 50) {
       throw new Error(
         `Chat POST 201 assistant text too short (len=${assistantText.trim().length}, expected >50): ` +
@@ -732,11 +607,6 @@ async function main() {
       );
     }
 
-    // M-SMOKE-CHAT-ROUNDTRIP — re-read the session and assert the assistant
-    // message persisted and is re-readable. GET /api/chat/sessions/:id returns
-    // messages[] (chat-session.route.ts:130 → chat-session.service.ts:194-202);
-    // there is NO single-message GET endpoint. This proves the reply was
-    // actually written to the store, not just echoed back in the POST response.
     const roundTrip = await fetchJson({
       baseUrl,
       path: `/api/chat/sessions/${createdSessionId}`,
@@ -779,9 +649,6 @@ async function main() {
       `[smoke:api] chat round-trip OK (assistant message ${assistantMessageId.slice(0, 8)} persisted + re-read)`,
     );
 
-    // 2. POST /messages/:id/tts → binary MP3 (R3).
-    //    Accept 200 happy-path here; we explicitly check 204/501 below to emit
-    //    R6/R7 contractual failure messages with the exact required wording.
     const ttsResult = await fetchBinary({
       baseUrl,
       path: `/api/chat/messages/${assistantMessageId}/tts`,
@@ -792,36 +659,24 @@ async function main() {
     });
 
     if (ttsResult.status === 501 && ttsResult.json?.error?.code === 'FEATURE_UNAVAILABLE') {
-      // R7 / N3 — DisabledTextToSpeechService active → deploy is broken.
       throw new Error('TTS unavailable (501 FEATURE_UNAVAILABLE)');
     }
     if (ttsResult.status === 204) {
-      // R6 — empty assistant text surfaced via createTtsHandler's `res.status(204).end()`.
       throw new Error('TTS returned 204 (empty assistant text)');
     }
     if (ttsResult.status !== 200) {
-      // R8 — any other unexpected status (cost guard 402, rate limit 429, etc.).
       const bodyPreview = ttsResult.json
         ? JSON.stringify(ttsResult.json).slice(0, 300)
         : (ttsResult.rawText || '<empty>').slice(0, 300);
       throw new Error(`TTS unexpected status ${ttsResult.status}: ${bodyPreview}`);
     }
 
-    // 3. Content-Type must be audio/* (R3).
     if (!ttsResult.contentType.toLowerCase().startsWith('audio/')) {
       throw new Error(
         `TTS 200 response Content-Type not audio/*: ${JSON.stringify(ttsResult.contentType)}`,
       );
     }
 
-    // 4. Magic-byte validation per R4 / D2, via the shared `validate-audio.cjs`
-    //    `detectAudioContainer`. Accept any container the backend has shipped :
-    //      - "OggS" header (0x4f 0x67 0x67 0x53) — Ogg container (current
-    //        path : OpenAI Opus, response_format='opus' since C9.12a)
-    //      - "ID3" header (0x49 0x44 0x33) — MP3 with ID3v2 tag
-    //      - MPEG frame-sync (0xFF followed by 0xF*, (b1 & 0xE0) === 0xE0)
-    //        — bare MP3 frame
-    //    No ffprobe — pure byte check.
     const buf = ttsResult.buffer;
     if (buf.length < 4) {
       throw new Error(`TTS audio too short for magic-byte check (length=${buf.length})`);
@@ -836,23 +691,12 @@ async function main() {
       );
     }
 
-    // 5. Length floor per R5 — sub-1KB body almost always = error envelope
-    //    misrouted as binary or truncated stream.
     if (buf.length < MIN_TTS_BYTE_LENGTH) {
       throw new Error(
         `TTS audio length ${buf.length} < ${MIN_TTS_BYTE_LENGTH} (suspect truncated or error envelope)`,
       );
     }
 
-    // 5b. M-SMOKE-TTS-GRANULEPOS (INV-5) — magic-bytes + the byte floor are
-    //     cheap pre-filters but a silence/truncated Opus stub carries a valid
-    //     OggS header and can exceed the floor while containing ~0s of audio.
-    //     The backend emits Ogg/Opus (response_format:'opus',
-    //     text-to-speech.openai.ts:50; audio/ogg, :184). Parse the last Ogg
-    //     page's granule position (Opus = sample count at 48 kHz) and require it
-    //     to imply >= ~2s of audio (MIN_GRANULEPOS_2S_48KHZ samples), allowing
-    //     for pre-skip. A silence/empty stub yields granulepos ~0 and fails
-    //     loudly. Pure byte parse — only applies when the container is Ogg.
     if (container === 'ogg') {
       const granulePos = readLastOggGranulePos(buf);
       if (granulePos === null) {
@@ -869,23 +713,11 @@ async function main() {
       }
     }
 
-    // 6. Happy log per R9 / AC9 — exact one-line shape, anchored regex in test.
     console.log(
       `[smoke:api] tts OK (bytes=${buf.length}, contentType=${ttsResult.contentType}, msgId=${assistantMessageId.slice(0, 8)})`,
     );
 
-    // 7. S3 OBJECT-STORE verification (INC-2026-06-14). A chat message WITH an
-    //    image runs the shared image pipeline → imageStorage.save = a REAL S3
-    //    upload (NOT the compare's skipStorage path). A working object store
-    //    returns 201; a misconfigured one fails the upload with a 500
-    //    `S3 upload failed (...)`. This is the only smoke assertion that exercises
-    //    the real S3 credentials end to end (audit finding #1 residual). The 1×1
-    //    PNG is fine — we verify the upload path, not vision quality.
-    //    expected=[201,402,429,503]: a 500 (S3) fails the smoke loudly; a
-    //    402/429/503 means S3 succeeded but the vision/LLM side is degraded
-    //    (cost guard / rate limit / breaker) — not an S3 fault, so warn only.
-    const imageChatEnabled =
-      getEnv('SMOKE_IMAGE_CHAT_ENABLED', 'true').toLowerCase() === 'true';
+    const imageChatEnabled = getEnv('SMOKE_IMAGE_CHAT_ENABLED', 'true').toLowerCase() === 'true';
     if (imageChatEnabled) {
       const imgChat = await fetchJson({
         baseUrl,
@@ -909,24 +741,6 @@ async function main() {
       }
     }
   } finally {
-    // R10 / AC8 — DELETE cleanup runs UNCONDITIONALLY, even on TTS failure.
-    //
-    // M-SMOKE-DELETE-ASSERT-FALSE-AND-GET-200 (INV-6). `/api/chat/sessions/:id`
-    // maps to `deleteSessionIfEmpty`, which returns `{deleted:false}` WITHOUT
-    // deleting when the session has messages (chat.repository.typeorm.ts:138-139).
-    // By this point the chat POST above persisted a user + assistant message, so
-    // the session is GUARANTEED non-empty. Therefore:
-    //   - deleted MUST be false. A `true` here would mean the persistence path
-    //     silently lost the messages → fail loudly.
-    //   - the session row MUST survive → a follow-up GET returns 200, never 404.
-    // This replaces the previous "tolerate both true and false" comment: that
-    // tolerance was vacuous; with a guaranteed-non-empty session only false is
-    // correct. (Note: this finally runs unconditionally — if TTS threw BEFORE
-    // the chat POST persisted, deleted could legitimately be true. But the chat
-    // POST + its assertions run at the TOP of the try, before TTS, so any path
-    // that reaches the TTS stage has already persisted the messages. The only
-    // way to reach this finally with an empty session is a throw inside the chat
-    // POST itself — which would have already failed the smoke before here.)
     const deleted = await fetchJson({
       baseUrl,
       path: `/api/chat/sessions/${createdSessionId}`,
@@ -947,9 +761,6 @@ async function main() {
       );
     }
 
-    // The DELETE was a no-op (deleted=false), so the session row still exists.
-    // A GET MUST return 200 (NOT 404) — proves the messages persisted and the
-    // no-op-delete contract holds.
     const survives = await fetchJson({
       baseUrl,
       path: `/api/chat/sessions/${createdSessionId}`,
@@ -964,9 +775,7 @@ async function main() {
           'expected 200) — the delete was not a no-op or persistence was lost.',
       );
     }
-    console.log(
-      `[smoke:api] cleanup delete session OK (deleted=false, session survives GET 200)`,
-    );
+    console.log(`[smoke:api] cleanup delete session OK (deleted=false, session survives GET 200)`);
   }
 
   console.log('[smoke:api] PASS');

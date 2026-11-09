@@ -25,12 +25,10 @@ export class AuthRefreshToken {
   @Column({ type: 'uuid', unique: true })
   jti!: string;
 
-  /** Rotation-based reuse detection. */
   @Index('idx_refresh_token_family')
   @Column({ type: 'uuid' })
   familyId!: string;
 
-  /** SHA-256 of the raw refresh JWT. */
   @Column({ type: 'varchar', length: 128 })
   tokenHash!: string;
 
@@ -44,18 +42,12 @@ export class AuthRefreshToken {
   @Column({ type: 'timestamp', nullable: true })
   rotatedAt?: Date | null;
 
-  /**
-   * Sliding idle window — if `now - lastRotatedAt` exceeds the idle threshold,
-   * next refresh revokes the family and forces re-auth. Defaults to `issuedAt`
-   * on insert; on rotation the successor is initialised with `now`.
-   */
   @Column({ type: 'timestamp', name: 'last_rotated_at', nullable: true })
   lastRotatedAt?: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
   revokedAt?: Date | null;
 
-  /** Set when a replay is detected on this token's family. */
   @Column({ type: 'timestamp', nullable: true })
   reuseDetectedAt?: Date | null;
 

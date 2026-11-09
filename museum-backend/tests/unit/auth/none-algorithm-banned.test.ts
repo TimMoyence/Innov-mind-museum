@@ -1,28 +1,6 @@
-/**
- * T1.1 / R5 — Regression audit: `algorithms: ['none']` is BANNED in
- * museum-backend/src/.
- *
- * CVE-2022-23540 doctrine (lib-docs/jsonwebtoken/PATTERNS.md §4, §5):
- *   DON'T allow `algorithm: 'none'` unless you genuinely need unsigned tokens.
- *   PATTERNS.md §5: "algorithms is the #1 footgun".
- *
- * This test walks every .ts file under museum-backend/src/ and asserts that
- * neither `algorithms: [..., 'none', ...]` nor `algorithm: 'none'` appears.
- *
- * NOTE (tasks.md T1.1): This test PASSES today (invariant already holds). Its
- * value is as a regression guard — a future PR that introduces `'none'` will
- * fail this test and stop on CI. The ast-grep rule (T1.7) is the compile-time
- * guard; this test is the runtime (Jest) guard for defence in depth.
- *
- * Frozen-test invariant: this file is immutable byte-for-byte once committed.
- */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-/**
- * Recursively collect all *.ts files under a directory.
- * @param dir
- */
 function collectTsFiles(dir: string): string[] {
   const results: string[] = [];
   for (const entry of readdirSync(dir)) {
@@ -47,7 +25,6 @@ describe('R5 — "none" algorithm ban across museum-backend/src/', () => {
   });
 
   it('R5.A — no algorithms array contains the string "none"', () => {
-    // Matches: algorithms: ['none'] or algorithms: ["none"] or algorithms: [..., 'none', ...]
     const noneInArrayPattern = /algorithms\s*:\s*\[.*['"]none['"].*\]/;
 
     const violations: string[] = [];
@@ -64,7 +41,6 @@ describe('R5 — "none" algorithm ban across museum-backend/src/', () => {
   });
 
   it('R5.B — no single-string algorithm option set to "none"', () => {
-    // Matches: algorithm: 'none' or algorithm: "none"
     const singleNonePattern = /\balgorithm\s*:\s*['"]none['"]/;
 
     const violations: string[] = [];

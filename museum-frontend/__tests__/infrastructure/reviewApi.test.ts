@@ -64,13 +64,6 @@ describe('reviewApi', () => {
   });
 
   describe('submitReview', () => {
-    // C2-FE / UFR-022 RED. Contract realigned to the committed BE OpenAPI:
-    // POST /api/reviews body = { rating, comment, sessionId? } — `userName` is
-    // derived server-side and was dropped from the request body (R18/R23,
-    // verified in generated openapi.ts:2112-2123). These tests FAIL at baseline
-    // because `reviewApi.submitReview(rating, comment, userName)` still posts
-    // `{ rating, comment, userName }` (reviewApi.ts:35).
-
     it('sends POST /api/reviews with rating and comment but NEVER userName, even with a 3rd arg', async () => {
       const review = makeReview({
         id: 'uuid-1',
@@ -82,8 +75,6 @@ describe('reviewApi', () => {
       });
       mockOpenApiRequest.mockResolvedValue({ review });
 
-      // The 3rd positional arg is now `sessionId`, NOT `userName`. At baseline
-      // the impl maps it to `userName` in the body — this assertion fails.
       const result = await reviewApi.submitReview(
         9,
         'Great museum!',
@@ -94,11 +85,11 @@ describe('reviewApi', () => {
       const call = mockOpenApiRequest.mock.calls[0][0] as {
         path: string;
         method: string;
-        body: string;
+        json: Record<string, unknown>;
       };
       expect(call.path).toBe('/api/reviews');
       expect(call.method).toBe('post');
-      const body = JSON.parse(call.body) as Record<string, unknown>;
+      const body = call.json;
       expect(body).not.toHaveProperty('userName');
       expect(body).toMatchObject({ rating: 9, comment: 'Great museum!' });
       expect(result.review).toEqual(review);
@@ -111,8 +102,8 @@ describe('reviewApi', () => {
 
       await reviewApi.submitReview(10, 'Loved it', sessionId);
 
-      const call = mockOpenApiRequest.mock.calls[0][0] as { body: string };
-      const body = JSON.parse(call.body) as Record<string, unknown>;
+      const call = mockOpenApiRequest.mock.calls[0][0] as { json: Record<string, unknown> };
+      const body = call.json;
       expect(body).toMatchObject({ rating: 10, comment: 'Loved it', sessionId });
       expect(body).not.toHaveProperty('userName');
     });
@@ -123,8 +114,8 @@ describe('reviewApi', () => {
 
       await reviewApi.submitReview(0, 'Not for me');
 
-      const call = mockOpenApiRequest.mock.calls[0][0] as { body: string };
-      const body = JSON.parse(call.body) as Record<string, unknown>;
+      const call = mockOpenApiRequest.mock.calls[0][0] as { json: Record<string, unknown> };
+      const body = call.json;
       expect(body).not.toHaveProperty('sessionId');
       expect(body).not.toHaveProperty('userName');
     });

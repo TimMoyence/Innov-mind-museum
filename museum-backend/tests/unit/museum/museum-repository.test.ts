@@ -10,10 +10,6 @@ import {
 import { makeMuseum } from 'tests/helpers/museum/museum.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
-// T3.4 (2026-05-16) — Local makeMuseum() removed: replaced by the shared factory
-// at tests/helpers/museum/museum.fixtures.ts, which uses Object.assign(new Museum(), ...)
-// instead of an `as Museum` cast and gives every test the same default shape.
-
 function buildMocks() {
   const { repo } = makeMockTypeOrmRepo<Museum>();
   const dataSource = makeMockDataSource(repo);
@@ -26,16 +22,12 @@ describe('MuseumRepositoryPg', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // TD-54 — the geofence-mode cache is a module-level singleton; reset it for
-    // EVERY test (not just the geofence describe) so a value cached by one test
-    // can't leak into another and silently change the SQL path under test.
     _resetGeofenceModeCacheForTests();
     const mocks = buildMocks();
     repo = mocks.repo;
     sut = new MuseumRepositoryPg(mocks.dataSource);
   });
 
-  // ─── create ───
   describe('create', () => {
     it('creates and saves a museum', async () => {
       const museum = makeMuseum();
@@ -103,7 +95,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── update ───
   describe('update', () => {
     it('updates existing museum fields', async () => {
       const existing = makeMuseum();
@@ -163,7 +154,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── findById ───
   describe('findById', () => {
     it('returns museum when found', async () => {
       const museum = makeMuseum();
@@ -184,7 +174,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── findBySlug ───
   describe('findBySlug', () => {
     it('returns museum when found by slug', async () => {
       const museum = makeMuseum();
@@ -205,7 +194,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── findAll ───
   describe('findAll', () => {
     it('returns all museums ordered by name', async () => {
       const museums = [makeMuseum({ id: 1, name: 'A' }), makeMuseum({ id: 2, name: 'B' })];
@@ -243,7 +231,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── delete ───
   describe('delete', () => {
     it('deletes museum by id', async () => {
       repo.delete.mockResolvedValue({ affected: 1, raw: [] });
@@ -254,7 +241,6 @@ describe('MuseumRepositoryPg', () => {
     });
   });
 
-  // ─── findByCoords (W3 geofence containment) ───
   describe('findByCoords', () => {
     beforeEach(() => {
       _resetGeofenceModeCacheForTests();
@@ -262,7 +248,7 @@ describe('MuseumRepositoryPg', () => {
 
     it('returns null when neither geofence nor geofence_bbox column is present', async () => {
       const ds = makeMockDataSource(repo);
-      (ds.query as jest.Mock).mockResolvedValueOnce([]); // information_schema lookup
+      (ds.query as jest.Mock).mockResolvedValueOnce([]);
       sut = new MuseumRepositoryPg(ds);
 
       const result = await sut.findByCoords(48.86, 2.34);
@@ -273,8 +259,8 @@ describe('MuseumRepositoryPg', () => {
     it('PostGIS path — runs ST_Contains and returns matched museum', async () => {
       const ds = makeMockDataSource(repo);
       (ds.query as jest.Mock)
-        .mockResolvedValueOnce([{ column_name: 'geofence' }]) // schema introspect
-        .mockResolvedValueOnce([{ id: 42 }]); // ST_Contains hit
+        .mockResolvedValueOnce([{ column_name: 'geofence' }])
+        .mockResolvedValueOnce([{ id: 42 }]);
       const matched = makeMuseum({ id: 42, name: 'Louvre' });
       repo.findOne.mockResolvedValue(matched);
       sut = new MuseumRepositoryPg(ds);
@@ -290,7 +276,7 @@ describe('MuseumRepositoryPg', () => {
       const ds = makeMockDataSource(repo);
       (ds.query as jest.Mock)
         .mockResolvedValueOnce([{ column_name: 'geofence' }])
-        .mockResolvedValueOnce([]); // no row
+        .mockResolvedValueOnce([]);
       sut = new MuseumRepositoryPg(ds);
 
       const result = await sut.findByCoords(0, 0);
@@ -329,7 +315,7 @@ describe('MuseumRepositoryPg', () => {
         ]);
       sut = new MuseumRepositoryPg(ds);
 
-      const result = await sut.findByCoords(45.0, 5.0); // far outside Paris
+      const result = await sut.findByCoords(45.0, 5.0);
 
       expect(result).toBeNull();
     });
@@ -338,7 +324,7 @@ describe('MuseumRepositoryPg', () => {
       const ds = makeMockDataSource(repo);
       (ds.query as jest.Mock)
         .mockResolvedValueOnce([{ column_name: 'geofence_bbox' }])
-        .mockResolvedValue([]); // returns empty bbox list
+        .mockResolvedValue([]);
       sut = new MuseumRepositoryPg(ds);
 
       await sut.findByCoords(48.86, 2.34);

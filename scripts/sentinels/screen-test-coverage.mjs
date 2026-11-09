@@ -1,32 +1,4 @@
 #!/usr/bin/env node
-// scripts/sentinels/screen-test-coverage.mjs — UFR-021 enforcement
-//
-// Walks museum-frontend/app/**/*.tsx (Expo Router routes) +
-// museum-frontend/features/**/ui/*Screen.tsx, and for each screen verifies
-// that at least one museum-frontend/.maestro/*.yaml flow references either:
-//   (a) a testID literal declared in the screen source, OR
-//   (b) the screen's Expo Router path, OR
-//   (c) the screen's component name (matched against `# screen: <Name>` magic
-//       comment in flow headers, future-proof).
-//
-// Opt-out : `// e2e-skip: <reason ≥ 30 chars>` magic comment in first 20
-// lines of the screen file.
-//
-// Baseline : museum-frontend/.maestro/coverage-baseline.json grandfathers
-// pre-UFR-021 uncovered screens. New screens MUST NOT be added; removals only.
-//
-// Flags :
-//   (default)   fail on any MISS, exit 1
-//   --report    warn-only mode, emit /tmp/screen-coverage-report.json
-//   --staged    check only screens in `git diff --cached --name-only`
-//   --emit-baseline
-//               write current MISS set to coverage-baseline.json (one-time
-//               bootstrap, not for routine use)
-//
-// No external deps — stdlib only (matches the existing sentinel style:
-// as-any-ratchet, audit-factory-coverage, workspace-links).
-//
-// Spec : docs/TESTING_DISCIPLINE_PROPOSAL.md §3.
 
 import { execSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, writeFileSync, existsSync } from 'node:fs';
@@ -57,9 +29,6 @@ const C = process.stdout.isTTY
     }
   : { green: '', red: '', yellow: '', gray: '', bold: '', reset: '' };
 
-// ────────────────────────────────────────────────────────────────────────
-// File discovery
-// ────────────────────────────────────────────────────────────────────────
 
 function walkDir(dir, predicate) {
   if (!existsSync(dir)) return [];
@@ -78,8 +47,8 @@ function walkDir(dir, predicate) {
 
 function isAppScreen(name) {
   if (!name.endsWith('.tsx')) return false;
-  if (name.startsWith('_')) return false; // _layout.tsx, _styles/, etc.
-  if (name.startsWith('+')) return false; // +not-found.tsx, etc.
+  if (name.startsWith('_')) return false;
+  if (name.startsWith('+')) return false;
   return true;
 }
 
@@ -98,23 +67,17 @@ function findScreens() {
 function findFlows() {
   if (!existsSync(MAESTRO_DIR)) return [];
   const all = readdirSync(MAESTRO_DIR).filter((f) => f.endsWith('.yaml'));
-  // Exclude config.yaml + helpers subdir (helpers walked separately if needed)
   return all
     .filter((f) => f !== 'config.yaml')
     .map((f) => join(MAESTRO_DIR, f));
 }
 
-// ────────────────────────────────────────────────────────────────────────
-// Screen analysis
-// ────────────────────────────────────────────────────────────────────────
 
 function deriveRoutePath(absPath) {
   if (!absPath.startsWith(APP_DIR)) return null;
   const rel = relative(APP_DIR, absPath).replace(/\.tsx$/, '');
   if (rel === 'index') return '/';
-  // Strip (group) segments and resolve index files
   const parts = rel.split('/').filter((p) => !/^\([^)]+\)$/.test(p));
-  // Replace [param] with :param
   const normalized = parts.map((p) => p.replace(/^\[(.+)\]$/, ':$1'));
   const last = normalized[normalized.length - 1];
   if (last === 'index') normalized.pop();
@@ -124,7 +87,7 @@ function deriveRoutePath(absPath) {
 function deriveScreenName(absPath) {
   if (!absPath.endsWith('Screen.tsx')) return null;
   const base = absPath.split('/').pop().replace('.tsx', '');
-  return base; // e.g. "BiometricLockScreen"
+  return base;
 }
 
 function extractTestIds(source) {
@@ -137,24 +100,9 @@ function extractTestIds(source) {
   return ids;
 }
 
-function extractOptOutReason(source) {
-  const first20 = source.split('\n').slice(0, 20).join('\n');
-  const m = first20.match(/^\s*\/\/\s*e2e-skip:\s*(.+)$/m);
-  if (!m) return null;
-  const reason = m[1].trim();
-  return reason;
-}
+const OPT_OUTS = new Map([]);
 
-// ────────────────────────────────────────────────────────────────────────
-// Coverage matching
-// ────────────────────────────────────────────────────────────────────────
 
-// Strip YAML comments line-by-line so a *commented-out* testID / route never
-// counts as real coverage (e.g. `#  10. /(stack)/ticket-detail — SKIPPED`).
-// YAML rule honored: `#` starts a comment only at line start or when preceded
-// by whitespace, and never inside a single/double-quoted scalar. The `#screen:`
-// magic-comment match (case c) deliberately needs the RAW content, so this is
-// applied ONLY to the substring matches (cases a + b) via `flow.code`.
 function stripYamlComments(content) {
   return content
     .split('\n')
@@ -175,9 +123,6 @@ function stripYamlComments(content) {
 }
 
 function buildFlowsCorpus(flowPaths) {
-  // Returns Array<{path, name, content, code}>
-  //   content = raw file (used by the `# screen:` magic-comment match, case c)
-  //   code    = comment-stripped (used by testID + route substring, cases a + b)
   return flowPaths.map((p) => {
     const content = readFileSync(p, 'utf8');
     return {
@@ -190,11 +135,9 @@ function buildFlowsCorpus(flowPaths) {
 }
 
 function findCoverage(screen, flows) {
-  // screen = {path, source, testIds:Set, routePath, screenName}
   const hits = [];
   for (const flow of flows) {
     let matched = false;
-    // (a) testID literal substring match (comment-stripped)
     for (const id of screen.testIds) {
       const needle1 = `"${id}"`;
       const needle2 = `'${id}'`;
@@ -203,25 +146,14 @@ function findCoverage(screen, flows) {
         break;
       }
     }
-    // (b) route path substring (comment-stripped, only if not already matched)
     if (!matched && screen.routePath && screen.routePath !== '/') {
       if (flow.code.includes(screen.routePath)) matched = true;
-    }
-    // (c) screen name magic comment `# screen: <Name>` in header (RAW — it IS a comment)
-    if (!matched && screen.screenName) {
-      const header = flow.content.split('\n').slice(0, 10).join('\n');
-      if (new RegExp(`#\\s*screen:\\s*${screen.screenName}\\b`).test(header)) {
-        matched = true;
-      }
     }
     if (matched) hits.push(flow.name);
   }
   return hits;
 }
 
-// ────────────────────────────────────────────────────────────────────────
-// Baseline (grandfathered screens)
-// ────────────────────────────────────────────────────────────────────────
 
 function loadBaseline() {
   if (!existsSync(BASELINE_PATH)) {
@@ -244,9 +176,6 @@ function writeBaseline(misses) {
   return baseline;
 }
 
-// ────────────────────────────────────────────────────────────────────────
-// Staged-files filter (--staged)
-// ────────────────────────────────────────────────────────────────────────
 
 function getStagedScreens(allScreens) {
   let staged;
@@ -264,9 +193,6 @@ function getStagedScreens(allScreens) {
   return allScreens.filter((p) => stagedAbs.has(p));
 }
 
-// ────────────────────────────────────────────────────────────────────────
-// Main
-// ────────────────────────────────────────────────────────────────────────
 
 function main() {
   console.log(`${C.bold}[sentinel:screen-test-coverage]${C.reset} ${IS_REPORT ? '(report mode)' : ''}${IS_STAGED ? ' (staged)' : ''}`);
@@ -299,11 +225,11 @@ function main() {
       screenName: deriveScreenName(screenPath),
     };
 
-    const optOutReason = extractOptOutReason(source);
+    const optOutReason = OPT_OUTS.get(relative(REPO_ROOT, screenPath)) ?? null;
     if (optOutReason !== null) {
       if (optOutReason.length < 30) {
         console.log(
-          `${C.red}✗ ${relative(REPO_ROOT, screenPath)} : e2e-skip reason too short (${optOutReason.length} chars, need ≥30)${C.reset}`,
+          `${C.red}✗ ${relative(REPO_ROOT, screenPath)} : OPT_OUTS reason too short (${optOutReason.length} chars, need ≥30)${C.reset}`,
         );
         process.exit(1);
       }
@@ -329,7 +255,6 @@ function main() {
     }
   }
 
-  // ── Emit baseline mode (bootstrap only) ────────────────────────────
   if (IS_EMIT_BASELINE) {
     const all = [...results.misses, ...results.grandfathered];
     const baselineWritten = writeBaseline(all);
@@ -340,7 +265,6 @@ function main() {
     process.exit(0);
   }
 
-  // ── Report ───────────────────────────────────────────────────────────
   const total = screens.length;
   const covered = results.hits.length;
   const grand = results.grandfathered.length;
@@ -350,7 +274,7 @@ function main() {
   console.log(`${C.gray}walked ${total} screen(s), ${flows.length} flow(s)${C.reset}`);
   console.log(`  ${C.green}✓ covered      : ${covered}${C.reset}`);
   if (grand) console.log(`  ${C.yellow}∼ grandfathered : ${grand}${C.reset}`);
-  if (opted) console.log(`  ${C.gray}- e2e-skip      : ${opted}${C.reset}`);
+  if (opted) console.log(`  ${C.gray}- opted out     : ${opted}${C.reset}`);
   if (missed) console.log(`  ${C.red}✗ uncovered    : ${missed}${C.reset}`);
 
   if (IS_REPORT) {
@@ -389,7 +313,7 @@ function main() {
   }
   console.log('');
   console.log(`Fix : add a flow in museum-frontend/.maestro/ that references one of the testIDs or the route path,`);
-  console.log(`      OR add \`// e2e-skip: <reason ≥ 30 chars>\` at the top of the screen source.`);
+  console.log(`      OR add the screen path and a reason ≥ 30 chars to OPT_OUTS in scripts/sentinels/screen-test-coverage.mjs.`);
   console.log(`      See CLAUDE.md § UFR-021 for the doctrine.`);
   process.exit(1);
 }

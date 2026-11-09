@@ -1,15 +1,3 @@
-/**
- * T2.3 / B18 — Footer extension: terms, subprocessors, cookies (RED phase, UFR-022).
- *
- * Spec.md §3 R12 / R16 / R17 require the footer to expose three new public
- * links: `/<locale>/terms`, `/<locale>/subprocessors`, `/<locale>/cookies`.
- * Each link is read from `dict.footer.links.{terms,subprocessors,cookies}`.
- *
- * Pre-impl state (RED): these three keys do not exist on `Dictionary['footer']
- * ['links']`, and `Footer.tsx:42-73` does not render them. The first issue
- * makes the fixture type-error (caught by `pnpm lint` typecheck step); the
- * second makes the runtime assertions fail. Vitest will exit ≠ 0.
- */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import Footer from './Footer';
@@ -33,17 +21,10 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/image', () => ({
   default: ({ alt, ...props }: { alt: string; [key: string]: unknown }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));
 
-// ---------------------------------------------------------------------------
-// Fixture: a minimal Dictionary with the three new footer.links keys.
-// After GREEN, `Dictionary['footer']['links']` MUST type-allow these keys.
-// Pre-impl, this cast surfaces a typecheck failure (one of the two RED
-// signals — see file header).
-// ---------------------------------------------------------------------------
 const mockDict = {
   metadata: { title: '', description: '' },
   nav: { home: '', support: '', privacy: '', admin: '', login: '', download: '', language: '' },
@@ -88,7 +69,6 @@ const mockDict = {
       accessibility: 'Accessibility',
       security: 'Security',
       b2b: 'For museums',
-      // T2.3 / R12 / R16 / R17 — three new footer entries.
       terms: 'Terms of Service',
       subprocessors: 'Subprocessors',
       cookies: 'Cookies',
@@ -129,7 +109,6 @@ describe('Footer — B18 / R12 / R16 / R17 link additions', () => {
 
   it('preserves pre-existing public links (privacy / support / accessibility / security / b2b)', () => {
     render(<Footer dict={mockDict} locale="fr" />);
-    // Regression guard: GREEN MUST NOT drop any existing footer link.
     expect(screen.getByText('Privacy Policy')).toHaveAttribute('href', '/fr/privacy');
     expect(screen.getByText('Help')).toHaveAttribute('href', '/fr/support');
     expect(screen.getByText('Accessibility')).toHaveAttribute('href', '/fr/accessibility');

@@ -23,7 +23,7 @@ describe('UpdateMuseumUseCase', () => {
     const result = await useCase.execute(museumId, { name: 'Musee du Louvre' });
 
     expect(result.name).toBe('Musee du Louvre');
-    expect(result.slug).toBe('louvre'); // unchanged
+    expect(result.slug).toBe('louvre');
   });
 
   it('updates multiple fields at once', async () => {

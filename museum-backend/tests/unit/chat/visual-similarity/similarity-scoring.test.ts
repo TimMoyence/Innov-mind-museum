@@ -1,25 +1,7 @@
-/**
- * RED — T5.1 — pure scorer `similarity-scoring.ts`.
- *
- * Locks down tasks.md T5.1 + design.md §9 D4 + spec R5:
- *   - `computeMetadataScore(query, candidate)` returns a value in `[0, 1]`
- *     derived from cumulable Wikidata-fact bonuses (artist=0.4, movement=0.2,
- *     genre=0.15, technique=0.15, temporal±50y=0.1; total capped at 1).
- *   - `computeMetadataScore(undefined, candidate)` returns `0` (no signal).
- *   - `fuse(visual, meta, { wVisual, wMeta })` returns `wVisual*visual +
- *     wMeta*meta`, clamped to `[0, 1]`. Defensive clamp guarantees the
- *     contract even on float drift / weight misconfiguration.
- *
- * SUT does not yet exist (Phase 5). Tests are RED until the editor lands the
- * scorer file.
- */
-
 import { makeArtworkFacts } from '../../../helpers/chat/visual-similarity/artwork-facts.fixtures';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 
-// SUT — Phase 5 file, must not yet exist.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
 const scoring = require('@modules/chat/useCase/visual-similarity/similarity-scoring') as {
   computeMetadataScore: (query: ArtworkFacts | undefined, candidate: ArtworkFacts) => number;
   fuse: (visual: number, meta: number, weights: { wVisual: number; wMeta: number }) => number;
@@ -98,7 +80,6 @@ describe('computeMetadataScore (T5.1 — pure scorer)', () => {
 
     const score = computeMetadataScore(query, candidate);
 
-    // artist (0.4) + movement (0.2) = 0.6 — the genre/technique/temporal must NOT contribute
     expect(score).toBeCloseTo(0.6, 2);
   });
 
@@ -127,7 +108,6 @@ describe('fuse (T5.1 — pure scorer)', () => {
   });
 
   it('clamps the output to `[0, 1]` defensively', () => {
-    // Even with degenerate (but type-valid) inputs, the contract shall hold.
     expect(fuse(1, 1, { wVisual: 0.7, wMeta: 0.3 })).toBeLessThanOrEqual(1);
     expect(fuse(0, 0, { wVisual: 0.7, wMeta: 0.3 })).toBeGreaterThanOrEqual(0);
   });

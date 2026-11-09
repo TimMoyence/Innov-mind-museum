@@ -107,8 +107,6 @@ describe('LlmCacheServiceImpl', () => {
     expect(cache.set.mock.calls[0][0]).not.toBe(cache.set.mock.calls[1][0]);
   });
 
-  // ── PR-B T1.9 — fail-open semantics (spec R8) ─────────────────────────
-
   describe('fail-open on cache exceptions (R8)', () => {
     it('lookup returns hit=false when cache.get throws (Redis down / network)', async () => {
       const cache = buildMockCache();
@@ -119,9 +117,6 @@ describe('LlmCacheServiceImpl', () => {
 
       expect(result.hit).toBe(false);
       expect(result.value).toBeNull();
-      // The miss counter is bumped for the context_class so dashboards see the
-      // event ; alternatively a dedicated `llm_cache_lookup_error` counter
-      // could be added later — for now we observe the miss + log the throw.
     });
 
     it('lookup propagates the contextClass on fail-open so callers can log it', async () => {
@@ -147,11 +142,7 @@ describe('LlmCacheServiceImpl', () => {
     });
 
     it('lookup logs the failure with structured fields {layer, requestId, error}', async () => {
-      const loggerSpy = jest.spyOn(
-        // eslint-disable-next-line @typescript-eslint/no-require-imports -- spy on the singleton logger imported by the service
-        require('@shared/logger/logger').logger,
-        'warn',
-      );
+      const loggerSpy = jest.spyOn(require('@shared/logger/logger').logger, 'warn');
       const cache = buildMockCache();
       cache.get.mockRejectedValueOnce(new Error('boom'));
       const service = new LlmCacheServiceImpl(cache);
@@ -170,18 +161,6 @@ describe('LlmCacheServiceImpl', () => {
     });
   });
 
-  // ── F1 (W2 follow-up) — voiceMode + audioDescriptionMode discrimination ──
-  //
-  // Spec F1.1/F1.2/F1.3 — LLM response cache key MUST discriminate on
-  // `voiceMode` and `audioDescriptionMode` (C9.10 — voice produces ~60-80w
-  // prose, no-voice produces ~250-400w with markdown; audio-description
-  // produces an alt-text-style answer). Today both fields are absent from
-  // `LlmCacheKeyInput` → keys collide → wrong-shape responses get cross-served
-  // across (voice, no-voice) / (audio-desc, no-audio-desc) cohorts. T1-GREEN
-  // adds the fields + bumps KEY_VERSION v1→v2 so legacy entries don't bleed.
-  // 2026-06-12 (run undefined-network-detection-reliability, US-12.2/INV-21) —
-  // KEY_VERSION bumped v2→v3 (lowDataMode dimension); version-pinned asserts
-  // below re-pinned v3 (contract evolution, design.md §4 #12).
   describe('F1 — voiceMode / audioDescriptionMode key discrimination (KEY_VERSION v3)', () => {
     it('A — two inputs differing only in voiceMode produce different keys', async () => {
       const cache = buildMockCache();
@@ -208,11 +187,6 @@ describe('LlmCacheServiceImpl', () => {
     });
 
     it('C — golden-hash for canonical input without voiceMode/audioDescriptionMode', async () => {
-      // Both fields absent → canonical hash MUST be byte-identical to today's
-      // shape (mirror imageContentHash R8/AC6 contract). The hex side survives
-      // every truthy-only field addition (lowDataMode included); only the
-      // version segment shifts (v1 → v2 F1, v2 → v3 lowDataMode 2026-06-12,
-      // US-12.2/INV-21).
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
 
@@ -234,14 +208,6 @@ describe('LlmCacheServiceImpl', () => {
     });
   });
 
-  // ── US-12.2 / INV-21 (2026-06-12, run undefined-network-detection-reliability)
-  //
-  // `X-Data-Mode: low` flips the prompt builder to a 100-150-word concise
-  // answer (`llm-prompt-builder.ts:152-156`) but `lowDataMode` was absent from
-  // `LlmCacheKeyInput` → (low, normal) cohorts shared a cache line and
-  // cross-served wrong-length responses. Same bug class as voiceMode F1
-  // (`d54552beb`). GREEN adds the field (truthy-only emit, mirror
-  // voiceMode/imageContentHash contracts) + bumps KEY_VERSION v2→v3.
   describe('US-12.2 — lowDataMode key discrimination (KEY_VERSION v3)', () => {
     it('INV-21 — two inputs differing only in lowDataMode produce different keys', async () => {
       const cache = buildMockCache();
@@ -256,9 +222,6 @@ describe('LlmCacheServiceImpl', () => {
     });
 
     it('INV-21 — lowDataMode:false folds to the absent-field canonical (truthy-only emit)', async () => {
-      // Mirror of the voiceMode/audioDescriptionMode fold contract: false and
-      // absent MUST produce byte-identical canonical JSON, so the majority
-      // `normal` cohort keeps hex-stable keys across the v3 bump.
       const cache = buildMockCache();
       const service = new LlmCacheServiceImpl(cache);
 

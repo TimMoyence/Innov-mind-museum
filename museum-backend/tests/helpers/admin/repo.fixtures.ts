@@ -1,9 +1,5 @@
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 
-/**
- * Shared mock IAdminRepository factory.
- * @param overrides
- */
 export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository => ({
   listUsers: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
   getUserById: jest.fn().mockResolvedValue(null),

@@ -85,10 +85,8 @@ describe('LLMCircuitBreaker', () => {
     }
     expect(breaker.state).toBe('CLOSED');
 
-    // Advance past the window so the first 4 failures expire
     jest.advanceTimersByTime(61_000);
 
-    // One more failure — should NOT trip (only 1 in window)
     breaker.recordFailure();
     expect(breaker.state).toBe('CLOSED');
   });
@@ -108,8 +106,6 @@ describe('LLMCircuitBreaker', () => {
 
     await expect(breaker.execute(() => Promise.reject(error))).rejects.toThrow('LLM unavailable');
 
-    // Should have recorded the failure
-    // 4 more to trip
     for (let i = 0; i < 4; i++) {
       breaker.recordFailure();
     }
@@ -128,13 +124,6 @@ describe('LLMCircuitBreaker', () => {
     expect(breaker.state).toBe('CLOSED');
   });
 
-  // UFR-022 red phase — PR-13 RUN_ID 2026-05-23-pr-13-threeStateCircuit.
-  // Additive contract on `LLMCircuitBreaker`: it now accepts an `onStateChange`
-  // callback (parity with `LlmCostCircuitBreaker` + `GuardrailCircuitBreaker`).
-  // Pre-green: this case FAILS because `LLMCircuitBreakerOptions` has no
-  // `onStateChange` field and the implementation never invokes it.
-  // Frozen-test (UFR-022): this case is sha256-hashed in red-test-manifest.json
-  // alongside the rest of the file. Green editor MUST NOT touch it.
   it('fires onStateChange callback on every real FSM transition when supplied', () => {
     type Transition = ['CLOSED' | 'OPEN' | 'HALF_OPEN', 'CLOSED' | 'OPEN' | 'HALF_OPEN'];
     const events: Transition[] = [];
@@ -145,18 +134,15 @@ describe('LLMCircuitBreaker', () => {
       onStateChange: (next, prev) => events.push([next, prev]),
     });
 
-    // CLOSED → OPEN
     cb.recordFailure();
     cb.recordFailure();
     expect(cb.state).toBe('OPEN');
     expect(events).toContainEqual(['OPEN', 'CLOSED']);
 
-    // OPEN → HALF_OPEN (lazy on state getter once cooldown elapses)
     jest.advanceTimersByTime(30_000);
     expect(cb.state).toBe('HALF_OPEN');
     expect(events).toContainEqual(['HALF_OPEN', 'OPEN']);
 
-    // HALF_OPEN → CLOSED
     cb.recordSuccess();
     expect(cb.state).toBe('CLOSED');
     expect(events).toContainEqual(['CLOSED', 'HALF_OPEN']);

@@ -1,48 +1,38 @@
-# Navigate and capture — app already logged in
 appId: com.musaium.mobile
 ---
-
-# --- Start a new conversation ---
 - tapOn:
-    text: ".*ouvelle conversation.*|.*ew conversation.*"
+    text: '.*ouvelle conversation.*|.*ew conversation.*'
     optional: true
 
 - extendedWaitUntil:
-    visible: ".*message.*|.*question.*|.*Musaium.*"
+    visible: '.*message.*|.*question.*|.*Musaium.*'
     timeout: 8000
 
-# --- Screenshot 4: Chat screen ---
 - takeScreenshot: 04_chat
 
-# --- Go back ---
 - pressKey: back
 
-# --- Tap Musees tab ---
 - tapOn:
-    text: ".*usée.*|.*useum.*"
+    text: '.*usée.*|.*useum.*'
 
 - extendedWaitUntil:
-    visible: ".*usée.*|.*useum.*"
+    visible: '.*usée.*|.*useum.*'
     timeout: 5000
 
-# --- Screenshot 5: Museums ---
 - takeScreenshot: 05_museums
 
-# --- Tap Accueil tab ---
 - tapOn:
-    text: ".*ccueil.*"
+    text: '.*ccueil.*'
 
 - extendedWaitUntil:
-    visible: ".*ccueil.*|.*Musaium.*"
+    visible: '.*ccueil.*|.*Musaium.*'
     timeout: 5000
 
-# --- Tap Parametres ---
 - tapOn:
-    text: ".*aramètre.*"
+    text: '.*aramètre.*'
 
 - extendedWaitUntil:
-    visible: ".*aramètre.*|.*ompte.*|.*hème.*"
+    visible: '.*aramètre.*|.*ompte.*|.*hème.*'
     timeout: 5000
 
-# --- Screenshot 6: Settings ---
 - takeScreenshot: 06_settings

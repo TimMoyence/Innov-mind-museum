@@ -1,28 +1,3 @@
-/**
- * Unit tests for `TokenJwtService` — banking-grade JWT signing/verification primitives.
- *
- * Covers:
- *   - sign happy path (access + refresh): produced JWTs decode to expected claims
- *     including `sub`, `type`, `jti`, `role`, `museumId`, `iat`, `exp`.
- *   - sign failure paths: missing secret env var → throws.
- *   - verify happy path: round-trip sign+verify returns the original payload.
- *   - verify failure paths: expired token (fake timers), wrong issuer-equivalent
- *     (wrong type), wrong secret, tampered signature, malformed JWT — each must
- *     throw an `AppError` with `statusCode: 401` and a domain-specific `code`.
- *   - JTI uniqueness across sign calls (assumes caller-supplied jti).
- *   - exp > iat, iat ≤ now structural invariants.
- *   - access-vs-refresh token discrimination (`verifyAccessToken` rejects refresh
- *     and vice versa, since each verifier uses a distinct secret + `type` check).
- *   - sha256 helper deterministic + hex output.
- *
- * The service uses `jsonwebtoken` HS256 with secrets resolved from `env.auth.*`
- * at call-time, so mutating `env.auth.accessTokenSecret` for a single test (then
- * restoring) is safe and isolated.
- *
- * Per CLAUDE.md DRY rule: shared `makeUser` factory used wherever a User-shaped
- * object is needed.
- */
-
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
 import { AppError } from '@shared/errors/app.error';
@@ -51,10 +26,7 @@ describe('TokenJwtService — TTL parsing at construction', () => {
   });
 
   it('uses default 15m access TTL → 900 seconds when env unset', () => {
-    // env.auth.accessTokenTtl defaults to '15m' if JWT_ACCESS_TTL absent.
-    // We verify the parser, not the env wiring.
     const service = new TokenJwtService();
-    // Default config is '15m' → 900s, allow numeric override but assert sane bounds.
     expect(service.accessTtlSeconds).toBeGreaterThanOrEqual(60);
     expect(service.accessTtlSeconds).toBeLessThanOrEqual(86_400);
   });
@@ -134,13 +106,11 @@ describe('TokenJwtService — signAccessToken', () => {
     });
     const decoded = jwt.decode(token) as JwtPayload;
     expect(decoded.exp).toBeGreaterThan(decoded.iat!);
-    // iat must be ≤ now (in seconds).
     expect(decoded.iat).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
   });
 
   it('throws when the access secret is empty', () => {
     const original = env.auth.accessTokenSecret;
-    // Mutating env to simulate misconfiguration. jsonwebtoken throws on empty secret.
     (env.auth as { accessTokenSecret: string }).accessTokenSecret = '';
     try {
       expect(() => service.signAccessToken({ userId: 1, role: 'visitor', jti: 'x' })).toThrow();
@@ -242,8 +212,6 @@ describe('TokenJwtService — verifyAccessToken', () => {
   });
 
   it('falls back role to "visitor" when role claim is empty/undefined', () => {
-    // Sign a token manually without role to simulate a token missing the role claim.
-    // TD-JWT-02: iss+aud must be present (tokens without iss/aud are rejected post-pinning).
     const token = jwt.sign(
       { sub: '5', type: 'access', jti: 'legacy-jti' },
       env.auth.accessTokenSecret,
@@ -265,7 +233,6 @@ describe('TokenJwtService — verifyAccessToken', () => {
         jti: 'expiring',
       });
 
-      // Advance past the access TTL + 1 second.
       jest.setSystemTime(new Date(baseTime.getTime() + (service.accessTtlSeconds + 1) * 1000));
 
       const err = expectAppError(() => service.verifyAccessToken(token));
@@ -293,7 +260,6 @@ describe('TokenJwtService — verifyAccessToken', () => {
       role: 'visitor',
       jti: 'tampered',
     });
-    // Flip a character in the signature segment.
     const parts = token.split('.');
     const signature = parts[2];
     const tamperedSig = signature.startsWith('A')
@@ -464,9 +430,6 @@ describe('TokenJwtService — verifyRefreshToken', () => {
       env.auth.refreshTokenSecret,
       { algorithm: 'HS256', expiresIn: '5m' },
     );
-    // `jsonwebtoken` preserves numeric `sub` in the JSON payload (it does NOT
-    // auto-coerce to string), and the verifier explicitly requires
-    // `typeof sub === 'string'` — so the verifier must reject this token.
     const err = expectAppError(() => service.verifyRefreshToken(token));
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('INVALID_REFRESH_TOKEN');

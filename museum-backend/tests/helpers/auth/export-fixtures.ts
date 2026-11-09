@@ -1,12 +1,3 @@
-/**
- * Test fixture factory used by the GDPR DSAR (Art. 15 + 20) e2e tests.
- *
- * Seeds the database with a fully-populated user account spanning every
- * module that participates in the export: auth (consent grant), chat
- * (session + messages + audio reference), review, support (ticket + nested
- * message). The shape returned by `seedUserWithFullDataset` includes the
- * counts the e2e assertions rely on so callers don't recompute them.
- */
 import type { E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
 interface SeedOptions {
@@ -28,26 +19,12 @@ interface SeededDataset {
   };
 }
 
-/**
- * Inserts a representative slice of user-owned data: 1 chat session w/ 2
- * messages (one carrying an audio reference), 1 approved review, 1 support
- * ticket w/ 1 user message, and 1 active consent grant.
- *
- * Uses raw SQL because the e2e harness already has an initialised DataSource;
- * fanning out through every module's repository would force this fixture to
- * import five composition roots, which is brittle.
- * @param harness
- * @param root0
- * @param root0.userId
- * @param root0.email
- */
 export async function seedUserWithFullDataset(
   harness: E2EHarness,
   { userId, email }: SeedOptions,
 ): Promise<SeededDataset> {
   const ds = harness.dataSource;
 
-  // 1. Chat session + 2 messages (one with an audioUrl).
   const sessionRows = await ds.query<{ id: string }[]>(
     `INSERT INTO chat_sessions ("userId", locale, "museumMode", title, "museumName")
      VALUES ($1, $2, $3, $4, $5)
@@ -67,14 +44,12 @@ export async function seedUserWithFullDataset(
     [sessionId],
   );
 
-  // 2. Public review by the user.
   await ds.query(
     `INSERT INTO reviews ("userId", "userName", rating, comment, status)
      VALUES ($1, $2, $3, $4, $5)`,
     [userId, 'Tester', 5, 'Excellent app for museum visits', 'approved'],
   );
 
-  // 3. Support ticket + 1 message.
   const ticketRows = await ds.query<{ id: string }[]>(
     `INSERT INTO support_tickets ("userId", subject, description, status, priority)
      VALUES ($1, $2, $3, $4, $5)
@@ -89,7 +64,6 @@ export async function seedUserWithFullDataset(
     [ticketId, userId, 'user', 'Help please'],
   );
 
-  // 4. Active consent grant.
   await ds.query(
     `INSERT INTO user_consents (user_id, scope, version, source, granted_at)
      VALUES ($1, $2, $3, $4, NOW())`,
@@ -105,10 +79,8 @@ export async function seedUserWithFullDataset(
       reviews: 1,
       supportTickets: 1,
       supportMessages: 1,
-      // 2 = the seeded location_to_llm above + the tos_privacy consent that
-      // registration auto-records on signup (register.useCase.ts:recordTosConsent).
       consentRecords: 2,
-      mediaItems: 1, // one assistant audioUrl
+      mediaItems: 1,
     },
   };
 }

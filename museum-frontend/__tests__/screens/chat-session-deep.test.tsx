@@ -1,36 +1,3 @@
-/**
- * Deep behavioural tests for ChatSessionScreen.
- *
- * Pin specific named contracts that previously had no coverage:
- *   - error → haptic notification
- *   - error → ErrorState dismiss wired to clearError
- *   - intent=camera → onTakePicture invoked once
- *   - intent=audio → toggleRecording invoked after 500 ms
- *   - initialPrompt + !isLoading → sendMessage called once with the prompt
- *   - initialPrompt while loading → no sendMessage until loading completes
- *   - onClose: empty session → deleteSessionIfEmpty + router.back()
- *   - onClose: non-empty + canGoBack=false → router.replace('/(tabs)/conversations')
- *   - onSend (via ChatInput): empty input is no-op; failure restores text
- *   - onMessageLinkPress: http URL opens InAppBrowser; mailto returns true; empty returns false
- *   - onMessageImageError: dedup, calls refreshMessageImageUrl once per id in flight
- *   - onMessageLongPress: opens the context-menu route with the matching message
- *   - onReportMessage: Alert.alert with 5 buttons; pressing 'offensive' → reportMessage('offensive')
- *   - reportMessage failure → second Alert with error copy
- *   - ChatHeader.onSummary → opens the summary route
- *   - ChatHeader.onToggleAudioDescription → toggles session override
- *   - AiConsentModal.onPrivacy → router.push to /(stack)/privacy
- *   - DailyLimitModal visible mirrors session.dailyLimitReached
- *
- * Bottom-sheet wiring (C4) :
- *   The chat screen now drives every modal-like surface through the
- *   `useBottomSheetRouter()` hook (see `features/chat/ui/bottom-sheet-router/`).
- *   Rather than rendering the real router and walking the sheet content trees,
- *   we mock the barrel and inspect the `router.open(route, params)` calls.
- *   Each legacy assertion against `lastProps('AiConsentModal')` is preserved as
- *   an equivalent assertion on the captured `params` of the matching
- *   `router.open()` invocation.
- */
-
 import '../helpers/test-utils';
 import type * as ReactTypes from 'react';
 import * as Haptics from 'expo-haptics';
@@ -41,7 +8,6 @@ import { render, fireEvent, waitFor, act } from '../helpers/render-chat-screen';
 import { makeAssistantMessage, makeChatUiMessage } from '../helpers/factories';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 
-// ── Local chatApi mock (avoids reliance on chat-screen.setup) ───────────────
 const mockDeleteSessionIfEmpty = jest.fn();
 const mockReportMessage = jest.fn();
 const mockCreateSession = jest.fn();
@@ -54,13 +20,11 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── expo-router param override (test-utils returns {} by default) ───────────
 const mockExpoRouterMock = jest.requireMock<Record<string, unknown>>('expo-router');
 const setParams = (extra: Record<string, string> = {}) => {
   mockExpoRouterMock.useLocalSearchParams = () => ({ sessionId: 'session-42', ...extra });
 };
 
-// ── @react-navigation/native ────────────────────────────────────────────────
 const mockNavAddListener = jest.fn((..._args: unknown[]) => jest.fn());
 const mockNavCanGoBack = jest.fn(() => true);
 jest.mock('@react-navigation/native', () => ({
@@ -75,13 +39,11 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// ── useChatSession ──────────────────────────────────────────────────────────
 const mockUseChatSession = jest.fn();
 jest.mock('@/features/chat/application/useChatSession', () => ({
   useChatSession: (...args: unknown[]) => mockUseChatSession(...args),
 }));
 
-// ── Side-hooks that the screen wires but we don't probe directly here ───────
 const mockAudioRecorderState = {
   isRecording: false,
   recordedAudioUri: null as string | null,
@@ -95,10 +57,6 @@ jest.mock('@/features/chat/application/useAudioRecorder', () => ({
   useAudioRecorder: () => mockAudioRecorderState,
 }));
 
-// EU AI Act Article 50 voice disclosure (origin/main commit 59296c75): the
-// real hook gates the very first toggleRecording press on per-session
-// acknowledgement. These prop-forwarding tests don't probe the disclosure
-// flow, so we mark it pre-acknowledged + no-op the acknowledge call.
 jest.mock('@/features/chat/hooks/useVoiceDisclosure', () => ({
   useVoiceDisclosure: () => ({
     isAcknowledged: true,
@@ -151,11 +109,6 @@ jest.mock('@/shared/ui/SkeletonChatBubble', () => {
   };
 });
 
-// ── Bottom-sheet router mock ────────────────────────────────────────────────
-// The chat screen now opens every modal via `useBottomSheetRouter().open()`.
-// We capture every call so each legacy assertion (visible-prop checks, modal
-// callback invocations, etc.) translates 1:1 to introspection of `mockRouterOpen`
-// / `mockRouterClose` and direct invocation of the captured `params` callbacks.
 const mockRouterOpen = jest.fn();
 const mockRouterClose = jest.fn();
 jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
@@ -167,17 +120,10 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-/**
- * Returns the params object of the *last* `router.open(route, params)` call
- * for the given route id, or `undefined` if the route was never opened.
- * Replaces the legacy `lastProps<...>('AiConsentModal')` helper for sheets
- * now routed through the bottom-sheet machine.
- */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- test helper: T types the unsafe cast of params at call-site for ergonomic typed access (e.g. lastRouteParams<{ url: string }>('browser')). Disable is scoped to this single helper.
-function lastRouteParams<T = Record<string, unknown>>(routeId: string): T | undefined {
+function lastRouteParams(routeId: string): Record<string, unknown> | undefined {
   for (let i = mockRouterOpen.mock.calls.length - 1; i >= 0; i--) {
     const call = mockRouterOpen.mock.calls[i];
-    if (call?.[0] === routeId) return call[1] as T;
+    if (call?.[0] === routeId) return call[1] as Record<string, unknown>;
   }
   return undefined;
 }
@@ -186,9 +132,6 @@ function openedRoutes(): string[] {
   return mockRouterOpen.mock.calls.map((c) => c[0] as string);
 }
 
-// ── Children mocked as jest.fn so we can capture and invoke their props ─────
-// Use a mock-prefixed factory that returns a render function which stores props
-// on the jest.fn itself via .mock.calls — avoids out-of-scope variable issues.
 jest.mock('@/features/chat/ui/ChatMessageList', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -234,8 +177,6 @@ jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
   };
 });
 
-// Helpers ────────────────────────────────────────────────────────────────────
-
 const childMockSpec: Record<string, { module: string; export: string }> = {
   ChatMessageList: { module: '@/features/chat/ui/ChatMessageList', export: 'ChatMessageList' },
   ChatInput: { module: '@/features/chat/ui/ChatInput', export: 'ChatInput' },
@@ -257,12 +198,11 @@ function getChildMock(name: string): jest.Mock {
   return fn;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- Justification: test-only call-site narrowing of captured prop bag — the generic exists to let each of the 63 callers use a different ad-hoc Pick<> shape without an extra `as` cast at every site. Approved-by: tim@2026-05-02
-function lastProps<T = Record<string, unknown>>(name: string): T {
+function lastProps(name: string): Record<string, unknown> {
   const fn = getChildMock(name);
   const calls = fn.mock.calls;
   if (calls.length === 0) throw new Error(`No calls captured for ${name}`);
-  return calls[calls.length - 1][0] as T;
+  return calls[calls.length - 1][0] as Record<string, unknown>;
 }
 
 function clearAllChildMocks(): void {
@@ -389,8 +329,6 @@ describe('ChatSessionScreen — initial intent', () => {
       setParams({ intent: 'audio' });
       render(<ChatSessionScreen />);
 
-      // The audio intent path schedules a 500 ms timer to defer recording start
-      // until the screen has fully mounted (mitigates a documented iOS silent-fail).
       const audioTimerCall = setTimeoutSpy.mock.calls.find((c) => c[1] === 500);
       expect(audioTimerCall).toBeDefined();
     } finally {
@@ -439,7 +377,7 @@ describe('ChatSessionScreen — onClose', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ isEmpty: true }));
 
     render(<ChatSessionScreen />);
-    const onClose = lastProps<{ onClose: () => void | Promise<void> }>('ChatHeader').onClose;
+    const onClose = (lastProps('ChatHeader') as { onClose: () => void | Promise<void> }).onClose;
     await act(async () => {
       await onClose();
     });
@@ -460,7 +398,7 @@ describe('ChatSessionScreen — onClose', () => {
     );
 
     render(<ChatSessionScreen />);
-    const onClose = lastProps<{ onClose: () => void | Promise<void> }>('ChatHeader').onClose;
+    const onClose = (lastProps('ChatHeader') as { onClose: () => void | Promise<void> }).onClose;
     await act(async () => {
       await onClose();
     });
@@ -481,7 +419,7 @@ describe('ChatSessionScreen — onClose', () => {
     );
 
     render(<ChatSessionScreen />);
-    const onClose = lastProps<{ onClose: () => void | Promise<void> }>('ChatHeader').onClose;
+    const onClose = (lastProps('ChatHeader') as { onClose: () => void | Promise<void> }).onClose;
     await act(async () => {
       await onClose();
     });
@@ -497,7 +435,7 @@ describe('ChatSessionScreen — onClose', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ isEmpty: true }));
 
     render(<ChatSessionScreen />);
-    const onClose = lastProps<{ onClose: () => void | Promise<void> }>('ChatHeader').onClose;
+    const onClose = (lastProps('ChatHeader') as { onClose: () => void | Promise<void> }).onClose;
     await act(async () => {
       await onClose();
     });
@@ -511,7 +449,7 @@ describe('ChatSessionScreen — onClose', () => {
 describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
   it('passes a stable onSend callback to Composer', () => {
     render(<ChatSessionScreen />);
-    const props = lastProps<{ onSend: () => void }>('Composer');
+    const props = lastProps('Composer') as { onSend: () => void };
     expect(typeof props.onSend).toBe('function');
   });
 
@@ -520,9 +458,8 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ sendMessage }));
 
     render(<ChatSessionScreen />);
-    const onSend = lastProps<{ onSend: () => void }>('Composer').onSend;
+    const onSend = (lastProps('Composer') as { onSend: () => void }).onSend;
     onSend();
-    // microtask drain
     await Promise.resolve();
 
     expect(sendMessage).not.toHaveBeenCalled();
@@ -532,9 +469,7 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
     mockAiConsentState.consentResolved = false;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean; disabled: boolean }>('Composer');
-      // Consent gate goes through `disabled`, not `isSending` — surfacing an
-      // inert button (not a spinner) when waiting on the consent flow.
+      const props = lastProps('Composer') as { isSending: boolean; disabled: boolean };
       expect(props.disabled).toBe(true);
       expect(props.isSending).toBe(false);
     } finally {
@@ -546,7 +481,7 @@ describe('ChatSessionScreen — onSend (via Composer wiring)', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const props = lastProps<{ isSending: boolean; disabled: boolean }>('Composer');
+      const props = lastProps('Composer') as { isSending: boolean; disabled: boolean };
       expect(props.disabled).toBe(true);
       expect(props.isSending).toBe(false);
     } finally {
@@ -559,32 +494,25 @@ describe('ChatSessionScreen — markdown link tap', () => {
   it('https URL prompts a confirm dialog (TD-MD-01); opens browser only after confirm', () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<ChatSessionScreen />);
-    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
-      'ChatMessageList',
-    ).onLinkPress;
+    const onLinkPress = (lastProps('ChatMessageList') as { onLinkPress: (url: string) => boolean })
+      .onLinkPress;
 
     let result: boolean | undefined;
     act(() => {
       result = onLinkPress('https://example.org/article');
     });
 
-    // Always returns false (we never let the markdown lib auto-open).
     expect(result).toBe(false);
-    // No immediate navigation — the confirm dialog gates it.
     expect(openedRoutes()).not.toContain('browser');
-    // A confirm Alert was raised using the link-confirm copy keys. (The test
-    // i18n mock returns the key verbatim and drops interpolation, so we assert
-    // the key here; hostname interpolation is covered at the unit level.)
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy.mock.calls[0]?.[0]).toBe('chat.link_confirm_title');
     expect(alertSpy.mock.calls[0]?.[1]).toBe('chat.link_confirm_body');
 
-    // Pressing the "Open" button (last button — after Cancel) navigates.
     const buttons = alertSpy.mock.calls[0]?.[2] ?? [];
     act(() => {
       buttons[buttons.length - 1]?.onPress?.();
     });
-    const browserParams = lastRouteParams<{ url: string }>('browser');
+    const browserParams = lastRouteParams('browser') as { url: string } | undefined;
     expect(browserParams?.url).toBe('https://example.org/article');
     alertSpy.mockRestore();
   });
@@ -592,9 +520,8 @@ describe('ChatSessionScreen — markdown link tap', () => {
   it('http URL is ignored entirely (TD-MD-02 downgrade rejection) — no dialog, no nav', () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<ChatSessionScreen />);
-    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
-      'ChatMessageList',
-    ).onLinkPress;
+    const onLinkPress = (lastProps('ChatMessageList') as { onLinkPress: (url: string) => boolean })
+      .onLinkPress;
 
     let result: boolean | undefined;
     act(() => {
@@ -609,18 +536,16 @@ describe('ChatSessionScreen — markdown link tap', () => {
 
   it('mailto URL returns true (lets the markdown lib open it via Linking)', () => {
     render(<ChatSessionScreen />);
-    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
-      'ChatMessageList',
-    ).onLinkPress;
+    const onLinkPress = (lastProps('ChatMessageList') as { onLinkPress: (url: string) => boolean })
+      .onLinkPress;
 
     expect(onLinkPress('mailto:test@example.com')).toBe(true);
   });
 
   it('empty URL returns false and does NOT open the browser route', () => {
     render(<ChatSessionScreen />);
-    const onLinkPress = lastProps<{ onLinkPress: (url: string) => boolean }>(
-      'ChatMessageList',
-    ).onLinkPress;
+    const onLinkPress = (lastProps('ChatMessageList') as { onLinkPress: (url: string) => boolean })
+      .onLinkPress;
 
     expect(onLinkPress('')).toBe(false);
     expect(openedRoutes()).not.toContain('browser');
@@ -633,9 +558,8 @@ describe('ChatSessionScreen — onMessageImageError', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ refreshMessageImageUrl: refresh }));
 
     render(<ChatSessionScreen />);
-    const onImageError = lastProps<{ onImageError: (id: string) => void }>(
-      'ChatMessageList',
-    ).onImageError;
+    const onImageError = (lastProps('ChatMessageList') as { onImageError: (id: string) => void })
+      .onImageError;
     onImageError('msg-1');
     await Promise.resolve();
     onImageError('msg-2');
@@ -657,15 +581,13 @@ describe('ChatSessionScreen — onMessageImageError', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ refreshMessageImageUrl: refresh }));
 
     render(<ChatSessionScreen />);
-    const onImageError = lastProps<{ onImageError: (id: string) => void }>(
-      'ChatMessageList',
-    ).onImageError;
+    const onImageError = (lastProps('ChatMessageList') as { onImageError: (id: string) => void })
+      .onImageError;
     onImageError('msg-1');
     onImageError('msg-1');
     onImageError('msg-1');
 
     expect(refresh).toHaveBeenCalledTimes(1);
-    // Resolve to avoid hanging promises across tests.
     resolvers.forEach((r) => {
       r();
     });
@@ -681,15 +603,14 @@ describe('ChatSessionScreen — long press + report', () => {
 
     render(<ChatSessionScreen />);
 
-    // No menu open yet → no `context-menu` route in the opens history.
     expect(openedRoutes()).not.toContain('context-menu');
 
-    const onReport = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+    const onReport = (lastProps('ChatMessageList') as { onReport: (id: string) => void }).onReport;
     act(() => {
       onReport('msg-99');
     });
 
-    const params = lastRouteParams<{ message: ChatUiMessage }>('context-menu');
+    const params = lastRouteParams('context-menu') as { message: ChatUiMessage } | undefined;
     expect(params?.message.id).toBe('msg-99');
     expect(params?.message.text).toBe('hello');
   });
@@ -703,7 +624,7 @@ describe('ChatSessionScreen — long press + report', () => {
     );
     render(<ChatSessionScreen />);
 
-    const onReport = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+    const onReport = (lastProps('ChatMessageList') as { onReport: (id: string) => void }).onReport;
     act(() => {
       onReport('does-not-exist');
     });
@@ -713,17 +634,18 @@ describe('ChatSessionScreen — long press + report', () => {
 
   it('Alert.alert from onReport surfaces 5 buttons (4 reasons + cancel)', () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
-    // Make a message available so the long-press picks one up; then invoke the
-    // sheet content's `onReport` callback (captured by the router mock).
     const target = makeAssistantMessage({ id: 'msg-x' });
     mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+    const onLongPress = (lastProps('ChatMessageList') as { onReport: (id: string) => void })
+      .onReport;
     act(() => {
       onLongPress('msg-x');
     });
-    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    const params = lastRouteParams('context-menu') as
+      | { onReport: (id: string) => void }
+      | undefined;
     expect(params).toBeDefined();
     act(() => {
       params?.onReport('msg-x');
@@ -743,11 +665,14 @@ describe('ChatSessionScreen — long press + report', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+    const onLongPress = (lastProps('ChatMessageList') as { onReport: (id: string) => void })
+      .onReport;
     act(() => {
       onLongPress('msg-x');
     });
-    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    const params = lastRouteParams('context-menu') as
+      | { onReport: (id: string) => void }
+      | undefined;
     act(() => {
       params?.onReport('msg-x');
     });
@@ -772,11 +697,14 @@ describe('ChatSessionScreen — long press + report', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
     render(<ChatSessionScreen />);
 
-    const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+    const onLongPress = (lastProps('ChatMessageList') as { onReport: (id: string) => void })
+      .onReport;
     act(() => {
       onLongPress('msg-x');
     });
-    const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+    const params = lastRouteParams('context-menu') as
+      | { onReport: (id: string) => void }
+      | undefined;
     act(() => {
       params?.onReport('msg-x');
     });
@@ -786,7 +714,6 @@ describe('ChatSessionScreen — long press + report', () => {
     });
 
     await waitFor(() => {
-      // First call = the 5-option menu; second = the error confirmation.
       expect(alertSpy).toHaveBeenCalledTimes(2);
     });
     expect(alertSpy.mock.calls[1]?.[0]).toBe('common.error');
@@ -799,7 +726,7 @@ describe('ChatSessionScreen — header callbacks', () => {
     render(<ChatSessionScreen />);
     expect(openedRoutes()).not.toContain('summary');
 
-    const onSummary = lastProps<{ onSummary: () => void }>('ChatHeader').onSummary;
+    const onSummary = (lastProps('ChatHeader') as { onSummary: () => void }).onSummary;
     act(() => {
       onSummary();
     });
@@ -810,22 +737,21 @@ describe('ChatSessionScreen — header callbacks', () => {
   it('onToggleAudioDescription flips audioDescriptionEnabled prop on next render', () => {
     render(<ChatSessionScreen />);
     expect(
-      lastProps<{ audioDescriptionEnabled: boolean }>('ChatHeader').audioDescriptionEnabled,
+      (lastProps('ChatHeader') as { audioDescriptionEnabled: boolean }).audioDescriptionEnabled,
     ).toBe(false);
 
-    const toggle = lastProps<{ onToggleAudioDescription: () => void }>(
-      'ChatHeader',
-    ).onToggleAudioDescription;
+    const toggle = (lastProps('ChatHeader') as { onToggleAudioDescription: () => void })
+      .onToggleAudioDescription;
     act(() => {
       toggle();
     });
 
     expect(
-      lastProps<{ audioDescriptionEnabled: boolean }>('ChatHeader').audioDescriptionEnabled,
+      (lastProps('ChatHeader') as { audioDescriptionEnabled: boolean }).audioDescriptionEnabled,
     ).toBe(true);
   });
 
-  it('passes the lastAssistantMessage.metadata.expertiseSignal to ChatHeader', () => {
+  it('M6 · does not hand a level to ChatHeader even when the last answer signals one', () => {
     const assistant = makeAssistantMessage(
       { id: 'a-1', text: 'foo' },
       { expertiseSignal: 'expert' },
@@ -834,8 +760,8 @@ describe('ChatSessionScreen — header callbacks', () => {
 
     render(<ChatSessionScreen />);
 
-    expect(lastProps<{ expertiseLevel: string | undefined }>('ChatHeader').expertiseLevel).toBe(
-      'expert',
+    expect(lastProps('ChatHeader') as { sessionTitle: string | null }).not.toHaveProperty(
+      'expertiseLevel',
     );
   });
 });
@@ -855,7 +781,7 @@ describe('ChatSessionScreen — consent route wiring', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const params = lastRouteParams<{ onPrivacy: () => void }>('consent');
+      const params = lastRouteParams('consent') as { onPrivacy: () => void } | undefined;
       expect(params).toBeDefined();
       act(() => {
         params?.onPrivacy();
@@ -873,7 +799,7 @@ describe('ChatSessionScreen — consent route wiring', () => {
     mockAiConsentState.showAiConsent = true;
     try {
       render(<ChatSessionScreen />);
-      const params = lastRouteParams<{ onAccept: () => void }>('consent');
+      const params = lastRouteParams('consent') as { onAccept: () => void } | undefined;
       act(() => {
         params?.onAccept();
       });
@@ -900,7 +826,7 @@ describe('ChatSessionScreen — daily limit route', () => {
     );
 
     render(<ChatSessionScreen />);
-    const params = lastRouteParams<{ onDismiss: () => void }>('daily-limit');
+    const params = lastRouteParams('daily-limit') as { onDismiss: () => void } | undefined;
     act(() => {
       params?.onDismiss();
     });
@@ -924,12 +850,12 @@ describe('ChatSessionScreen — ChatMessageList passthrough', () => {
 
     render(<ChatSessionScreen />);
 
-    const props = lastProps<{
+    const props = lastProps('ChatMessageList') as {
       messages: ChatUiMessage[];
       isSending: boolean;
       isStreaming: boolean;
       locale: string;
-    }>('ChatMessageList');
+    };
     expect(props.messages).toHaveLength(2);
     expect(props.isSending).toBe(true);
     expect(props.isStreaming).toBe(true);
@@ -941,33 +867,26 @@ describe('ChatSessionScreen — ChatMessageList passthrough', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ retryMessage }));
 
     render(<ChatSessionScreen />);
-    const props = lastProps<{ onRetry: (id: string) => void }>('ChatMessageList');
+    const props = lastProps('ChatMessageList') as { onRetry: (id: string) => void };
     props.onRetry('msg-1');
     expect(retryMessage).toHaveBeenCalledWith('msg-1');
   });
 
-  it('onFollowUpPress + onRecommendationPress: chip text taps fire sendMessage / setText respectively', () => {
+  it('onRecommendationPress: a recommendation tap only fills the input, never sends', () => {
     const sendMessage = jest.fn().mockResolvedValue(true);
     mockUseChatSession.mockReturnValue(defaultSession({ sendMessage }));
 
     render(<ChatSessionScreen />);
 
-    const onFollowUpPress = lastProps<{ onFollowUpPress: (text: string) => void }>(
-      'ChatMessageList',
-    ).onFollowUpPress;
-    act(() => {
-      onFollowUpPress('What about Renoir?');
-    });
-    expect(sendMessage).toHaveBeenCalledWith({ text: 'What about Renoir?' });
-
-    const onRecommendationPress = lastProps<{
-      onRecommendationPress: (text: string) => void;
-    }>('ChatMessageList').onRecommendationPress;
+    const onRecommendationPress = (
+      lastProps('ChatMessageList') as {
+        onRecommendationPress: (text: string) => void;
+      }
+    ).onRecommendationPress;
     act(() => {
       onRecommendationPress('Try Sisley next');
     });
-    // Recommendation only sets text — no extra sendMessage call.
-    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).not.toHaveBeenCalled();
   });
 });
 
@@ -1005,11 +924,14 @@ describe('ChatSessionScreen — report Alert button branches', () => {
       mockUseChatSession.mockReturnValue(defaultSession({ messages: [target], isEmpty: false }));
       render(<ChatSessionScreen />);
 
-      const onLongPress = lastProps<{ onReport: (id: string) => void }>('ChatMessageList').onReport;
+      const onLongPress = (lastProps('ChatMessageList') as { onReport: (id: string) => void })
+        .onReport;
       act(() => {
         onLongPress('msg-x');
       });
-      const params = lastRouteParams<{ onReport: (id: string) => void }>('context-menu');
+      const params = lastRouteParams('context-menu') as
+        | { onReport: (id: string) => void }
+        | undefined;
       act(() => {
         params?.onReport('msg-x');
       });
@@ -1034,20 +956,19 @@ describe('ChatSessionScreen — onSend full path', () => {
     mockUseChatSession.mockReturnValue(defaultSession({ sendMessage }));
     render(<ChatSessionScreen />);
 
-    // Drive the input value through Composer's onChangeText, then press onSend.
-    const onChangeText = lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText;
+    const onChangeText = (lastProps('Composer') as { onChangeText: (s: string) => void })
+      .onChangeText;
     act(() => {
       onChangeText('Tell me more');
     });
-    const onSend = lastProps<{ onSend: () => void }>('Composer').onSend;
+    const onSend = (lastProps('Composer') as { onSend: () => void }).onSend;
     await act(async () => {
       onSend();
       await Promise.resolve();
     });
 
     expect(sendMessage).toHaveBeenCalledWith({ text: 'Tell me more' });
-    // Input value cleared after send.
-    expect(lastProps<{ text: string }>('Composer').text).toBe('');
+    expect((lastProps('Composer') as { text: string }).text).toBe('');
   });
 
   it('restores the typed text when sendMessage rejects (returns falsy)', async () => {
@@ -1056,43 +977,40 @@ describe('ChatSessionScreen — onSend full path', () => {
     render(<ChatSessionScreen />);
 
     act(() => {
-      lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText('failing text');
+      (lastProps('Composer') as { onChangeText: (s: string) => void }).onChangeText('failing text');
     });
     await act(async () => {
-      lastProps<{ onSend: () => void }>('Composer').onSend();
+      (lastProps('Composer') as { onSend: () => void }).onSend();
       await Promise.resolve();
     });
 
     expect(sendMessage).toHaveBeenCalledWith({ text: 'failing text' });
-    expect(lastProps<{ text: string }>('Composer').text).toBe('failing text');
+    expect((lastProps('Composer') as { text: string }).text).toBe('failing text');
   });
 });
 
 describe('ChatSessionScreen — Composer media wiring (A1)', () => {
   it('forwards toggleRecording, recordedAudioUri and isRecording to Composer (R23)', () => {
     render(<ChatSessionScreen />);
-    const props = lastProps<{
+    const props = lastProps('Composer') as {
       toggleRecording: () => Promise<void> | void;
       recordedAudioUri: string | null;
       isRecording: boolean;
       onOpenAttachments: () => void;
-    }>('Composer');
+    };
 
     expect(typeof props.toggleRecording).toBe('function');
     expect(typeof props.onOpenAttachments).toBe('function');
 
-    // Recording toggle is wired through the audio recorder hook (the screen
-    // wraps it behind the EU AI Act gate; with disclosure pre-acknowledged
-    // the raw recorder hook fires synchronously).
     void props.toggleRecording();
     expect(mockAudioRecorderState.toggleRecording).toHaveBeenCalledTimes(1);
   });
 
   it('opens the attachment-picker route with wired media + audio handles (R22)', () => {
     render(<ChatSessionScreen />);
-    const { onOpenAttachments } = lastProps<{
+    const { onOpenAttachments } = lastProps('Composer') as {
       onOpenAttachments: () => void;
-    }>('Composer');
+    };
 
     onOpenAttachments();
     const openedCall = mockRouterOpen.mock.calls.find((c) => c[0] === 'attachment-picker');
@@ -1123,26 +1041,19 @@ describe('ChatSessionScreen — Composer media wiring (A1)', () => {
 describe('ChatSessionScreen — Composer value change', () => {
   it('passes a fresh value down after onChangeText is invoked', () => {
     render(<ChatSessionScreen />);
-    expect(lastProps<{ text: string }>('Composer').text).toBe('');
+    expect((lastProps('Composer') as { text: string }).text).toBe('');
 
     act(() => {
-      lastProps<{ onChangeText: (s: string) => void }>('Composer').onChangeText('typing...');
+      (lastProps('Composer') as { onChangeText: (s: string) => void }).onChangeText('typing...');
     });
 
-    expect(lastProps<{ text: string }>('Composer').text).toBe('typing...');
+    expect((lastProps('Composer') as { text: string }).text).toBe('typing...');
   });
 
   it('onClearImage clears the selected image via the image picker hook', () => {
     render(<ChatSessionScreen />);
-    const onClearImage = lastProps<{ onClearImage: () => void }>('Composer').onClearImage;
+    const onClearImage = (lastProps('Composer') as { onClearImage: () => void }).onClearImage;
     onClearImage();
     expect(mockImagePickerState.clearSelectedImage).toHaveBeenCalledTimes(1);
   });
 });
-
-// NOTE: the chat-local <OfflineBanner> mount was removed in this cycle
-// (connectivity single-source-of-truth, design §D5). The banner is now mounted
-// globally in app/_layout.tsx via <GlobalOfflineBannerHost />, so the chat
-// screen no longer forwards pendingCount/isOffline to a local OfflineBanner.
-// The global mount is covered by __tests__/components/GlobalOfflineBanner.test.tsx
-// and the .maestro/connectivity-offline-banner.yaml flow (UFR-021).

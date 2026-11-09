@@ -1,11 +1,3 @@
-/**
- * Behaviour & accessibility tests for key UI components.
- *
- * Replaces the previous toJSON()-based snapshot tests with role-query
- * and behaviour assertions per ADR-012 + Phase 0 cosmetic-test purge.
- * Each test case pins a specific user-visible regression — see inline
- * `// pins:` comments for the exact contract guarded.
- */
 import '../helpers/test-utils';
 import React from 'react';
 import { Text } from 'react-native';
@@ -14,7 +6,6 @@ import { render } from '@testing-library/react-native';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
 import { nonNull } from '../helpers/nonNull';
 
-// ── ErrorBoundary-specific mocks ────────────────────────────────────────────
 jest.mock('@/shared/i18n/i18n', () => ({
   __esModule: true,
   default: {
@@ -34,7 +25,6 @@ jest.mock('@/shared/ui/themes', () => ({
 
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 
-// ── ChatMessageBubble mocks ─────────────────────────────────────────────────
 jest.mock('@/features/chat/ui/MarkdownBubble', () => {
   const { Text: RNText } = require('react-native');
   return {
@@ -51,12 +41,7 @@ jest.mock('@/features/chat/ui/ArtworkCard', () => {
 
 import { ChatMessageBubble } from '@/features/chat/ui/ChatMessageBubble';
 
-// ============================================================================
-// ErrorBoundary — fallback behaviour
-// ============================================================================
-
 describe('ErrorBoundary — fallback behaviour', () => {
-  // pins: the ErrorBoundary is transparent (renders children) when no error
   it('renders children when no error is thrown', () => {
     const { getByText } = render(
       <ErrorBoundary>
@@ -66,8 +51,6 @@ describe('ErrorBoundary — fallback behaviour', () => {
     expect(getByText('Safe content')).toBeTruthy();
   });
 
-  // pins: after a child throws, the boundary swaps in a recoverable fallback
-  // (fallback contains a retry/reload affordance — the contract a user relies on)
   it('renders fallback UI after a child throws', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const ThrowError = () => {
@@ -78,17 +61,11 @@ describe('ErrorBoundary — fallback behaviour', () => {
         <ThrowError />
       </ErrorBoundary>,
     );
-    // child content gone
     expect(queryByText('snapshot crash')).toBeNull();
-    // fallback button (retry/reload) reachable by role
     expect(getByRole('button')).toBeTruthy();
     spy.mockRestore();
   });
 });
-
-// ============================================================================
-// ChatMessageBubble — role-based rendering
-// ============================================================================
 
 describe('ChatMessageBubble — role-based rendering', () => {
   const baseMessage = {
@@ -98,7 +75,6 @@ describe('ChatMessageBubble — role-based rendering', () => {
     metadata: null,
   };
 
-  // pins: user messages render the message text verbatim (no markdown stripping)
   it('renders user message text without modification', () => {
     const { getByText } = render(
       <ChatMessageBubble
@@ -111,8 +87,6 @@ describe('ChatMessageBubble — role-based rendering', () => {
     expect(getByText('Hello, how can I help?')).toBeTruthy();
   });
 
-  // pins: assistant messages must expose a report affordance with a screen-reader-accessible
-  // label matching /report/i (AssistantMetaActions renders a flagging button for moderation)
   it('exposes a report affordance on assistant messages', () => {
     const onReport = jest.fn();
     const { getByLabelText } = render(
@@ -123,19 +97,11 @@ describe('ChatMessageBubble — role-based rendering', () => {
         onReport={onReport}
       />,
     );
-    // AssistantMetaActions always renders a report Pressable with accessibilityLabel
-    // matching the i18n key 'messageMenu.report' — must be present for moderation to work
     expect(getByLabelText(/report/i)).toBeTruthy();
   });
 });
 
-// ============================================================================
-// ChatInput — disabled/sending state
-// ============================================================================
-
 describe('ChatInput — disabled/sending state', () => {
-  // pins: send button is accessible (enabled) when not sending, even with empty value —
-  // the component delegates empty-submit prevention to the caller, not the button state
   it('renders an accessible send button in the default (not sending) state', () => {
     const onSend = jest.fn();
     const onChangeText = jest.fn();
@@ -144,21 +110,17 @@ describe('ChatInput — disabled/sending state', () => {
     );
     const sendButton = getByRole('button', { name: /send/i });
     expect(sendButton).toBeTruthy();
-    // not in a disabled state
     const isDisabled =
       sendButton.props.accessibilityState?.disabled ?? sendButton.props.disabled ?? false;
     expect(isDisabled).toBeFalsy();
   });
 
-  // pins: while a message is in flight, the send button is always rendered but disabled
-  // (prevents duplicate sends — Pressable is always mounted, isSending sets disabled={true})
   it('disables send when isSending is true', () => {
     const onSend = jest.fn();
     const { queryByRole } = render(
       <ChatInput value="Hello" onChangeText={jest.fn()} onSend={onSend} isSending={true} />,
     );
     const sendButton = queryByRole('button', { name: /send/i });
-    // button is always rendered (never hidden) — a missing button means a regression
     expect(sendButton).not.toBeNull();
     const button = nonNull(sendButton);
     expect(button.props.accessibilityState?.disabled ?? button.props.disabled).toBeTruthy();

@@ -27,7 +27,6 @@ export class TypeOrmMuseumEnrichmentRepo implements MuseumEnrichmentRepoPort {
       .getMany();
   }
 
-  /** Higher confidence overwrites; lower fills nulls only. Mutates existing row. */
   async upsertFromClassification(
     data: Omit<MuseumEnrichment, 'id' | 'museum' | 'createdAt' | 'updatedAt'>,
     sourceUrl: string,

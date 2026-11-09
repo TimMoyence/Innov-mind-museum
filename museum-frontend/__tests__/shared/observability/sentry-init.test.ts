@@ -1,10 +1,3 @@
-/**
- * Tests for the mobile Sentry PII scrubber.
- *
- * The scrubber is imported directly (Sentry-SDK-free) so we don't need to mock
- * `@sentry/react-native` here. DRY factories keep event shapes consistent.
- */
-
 import {
   hashEmail,
   REDACTED,
@@ -14,13 +7,11 @@ import {
   type ScrubbableEvent,
 } from '@/shared/observability/sentry-scrubber';
 
-/** Factory — fake Sentry event with overridable sections. */
 const makeFakeEvent = (overrides: Partial<ScrubbableEvent> = {}): ScrubbableEvent => ({
   request: { headers: {}, data: {}, url: 'https://api.musaium.example/' },
   ...overrides,
 });
 
-/** Factory — fake Sentry breadcrumb defaulting to category:http. */
 const makeFakeBreadcrumb = (
   overrides: Partial<ScrubbableBreadcrumb> = {},
 ): ScrubbableBreadcrumb => ({

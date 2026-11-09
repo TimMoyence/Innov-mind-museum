@@ -1,38 +1,17 @@
-/**
- * A2 — Artwork hero modal (fullscreen + pinch-zoom).
- *
- * Opened on tap of `<ArtworkHeroCard>`. Renders the user-uploaded image at
- * full size with pinch-to-zoom (gesture-handler v2 + Reanimated worklet)
- * + metadata footer + close button.
- *
- * Pinch-zoom : `Gesture.Pinch()` (v2 API) + `useSharedValue` clamped to
- * `[1, 5]` via `useAnimatedStyle`. The gesture stays active in reduced-motion
- * mode — pinch is a functional gesture, not decorative motion (see
- * `useReducedMotion.ts:11` comment).
- *
- * Hardware-back : Android `BackHandler` listener invokes `onClose()` while
- * the modal is visible (pattern reused from `MuseumSheet.tsx:42`).
- *
- * Lazy mount : returns `null` when `!visible || !model` so the GestureDetector
- * + Reanimated worklets do not initialise unless the modal is actually shown.
- * This keeps screens that never open the modal (e.g. chat-session-deep test
- * suite) free of gesture-handler / reanimated test friction.
- *
- * Spec: docs/chat-ux-refonte/specs/A2.md §1.3 (R16-R22).
- */
-
-import React, { useEffect, useMemo } from 'react';
-import { BackHandler, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { useHardwareBack } from '@/shared/ui/hooks/useHardwareBack';
 import { fontSize, space } from '@/shared/ui/tokens';
 
 import type { ArtworkHeroModel } from '@/features/chat/application/useArtworkHero';
 import { useCarnetImageSource } from '@/features/chat/application/useCarnetImageSource';
+import { artworkLocation } from '@/features/chat/ui/ArtworkCard';
 
 interface ArtworkHeroModalProps {
   readonly visible: boolean;
@@ -43,9 +22,6 @@ interface ArtworkHeroModalProps {
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 
-// Modal overlay palette — local constants kept consistent with
-// `ImageFullscreenModal.tsx:30-33`. Non-thematic (always full-screen dark
-// overlay), so not extractable as a DS token without breaking the DS.
 const MODAL_BG = 'rgba(0,0,0,0.95)';
 const TITLE_COLOR = '#ffffff';
 const SUBTITLE_COLOR = '#e5e7eb';
@@ -62,22 +38,8 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
 
-  // R19 — Android hardware-back closes the modal without quitting the screen.
-  useEffect(() => {
-    if (!visible) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      onClose();
-      return true;
-    });
-    return () => {
-      sub.remove();
-    };
-  }, [visible, onClose]);
+  useHardwareBack(onClose, visible);
 
-  // R20 — pinch-zoom clamped to [1, 5]. Worklet-driven via Reanimated.
-  // TD-RNGH-03 — useMemo so the Gesture instance survives parent re-renders.
-  // Empty deps OK : the gesture only reads shared values via worklet refs
-  // (savedScale / scale), which keep their identity across renders.
   const pinch = useMemo(
     () =>
       Gesture.Pinch()
@@ -97,19 +59,13 @@ export const ArtworkHeroModal = React.memo(function ArtworkHeroModal({
     transform: [{ scale: scale.value }],
   }));
 
-  // R16 — lazy mount : skip the gesture tree entirely when not visible.
   if (!visible || !model) return null;
 
   const title = model.title ?? t('chat.artworkHero.modal.title_fallback');
-  const location = model.museum ? [model.museum, model.room].filter(Boolean).join(' — ') : null;
+  const location = artworkLocation(model.museum, model.room);
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      {/* TD-RNGH-02 — RN `<Modal>` opens a separate native window root, so the
-       * tree-level `<GestureHandlerRootView>` in `app/_layout.tsx` does NOT
-       * reach this subtree. Re-wrap here so pinch-zoom (Gesture.Pinch)
-       * actually receives touch events. Without this the pinch detector
-       * silently no-ops — defeats the whole purpose of the modal. */}
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaView style={styles.root} accessibilityViewIsModal>
           <Pressable
@@ -158,11 +114,6 @@ interface FullImageProps {
   readonly fallbackUrl: string;
 }
 
-/**
- * Resolves the fullscreen image through {@link useCarnetImageSource} so a
- * stale signed URL is re-minted from a fresh signed URL + durable cache (D4)
- * rather than rendering a broken (expired) image.
- */
 function FullImage({ messageId, fallbackUrl }: FullImageProps): React.ReactElement {
   const { uri } = useCarnetImageSource({ messageId: messageId ?? '', fallbackUrl });
   return (

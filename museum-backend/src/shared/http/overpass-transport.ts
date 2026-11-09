@@ -30,7 +30,6 @@ export async function postQuery(
   }
 }
 
-/** Returns `null` on non-OK / unexpected shape → caller falls through to next endpoint. */
 export async function fetchFromEndpoint(
   endpoint: string,
   query: string,

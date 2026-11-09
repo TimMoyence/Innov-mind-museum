@@ -1,31 +1,3 @@
-/**
- * Verifies the structured-output fast path of {@link LangChainChatOrchestrator}
- * for default (non-walk) intent — C2 image-chat fix 2026-05.
- *
- * Bug history (historical — legacy path retired C9.17): gpt-4o-mini
- * occasionally ignored the legacy plain-text directive embedded in the
- * summary section prompt on the first turn, returning the answer text
- * without the trailing JSON-tail block. The legacy parser then extracted
- * `metadata: {}`, dropping `suggestedImages` — the fan-out fetcher never
- * ran, no images were attached, promptfoo c2-enrichment regressed at
- * 2/4 PASS.
- *
- * Fix: wire `model.withStructuredOutput(mainAssistantOutputSchema)` into the
- * default section invocation. OpenAI / Gemini honour
- * `response_format: json_schema` and return a parsed object; the orchestrator
- * re-stringifies it as `{ answer, ...metadata }` so the runtime metadata
- * extractor consumes it transparently.
- *
- * This file pins:
- *   1. Structured-output adapter is invoked when both the section ships a
- *      schema AND the model exposes `withStructuredOutput`.
- *   2. Fields produced by the schema (`text`, `suggestedImages`,
- *      `detectedArtwork`, etc.) make it to `OrchestratorOutput.metadata`.
- *   3. Step B (C9.17) will pin the fail-closed behaviour when a section
- *      ships an `outputSchema` but the model lacks `withStructuredOutput`.
- *      Until then, the placeholder `it.todo(...)` documents the intent.
- */
-
 jest.mock('@src/config/env', () => ({
   env: {
     llm: {
@@ -104,11 +76,6 @@ interface StructuredFakeReturn {
   citations?: string[];
 }
 
-/**
- * Fake model that exposes both `invoke` and `withStructuredOutput`. The
- * structured adapter is invoked by the orchestrator when the section ships a
- * schema; this fake captures the schema arg and returns a deterministic object.
- */
 class FakeStructuredModel {
   capturedSchemaName: string | undefined;
   invokedStructured = 0;
@@ -195,7 +162,6 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
   it('preserves an empty suggestedImages array as undefined (non-visual subject)', async () => {
     const model = new FakeStructuredModel({
       text: 'Impressionism is a 19th-century movement…',
-      // No suggestedImages — non-visual subject.
     });
     const orchestrator = new LangChainChatOrchestrator({ model: model as never });
 
@@ -206,17 +172,10 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
     expect(result.metadata.suggestedImages).toBeUndefined();
   });
 
-  // C9.17 Step B — the legacy plain-text + JSON-tail path has been removed
-  // from `invokeSection`. A section that ships an `outputSchema` against a
-  // model lacking `withStructuredOutput` now throws inside `invokeSection`;
-  // the section runner catches the throw and surfaces a `status:'error'`
-  // result, which `resolveSummary` degrades to the canned
-  // `createSummaryFallback` text (degraded=true).
   it('fails closed when section has outputSchema but model lacks withStructuredOutput', async () => {
     const invokeSpy = jest.fn(async () => {
       throw new Error('legacy invoke should not be called');
     });
-    // Model with `invoke` only — no `withStructuredOutput`.
     const model = {
       invoke: invokeSpy,
       stream: jest.fn(),
@@ -225,11 +184,7 @@ describe('LangChainChatOrchestrator — structured-output path (C2 fix 2026-05)'
 
     const result = await orchestrator.generate(makeInput({ text: 'Tell me about the Mona Lisa.' }));
 
-    // Legacy invoke path retired — no plain-text fallback attempted.
     expect(invokeSpy).not.toHaveBeenCalled();
-    // Section runner caught the throw → resolveSummary surfaced the canned
-    // fallback text. Exact wording comes from `createSummaryFallback`, but it
-    // is guaranteed non-empty.
     expect(typeof result.text).toBe('string');
     expect(result.text.length).toBeGreaterThan(0);
   });

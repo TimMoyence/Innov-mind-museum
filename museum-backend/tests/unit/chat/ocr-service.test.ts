@@ -16,7 +16,6 @@ jest.mock('@shared/observability/sentry', () => ({
   startSpan: jest.fn((_ctx: unknown, cb: (span: unknown) => unknown) => cb({})),
 }));
 
-// Mock tesseract.js — dynamic import inside TesseractOcrService.getScheduler()
 const mockAddJob = jest.fn();
 const mockTerminate = jest.fn();
 const mockScheduler = {
@@ -83,14 +82,8 @@ describe('TesseractOcrService', () => {
   });
 
   it('returns null on OCR timeout (fail-open)', async () => {
-    mockAddJob.mockImplementation(
-      () =>
-        new Promise((_resolve) => {
-          // never resolves — the timeout will fire
-        }),
-    );
+    mockAddJob.mockImplementation(() => new Promise((_resolve) => {}));
 
-    // Override timeout to be very short so the test runs fast
     const { env } = require('@src/config/env');
     const originalTimeout = env.llm.timeoutMs;
     env.llm.timeoutMs = 50;
@@ -114,7 +107,6 @@ describe('TesseractOcrService', () => {
   });
 
   it('destroy terminates the scheduler', async () => {
-    // Trigger scheduler init first
     mockAddJob.mockResolvedValue({ data: { text: 'test', confidence: 80 } });
     await service.extractText('dGVzdA==');
 
@@ -123,7 +115,6 @@ describe('TesseractOcrService', () => {
   });
 
   it('destroy is safe to call when scheduler was never initialized', async () => {
-    // No extractText call => schedulerPromise is null
     await expect(service.destroy()).resolves.toBeUndefined();
   });
 });

@@ -1,8 +1,6 @@
 import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/extracted-content/canonical-url';
 
 describe('canonicalizeUrl', () => {
-  // ── Trailing slash ──────────────────────────────────────────────────────────
-
   it('strips trailing slash from non-root path', () => {
     expect(canonicalizeUrl('https://example.com/mona-lisa/')).toBe('https://example.com/mona-lisa');
   });
@@ -20,8 +18,6 @@ describe('canonicalizeUrl', () => {
       'https://louvre.fr/en/collections/paintings',
     );
   });
-
-  // ── Query fingerprint ───────────────────────────────────────────────────────
 
   it('sorts query params alphabetically', () => {
     expect(canonicalizeUrl('https://example.com/search?z=last&a=first&m=mid')).toBe(
@@ -45,8 +41,6 @@ describe('canonicalizeUrl', () => {
     expect(canonicalizeUrl('https://example.com/artwork')).toBe('https://example.com/artwork');
   });
 
-  // ── Combined ────────────────────────────────────────────────────────────────
-
   it('strips trailing slash AND sorts query params in one pass', () => {
     expect(canonicalizeUrl('https://example.com/gallery/?z=3&a=1')).toBe(
       'https://example.com/gallery?a=1&z=3',
@@ -59,15 +53,12 @@ describe('canonicalizeUrl', () => {
     expect(a).toBe(b);
   });
 
-  // ── Protocol and case preservation ─────────────────────────────────────────
-
   it('preserves https scheme', () => {
     const result = canonicalizeUrl('https://example.com/art');
     expect(result.startsWith('https://')).toBe(true);
   });
 
   it('preserves hostname casing as-is (URL spec lowercases host)', () => {
-    // URL spec lowercases hostnames — canonicalizeUrl delegates to URL constructor
     const result = canonicalizeUrl('https://EXAMPLE.COM/art');
     expect(result).toBe('https://example.com/art');
   });

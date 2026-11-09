@@ -24,9 +24,6 @@ const STAT_CARDS: StatCardDef[] = [
   {
     labelKey: 'totalMessages',
     valueKey: 'totalMessages',
-    // accent palette stops at -600 (#0284C7), which on bg-accent-400/10
-    // computes to 3.48:1 — below WCAG AA. Use Tailwind sky-700 (same hue,
-    // darker) on sky-50 for a 5.7:1 ratio without touching design tokens.
     color: 'bg-sky-50 text-sky-700',
   },
   {
@@ -72,7 +69,6 @@ export default function AdminDashboardPage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {STAT_CARDS.map((card) => {
             const value = stats[card.valueKey];
-            // usersByRole is a Record<string,number> — skip numeric display for it
             const numericValue = typeof value === 'number' ? value : null;
             return (
               <div

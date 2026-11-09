@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { TextLines } from '@/shared/ui/TextLines';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 import { formatDistance } from '../application/formatDistance';
@@ -93,11 +94,10 @@ export const MuseumSheetEnrichmentBody = ({
             <Ionicons name="time-outline" size={16} color={hoursToneColor} />
             <Text style={[styles.hoursLabel, { color: hoursToneColor }]}>{hoursDisplay.label}</Text>
           </View>
-          {hoursDisplay.weeklyLines.map((line) => (
-            <Text key={line} style={[styles.weeklyLine, { color: theme.textSecondary }]}>
-              {line}
-            </Text>
-          ))}
+          <TextLines
+            lines={hoursDisplay.weeklyLines}
+            style={[styles.weeklyLine, { color: theme.textSecondary }]}
+          />
         </View>
       ) : null}
 

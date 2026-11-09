@@ -19,9 +19,10 @@ const flowFiles = (directory: string): string[] =>
   });
 
 const switchesDataSaving = (flow: string, mode: string): boolean =>
-  new RegExp(`file: ${DATA_SAVING_HELPER}\\n\\s+env:\\n\\s+MODE: "${mode}"`).test(flow);
+  new RegExp(`file: ${DATA_SAVING_HELPER}\\n\\s+env:\\n\\s+MODE: (["'])${mode}\\1`).test(flow);
 
-const BADGE_REQUIRED = /- extendedWaitUntil:\n\s+visible:\n\s+id: "low-data-badge"\n\s+timeout: \d+\n(?!\s+optional)/;
+const BADGE_REQUIRED =
+  /- extendedWaitUntil:\n\s+visible:\n\s+id: (["'])low-data-badge\1\n\s+timeout: \d+\n(?!\s+optional)/;
 
 describe('weak-net flows drive the data saving mode the release APK can reach', () => {
   it('no Maestro flow opens a dev-only deeplink', () => {
@@ -35,8 +36,8 @@ describe('weak-net flows drive the data saving mode the release APK can reach', 
 
   it('the data saving helper switches the mode from the Settings screen', () => {
     const helper = executable(DATA_SAVING_HELPER);
-    expect(helper).toContain('openLink: "musaium:///(stack)/settings"');
-    expect(helper).toContain('text: "${MODE}"');
+    expect(helper).toMatch(/openLink: (["'])musaium:\/\/\/\(stack\)\/settings\1/);
+    expect(helper).toMatch(/text: (["'])\$\{MODE\}\1/);
   });
 
   it.each(['net-chat-edge.yaml', 'net-image-upload-edge.yaml', 'net-offline-queue-resync.yaml'])(
@@ -44,12 +45,12 @@ describe('weak-net flows drive the data saving mode the release APK can reach', 
     (file) => {
       const flow = executable(file);
       const chatEntry = flow.indexOf('file: helpers/chat-entry.yaml');
-      const savingOn = flow.search(new RegExp(`MODE: "Économie activée\\|Saving enabled"`));
+      const savingOn = flow.search(new RegExp(`MODE: (["'])Économie activée\\|Saving enabled\\1`));
       expect(chatEntry).toBeGreaterThanOrEqual(0);
       expect(switchesDataSaving(flow, 'Économie activée\\|Saving enabled')).toBe(true);
       expect(savingOn).toBeGreaterThan(chatEntry);
       expect(flow.slice(savingOn)).toMatch(BADGE_REQUIRED);
-      expect(flow.trimEnd()).toMatch(/(Automatique\|Automatic"\s*)$/);
+      expect(flow.trimEnd()).toMatch(/(Automatique\|Automatic["']\s*)$/);
     },
   );
 });

@@ -14,7 +14,6 @@ const _require = createRequire(import.meta.url);
 const musaiumTestDiscipline = _require('eslint-plugin-musaium-test-discipline');
 
 export default tseslint.config(
-  // ── Global ignores ──────────────────────────────────────────────
   {
     ignores: [
       'node_modules/',
@@ -37,10 +36,8 @@ export default tseslint.config(
     ],
   },
 
-  // ── Base JS rules ───────────────────────────────────────────────
   eslint.configs.recommended,
 
-  // ── TypeScript strict + stylistic ───────────────────────────────
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
@@ -52,7 +49,6 @@ export default tseslint.config(
     },
   },
 
-  // ── React ───────────────────────────────────────────────────────
   {
     ...react.configs.flat.recommended,
     settings: {
@@ -61,10 +57,8 @@ export default tseslint.config(
   },
   react.configs.flat['jsx-runtime'],
 
-  // ── React Hooks (v7 — includes React Compiler rules) ───────────
   reactHooks.configs.flat.recommended,
 
-  // ── React Native (manual — no flat config preset) ──────────────
   {
     plugins: {
       'react-native': reactNative,
@@ -76,30 +70,23 @@ export default tseslint.config(
     },
   },
 
-  // ── Project-wide rule overrides ─────────────────────────────────
   {
     files: ['**/*.ts', '**/*.tsx'],
     rules: {
-      // React Hooks — escalate exhaustive-deps to error
       'react-hooks/exhaustive-deps': 'error',
-      // React Compiler rules — warn until codebase is adapted
       'react-hooks/refs': 'warn',
       'react-hooks/set-state-in-effect': 'warn',
 
-      // Deprecated API usage — warn to track migration debt
       '@typescript-eslint/no-deprecated': 'warn',
 
-      // React
       'react/jsx-no-leaked-render': 'error',
       'react/self-closing-comp': 'error',
       'react/display-name': 'warn',
 
-      // React Native
       'react-native/no-unused-styles': 'warn',
       'react-native/no-inline-styles': 'warn',
       'react-native/no-color-literals': 'warn',
 
-      // TypeScript strict
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'warn',
       '@typescript-eslint/no-unused-vars': [
@@ -110,9 +97,12 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/consistent-type-imports': 'warn',
 
-      // Relax rules that are too noisy for RN/Expo codebases
-      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-require-imports': [
+        'warn',
+        { allow: ['\\.(png|jpe?g|gif|webp|m4a|mp3|wav)$'] },
+      ],
       '@typescript-eslint/no-empty-function': 'warn',
+      'no-empty': ['error', { allowEmptyCatch: true }],
       '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
@@ -133,13 +123,6 @@ export default tseslint.config(
     },
   },
 
-  // ── Shared/testing harness boundary (spec R7) ────────────────────
-  //
-  // `@/shared/testing/*` is a TEST-ONLY network-simulation harness (FakeClock,
-  // mulberry32, withNetworkSim, netInfoFromProfile, paceTokens). It must never
-  // ship in the app bundle, so `app/**` (Expo Router routes) cannot import it.
-  // `__tests__/**` is exempt (the block below does not match it). Mirrors the
-  // scoped-config style of the test-relax + test-discipline blocks.
   {
     files: ['app/**/*.{ts,tsx}'],
     rules: {
@@ -158,17 +141,6 @@ export default tseslint.config(
     },
   },
 
-  // ── Out-of-project app fixtures — untyped parse ──────────────────
-  //
-  // The boundary test (`__tests__/lint/sharedTestingBoundary.test.ts`) writes a
-  // throwaway fixture under a dot-prefixed temp dir (`app/.boundary-fixture-*/`).
-  // The typed `projectService` cannot find dot-dir files in the TS project and
-  // fatally errors before any rule runs, which would mask the boundary rule.
-  // These dirs are NOT real source (mkdtemp temp, removed on teardown), so we
-  // disable type-checked linting for them (`disableTypeChecked` also drops the
-  // project service) — the syntactic `no-restricted-imports` rule (from the
-  // block above) still runs. Real `app/**` files keep full typed linting (this
-  // block only matches the fixture path).
   {
     ...tseslint.configs.disableTypeChecked,
     files: [
@@ -177,7 +149,6 @@ export default tseslint.config(
     ],
   },
 
-  // ── Test files — relax strict type rules ────────────────────────
   {
     files: ['__tests__/**', 'tests/**'],
     rules: {
@@ -195,17 +166,12 @@ export default tseslint.config(
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-      // Test fixtures often declare `async () => undefined` stubs that satisfy
-      // promise-returning interfaces without ever awaiting — that's the point
-      // of a stub. The project-level `require-await: 'warn'` is too strict for
-      // tests ; relax inside `__tests__/`.
       '@typescript-eslint/require-await': 'off',
       'react-native/no-color-literals': 'off',
       'react-native/no-inline-styles': 'off',
     },
   },
 
-  // ── Musaium Test Discipline ──────────────────────────────────────
   {
     files: ['__tests__/**/*.test.{ts,tsx}'],
     plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
@@ -215,19 +181,6 @@ export default tseslint.config(
     },
   },
 
-  // ── `eslint-plugin-import` shim ───────────────────────────────────
-  //
-  // The repo does not load `eslint-plugin-import`, but several test files
-  // carry `eslint-disable-next-line import/order, import/first` comments
-  // (copy-paste from upstream examples / other monorepo apps). Without a
-  // registered plugin, ESLint flags those comments as "unknown rule"
-  // errors. Register a no-op stub plugin so the disable directives resolve
-  // to a defined-but-off rule. Adding the real plugin would change source
-  // ordering across the codebase — out of scope for C1 hexagonal refacto.
-  //
-  // Test files (`__tests__/**/*.test.{ts,tsx}`) also opt out of the
-  // `reportUnusedDisableDirectives` warning so those Jest-hoisting guard
-  // comments don't become fatal under `--max-warnings=0`.
   {
     plugins: {
       import: {
@@ -249,9 +202,6 @@ export default tseslint.config(
     },
   },
 
-  // ── Grandfather — baseline files exempt from no-inline-test-entities
-  //    Phase 7 will migrate these. Until then, rule is 'off' for baselined
-  //    paths so 'error' only fires on new code.
   ...(() => {
     const baselinePath = resolve(
       __dirname,
@@ -271,6 +221,5 @@ export default tseslint.config(
     ];
   })(),
 
-  // ── Prettier — must be last ───────────────────────────────────────
   prettierConfig,
 );

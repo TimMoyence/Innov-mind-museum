@@ -12,7 +12,6 @@ export const changeUserRoleSchema = z.object({
   role: z.enum(validRoles),
 });
 
-/** R1 (C6) — 400 on `{tier:'enterprise'}` (R16) and empty body. */
 export const changeUserTierSchema = z.object({
   tier: z.enum(['free', 'premium']),
 });
@@ -53,10 +52,6 @@ export const listReportsQuerySchema = paginationQuery.extend({
   dateTo: z.string().optional(),
 });
 
-// M7/H-2 — granularity enum blocks template-literal injection into the
-// date_trunc() SQL call. Outside enum → 400.
-// z.coerce.date() → Date → re-serialise to ISO so the repo's filters.from/to:
-// string contract holds.
 const isoDateString = z.coerce
   .date()
   .transform((d) => d.toISOString())
@@ -80,7 +75,6 @@ export const engagementAnalyticsQuerySchema = z.strictObject({
   to: isoDateString,
 });
 
-// M7 — Zod replaces `parseInt || default`.
 export const listTicketsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -94,14 +88,6 @@ export const listReviewsQuerySchema = z.strictObject({
   status: z.enum(REVIEW_STATUSES as [string, ...string[]]).optional(),
 });
 
-/**
- * Wave B C8 / R-C8 — admin /stats query schema. `museumId` is the optional
- * B2B tenant scope. `z.strictObject` rejects any other query param (defence-
- * in-depth — a stray `?foo=bar` cannot smuggle an unscanned filter into the
- * upstream repo). The RBAC enforcement (museum_manager → forced to JWT
- * `museumId` claim; super_admin → any value or absent) happens in the route
- * handler AFTER this schema parses the raw query.
- */
 export const statsQuerySchema = z.strictObject({
   museumId: z.coerce.number().int().positive().optional(),
 });

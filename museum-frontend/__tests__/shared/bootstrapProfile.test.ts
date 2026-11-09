@@ -1,14 +1,4 @@
-/**
- * Tests for `bootstrapProfile()` orchestrator (TD-2 Option B 2026-05-15).
- *
- * Verifies the fire-and-forget contract: never throws, idempotent per session,
- * dispatches to all 4 stores with the extracted server fields, falls back to
- * a typed `'failed'` outcome on `/auth/me` errors. The Sentry import is
- * smoke-mocked to a no-op so breadcrumbs don't leak to a real DSN in tests.
- */
 import '@/__tests__/helpers/test-utils';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockMe = jest.fn();
 
@@ -31,8 +21,6 @@ import { useAudioDescriptionStore } from '@/features/settings/infrastructure/aud
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const serverUser = {
   id: 42,
   email: 'visitor@test.com',
@@ -40,7 +28,6 @@ const serverUser = {
   onboardingCompleted: true,
   contentPreferences: ['history', 'artist'],
   ttsVoice: 'alloy' as const,
-  defaultLocale: 'fr-FR',
   defaultMuseumMode: false,
   guideLevel: 'expert' as const,
   dataMode: 'low' as const,
@@ -50,7 +37,6 @@ const serverUser = {
 const resetAllStores = (): void => {
   useUserProfileStore.setState({ contentPreferences: [], hasSeenOnboarding: false });
   useRuntimeSettingsStore.setState({
-    defaultLocale: 'en-US',
     defaultMuseumMode: true,
     guideLevel: 'beginner',
   });
@@ -71,8 +57,6 @@ afterEach(() => {
   consoleWarnSpy.mockRestore();
 });
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('bootstrapProfile (TD-2)', () => {
   describe('happy path', () => {
     it('fetches /auth/me and dispatches to all 4 stores with extracted fields', async () => {
@@ -83,7 +67,6 @@ describe('bootstrapProfile (TD-2)', () => {
       expect(outcome.outcome).toBe('hydrated');
       expect(mockMe).toHaveBeenCalledTimes(1);
       expect(useUserProfileStore.getState().contentPreferences).toEqual(['history', 'artist']);
-      expect(useRuntimeSettingsStore.getState().defaultLocale).toBe('fr-FR');
       expect(useRuntimeSettingsStore.getState().defaultMuseumMode).toBe(false);
       expect(useRuntimeSettingsStore.getState().guideLevel).toBe('expert');
       expect(useDataModePreferenceStore.getState().preference).toBe('low');
@@ -116,12 +99,12 @@ describe('bootstrapProfile (TD-2)', () => {
       expect(mockMe).toHaveBeenCalledTimes(1);
 
       resetBootstrapProfileGuard();
-      mockMe.mockResolvedValueOnce({ user: { ...serverUser, defaultLocale: 'es-ES' } });
+      mockMe.mockResolvedValueOnce({ user: { ...serverUser, guideLevel: 'intermediate' } });
       const outcome = await bootstrapProfile();
 
       expect(outcome.outcome).toBe('hydrated');
       expect(mockMe).toHaveBeenCalledTimes(2);
-      expect(useRuntimeSettingsStore.getState().defaultLocale).toBe('es-ES');
+      expect(useRuntimeSettingsStore.getState().guideLevel).toBe('intermediate');
     });
 
     it('concurrent calls coalesce onto a single in-flight promise', async () => {
@@ -131,8 +114,6 @@ describe('bootstrapProfile (TD-2)', () => {
 
       expect(mockMe).toHaveBeenCalledTimes(1);
       expect(a.outcome).toBe('hydrated');
-      // The second concurrent call awaits the same in-flight promise so it
-      // also resolves with `'hydrated'`, not `'skipped_already_done'`.
       expect(b.outcome).toBe('hydrated');
     });
   });
@@ -150,7 +131,6 @@ describe('bootstrapProfile (TD-2)', () => {
       mockMe.mockRejectedValueOnce(new Error('boom'));
       await bootstrapProfile();
       expect(useUserProfileStore.getState().contentPreferences).toEqual([]);
-      expect(useRuntimeSettingsStore.getState().defaultLocale).toBe('en-US');
       expect(useDataModePreferenceStore.getState().preference).toBe('auto');
       expect(useAudioDescriptionStore.getState().enabled).toBe(false);
     });
@@ -182,18 +162,13 @@ describe('bootstrapProfile (TD-2)', () => {
           email: 'visitor@test.com',
           role: 'visitor' as const,
           onboardingCompleted: true,
-          // contentPreferences, defaultLocale, defaultMuseumMode, guideLevel,
-          // dataMode, audioDescriptionMode all undefined.
         },
       });
 
       const outcome = await bootstrapProfile();
 
       expect(outcome.outcome).toBe('hydrated');
-      // Stores keep their pre-call values because each mergeFromServer
-      // silently no-ops on undefined.
       expect(useUserProfileStore.getState().contentPreferences).toEqual([]);
-      expect(useRuntimeSettingsStore.getState().defaultLocale).toBe('en-US');
       expect(useDataModePreferenceStore.getState().preference).toBe('auto');
       expect(useAudioDescriptionStore.getState().enabled).toBe(false);
     });
@@ -214,8 +189,6 @@ describe('bootstrapProfile (TD-2)', () => {
 
       expect(useRuntimeSettingsStore.getState().guideLevel).toBe('intermediate');
       expect(useAudioDescriptionStore.getState().enabled).toBe(true);
-      // Untouched fields stay at their defaults.
-      expect(useRuntimeSettingsStore.getState().defaultLocale).toBe('en-US');
       expect(useDataModePreferenceStore.getState().preference).toBe('auto');
     });
   });

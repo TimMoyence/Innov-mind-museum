@@ -10,23 +10,22 @@ interface ReviewCardProps {
   review: ReviewDTO;
 }
 
-const formatRelativeDate = (iso: string, locale: string): string => {
-  const date = new Date(iso);
-  const now = Date.now();
-  const diffMs = now - date.getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
+const reviewAge = (
+  iso: string,
+): { unit: 'today' | 'yesterday' | 'days' | 'months' | 'years'; count: number } => {
+  const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
 
-  if (diffDays === 0) return locale === 'fr' ? "Aujourd'hui" : 'Today';
-  if (diffDays === 1) return locale === 'fr' ? 'Hier' : 'Yesterday';
-  if (diffDays < 30) return `${String(diffDays)}d`;
-  if (diffDays < 365) return `${String(Math.floor(diffDays / 30))}mo`;
-  return `${String(Math.floor(diffDays / 365))}y`;
+  if (diffDays <= 0) return { unit: 'today', count: 0 };
+  if (diffDays === 1) return { unit: 'yesterday', count: 1 };
+  if (diffDays < 30) return { unit: 'days', count: diffDays };
+  if (diffDays < 365) return { unit: 'months', count: Math.floor(diffDays / 30) };
+  return { unit: 'years', count: Math.floor(diffDays / 365) };
 };
 
-/** Displays a single review with its 0-10 NPS rating, username, comment, and relative date. */
 export const ReviewCard = ({ review }: ReviewCardProps) => {
   const { theme } = useTheme();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const age = reviewAge(review.createdAt);
 
   return (
     <View
@@ -39,14 +38,9 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
       <View style={styles.header}>
         <Text style={[styles.userName, { color: theme.textPrimary }]}>{review.userName}</Text>
         <Text style={[styles.date, { color: theme.textTertiary }]}>
-          {formatRelativeDate(review.createdAt, i18n.language)}
+          {t(`reviews.age.${age.unit}`, { count: age.count })}
         </Text>
       </View>
-      {/* NPS score on a 0-10 scale (no 5-star clamp). R26/Q4.
-          The numerator and the "/10" suffix are two adjacent Text nodes so the
-          number can be emphasised; the suffix dict value is a bare "/10" (no
-          {{rating}} interpolation) — rendering the rating exactly ONCE → "9/10"
-          (C2FE-F1: the prior duplicated "{{rating}}/10" produced "9 9/10"). */}
       <View style={styles.ratingRow}>
         <Text style={[styles.ratingNumber, { color: theme.textPrimary }]}>
           {String(review.rating)}

@@ -43,7 +43,6 @@ describe('buildSttPromptBias (W7.4)', () => {
       ],
     });
     expect(prompt).toBeDefined();
-    // "Léonard de Vinci" should appear once even though both works share it.
     const matches = prompt!.match(/Léonard de Vinci/g) ?? [];
     expect(matches).toHaveLength(1);
   });

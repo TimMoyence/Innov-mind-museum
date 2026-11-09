@@ -36,12 +36,8 @@ describe('chat service – synthesizeSpeech', () => {
     const service = buildChatTestService({ tts });
     const session = await service.createSession({ userId: USER_ID });
 
-    // Post a message to get an assistant response, then check an edge case
-    // The FakeOrchestrator always returns text, so we test the null path by
-    // checking that the service method handles the flow correctly when called
     const result = await service.postMessage(session.id, { text: 'Hello' }, undefined, USER_ID);
 
-    // The assistant message will have text from FakeOrchestrator, so TTS should work
     const ttsResult = await service.synthesizeSpeech(result.message.id, USER_ID);
     expect(ttsResult).not.toBeNull();
   });
@@ -51,7 +47,6 @@ describe('chat service – synthesizeSpeech', () => {
     const service = buildChatTestService({ tts });
     const session = await service.createSession({ userId: USER_ID });
 
-    // Get the session to find the user message
     await service.postMessage(session.id, { text: 'Hello' }, undefined, USER_ID);
     const sessionData = await service.getSession(session.id, { limit: 50 }, USER_ID);
     const userMessage = sessionData.messages.find((m) => m.role === 'user');
@@ -71,7 +66,7 @@ describe('chat service – synthesizeSpeech', () => {
   });
 
   it('throws 501 when TTS service not configured', async () => {
-    const service = buildChatTestService(); // no TTS injected
+    const service = buildChatTestService();
     const session = await service.createSession({ userId: USER_ID });
     const posted = await service.postMessage(session.id, { text: 'Hello' }, undefined, USER_ID);
 

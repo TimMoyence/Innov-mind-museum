@@ -1,13 +1,3 @@
-/**
- * R3 RED — dictionary symmetry test for `landing.beta.*`.
- *
- * Pins R3 §1 R18 + AC4 down BEFORE implementation: every key under
- * `landing.beta.*` MUST exist in BOTH fr.json AND en.json (full parity), and
- * the "check inbox" honesty key (`success`) is present (N5 + UFR-013).
- *
- * MUST FAIL at baseline `d5919dd3` — neither dictionary has the `beta`
- * namespace yet.
- */
 import { describe, it, expect } from 'vitest';
 import frDict from '@/dictionaries/fr.json';
 import enDict from '@/dictionaries/en.json';
@@ -76,8 +66,6 @@ describe('Dictionary parity — landing.beta.* (R3 R18 / AC4)', () => {
   });
 
   it('landing.beta.success in EN mentions confirmation email (N5 honesty UFR-013)', () => {
-    // R3 N5 + spec §3.5 — the success copy MUST be honest about Brevo's
-    // double-opt-in step. The user will receive a confirmation email next.
     const en = (enDict as unknown as { landing: { beta: { success: string } } }).landing.beta
       .success;
     expect(en.toLowerCase()).toMatch(/confirm/);
@@ -92,8 +80,6 @@ describe('Dictionary parity — landing.beta.* (R3 R18 / AC4)', () => {
 
 describe('Footer is NOT modified by R3 (scope OUT)', () => {
   it('footer.links does NOT add a `beta` entry (only b2b from R4)', () => {
-    // R3 explicitly does NOT add a Footer link (spec §0.4 scope OUT). The
-    // only landing-related Footer link is `b2b` shipped by R4.
     const fr = (frDict as unknown as { footer: { links: Record<string, unknown> } }).footer.links;
     const en = (enDict as unknown as { footer: { links: Record<string, unknown> } }).footer.links;
     expect(fr).not.toHaveProperty('beta');

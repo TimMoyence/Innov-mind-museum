@@ -1,23 +1,3 @@
-/**
- * RED (T2.1) — `DeleteAccountUseCase` ordered best-effort erasure chain
- * (B1 + B2, R1–R6, R16–R17).
- *
- * On account deletion the use case must, BEFORE the DB cascade (`deleteUser`):
- *   1. clean up images  (existing port)
- *   2. delete the user's TTS audio   (new AudioCleanupPort.deleteUserAudio)
- *   3. remove the Brevo marketing contact (new removeContact(email))
- * Each external step is best-effort: a failure is logged and swallowed, the
- * remaining steps + `deleteUser` still run (R17). Ordering is load-bearing:
- * all external cleanups precede `deleteUser` (R16) because the DB rows are the
- * source of the refs/email.
- *
- * Does NOT modify `deleteAccount-image-cleanup.test.ts` (which locks the image
- * (userId, legacyFetcher) contract).
- *
- * FAILS at red baseline: the current `DeleteAccountUseCase` ignores the 4th/5th
- * ctor args, so `deleteUserAudio` / `removeContact` are never invoked → the
- * "called once before deleteUser" assertions fail.
- */
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
 import {
@@ -71,15 +51,12 @@ describe('DeleteAccountUseCase — erasure chain ordering (B1 + B2)', () => {
 
     await useCase.execute(42);
 
-    // Audio cleanup invoked exactly once with the user id.
     expect(audioCleanup.deleteUserAudio).toHaveBeenCalledTimes(1);
     expect(audioCleanup.deleteUserAudio).toHaveBeenCalledWith(42);
 
-    // Brevo removal invoked exactly once with the user's email.
     expect(brevoRemoval.removeContact).toHaveBeenCalledTimes(1);
     expect(brevoRemoval.removeContact).toHaveBeenCalledWith('subject@example.com');
 
-    // Every external cleanup precedes the DB cascade.
     const deleteUserIdx = order.indexOf('deleteUser');
     expect(deleteUserIdx).toBeGreaterThan(-1);
     expect(order.indexOf('image')).toBeLessThan(deleteUserIdx);

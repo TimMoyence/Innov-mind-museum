@@ -10,23 +10,6 @@ import {
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
 
-/**
- * RBAC matrix integration test — Finding H3 remediation.
- *
- * Asserts tightened least-privilege policy across all 17 admin endpoints:
- *   - 5 admin-only: users/:id/role, audit-logs, analytics/{usage,content,engagement}
- *   - 12 admin+moderator: users (read-only directory for ticket triage),
- *     stats, reports, reports/:id, tickets, tickets/:id, reviews, reviews/:id,
- *     ke/pending, ke/:id/approve, plus museums/:id/cache/purge (admin-only)
- *
- * Visitor is expected to be denied everywhere (403).
- * Unauthenticated is expected to be rejected everywhere (401).
- *
- * See docs/rbac-matrix.md for the authoritative matrix.
- */
-
-// ── Mock admin-route use cases so handlers run without DB ───────────────────
-
 const mockListUsers = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
 const mockChangeUserRole = jest.fn().mockResolvedValue({ id: 1, role: 'moderator' });
 const mockListAuditLogs = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
@@ -51,7 +34,6 @@ jest.mock('@modules/admin/useCase', () => ({
   getUsageAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetUsageAnalytics(...a) },
   getContentAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetContentAnalytics(...a) },
   getEngagementAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetEngagementAnalytics(...a) },
-  // Admin-side facades wrap peer useCases. admin.route uses these, not the peers directly.
   adminReviewFacade: {
     list: (...a: unknown[]) => mockListReviews(...a),
     moderateReview: (...a: unknown[]) => mockModerateReview(...a),
@@ -72,16 +54,10 @@ jest.mock('@modules/review/useCase', () => ({
   moderateReviewUseCase: { execute: (...a: unknown[]) => mockModerateReview(...a) },
 }));
 
-// ── Test app setup ──────────────────────────────────────────────────────────
-
 const { app } = createRouteTestApp();
 const moderatorToken = () => makeToken({ role: 'moderator' });
-// C1A R6 — manager token carries a museumId claim so /stats reaches the
-// (mocked) use-case → 200; every other endpoint is gated out → 403.
 const museumManagerToken = () => makeToken({ role: 'museum_manager', museumId: 42 });
 
-// Standalone app for admin-ke routes (not auto-mounted in test app — chat module
-// not built so artworkKnowledgeRepo is undefined in api.router wiring).
 function makeKeApp() {
   const repo = makeMockArtworkKnowledgeRepo({
     findNeedsReview: jest.fn().mockResolvedValue([]),
@@ -106,8 +82,6 @@ function makeKeApp() {
   return keApp;
 }
 
-// ── Matrix definition ───────────────────────────────────────────────────────
-
 type Method = 'get' | 'post' | 'patch';
 type RouteKind = 'main' | 'ke';
 
@@ -116,22 +90,20 @@ interface RouteCase {
   method: Method;
   path: string;
   body?: Record<string, unknown>;
-  admin: number; // expected status for admin role
-  moderator: number; // expected status for moderator role
-  museum_manager: number; // C1A R6 — expected status for museum_manager role
-  visitor: number; // expected status for visitor role
-  anonymous: number; // expected status without auth header
+  admin: number;
+  moderator: number;
+  museum_manager: number;
+  visitor: number;
+  anonymous: number;
   kind: RouteKind;
 }
 
-// Body payloads pass validation so handlers run to completion with mocked use cases.
 const roleBody = { role: 'moderator' };
 const reportBody = { status: 'reviewed' };
 const ticketBody = { status: 'in_progress' };
 const reviewBody = { status: 'approved' };
 
 const MATRIX: RouteCase[] = [
-  // admin-only (5)
   {
     label: 'PATCH /users/:id/role',
     method: 'patch',
@@ -188,7 +160,6 @@ const MATRIX: RouteCase[] = [
     anonymous: 401,
     kind: 'main',
   },
-  // admin + moderator (12)
   {
     label: 'GET /users',
     method: 'get',
@@ -240,9 +211,6 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/tickets',
     admin: 200,
     moderator: 200,
-    // C1B R10 — manager (scoped via JWT museumId claim) can list their own
-    // tenant's tickets. Flipped 403→200; the value-level scope + the 404
-    // ownership guard are proven by tickets-tenant-isolation.test.ts.
     museum_manager: 200,
     visitor: 403,
     anonymous: 401,
@@ -255,9 +223,6 @@ const MATRIX: RouteCase[] = [
     body: ticketBody,
     admin: 200,
     moderator: 200,
-    // C1B R10 — manager passes the RBAC gate; the per-tenant 404 ownership
-    // guard lives below the (mocked) facade → proven by the real-DB
-    // tickets-tenant-isolation.test.ts, not here. Flipped 403→200.
     museum_manager: 200,
     visitor: 403,
     anonymous: 401,
@@ -269,9 +234,6 @@ const MATRIX: RouteCase[] = [
     path: '/api/admin/reviews',
     admin: 200,
     moderator: 200,
-    // C1B R10 — manager (scoped via JWT museumId claim) lists their own
-    // tenant's reviews. Flipped 403→200; value-level scope proven by
-    // reviews-tenant-isolation.test.ts.
     museum_manager: 200,
     visitor: 403,
     anonymous: 401,
@@ -284,9 +246,6 @@ const MATRIX: RouteCase[] = [
     body: reviewBody,
     admin: 200,
     moderator: 200,
-    // C1B R10 — manager passes the RBAC gate; the per-tenant 404 ownership
-    // guard lives below the (mocked) facade → proven by the real-DB
-    // reviews-tenant-isolation.test.ts, not here. Flipped 403→200.
     museum_manager: 200,
     visitor: 403,
     anonymous: 401,
@@ -314,7 +273,6 @@ const MATRIX: RouteCase[] = [
     anonymous: 401,
     kind: 'ke',
   },
-  // admin-only extras (2): cache purge + (role already covered above)
   {
     label: 'POST /museums/:id/cache/purge',
     method: 'post',
@@ -327,8 +285,6 @@ const MATRIX: RouteCase[] = [
     kind: 'main',
   },
 ];
-
-// ── Test harness ────────────────────────────────────────────────────────────
 
 const keApp = makeKeApp();
 

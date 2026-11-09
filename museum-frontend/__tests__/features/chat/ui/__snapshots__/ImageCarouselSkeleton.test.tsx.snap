@@ -13,7 +13,14 @@ exports[`ImageCarouselSkeleton (C2.4 v2) renders 3 placeholder thumbs inside a n
   horizontal={true}
   scrollEnabled={false}
   showsHorizontalScrollIndicator={false}
-  style={{}}
+  style={
+    [
+      {
+        "flexGrow": 0,
+      },
+      undefined,
+    ]
+  }
 >
   <View>
     <View

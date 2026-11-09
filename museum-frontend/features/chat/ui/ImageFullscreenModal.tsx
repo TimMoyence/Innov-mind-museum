@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/refs -- Animated.Value + PanResponder refs are stable objects read once at creation; safe RN pattern */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Image,
@@ -19,8 +18,10 @@ import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessio
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
+export type FullscreenImage = Pick<ChatUiEnrichedImage, 'url' | 'caption' | 'attribution'>;
+
 interface ImageFullscreenModalProps {
-  images: ChatUiEnrichedImage[];
+  images: readonly FullscreenImage[];
   initialIndex: number;
   visible: boolean;
   onClose: () => void;
@@ -32,10 +33,6 @@ const CAPTION_COLOR = semantic.fullscreenModal.background;
 const ATTRIBUTION_COLOR = semantic.fullscreenModal.captionColor;
 const COUNTER_COLOR = semantic.fullscreenModal.counterColor;
 
-/**
- * Fullscreen modal for viewing enriched images with swipe navigation.
- * Supports horizontal swipe for prev/next and vertical swipe-down to dismiss.
- */
 export const ImageFullscreenModal = React.memo(
   ({ images, initialIndex, visible, onClose }: ImageFullscreenModalProps) => {
     const { t } = useTranslation();
@@ -43,19 +40,19 @@ export const ImageFullscreenModal = React.memo(
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const reduceMotion = useReducedMotion();
     const { width: screenWidth } = useWindowDimensions();
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(1)).current;
+    const [translateX] = useState(() => new Animated.Value(0));
+    const [translateY] = useState(() => new Animated.Value(0));
+    const [scale] = useState(() => new Animated.Value(1));
 
-    const onCloseRef = useRef(onClose);
-    onCloseRef.current = onClose;
-    const imagesRef = useRef(images);
-    imagesRef.current = images;
+    const imageCount = images.length;
+    const [openedWith, setOpenedWith] = useState({ visible, initialIndex });
+    if (openedWith.visible !== visible || openedWith.initialIndex !== initialIndex) {
+      setOpenedWith({ visible, initialIndex });
+      if (visible) setCurrentIndex(initialIndex);
+    }
 
-    // Reset index when modal opens with a new initialIndex
     useEffect(() => {
       if (visible) {
-        setCurrentIndex(initialIndex);
         translateX.setValue(0);
         translateY.setValue(0);
         scale.setValue(1);
@@ -64,7 +61,6 @@ export const ImageFullscreenModal = React.memo(
 
     const goTo = (nextIndex: number) => {
       if (reduceMotion) {
-        // WCAG 2.3.3: skip the decorative scale bounce, switch image instantly.
         setCurrentIndex(nextIndex);
         return;
       }
@@ -82,54 +78,49 @@ export const ImageFullscreenModal = React.memo(
       });
     };
 
-    const panResponder = useRef(
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_evt, gestureState) =>
-          Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
-        onPanResponderMove: (_evt, gestureState) => {
-          if (Math.abs(gestureState.dy) > Math.abs(gestureState.dx)) {
-            // Vertical movement — track for dismiss
-            translateY.setValue(gestureState.dy);
-          } else {
-            // Horizontal movement — track for navigation
-            translateX.setValue(gestureState.dx);
-          }
-        },
-        onPanResponderRelease: (_evt, gestureState) => {
-          // Swipe down to dismiss
-          if (gestureState.dy > SWIPE_THRESHOLD) {
-            onCloseRef.current();
-            translateY.setValue(0);
-            translateX.setValue(0);
-            return;
-          }
+    const panResponder = useMemo(
+      () =>
+        PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: (_evt, gestureState) =>
+            Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
+          onPanResponderMove: (_evt, gestureState) => {
+            if (Math.abs(gestureState.dy) > Math.abs(gestureState.dx)) {
+              translateY.setValue(gestureState.dy);
+            } else {
+              translateX.setValue(gestureState.dx);
+            }
+          },
+          onPanResponderRelease: (_evt, gestureState) => {
+            if (gestureState.dy > SWIPE_THRESHOLD) {
+              onClose();
+              translateY.setValue(0);
+              translateX.setValue(0);
+              return;
+            }
 
-          // Horizontal swipe for navigation
-          if (gestureState.dx < -SWIPE_THRESHOLD) {
-            // Swipe left → next
-            setCurrentIndex((prev) => (prev < imagesRef.current.length - 1 ? prev + 1 : prev));
-          } else if (gestureState.dx > SWIPE_THRESHOLD) {
-            // Swipe right → prev
-            setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
-          }
+            if (gestureState.dx < -SWIPE_THRESHOLD) {
+              setCurrentIndex((prev) => (prev < imageCount - 1 ? prev + 1 : prev));
+            } else if (gestureState.dx > SWIPE_THRESHOLD) {
+              setCurrentIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            }
 
-          // Reset transforms
-          Animated.parallel([
-            Animated.timing(translateX, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-            Animated.timing(translateY, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        },
-      }),
-    ).current;
+            Animated.parallel([
+              Animated.timing(translateX, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+              }),
+              Animated.timing(translateY, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          },
+        }),
+      [onClose, imageCount, translateX, translateY],
+    );
 
     const current = images[currentIndex];
     if (!current) return null;
@@ -143,7 +134,6 @@ export const ImageFullscreenModal = React.memo(
         onRequestClose={onClose}
       >
         <SafeAreaView style={styles.root}>
-          {/* Close button */}
           <Pressable
             style={[styles.closeButton, { top: insets.top + space['4'] }]}
             onPress={onClose}
@@ -155,7 +145,6 @@ export const ImageFullscreenModal = React.memo(
             <Ionicons name="close-circle" size={32} color={CAPTION_COLOR} />
           </Pressable>
 
-          {/* Image area */}
           <Animated.View
             style={[
               styles.imageArea,
@@ -165,7 +154,6 @@ export const ImageFullscreenModal = React.memo(
             ]}
             {...panResponder.panHandlers}
           >
-            {/* Tap zones for navigation */}
             <View style={styles.tapZoneContainer}>
               <Pressable
                 style={styles.tapZoneLeft}
@@ -193,7 +181,6 @@ export const ImageFullscreenModal = React.memo(
             />
           </Animated.View>
 
-          {/* Bottom bar */}
           <View style={styles.bottomBar}>
             <Text style={styles.caption} numberOfLines={2}>
               {current.caption}

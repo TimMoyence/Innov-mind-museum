@@ -34,9 +34,7 @@ jest.mock('@src/config/env', () => ({
       maxAudioBytes: 25 * 1024 * 1024,
     },
     guardrails: {
-      // Mirrors env.ts:402 GUARDRAILS_V2_TIMEOUT_MS default.
       timeoutMs: 1500,
-      // Mirrors env.ts LLM_GUARDRAIL_JUDGE_TIMEOUT_MS default (1500 since 2026-06-01).
       judgeTimeoutMs: 1500,
     },
     upload: {
@@ -59,10 +57,6 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-/**
- * Extracts the multer fileFilter from a multer instance. The typings don't
- * expose it, but at runtime it is stored on the instance we configured.
- */
 type FileFilterFn = (
   req: unknown,
   file: { mimetype: string },
@@ -246,7 +240,6 @@ describe('chat-route.helpers — uncovered branches', () => {
     });
 
     it('returns null for s3:// ref when S3 config is incomplete', () => {
-      // Temporarily remove a required S3 config value
       const { env } = jest.requireMock<{
         env: { storage: { s3: Record<string, unknown> } };
       }>('@src/config/env');
@@ -397,28 +390,6 @@ describe('chat-route.helpers — uncovered branches', () => {
   });
 });
 
-/**
- * I-OPS4 — chat-route socket-timeout ceiling reconciliation.
- *
- * The global request timeout (`env.requestTimeoutMs = 20000`) can fire BEFORE
- * the LLM total budget (`env.llm.totalBudgetMs = 25000`) plus the serial
- * guardrail budget (~2000ms) is exhausted, producing an opaque client-side
- * socket timeout instead of a graceful LLM-deadline path.
- *
- * `extendTimeoutForUpload` must therefore raise the socket ceiling for BOTH the
- * multipart upload path AND the text-only (`application/json`) path, never
- * shortening an already-set timeout. The single source of truth is the exported
- * `chatRouteSocketCeilingMs` constant (R2 invariant).
- *
- * With the mocked env (totalBudgetMs=30000, guardrail serial = 1500 + 500):
- *   chatRouteSocketCeilingMs >= 30000 + 2000 + margin.
- *
- * NOTE (2026-06-01): since hybrid-by-gravity friction landed, the LLM judge runs
- * in PARALLEL with the sidecar, so the timeoutMs + judgeTimeoutMs sum is now a
- * safe over-estimation (ceiling), not the literal serial latency. The `>=`
- * assertions below stay valid by construction — a looser ceiling only ever
- * protects the graceful timeout path. Do not tighten them to an exact `===`.
- */
 interface ReqStub {
   is: (type: string) => boolean;
 }
@@ -446,7 +417,6 @@ describe('chat-route socket ceiling (I-OPS4)', () => {
     const req = makeReq(multipart);
     const res = makeRes();
     const next = jest.fn();
-    // RequestHandler signature; the stubs cover the fields the helper touches.
     (extendTimeoutForUpload as unknown as (r: unknown, s: unknown, n: unknown) => void)(
       req,
       res,
@@ -467,7 +437,6 @@ describe('chat-route socket ceiling (I-OPS4)', () => {
     expect(chatRouteSocketCeilingMs).toBeGreaterThanOrEqual(
       env.llm.totalBudgetMs + SERIAL_GUARDRAIL_BUDGET_MS,
     );
-    // A positive coherence margin must exist beyond the bare budget sum.
     expect(chatRouteSocketCeilingMs).toBeGreaterThan(
       env.llm.totalBudgetMs + SERIAL_GUARDRAIL_BUDGET_MS,
     );
@@ -479,15 +448,12 @@ describe('chat-route socket ceiling (I-OPS4)', () => {
     expect(lastTimeout(res)).toBeGreaterThanOrEqual(
       env.llm.totalBudgetMs + SERIAL_GUARDRAIL_BUDGET_MS,
     );
-    // Matches the exported invariant constant exactly for the text-only path.
     expect(lastTimeout(res)).toBeGreaterThanOrEqual(chatRouteSocketCeilingMs);
   });
 
   it('does NOT shorten the multipart path below the multipart ceiling', () => {
     const res = runHelper(true);
     expect(res.setTimeout).toHaveBeenCalled();
-    // Multipart historically used totalBudgetMs + 10000 = 40000 here; it must
-    // never be shortened below that, and never below the global ceiling.
     expect(lastTimeout(res)).toBeGreaterThanOrEqual(env.llm.totalBudgetMs + 10_000);
     expect(lastTimeout(res)).toBeGreaterThanOrEqual(chatRouteSocketCeilingMs);
   });

@@ -43,13 +43,13 @@ describe('formatDate', () => {
 describe('formatDateTime', () => {
   it('produces a string containing both date and time fragments (FR)', () => {
     const out = formatDateTime('2026-04-30T10:00:00Z', 'fr-FR');
-    expect(out).toMatch(/\d{2}\/\d{2}\/\d{4}/); // dd/mm/yyyy
-    expect(out).toMatch(/:/); // time separator
+    expect(out).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    expect(out).toMatch(/:/);
   });
 
   it('produces a string containing both date and time fragments (EN)', () => {
     const out = formatDateTime('2026-04-30T10:00:00Z', 'en-US');
-    expect(out).toMatch(/\d{1,2}\/\d{1,2}\/\d{2,4}/); // m/d/yy or m/d/yyyy
-    expect(out).toMatch(/:/); // time separator
+    expect(out).toMatch(/\d{1,2}\/\d{1,2}\/\d{2,4}/);
+    expect(out).toMatch(/:/);
   });
 });

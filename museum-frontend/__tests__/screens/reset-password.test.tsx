@@ -1,19 +1,3 @@
-/**
- * RED — TD-RNAV-01 cycle 2, T1.5 (R7, R8, R9, R6, R10, R13).
- *
- * The screen `app/(stack)/reset-password.tsx` does NOT exist yet — the suite
- * MUST fail on import (absence of feature), then turn green once the screen is
- * implemented in the GREEN phase.
- *
- * Interactive variant (mirrors web `ResetPasswordForm.tsx` + the existing
- * `change-password.tsx` form scaffolding):
- *  - valid token + newPassword>=8 + match -> resetPassword(token,newPassword)
- *    once -> success + login CTA (R7).
- *  - newPassword<8 -> reset_password.error_short visible, NOT called (R8).
- *  - mismatch -> reset_password.error_mismatch visible, NOT called (R9).
- *  - missing token -> invalidToken state + login CTA, no API (R6).
- *  - rejection -> localized error, token never logged (R10/R13).
- */
 import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
@@ -29,11 +13,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
 const mockParams: { token?: string } = {};
-// test-utils already installs the shared jest.mock('expo-router') with
-// useLocalSearchParams: () => ({}). Re-declaring jest.mock here would be
-// overwritten by the imported helper's factory (hoist order), so instead we
-// MUTATE the shared mock — same pattern as
-// __tests__/screens/chat-session-deep.test.tsx:57-61.
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => mockParams;
 mockExpoRouter.router = {

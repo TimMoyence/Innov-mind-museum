@@ -1,28 +1,3 @@
-/**
- * RED (T3.1 + T5.1 — Cycle D, R6/R8/R9) — REAL Postgres cascade + audit
- * retention + leads erasure, on the production `DeleteAccountUseCase`.
- *
- * Proves on a real PG (testcontainer, harness pattern) that account deletion:
- *  - R9 — cascades every FK child table to zero rows (
- *         user_memories, user_consents, auth_refresh_tokens,
- *         social_accounts, chat_sessions),
- *  - R8 — RETAINS the user's `audit_logs` rows (no FK to `users`; legal
- *         obligation),
- *  - R6 — purges every `leads` row whose stored email matches the account email
- *         (via `ILeadRepository.deleteByEmail`, wired into the use case).
- *
- * RED reason (T5.1): the leads erasure is NOT wired into the use case yet — the
- * current `DeleteAccountUseCase.execute()` never calls a lead-erasure port, so
- * the seeded `leads` row SURVIVES the deletion → the "0 residual lead"
- * assertion fails. (The FK cascade + audit retention already hold per the
- * migrations; this file locks them as a regression gate once green.)
- *
- * Harness gotchas applied (MEMORY / CLAUDE.md): `createIntegrationHarness()` +
- * `harness.scheduleStop()` (NEVER `stop()`), migrations run out-of-transaction,
- * no SAVEPOINT, `as Entity` casts only via shared fixtures/helpers.
- *
- * Gated on RUN_INTEGRATION/RUN_E2E (mirror sibling integration suites).
- */
 import {
   makeDeleteAccountUseCase,
   type LeadErasureLike,
@@ -49,7 +24,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
 
   const ACCOUNT_EMAIL = 'subject@example.com';
 
-  /** Seeds a user + 1 row per child table + audit rows + a matching lead. */
   async function seedAccount(): Promise<number> {
     const ds = harness.dataSource;
 
@@ -65,7 +39,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
     );
     const userId = user.id;
 
-    // ── 1 row per FK child table (R9) ───────────────────────────────────────
     const { UserMemory } = await import('@modules/chat/domain/memory/userMemory.entity');
     await ds.getRepository(UserMemory).save(
       ds.getRepository(UserMemory).create({
@@ -119,10 +92,8 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
       }),
     );
 
-    // chat_sessions (FK cascade → messages / artwork_matches / reports).
     await ds.query(`INSERT INTO "chat_sessions" ("userId") VALUES ($1)`, [userId]);
 
-    // ── audit_logs (R8 — must be RETAINED) via the real hash-chained repo ────
     const { AuditRepositoryPg } = await import('@shared/audit/audit.repository.pg');
     const auditRepo = new AuditRepositoryPg(ds);
     await auditRepo.insert({
@@ -140,7 +111,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
       targetId: String(userId),
     });
 
-    // ── leads (R6 — must be PURGED by deleteByEmail) ─────────────────────────
     const { Lead } = await import('@modules/leads/domain/lead/lead.entity');
     await ds.getRepository(Lead).save(
       ds.getRepository(Lead).create({
@@ -155,7 +125,6 @@ describeIntegration('DeleteAccountUseCase — real cascade + audit retention + l
     return userId;
   }
 
-  /** Builds the production use case with a REAL leads-erasure port. */
   async function buildUseCase() {
     const { UserRepositoryPg } =
       await import('@modules/auth/adapters/secondary/pg/user.repository.pg');

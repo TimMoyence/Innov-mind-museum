@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import { buildWebSearchPromptBlock } from './web-search.prompt';
@@ -13,15 +14,6 @@ interface CacheEntry {
   results: SearchResult[];
 }
 
-/**
- * Web search service with Redis cache, timeout, and fail-open behavior.
- *
- * Wraps a {@link WebSearchProvider} with:
- * - **Cache**: Redis-backed via {@link CacheService} with TTL (falls back to no-cache when unavailable).
- * - **Timeout**: aborts the provider call after `config.timeoutMs`.
- * - **Fail-open**: any error (timeout, network, cache, etc.) returns `''` so the chat
- *   pipeline continues without web search enrichment.
- */
 export class WebSearchService {
   constructor(
     private readonly provider: WebSearchProvider,
@@ -29,14 +21,12 @@ export class WebSearchService {
     private readonly cacheService?: CacheService,
   ) {}
 
-  /** Fail-open: returns [] on any failure (timeout, provider error, empty query). */
   async searchRaw(searchQuery: string): Promise<SearchResult[]> {
     const key = searchQuery.toLowerCase().trim();
     if (!key) return [];
 
     const cacheKey = `ws:search:${key}`;
 
-    // Check cache (fail-open: cache errors fall through to provider)
     if (this.cacheService) {
       try {
         const cached = await this.cacheService.get<CacheEntry>(cacheKey);
@@ -44,12 +34,9 @@ export class WebSearchService {
           logger.info('web_search_cache_hit', { query: key });
           return cached.results;
         }
-      } catch {
-        // fail-open: cache read error, proceed to provider
-      }
+      } catch {}
     }
 
-    // Fetch with timeout
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => {
@@ -70,13 +57,10 @@ export class WebSearchService {
           }),
         ]);
 
-        // Store in cache (fail-open: cache write errors are swallowed)
         if (this.cacheService) {
           try {
             await this.cacheService.set(cacheKey, { results }, this.config.cacheTtlSeconds);
-          } catch {
-            // fail-open: cache write error does not affect the response
-          }
+          } catch {}
         }
 
         logger.info('web_search_success', {
@@ -88,7 +72,7 @@ export class WebSearchService {
         clearTimeout(timeout);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = errorMessage(err);
       if (message === 'WEB_SEARCH_TIMEOUT') {
         logger.warn('web_search_timeout', {
           query: key,
@@ -101,7 +85,6 @@ export class WebSearchService {
     }
   }
 
-  /** Fail-open: returns `''` on any failure or no results. */
   async search(searchQuery: string): Promise<string> {
     const results = await this.searchRaw(searchQuery);
     return buildWebSearchPromptBlock(results);

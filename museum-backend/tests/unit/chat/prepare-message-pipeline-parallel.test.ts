@@ -1,23 +1,9 @@
-/**
- * C9.6 — Asserts the enrichment fan-out uses Promise.all (parallel) rather
- * than serial awaits. Mocks the two top-level imported helpers
- * (`fetchEnrichmentData`, `resolveLocationForMessage`) with controlled
- * delays + records their start timestamps; asserts the start-time spread is
- * within a small parallel-execution window and the total wall-clock is well
- * under the serial sum.
- *
- * Spec R1 (parallel start), R2 (wall-clock < sum), R5 (enqueue still called),
- * R6 (span emitted once) — all behavioural, time-aware. Uses real timers
- * (jest fake timers wouldn't advance the real awaits with realistic
- * `setTimeout`-based mock latencies).
- */
-
 const FETCH_DELAY_MS = 80;
 const LOC_DELAY_MS = 80;
 const ROUTER_DELAY_MS = 80;
 const SERIAL_SUM_MS = FETCH_DELAY_MS + LOC_DELAY_MS + ROUTER_DELAY_MS;
-const PARALLEL_HEADROOM_MS = 60; // CI variance + scheduler jitter
-const START_SPREAD_MAX_MS = 30; // max delta between earliest + latest start
+const PARALLEL_HEADROOM_MS = 60;
+const START_SPREAD_MAX_MS = 30;
 
 const recordedStarts: { name: string; at: number }[] = [];
 
@@ -43,7 +29,6 @@ jest.mock('@modules/chat/useCase/location-resolver', () => ({
     return undefined;
   }),
 }));
-
 
 import { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { ImageProcessingService } from '@modules/chat/useCase/image/image-processing.service';
@@ -100,12 +85,10 @@ describe('PrepareMessagePipeline — C9.6 parallel enrichment fan-out', () => {
 
     expect(prep.kind).toBe('ready');
 
-    // R1: all three started within a small window (parallel start)
     const startTimes = recordedStarts.map((r) => r.at);
     const spread = Math.max(...startTimes) - Math.min(...startTimes);
     expect(spread).toBeLessThan(START_SPREAD_MAX_MS);
 
-    // R2: total wall-clock is dominated by the SLOWEST of the three, NOT their sum.
     expect(elapsedMs).toBeLessThan(SERIAL_SUM_MS - PARALLEL_HEADROOM_MS);
   });
 });

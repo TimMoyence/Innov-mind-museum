@@ -1,19 +1,22 @@
-/* eslint-disable @typescript-eslint/no-deprecated -- expo-image-manipulator API migration pending */
 import { useCallback, useState } from 'react';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat, type ImageManipulatorContext } from 'expo-image-manipulator';
 
-/** Hook that provides image crop and rotate operations via expo-image-manipulator. */
+const renderJpeg = async (
+  uri: string,
+  apply: (context: ImageManipulatorContext) => ImageManipulatorContext,
+): Promise<string> => {
+  const image = await apply(ImageManipulator.manipulate(uri)).renderAsync();
+  const result = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+  return result.uri;
+};
+
 export const useImageManipulation = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const rotateImage = useCallback(async (uri: string): Promise<string> => {
     setIsProcessing(true);
     try {
-      const result = await ImageManipulator.manipulateAsync(uri, [{ rotate: 90 }], {
-        compress: 0.8,
-        format: ImageManipulator.SaveFormat.JPEG,
-      });
-      return result.uri;
+      return await renderJpeg(uri, (context) => context.rotate(90));
     } finally {
       setIsProcessing(false);
     }
@@ -26,11 +29,7 @@ export const useImageManipulation = () => {
     ): Promise<string> => {
       setIsProcessing(true);
       try {
-        const result = await ImageManipulator.manipulateAsync(uri, [{ crop }], {
-          compress: 0.8,
-          format: ImageManipulator.SaveFormat.JPEG,
-        });
-        return result.uri;
+        return await renderJpeg(uri, (context) => context.crop(crop));
       } finally {
         setIsProcessing(false);
       }

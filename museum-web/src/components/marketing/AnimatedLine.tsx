@@ -19,7 +19,6 @@ export default function AnimatedLine() {
       aria-hidden="true"
     >
       <svg className="h-2 w-full" viewBox="0 0 1200 8" preserveAspectRatio="none" fill="none">
-        {/* Connecting line — passes through center of icon boxes (cx=200, 600, 1000) */}
         <motion.line
           x1={200}
           y1={4}
@@ -30,7 +29,6 @@ export default function AnimatedLine() {
           strokeLinecap="round"
           style={shouldReduceMotion ? undefined : { pathLength }}
         />
-        {/* Decorative dots at the center of each step icon */}
         {[200, 600, 1000].map((cx) => (
           <circle key={cx} cx={cx} cy={4} r={4} fill="rgba(37, 99, 235, 0.5)" />
         ))}

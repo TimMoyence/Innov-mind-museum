@@ -8,8 +8,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { makeToken } from '../../helpers/auth/token.helpers';
 
-// ── Mock use cases so handlers execute without DB ────────────────────
-
 const mockRegister = jest.fn();
 const mockLogin = jest.fn();
 const mockRefresh = jest.fn();
@@ -29,15 +27,9 @@ const mockCompleteOnboarding = jest.fn();
 const mockGetUserById = jest.fn();
 
 jest.mock('@modules/auth/useCase', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const { env: envConfig } = require('@src/config/env');
 
-  // Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
-  // verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
-  // for denylist consultation per R8. Both methods provided to keep
-  // backward-compat with any non-middleware caller.
   const verifyClaims = (token: string) => {
     const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
       sub: string;
@@ -96,14 +88,6 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-/**
- * Auth route integration tests — HTTP layer validation + middleware + happy-path handler bodies.
- * Uses createApp() with mock healthCheck. No DB required — use cases are mocked.
- *
- * Rate-limit buckets are cleared before each test to prevent 429 bleed-through
- * (all supertest calls share 127.0.0.1 and the in-memory store is a module singleton).
- */
-
 const { app } = createRouteTestApp();
 
 describe('Auth Routes — HTTP Layer', () => {
@@ -115,8 +99,6 @@ describe('Auth Routes — HTTP Layer', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── POST /api/auth/register — Zod validation rejects ───────────
 
   describe('POST /api/auth/register', () => {
     it('returns 400 for empty body', async () => {
@@ -166,8 +148,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/auth/login — Zod validation rejects ──────────────
-
   describe('POST /api/auth/login', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app).post('/api/auth/login').send({});
@@ -189,8 +169,6 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── POST /api/auth/refresh — Zod validation rejects ────────────
 
   describe('POST /api/auth/refresh', () => {
     it('returns 400 for empty body', async () => {
@@ -216,8 +194,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/auth/social-login — Zod validation rejects ────────
-
   describe('POST /api/auth/social-login', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app).post('/api/auth/social-login').send({});
@@ -240,8 +216,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/auth/forgot-password — Zod validation rejects ────
-
   describe('POST /api/auth/forgot-password', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app).post('/api/auth/forgot-password').send({});
@@ -255,8 +229,6 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── POST /api/auth/reset-password — Zod validation rejects ─────
 
   describe('POST /api/auth/reset-password', () => {
     it('returns 400 for empty body', async () => {
@@ -280,8 +252,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/auth/verify-email — Zod validation rejects ───────
-
   describe('POST /api/auth/verify-email', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app).post('/api/auth/verify-email').send({});
@@ -296,16 +266,12 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/auth/confirm-email-change — Zod validation rejects
-
   describe('POST /api/auth/confirm-email-change', () => {
     it('returns 400 for empty body', async () => {
       const res = await request(app).post('/api/auth/confirm-email-change').send({});
       expect(res.status).toBe(400);
     });
   });
-
-  // ── Protected routes — auth middleware returns 401 ──────────────
 
   describe('Protected routes require authentication', () => {
     it('GET /api/auth/me returns 401 without token', async () => {
@@ -353,8 +319,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Authenticated validation — 400 with valid token ─────────────
-
   describe('Authenticated routes still validate body', () => {
     it('PUT /api/auth/change-password returns 400 for missing fields with valid token', async () => {
       const token = makeToken();
@@ -384,8 +348,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Error response format ──────────────────────────────────────
-
   describe('Error response format', () => {
     it('validation error returns structured JSON with error field', async () => {
       const res = await request(app).post('/api/auth/refresh').send({});
@@ -401,8 +363,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Health endpoint ─────────────────────────────────────────────
-
   describe('GET /api/health', () => {
     it('returns 200 with mocked health check', async () => {
       const res = await request(app).get('/api/health');
@@ -411,16 +371,12 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── 404 fallback ────────────────────────────────────────────────
-
   describe('Unknown routes', () => {
     it('returns 404 for unknown API routes', async () => {
       const res = await request(app).get('/api/nonexistent');
       expect(res.status).toBe(404);
     });
   });
-
-  // ── Happy-path handler body coverage ─────────────────────────────
 
   describe('Happy-path — handler bodies', () => {
     it('POST /api/auth/register creates user and returns 201', async () => {
@@ -431,15 +387,11 @@ describe('Auth Routes — HTTP Layer', () => {
         password: 'ValidPass1',
         firstname: 'Jane',
         lastname: 'Doe',
-        // A2 (R3): dateOfBirth is now required by the register schema.
         dateOfBirth: '1990-06-13',
       });
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ user: { id: 42, email: 'new@test.com' } });
-      // Options-object signature; `locale` is resolved from the request (defaults to 'fr').
-      // `ip` and `requestId` are propagated from the Express request for audit trail
-      // (cf. auth-session.route.ts:93-94, added with S4 regulatory audit work).
       expect(mockRegister).toHaveBeenCalledWith({
         email: 'new@test.com',
         password: 'ValidPass1',
@@ -684,13 +636,6 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.body).toEqual(exportResult);
     });
 
-    /**
-     * Stryker survivor — `byteSize <= STREAMING_THRESHOLD_BYTES` boundary at the
-     * 10 MB cutover. Builds a payload whose serialised size is *exactly*
-     * `STREAMING_THRESHOLD_BYTES` and asserts the small path (`res.send`) is
-     * taken — Express then emits `Content-Length` and no
-     * `Transfer-Encoding: chunked`. The chunked path would flip both signals.
-     */
     it('GET /api/users/me/export uses non-streaming path when byteSize === threshold', async () => {
       mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
 
@@ -721,25 +666,16 @@ describe('Auth Routes — HTTP Layer', () => {
       mockExportUserData.mockResolvedValueOnce(padded);
       const token = makeToken();
 
-      // `Accept-Encoding: identity` disables the compression middleware so the
-      // response surface reveals which write path the handler took.
       const res = await request(app)
         .get('/api/users/me/export')
         .set('Authorization', `Bearer ${token}`)
         .set('Accept-Encoding', 'identity');
 
       expect(res.status).toBe(200);
-      // Small path → Express sets Content-Length, no chunked transfer.
       expect(res.headers['content-length']).toBe(String(STREAMING_THRESHOLD_BYTES));
       expect(res.headers['transfer-encoding']).toBeUndefined();
     });
 
-    /**
-     * Stryker survivor — same boundary, off by one. At
-     * `STREAMING_THRESHOLD_BYTES + 1` the handler MUST switch to the chunked
-     * write/end path so we never buffer >10 MB of JSON. Surfaces as
-     * `Transfer-Encoding: chunked` and no `Content-Length`.
-     */
     it('GET /api/users/me/export uses streaming path when byteSize === threshold + 1', async () => {
       mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
 
@@ -770,28 +706,16 @@ describe('Auth Routes — HTTP Layer', () => {
       mockExportUserData.mockResolvedValueOnce(padded);
       const token = makeToken();
 
-      // `Accept-Encoding: identity` disables compression so chunked-transfer
-      // observation isn't masked by gzip.
       const res = await request(app)
         .get('/api/users/me/export')
         .set('Authorization', `Bearer ${token}`)
         .set('Accept-Encoding', 'identity');
 
       expect(res.status).toBe(200);
-      // Streaming path → chunked transfer, no Content-Length.
       expect(res.headers['transfer-encoding']).toBe('chunked');
       expect(res.headers['content-length']).toBeUndefined();
     });
 
-    /**
-     * Stryker survivor — `mediaCount` reduce: counts a message as "with media"
-     * when EITHER `imageRef` OR `audioUrl` is set. A `||→&&` mutant would only
-     * count messages that have BOTH. Three messages (image-only, audio-only,
-     * neither) → expected mediaCount === 2; mutant would yield 0.
-     * Also asserts `res.status(200)` AND `Content-Type` header are emitted —
-     * killing the MethodRemoval mutant on either call (response would still
-     * carry the body but lose status / content-type).
-     */
     it('GET /api/users/me/export logs mediaCount counting EITHER imageRef OR audioUrl, and emits status+content-type', async () => {
       mockGetUserById.mockResolvedValueOnce({ id: 1, email: 'user@test.com', role: 'visitor' });
 
@@ -833,11 +757,9 @@ describe('Auth Routes — HTTP Layer', () => {
         .get('/api/users/me/export')
         .set('Authorization', `Bearer ${token}`);
 
-      // status(200) + content-type emitted (kills MethodRemoval on either)
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toMatch(/application\/json/);
 
-      // mediaCount = 2 (image-only + audio-only); 0 under the && mutant
       expect(auditService.log).toHaveBeenCalledTimes(1);
       const logArg = auditService.log.mock.calls[0][0] as {
         metadata: { mediaCount: number; sessionsCount: number };
@@ -847,17 +769,7 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── F7 — httpOnly cookies + CSRF token issuance ─────────────────
-  // Audit 2026-04-30: web admin stored tokens in JS module-scope vars (XSS-readable).
-  // Backend now ALSO emits httpOnly + Secure (prod) + SameSite=Strict cookies
-  // alongside the JSON response. Mobile (JSON path) is unaffected.
-
   describe('F7 — Auth cookies (httpOnly + CSRF double-submit)', () => {
-    /**
-     * Returns the array of Set-Cookie strings from a supertest response.
-     * @param res
-     * @param res.headers
-     */
     const cookiesOf = (res: {
       headers: Record<string, string | string[] | undefined>;
     }): string[] => {
@@ -866,11 +778,6 @@ describe('Auth Routes — HTTP Layer', () => {
       return Array.isArray(raw) ? raw : [raw];
     };
 
-    /**
-     * Finds the Set-Cookie line whose name matches `cookieName`.
-     * @param cookies
-     * @param cookieName
-     */
     const findCookie = (cookies: string[], cookieName: string): string | undefined =>
       cookies.find((c) => c.startsWith(`${cookieName}=`));
 
@@ -888,7 +795,6 @@ describe('Auth Routes — HTTP Layer', () => {
         .send({ email: 'user@test.com', password: 'ValidPass1' });
 
       expect(res.status).toBe(200);
-      // JSON envelope unchanged (mobile invariant).
       expect(res.body.accessToken).toBe('at-cookie-test');
       expect(res.body.refreshToken).toBe('rt-cookie-test');
 
@@ -901,16 +807,14 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(refresh).toBeDefined();
       expect(csrf).toBeDefined();
 
-      // access_token: HttpOnly + SameSite=Strict + Path=/
       expect(access).toMatch(/HttpOnly/);
       expect(access).toMatch(/SameSite=Strict/);
       expect(access).toMatch(/Path=\//);
 
-      // refresh_token: path-scoped to /api/auth so it is NOT sent on every API call.
       expect(refresh).toMatch(/HttpOnly/);
       expect(refresh).toMatch(/Path=\/api\/auth/);
+      expect(refresh).toMatch(/SameSite=Strict/);
 
-      // csrf_token: NOT HttpOnly (web JS must read it to echo back).
       expect(csrf).not.toMatch(/HttpOnly/);
       expect(csrf).toMatch(/SameSite=Strict/);
     });
@@ -961,7 +865,6 @@ describe('Auth Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(200);
       const cookies = cookiesOf(res);
-      // express `res.clearCookie` writes the cookie with Expires=Thu, 01 Jan 1970...
       const access = findCookie(cookies, 'access_token');
       const refresh = findCookie(cookies, 'refresh_token');
       const csrf = findCookie(cookies, 'csrf_token');
@@ -970,20 +873,14 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(refresh).toBeDefined();
       expect(csrf).toBeDefined();
 
-      // All three should carry an Expires date in 1970 (epoch) which signals deletion.
       expect(access).toMatch(/Expires=Thu, 01 Jan 1970/);
       expect(refresh).toMatch(/Expires=Thu, 01 Jan 1970/);
       expect(csrf).toMatch(/Expires=Thu, 01 Jan 1970/);
 
-      // Refresh cookie cleared on the same Path it was set on.
       expect(refresh).toMatch(/Path=\/api\/auth/);
     });
 
     it('does NOT set Secure flag in dev/test (NODE_ENV !== production)', async () => {
-      // The harness runs under NODE_ENV=test, so Secure must be absent so
-      // local http://localhost dev still works. Production behaviour is
-      // covered by inspection of `setAuthCookies` (httpOnly + sameSite are
-      // unconditional, secure flips with env.nodeEnv).
       mockLogin.mockResolvedValueOnce({
         accessToken: 'at',
         refreshToken: 'rt',
@@ -1003,8 +900,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
 
     it('mobile JSON path remains unchanged: response body still carries accessToken + refreshToken', async () => {
-      // The dual-mode contract: JSON envelope MUST be byte-stable across the
-      // F7 rollout so already-shipped mobile builds keep parsing it.
       mockLogin.mockResolvedValueOnce({
         accessToken: 'at-jsonpath',
         refreshToken: 'rt-jsonpath',
@@ -1023,11 +918,6 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(res.body.user).toEqual({ id: 1, email: 'mobile@test.com' });
     });
   });
-
-  // ── F1 — Rate-limit /refresh + /social-login ────────────────────
-  // Audit 2026-04-30: both endpoints lacked rate-limit middleware. Refresh keyed by IP+familyId
-  // (per-family throttle so a stolen family cannot enable >30 rotations/min from one network);
-  // social-login keyed by IP+provider (per-provider throttle).
 
   describe('Rate-limit — F1 /refresh + /social-login', () => {
     const stubRefreshToken = (familyId: string): string => {
@@ -1079,7 +969,6 @@ describe('Auth Routes — HTTP Layer', () => {
 
     it('POST /api/auth/refresh falls back to IP-only key when JWT payload is non-JSON', async () => {
       mockRefresh.mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' });
-      // Valid JWT structure (3 segments) but payload base64 decodes to non-JSON → catch branch.
       const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
       const badPayload = Buffer.from('not-json-text').toString('base64url');
       const malformed = `${header}.${badPayload}.sig`;
@@ -1088,29 +977,19 @@ describe('Auth Routes — HTTP Layer', () => {
     });
 
     it('POST /api/auth/refresh: invalid bodies do NOT bump the IP bucket (TD-EX-01)', async () => {
-      // TD-EX-01: validateBody runs BEFORE the body-keyed limiter; malformed bodies
-      // short-circuit to 400 without bumping the counter — bucket never drains via
-      // invalid-body probes.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- runtime require to avoid hoist issues with jest.mock above
       const { getBucketCountForKey } = require('@shared/middleware/rate-limit.middleware') as {
         getBucketCountForKey: (key: string) => number | undefined;
       };
 
-      // 60 consecutive invalid-body requests — comfortably above the 30-req limit.
       for (let i = 0; i < 60; i += 1) {
         const res = await request(app).post('/api/auth/refresh').send({});
         expect(res.status).toBe(400);
       }
 
-      // After 60 invalid bodies, the bucket key for this IP must be untouched
-      // (undefined = bucket never created, or 0 = bucket created but never bumped).
-      // The refreshLimiter keyGenerator returns `ip` (or `ip:familyId`) — for empty body
-      // there is no refreshToken so no familyId → key is just the IP.
       const ipKey = 'auth-refresh:127.0.0.1';
       const count = getBucketCountForKey(ipKey);
       expect(count ?? 0).toBe(0);
 
-      // A 61st invalid request still returns 400 (validation) — NEVER 429.
       const next = await request(app).post('/api/auth/refresh').send({});
       expect(next.status).toBe(400);
     });
@@ -1151,13 +1030,6 @@ describe('Auth Routes — HTTP Layer', () => {
       expect(stillOk.status).toBe(200);
     });
   });
-
-  // ── F3 — OIDC nonce verification ────────────────────────────────────────
-  // Audit 2026-04-30: /social-login accepted any signed ID token, allowing
-  // replay if an attacker captured a valid token. Mitigation: server vends
-  // a single-use nonce via /social-nonce; client passes it to the social SDK
-  // (Apple SHA-256-hashes it); backend asserts the claim and consumes the
-  // nonce so a second submission is rejected.
 
   describe('Nonce — F3 OIDC nonce verification', () => {
     it('POST /api/auth/social-nonce returns a freshly-issued nonce', async () => {
@@ -1229,7 +1101,6 @@ describe('Auth Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Phase F — per-attempted-account rate-limit on /login (CGNAT bypass) ─
   describe('Rate-limit — Phase F /login per-account (CGNAT bypass)', () => {
     it('eventually returns 429 when one email is hammered (account or IP bucket trips)', async () => {
       mockLogin.mockResolvedValue({
@@ -1237,9 +1108,6 @@ describe('Auth Routes — HTTP Layer', () => {
         refreshToken: 'rt',
         user: { id: 1, email: 'target@test.com' },
       });
-      // Drive past both buckets (per-IP=10, per-account=20). Either limiter
-      // firing produces a 429; the new account-level limiter closes the CGNAT
-      // bypass when the per-IP cap is too coarse.
       const responses: number[] = [];
       for (let i = 0; i < 25; i += 1) {
         const res = await request(app)
@@ -1259,8 +1127,6 @@ describe('Auth Routes — HTTP Layer', () => {
       const a = await request(app)
         .post('/api/auth/login')
         .send({ email: '  CaseSensitive@TEST.com  ', password: 'pw' });
-      // Validation may reject the email format with whitespace, but the
-      // limiter must not throw — any of 200/400/429 is acceptable here.
       expect([200, 400, 429]).toContain(a.status);
     });
   });

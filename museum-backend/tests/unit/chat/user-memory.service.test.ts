@@ -33,12 +33,8 @@ const makeVisitContext = (overrides: Partial<VisitContext> = {}): VisitContext =
   ...overrides,
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────
-
 describe('UserMemoryService', () => {
   beforeEach(() => jest.clearAllMocks());
-
-  // ── getMemoryForPrompt ─────────────────────────────────────────────
 
   describe('getMemoryForPrompt', () => {
     it('returns empty string when user has no memory', async () => {
@@ -93,8 +89,6 @@ describe('UserMemoryService', () => {
     });
   });
 
-  // ── updateAfterSession ─────────────────────────────────────────────
-
   describe('updateAfterSession', () => {
     it('increments sessionCount on first session', async () => {
       const repo = makeRepo(null);
@@ -130,7 +124,7 @@ describe('UserMemoryService', () => {
       await svc.updateAfterSession(42, ctx, 'sess-2');
 
       const upsertCall = repo.upsert.mock.calls[0][1];
-      expect(upsertCall.museumsVisited).toBeUndefined(); // no update needed
+      expect(upsertCall.museumsVisited).toBeUndefined();
     });
 
     it('merges artworks discussed', async () => {
@@ -162,12 +156,9 @@ describe('UserMemoryService', () => {
       repo.upsert.mockRejectedValue(new Error('DB gone'));
       const svc = new UserMemoryService(repo);
 
-      // Should NOT throw
       await expect(svc.updateAfterSession(42, null, 'sess-1')).resolves.toBeUndefined();
     });
   });
-
-  // ── deleteUserMemory ───────────────────────────────────────────────
 
   describe('deleteUserMemory', () => {
     it('deletes memory and invalidates cache (GDPR)', async () => {
@@ -190,8 +181,6 @@ describe('UserMemoryService', () => {
     });
   });
 
-  // ── getUserMemory (GDPR export) ─────────────────────────────────────
-
   describe('getUserMemory', () => {
     it('returns memory entity for existing user', async () => {
       const memory = makeMemory({ userId: 42 });
@@ -213,8 +202,6 @@ describe('UserMemoryService', () => {
       expect(result).toBeNull();
     });
   });
-
-  // ── updateAfterSession (uncovered branches) ─────────────────────────
 
   describe('updateAfterSession — uncovered branches', () => {
     it('does not merge expertise when expertiseSignals < 3', async () => {
@@ -294,7 +281,7 @@ describe('UserMemoryService', () => {
       await svc.updateAfterSession(42, ctx, 'sess-1');
 
       const upsertCall = repo.upsert.mock.calls[0][1];
-      expect(upsertCall.favoriteArtists).toBeUndefined(); // duplicate, no update
+      expect(upsertCall.favoriteArtists).toBeUndefined();
     });
 
     it('adds new artists that are not duplicates', async () => {
@@ -347,7 +334,6 @@ describe('UserMemoryService', () => {
       const repo = makeRepo(existing);
       const svc = new UserMemoryService(repo);
       const ctx = makeVisitContext({ museumName: undefined });
-      // Override artworksDiscussed to have at least one entry
       ctx.artworksDiscussed = [
         {
           title: 'Art',
@@ -363,8 +349,6 @@ describe('UserMemoryService', () => {
       expect(upsertCall.notableArtworks![0].museum).toBeUndefined();
     });
   });
-
-  // ── invalidateCache ─────────────────────────────────────────────────
 
   describe('invalidateCache', () => {
     it('does nothing when no cache is configured', async () => {
@@ -384,8 +368,6 @@ describe('UserMemoryService', () => {
       expect(cache.del).toHaveBeenCalledWith('memory:prompt:42');
     });
   });
-
-  // ── getMemoryForPrompt (uncovered branch: cache miss, no cache) ─────
 
   describe('getMemoryForPrompt — uncovered branches', () => {
     it('fetches from repo and does not store when no cache configured', async () => {

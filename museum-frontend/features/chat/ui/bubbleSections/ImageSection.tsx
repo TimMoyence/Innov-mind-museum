@@ -17,11 +17,6 @@ interface ImageSectionProps {
   onImageError: (messageId: string) => void;
 }
 
-/**
- * Renders the attached image on a chat bubble with a proactive signed-URL refresh:
- * when `expiresAt` is within 5 minutes, triggers `onImageError` so the parent
- * refetches a fresh signed URL before the current one expires.
- */
 export const ImageSection = memo(function ImageSection({
   messageId,
   url,

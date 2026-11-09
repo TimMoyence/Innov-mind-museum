@@ -1,24 +1,5 @@
-/**
- * Red tests for A4 — `deriveTopBarCollapsed` helper (hysteresis 80↓ / 40↑).
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/A4.md` §1.1
- * (R1-R7) + §4 (AC1-AC7) :
- *
- *   1. Constants exposed : TOP_BAR_COLLAPSE_THRESHOLD === 80, TOP_BAR_EXPAND_THRESHOLD === 40 (R5, AC1).
- *   2. Expanded state stays expanded at scrollY < 80 (R1, AC2-AC3).
- *   3. Expanded state collapses at scrollY >= 80 (R2, AC4).
- *   4. Collapsed state stays collapsed at scrollY >= 40 (R3, AC5-AC6).
- *   5. Collapsed state re-expands only at scrollY < 40 (R4, AC7).
- *   6. The helper is pure — same input → same output, no internal state (R6, R7).
- *
- * At baseline (A4 not yet implemented) :
- *   - `@/features/chat/application/useCollapsibleTopBar` does not exist.
- *     → Jest fails with "Cannot find module" at module load time.
- */
-
 import '../../helpers/test-utils';
 
-// RED ASSERTION 1 : module does not exist yet.
 import {
   deriveTopBarCollapsed,
   TOP_BAR_COLLAPSE_THRESHOLD,
@@ -93,12 +74,8 @@ describe('deriveTopBarCollapsed (A4 hysteresis)', () => {
     });
 
     it('does not retain state between calls (each call is independent)', () => {
-      // Call sequence that, if hysteresis was misimplemented as internal
-      // state, could leak through: expanded → collapsed → expanded → ...
-      deriveTopBarCollapsed(100, false); // would-be-internal: collapsed
-      deriveTopBarCollapsed(20, true); // would-be-internal: expanded
-      // But the function is pure — a fresh call with prev=false at scrollY=50
-      // must still return false.
+      deriveTopBarCollapsed(100, false);
+      deriveTopBarCollapsed(20, true);
       expect(deriveTopBarCollapsed(50, false)).toBe(false);
     });
   });

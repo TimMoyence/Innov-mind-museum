@@ -38,7 +38,6 @@ describeE2E('auth refresh-token rotation e2e', () => {
     const b = (first.body as { refreshToken: string }).refreshToken;
     expect(b).not.toBe(a);
 
-    // Reusing A → 401 (replay detection)
     const replay = await harness.request('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: a }),
@@ -56,14 +55,12 @@ describeE2E('auth refresh-token rotation e2e', () => {
     expect(first.status).toBe(200);
     const b = (first.body as { refreshToken: string }).refreshToken;
 
-    // Attacker replays A
     const replay = await harness.request('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: a }),
     });
     expect(replay.status).toBe(401);
 
-    // Legit user's B should now also fail (family revoked)
     const usingB = await harness.request('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: b }),
@@ -84,7 +81,6 @@ describeE2E('auth refresh-token rotation e2e', () => {
       expect(next).not.toBe(current);
       current = next;
     }
-    // current = D; A/B/C all revoked
     const replayA = await harness.request('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: a }),

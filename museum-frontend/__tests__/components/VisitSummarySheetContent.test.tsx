@@ -14,12 +14,6 @@ const makeSummary = (overrides?: Partial<VisitSummary>): VisitSummary => ({
   ...overrides,
 });
 
-/**
- * Sheet-content variant of the legacy `VisitSummaryModal` tests (migrated
- * under C4). The `<Modal>` wrapper is now owned by the bottom-sheet router;
- * this component receives the summary + a `close` handle and renders the
- * card body.
- */
 describe('VisitSummarySheetContent', () => {
   const close = jest.fn();
 

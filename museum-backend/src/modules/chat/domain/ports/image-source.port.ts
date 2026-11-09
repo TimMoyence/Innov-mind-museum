@@ -1,3 +1,5 @@
+export const THUMBNAIL_WIDTH_PX = 330;
+
 export interface ImageSourcePhoto {
   url: string;
   thumbnailUrl: string;
@@ -8,6 +10,5 @@ export interface ImageSourcePhoto {
 }
 
 export interface ImageSourceClient {
-  /** Returns `[]` on any failure. */
   searchPhotos(query: string, perPage?: number): Promise<ImageSourcePhoto[]>;
 }

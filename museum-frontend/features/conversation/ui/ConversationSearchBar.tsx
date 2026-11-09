@@ -11,7 +11,6 @@ interface ConversationSearchBarProps {
   placeholder?: string;
 }
 
-/** Search input for filtering conversations by title or subtitle. */
 export const ConversationSearchBar = ({
   value,
   onChangeText,

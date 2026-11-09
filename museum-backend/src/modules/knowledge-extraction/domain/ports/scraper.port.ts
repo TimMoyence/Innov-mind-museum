@@ -6,6 +6,5 @@ export interface ScrapedPage {
 }
 
 export interface ScraperPort {
-  /** Returns null if scraping fails or is disallowed (SSRF policy). */
   scrape(url: string, signal?: AbortSignal): Promise<ScrapedPage | null>;
 }

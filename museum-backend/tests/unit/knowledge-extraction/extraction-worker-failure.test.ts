@@ -102,10 +102,6 @@ describe('handleJobFailure', () => {
   });
 });
 
-/**
- * Fix #1 from 2026-04-25 code review — exercise the cron-style branch where
- * `attempts` is not configured but the caller opts into `treatNoAttemptsAsFinal`.
- */
 describe('handleJobFailure — treatNoAttemptsAsFinal (cron semantics)', () => {
   it('pages Sentry on every failure when attemptsMax === 0 and the option is set', () => {
     const sinks = makeSinks();

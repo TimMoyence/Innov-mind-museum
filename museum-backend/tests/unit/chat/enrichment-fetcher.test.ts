@@ -116,14 +116,12 @@ describe('extractSuggestedImageEntries (C2 v2)', () => {
         metadata: {
           suggestedImages: [
             { query: 'Q1', description: 'D1', rationale: 'R1', caption: 'C1' },
-            { query: 'Q2', description: 'D2', rationale: 'R2' /* no caption */ },
+            { query: 'Q2', description: 'D2', rationale: 'R2' },
           ],
         },
       },
     ];
     const entries = extractSuggestedImageEntries(history);
-    expect(entries).toEqual([
-      { query: 'Q1', description: 'D1', rationale: 'R1', caption: 'C1' },
-    ]);
+    expect(entries).toEqual([{ query: 'Q1', description: 'D1', rationale: 'R1', caption: 'C1' }]);
   });
 });

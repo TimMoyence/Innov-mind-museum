@@ -11,10 +11,6 @@ import { notFound } from '@shared/errors/app.error';
 
 import type { EnrichMuseumResult } from '@modules/museum/domain/enrichment/enrichment.types';
 
-// ── Mocks ────────────────────────────────────────────────────────
-// Museum barrel — replace `buildEnrichMuseumUseCase` with our in-memory
-// double so `api.router.ts` wires the fake use case into the router.
-
 const mockExecute = jest.fn<Promise<EnrichMuseumResult>, [{ museumId: number; locale: string }]>();
 const mockGetJobStatus = jest.fn<
   Promise<EnrichMuseumResult>,
@@ -43,7 +39,6 @@ jest.mock('@modules/museum/useCase', () => {
   };
 });
 
-// Prevent BullMQ/Redis real connection at boot.
 jest.mock(
   '@modules/museum/adapters/secondary/enrichment/bullmq-museum-enrichment-queue.adapter',
   () => ({
@@ -146,8 +141,6 @@ describe('Museum Enrichment Routes — HTTP Layer', () => {
         .get('/api/museums/not-a-number/enrichment?locale=fr')
         .set('Authorization', `Bearer ${makeToken()}`);
 
-      // `/:id/enrichment` should not collide with `/:idOrSlug` (which uses
-      // a string param) — `parseMuseumIdParam` rejects non-numeric with 400.
       expect(res.status).toBe(400);
     });
   });

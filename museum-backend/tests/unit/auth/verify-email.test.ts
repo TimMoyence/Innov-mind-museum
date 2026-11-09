@@ -19,7 +19,6 @@ describe('VerifyEmailUseCase', () => {
     expect(result).toEqual({ verified: true });
     expect(repo.verifyEmail).toHaveBeenCalledTimes(1);
     expect(repo.verifyEmail).toHaveBeenCalledWith(expectedHash);
-    // Crucially, the raw token must never reach the repository layer.
     expect(repo.verifyEmail).not.toHaveBeenCalledWith(rawToken);
   });
 
@@ -59,7 +58,6 @@ describe('RegisterUseCase — verification email', () => {
       password: 'ValidPass1',
       firstname: 'Test',
       lastname: 'User',
-      // A2: dateOfBirth is now required (CNIL age gate); supply a valid adult DOB.
       dateOfBirth: '1990-06-13',
     });
 
@@ -89,7 +87,6 @@ describe('RegisterUseCase — verification email', () => {
       password: 'ValidPass1',
       firstname: 'Test',
       lastname: 'User',
-      // A2: dateOfBirth is now required (CNIL age gate); supply a valid adult DOB.
       dateOfBirth: '1990-06-13',
     });
 

@@ -22,23 +22,9 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     return await this.repo.findOne({ where: { userId } });
   }
 
-  /**
-   * Atomic UPSERT — `INSERT … ON CONFLICT (user_id) DO UPDATE` single round-trip.
-   * Concurrent callers cannot lose updates (Postgres serialises conflict resolution per row).
-   *
-   * The entity's `@VersionColumn` is passive here: `@VersionColumn` auto-increment fires
-   * only on `.save()`/`.update()` paths, NOT raw query-builder INSERT. Column does NOT
-   * increment on upsert. For client-side cache invalidation rely on `updatedAt`
-   * (`@UpdateDateColumn`), or switch to `.save()` with a transaction guard. To add
-   * version increment: include `version` in `orUpdate` columns with `user_memories.version + 1`.
-   */
   async upsert(userId: number, updates: UserMemoryUpdates): Promise<UserMemory> {
     const values: Partial<UserMemory> = { userId, ...updates };
 
-    // Resolve property → DB column from TypeORM metadata. Naive camelCase→snake_case
-    // silently breaks for columns kept camelCase by migration `Check1776593907869`
-    // (`sessionCount`, `favoritePeriods`) — those retain property name in PG (double-quoted)
-    // and lack `name:` override on the entity.
     const propertyToColumnName = (propertyName: string): string => {
       const column = this.repo.metadata.findColumnWithPropertyName(propertyName);
       if (!column) {
@@ -68,11 +54,6 @@ export class TypeOrmUserMemoryRepository implements UserMemoryRepository {
     await this.repo.delete({ userId });
   }
 
-  /**
-   * LEFT JOIN so sessions with no messages still appear (`lastMessageAt = null`).
-   * `s."userId"` is double-quoted because `@JoinColumn` keeps camelCase and PG folds
-   * unquoted identifiers to lowercase.
-   */
   async getRecentSessionsForUser(userId: number, limit: number): Promise<RecentSessionAggregate[]> {
     const rows = await this.dataSource
       .createQueryBuilder()

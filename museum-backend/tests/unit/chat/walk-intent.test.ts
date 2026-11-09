@@ -1,27 +1,9 @@
-/**
- * Service-integration coverage for chat session intent='walk'.
- *
- * Exercises the full ChatService path (createSession → buildOrchestratorInput →
- * orchestrator.generate → commitAssistantResponse) with an in-memory repo and
- * a walk-aware fake orchestrator that emits structured suggestions.
- *
- * Plan deviation: the original spec referenced createE2EHarness (HTTP + testcontainers
- * Postgres). We follow the existing pattern in this directory
- * (chat-api.smoke.integration.test.ts) using buildChatTestService for lower setup
- * cost and identical coverage of the use-case → service → repo path. The HTTP layer
- * is independently exercised by the unit tests added in T1.3
- * (contracts-create-session-intent.test.ts) and T1.7
- * (message-commit-suggestions.test.ts).
- */
-
 import { buildChatTestService } from 'tests/helpers/chat/chatTestApp';
 import type {
   ChatOrchestrator,
   OrchestratorInput,
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
-
-// ── Walk-aware fake orchestrator ────────────────────────────────────────────
 
 class WalkAwareOrchestrator implements ChatOrchestrator {
   public lastIntent: string | undefined;
@@ -43,8 +25,6 @@ class WalkAwareOrchestrator implements ChatOrchestrator {
     };
   }
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('chat walk-intent integration (service-level)', () => {
   it('persists intent=walk on createSession and surfaces suggestions on postMessage', async () => {

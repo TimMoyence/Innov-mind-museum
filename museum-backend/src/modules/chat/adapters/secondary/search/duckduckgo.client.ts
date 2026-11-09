@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -9,13 +10,11 @@ import type {
 const DUCKDUCKGO_API_URL = 'https://api.duckduckgo.com/';
 const HARD_RESULT_LIMIT = 10;
 
-/** A leaf related topic carries a direct URL + text. */
 interface DuckDuckGoRelatedTopic {
   FirstURL?: string;
   Text?: string;
 }
 
-/** A nested group has no FirstURL/Text of its own (skip it). */
 interface DuckDuckGoApiResponse {
   Heading?: string;
   AbstractText?: string;
@@ -23,14 +22,6 @@ interface DuckDuckGoApiResponse {
   RelatedTopics?: unknown[];
 }
 
-/**
- * DuckDuckGo Instant Answer API (`api.duckduckgo.com`). No API key required —
- * always-on free tail of the fallback chain. It returns an Abstract +
- * RelatedTopics rather than a full SERP, so normalization is best-effort:
- * emit the abstract (when present) plus each related topic that carries a
- * FirstURL + Text, skipping nested category groups. Never throws — any error
- * returns an empty array (fail-open).
- */
 export class DuckDuckGoClient implements WebSearchProvider {
   readonly name = 'duckduckgo';
 
@@ -86,7 +77,7 @@ export class DuckDuckGoClient implements WebSearchProvider {
       return results.slice(0, maxResults);
     } catch (err) {
       logger.warn('duckduckgo_search_exception', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
         query: query.query,
       });
       return [];

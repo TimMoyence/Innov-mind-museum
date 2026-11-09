@@ -1,11 +1,3 @@
-/**
- * F11 (2026-04-30) — Request logger must redact sensitive query-string keys
- * before writing to logs (mirrors sentry-scrubber.ts redaction list).
- *
- * Pre-fix: req.originalUrl logged verbatim — `?token=abc&password=xyz` survived
- * to log files. Post-fix: same redaction set as Sentry transport, single source
- * of truth via SENSITIVE_QUERY_KEYS export.
- */
 import express from 'express';
 import request from 'supertest';
 
@@ -74,9 +66,6 @@ describe('F11 — request logger query-string redaction', () => {
     app.get('/api/health', (_req, res) => {
       res.status(200).json({ ok: true });
     });
-    // Silent path matches exactly, so bare /api/health stays out of the log.
-    // (A hardening follow-up could canonicalise the path before the silent check
-    // so /api/health?foo=bar also stays silent — out of scope for F11.)
     await request(app).get('/api/health');
     expect(logger.info).not.toHaveBeenCalledWith('http_request', expect.anything());
   });

@@ -1,13 +1,3 @@
-/**
- * 2026-05-13 — Scalability hardening test (perennial design §11 / 100k prep).
- *
- * Covers the new Prometheus `musaium_guardrail_budget_redis_fallback_total`
- * counter that increments every time the Redis backend has to fail-CLOSED.
- * The original `guardrail-budget.test.ts` already exercises the behavioural
- * contract (fail-CLOSED on ping-false, corrupted counter, etc.) — this file
- * focuses strictly on the observability surface so a Redis-availability
- * regression alerts in Grafana, not just in logs.
- */
 import {
   __setNowForTest,
   __setStoreForTest,
@@ -45,8 +35,7 @@ describe('guardrail-budget Redis fail-closed', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: unreachableCache });
 
-    expect(await getBudgetExhausted()).toBe(true); // fail-CLOSED preserved
-
+    expect(await getBudgetExhausted()).toBe(true);
   });
 
   it('increments the fallback counter when ping() throws', async () => {
@@ -66,7 +55,6 @@ describe('guardrail-budget Redis fail-closed', () => {
     configureGuardrailBudget({ cache: throwingCache });
 
     expect(await getBudgetExhausted()).toBe(true);
-
   });
 
   it('increments the fallback counter when get() returns a malformed counter (NaN-string)', async () => {
@@ -84,7 +72,6 @@ describe('guardrail-budget Redis fail-closed', () => {
     configureGuardrailBudget({ cache: malformedCache });
 
     expect(await getBudgetExhausted()).toBe(true);
-
   });
 
   it('increments the fallback counter when get() returns a negative counter', async () => {
@@ -102,7 +89,6 @@ describe('guardrail-budget Redis fail-closed', () => {
     configureGuardrailBudget({ cache: corruptedCache });
 
     expect(await getBudgetExhausted()).toBe(true);
-
   });
 
   it('does NOT increment the fallback counter on the healthy path (ping=true + missing key)', async () => {
@@ -119,11 +105,7 @@ describe('guardrail-budget Redis fail-closed', () => {
     } as unknown as CacheService;
     configureGuardrailBudget({ cache: healthyCache });
 
-    // First-of-day legitimate miss → cumulative=0 → not exhausted, no fallback
-    // recorded. recordJudgeCost will succeed-soft (incrBy returns null from
-    // this stub, which the adapter silently ignores per fail-soft port).
     expect(await getBudgetExhausted()).toBe(false);
     await recordJudgeCost(50);
-
   });
 });

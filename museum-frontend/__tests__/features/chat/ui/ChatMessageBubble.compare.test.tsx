@@ -1,25 +1,8 @@
-/**
- * RED tests for `ChatMessageBubble` C3 compare integration (T8.5, Phase 8).
- *
- * Contract: when an assistant message carries
- *   `metadata.compareResults.matches.length > 0`
- * the bubble renders an `<ImageCompareCarousel>` below the streaming body.
- * When metadata is absent, the carousel is NOT rendered. With an empty
- * matches array but a `fallbackReason`, the carousel renders its own
- * empty-state (i.e. the parent still mounts the carousel — it owns the
- * fallback UX).
- *
- * The green-editor will need to wire `compareResults` into
- * `ChatUiMessageMetadata` and call `<ImageCompareCarousel>`. Until then,
- * these tests must FAIL: either the metadata field has no effect (no
- * carousel rendered) or the carousel module does not exist.
- */
 import '../../../helpers/test-utils';
 import { render, screen } from '@testing-library/react-native';
 
 import { makeAssistantMessage } from '../../../helpers/factories';
 
-// Heavy sub-components are mocked — keep the test focused on the swap.
 jest.mock('@/features/chat/ui/MarkdownBubble', () => {
   const { Text } = require('react-native');
   return {
@@ -55,17 +38,10 @@ jest.mock('@/features/chat/ui/ImageFullscreenModal', () => {
   };
 });
 
-// The C3 carousel — exposes a stable testID + a deterministic count of mock
-// match children so the bubble integration assertions don't depend on
-// the (yet-unwritten) real component's layout.
 jest.mock('@/features/chat/ui/ImageCompareCarousel', () => {
   const { Text, View } = require('react-native');
   return {
-    ImageCompareCarousel: ({
-      matches,
-    }: {
-      matches: readonly { qid: string }[];
-    }) => (
+    ImageCompareCarousel: ({ matches }: { matches: readonly { qid: string }[] }) => (
       <View testID="image-compare-carousel">
         <Text testID="image-compare-carousel-count">{String(matches.length)}</Text>
       </View>
@@ -90,8 +66,6 @@ describe('ChatMessageBubble — C3 compare integration (T8.5)', () => {
     const message = makeAssistantMessage(
       {},
       {
-        // Cast through unknown — the green editor must extend
-        // `ChatUiMessageMetadata` to include `compareResults`.
         ...({
           compareResults: {
             matches: [
@@ -154,7 +128,6 @@ describe('ChatMessageBubble — C3 compare integration (T8.5)', () => {
 
     render(<ChatMessageBubble {...baseProps} message={message} isStreaming={false} />);
 
-    // Parent still mounts the carousel — it owns the empty-state UX.
     expect(screen.queryByTestId('image-compare-carousel')).toBeTruthy();
     expect(screen.getByTestId('image-compare-carousel-count').props.children).toBe('0');
   });

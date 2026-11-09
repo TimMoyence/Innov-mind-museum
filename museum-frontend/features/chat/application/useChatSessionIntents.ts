@@ -17,23 +17,6 @@ interface ChatSessionIntents {
   isWalkMode: boolean;
 }
 
-/**
- * Centralises the screen-launch intents for the chat session route:
- *
- *  - `intent=camera|audio` → auto-trigger the camera or audio recorder
- *    once the screen mounts (camera fires immediately, audio is delayed
- *    500 ms to avoid silent-failure on iOS while the screen is mid-mount);
- *  - `intent=walk` → enable walk-mode UI affordances (banner, suggestion
- *    chips) without triggering camera or audio side-effects;
- *  - `initialPrompt=...` → submit the prompt as the first user message
- *    once loading clears;
- *  - error haptic → fire `Haptics.notificationAsync(Error)` whenever the
- *    `error` value flips truthy.
- *
- * Each intent is guarded by a `useRef` flag so the side-effect runs at
- * most once per mount without triggering an extra render (avoids the
- * react-hooks/set-state-in-effect cascade).
- */
 export const useChatSessionIntents = (params: ChatSessionIntentsParams): ChatSessionIntents => {
   const initialIntent = useMemo<'camera' | 'audio' | null>(() => {
     if (params.intent === 'camera' || params.intent === 'audio') return params.intent;
@@ -56,7 +39,6 @@ export const useChatSessionIntents = (params: ChatSessionIntentsParams): ChatSes
       void params.onTakePicture();
       return;
     }
-    // Delay audio recording to ensure screen is fully mounted (avoids silent failure on iOS).
     const timer = setTimeout(() => {
       void params.toggleRecording();
     }, 500);

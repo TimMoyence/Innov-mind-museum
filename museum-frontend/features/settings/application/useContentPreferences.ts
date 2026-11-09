@@ -6,16 +6,6 @@ import { useUserProfileStore } from '@/features/settings/infrastructure/userProf
 import { getErrorMessage } from '@/shared/lib/errors';
 import type { ContentPreference } from '@/shared/types/content-preference';
 
-/**
- * Application hook for reading and updating the visitor's content preferences.
- *
- * Optimistic update strategy: the Zustand store is updated immediately for
- * instant UI feedback, the PATCH is fired in the background, and on failure
- * the previous value is restored and the error is surfaced.
- *
- * Concurrency: rapid toggles are serialized via a ref-based mutex so that an
- * earlier rollback cannot invalidate a later successful request.
- */
 export const useContentPreferences = () => {
   const preferences = useUserProfileStore((s) => s.contentPreferences);
   const setContentPreferences = useUserProfileStore((s) => s.setContentPreferences);
@@ -27,7 +17,6 @@ export const useContentPreferences = () => {
 
   const toggle = useCallback(
     async (preference: ContentPreference) => {
-      // Simple mutex: refuse concurrent toggles while one PATCH is in flight.
       if (inflightRef.current) return;
       inflightRef.current = true;
 
@@ -38,10 +27,8 @@ export const useContentPreferences = () => {
       setError(null);
       try {
         const persisted = await userProfileApi.updateContentPreferences(next);
-        // Align local cache with the server's canonical order.
         setContentPreferences(persisted);
       } catch (err) {
-        // Roll back optimistic update.
         setContentPreferences(previous);
         setError(getErrorMessage(err));
         Sentry.captureException(err, { tags: { flow: 'contentPreferences.toggle' } });

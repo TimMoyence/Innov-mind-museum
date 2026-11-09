@@ -80,22 +80,18 @@ export default function LandingJsonLd({
     <>
       <script
         type="application/ld+json"
-        // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml -- JSON-LD structured data; content is developer-controlled schema.org objects serialized via JSON.stringify
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}
       />
       <script
         type="application/ld+json"
-        // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml -- JSON-LD structured data; content is developer-controlled schema.org objects serialized via JSON.stringify
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
       <script
         type="application/ld+json"
-        // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml -- JSON-LD structured data; content is developer-controlled schema.org objects serialized via JSON.stringify
         dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
       />
       <script
         type="application/ld+json"
-        // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml -- JSON-LD structured data; FAQ content from typed locale dictionary, serialized via JSON.stringify
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
     </>

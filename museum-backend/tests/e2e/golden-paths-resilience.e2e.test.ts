@@ -17,14 +17,10 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     await harness?.stop();
   });
 
-  // ---------------------------------------------------------------------------
-  // Golden Path 5: Token Expiry -> Transparent Refresh -> Continue Chat
-  // ---------------------------------------------------------------------------
   describe('GP5: token expiry -> refresh -> continue chat', () => {
     it('rejects an expired access token with 401, then refreshes and continues chatting', async () => {
       const { token, refreshToken, email } = await registerAndLogin(harness);
 
-      // -- Step 1: Create a session with the valid token --
       const createRes = await harness.request(
         '/api/chat/sessions',
         {
@@ -36,7 +32,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
       expect(createRes.status).toBe(201);
       const sessionId = (createRes.body as { session: { id: string } }).session.id;
 
-      // -- Step 2: Send a message with the valid token (should work) --
       const msg1Res = await harness.request(
         `/api/chat/sessions/${sessionId}/messages`,
         {
@@ -51,9 +46,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
       expect(msg1Res.status).toBe(201);
       expect((msg1Res.body as { message: { role: string } }).message.role).toBe('assistant');
 
-      // -- Step 3: Forge an already-expired access token --
-      // Decode the current token to extract claims, then re-sign with exp in the past.
-      // Uses the same JWT_ACCESS_SECRET that the E2E harness sets in process.env.
       const decoded = jwt.decode(token) as jwt.JwtPayload;
       const jwtSecret = process.env.JWT_ACCESS_SECRET!;
       const expiredToken = jwt.sign(
@@ -67,10 +59,8 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         { expiresIn: '0s' },
       );
 
-      // Small wait to ensure the token is truly expired (iat == exp)
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      // -- Step 4: Use the expired token -> expect 401 --
       const expiredRes = await harness.request(
         `/api/chat/sessions/${sessionId}?limit=20`,
         { method: 'GET' },
@@ -83,7 +73,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         }),
       );
 
-      // -- Step 5: Use the refresh token to get a new access token --
       const refreshRes = await harness.request('/api/auth/refresh', {
         method: 'POST',
         body: JSON.stringify({ refreshToken }),
@@ -103,7 +92,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
 
       const newAccessToken = refreshBody.accessToken;
 
-      // -- Step 6: Continue chatting with the new access token --
       const msg2Res = await harness.request(
         `/api/chat/sessions/${sessionId}/messages`,
         {
@@ -123,7 +111,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         0,
       );
 
-      // -- Step 7: Verify the session has all 4 messages (2 user + 2 assistant) --
       const getRes = await harness.request(
         `/api/chat/sessions/${sessionId}?limit=20`,
         { method: 'GET' },
@@ -138,14 +125,12 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     it('rejects the old refresh token after rotation (replay detection)', async () => {
       const { refreshToken } = await registerAndLogin(harness);
 
-      // First refresh: succeeds and rotates the token
       const refresh1 = await harness.request('/api/auth/refresh', {
         method: 'POST',
         body: JSON.stringify({ refreshToken }),
       });
       expect(refresh1.status).toBe(200);
 
-      // Attempting to reuse the old refresh token should fail (reuse detection)
       const refresh2 = await harness.request('/api/auth/refresh', {
         method: 'POST',
         body: JSON.stringify({ refreshToken }),
@@ -159,16 +144,8 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Golden Path 6: Rate Limit -> 429 -> Retry After
-  // ---------------------------------------------------------------------------
   describe('GP6: rate limit -> 429 -> retry after', () => {
     it('triggers 429 on rapid requests and includes Retry-After header', async () => {
-      // The harness relaxes the register/login limiters so the e2e suite can churn
-      // through dozens of auth calls in one process. We target /forgot-password
-      // instead — it keeps its hardcoded 5/5min IP budget and reliably triggers 429.
-
-      // Fire 8 rapid forgot-password attempts to exceed the limit of 5
       const results: { status: number; retryAfter: string | null }[] = [];
 
       for (let i = 0; i < 8; i++) {
@@ -181,22 +158,17 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
           status: response.status,
           retryAfter: response.headers.get('retry-after'),
         });
-        // Consume body to avoid connection issues
         await response.text();
       }
 
-      // At least one request should have been rate-limited
       const rateLimited = results.filter((r) => r.status === 429);
       expect(rateLimited.length).toBeGreaterThanOrEqual(1);
 
-      // The 429 response should include a Retry-After header
       const firstRateLimited = rateLimited[0];
       expect(firstRateLimited.retryAfter).not.toBeNull();
       const retryAfterSeconds = Number(firstRateLimited.retryAfter);
       expect(retryAfterSeconds).toBeGreaterThanOrEqual(1);
 
-      // Verify a legitimate register+login flow still works for an unrelated user
-      // (forgot-password bucket does not affect register/login buckets).
       const freshEmail = `e2e-ratelimit-fresh-${Date.now()}@musaium.test`;
       const password = 'Password123!';
       await harness.request('/api/auth/register', {
@@ -209,7 +181,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
           dateOfBirth: '1990-06-13',
         }),
       });
-      // E2E env has no SMTP — bypass verification email so login succeeds.
       await markEmailVerified(harness, freshEmail);
 
       const freshLogin = await harness.request('/api/auth/login', {
@@ -221,7 +192,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     });
 
     it('returns proper 429 error structure', async () => {
-      // forgot-password keeps its 5-per-5-minute hardcoded limit; flood it to 429.
       const responses: { status: number; body: unknown }[] = [];
 
       for (let i = 0; i < 8; i++) {
@@ -234,11 +204,9 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         responses.push(res);
       }
 
-      // Some should be rate-limited
       const blocked = responses.filter((r) => r.status === 429);
       expect(blocked.length).toBeGreaterThanOrEqual(1);
 
-      // Verify the 429 body has the standard error shape
       const blockedBody = blocked[0].body as {
         error?: { code?: string; message?: string };
       };
@@ -247,9 +215,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Golden Path 7: Guardrail Block -> Refusal -> Session Survives
-  // ---------------------------------------------------------------------------
   describe('GP7: guardrail block -> refusal -> session survives', () => {
     let token: string;
     let sessionId: string;
@@ -258,7 +223,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
       const auth = await registerAndLogin(harness);
       token = auth.token;
 
-      // Create a session for the guardrail tests
       const createRes = await harness.request(
         '/api/chat/sessions',
         {
@@ -284,7 +248,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         token,
       );
 
-      // The guardrail should still return 201 (the message is persisted, with a refusal response)
       expect(res.status).toBe(201);
 
       const body = res.body as {
@@ -292,17 +255,13 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         metadata: Record<string, unknown>;
       };
 
-      // The response should be from the assistant but with a refusal
       expect(body.message.role).toBe('assistant');
 
-      // The refusal text should NOT contain the system prompt
       expect(body.message.text).not.toContain('system prompt');
       expect(body.message.text).not.toContain('[END OF SYSTEM INSTRUCTIONS]');
 
-      // The refusal should be the guardrail default message (art-only scope)
       expect(body.message.text).toContain('art');
 
-      // Metadata should have a policy citation for the block
       expect(body.metadata).toEqual(
         expect.objectContaining({
           citations: expect.arrayContaining([expect.stringMatching(/^policy:/)]),
@@ -332,10 +291,8 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
 
       expect(body.message.role).toBe('assistant');
 
-      // The insult refusal should mention insulting language
       expect(body.message.text).toContain('insulting language');
 
-      // Metadata should have a policy:insult citation
       expect(body.metadata.citations).toEqual(expect.arrayContaining(['policy:insult']));
     });
 
@@ -360,10 +317,8 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
       };
 
       expect(body.message.role).toBe('assistant');
-      // The response should be from the synthetic orchestrator, not a guardrail refusal
       expect(body.message.text).toBe('Synthetic assistant response for e2e');
 
-      // No policy citation in the metadata for a legitimate question
       const policyCitations = (body.metadata.citations ?? []).filter((c: string) =>
         c.startsWith('policy:'),
       );
@@ -381,7 +336,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
 
       const messages = (getRes.body as { messages: { role: string; text?: string }[] }).messages;
 
-      // 3 user messages + 3 assistant responses (2 guardrail refusals + 1 normal)
       const userMessages = messages.filter((m) => m.role === 'user');
       const assistantMessages = messages.filter((m) => m.role === 'assistant');
       expect(userMessages).toHaveLength(3);
@@ -410,7 +364,6 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
 
       expect(body.message.role).toBe('assistant');
 
-      // French insult refusal should be in French
       expect(body.message.text).toContain('insultes');
 
       expect(body.metadata.citations).toEqual(expect.arrayContaining(['policy:insult']));
@@ -444,9 +397,7 @@ describeE2E('golden paths resilience e2e (auth expiry, rate limit, guardrails)',
         };
 
         expect(body.message.role).toBe('assistant');
-        // Should be a guardrail refusal, not the synthetic response
         expect(body.message.text).not.toBe('Synthetic assistant response for e2e');
-        // Should have a policy citation
         expect(body.metadata.citations).toEqual(
           expect.arrayContaining([expect.stringMatching(/^policy:/)]),
         );

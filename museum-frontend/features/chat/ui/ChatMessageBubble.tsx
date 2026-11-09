@@ -1,19 +1,19 @@
-import React, { useCallback, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
-import type { CitationFamily } from '@/features/chat/application/citations';
-import { FAMILY_FOR_SOURCE_TYPE } from '@/features/chat/application/citations';
 import { ArtworkCard } from '@/features/chat/ui/ArtworkCard';
-import { CitationChips } from '@/features/chat/ui/CitationChips';
 import { ImageCarousel } from '@/features/chat/ui/ImageCarousel';
 import { ImageCarouselSkeleton } from '@/features/chat/ui/ImageCarouselSkeleton';
+import { compareMatchCredit } from '@/features/chat/ui/ImageCompareCard';
 import { ImageCompareCarousel } from '@/features/chat/ui/ImageCompareCarousel';
 import { ImageFullscreenModal } from '@/features/chat/ui/ImageFullscreenModal';
+import type { FullscreenImage } from '@/features/chat/ui/ImageFullscreenModal';
 import { SourceCitation } from '@/features/chat/ui/SourceCitation';
+import type { components } from '@/shared/api/generated/openapi';
 import { forceOpaque } from '@/shared/ui/colorUtils';
 import { useReducedTransparency } from '@/shared/ui/hooks/useReducedTransparency';
 import { useTheme } from '@/shared/ui/ThemeContext';
@@ -21,14 +21,6 @@ import { semantic } from '@/shared/ui/tokens';
 
 import { FeedbackSection, ImageSection, StreamingBody, TtsSection } from './bubbleSections';
 
-/**
- * A3 — Local UI tuning value for the assistant bubble's frosted-glass effect.
- *
- * Chosen between `<GlassCard>` 52 (UI cards, low text density) and
- * `<FloatingContextMenu>` 64 (tactical overlay). The bubble is text-dense, so
- * we keep the blur lighter (42) to preserve readability. This is NOT a design
- * token — pure local UI constant, per spec §1.8 R27.
- */
 export const ASSISTANT_BUBBLE_BLUR_INTENSITY = 42;
 
 interface ChatMessageBubbleProps {
@@ -46,35 +38,22 @@ interface ChatMessageBubbleProps {
   onRetry?: (message: ChatUiMessage) => void;
   feedbackValue?: 'positive' | 'negative' | null;
   onFeedback?: (messageId: string, value: 'positive' | 'negative') => void;
-  /**
-   * C9.18 (2026-05-17) — B2B deep-link callback fired when the user taps the
-   * detected-artwork chip. Parent owns the actual navigation (it knows the
-   * session museumId). `detectedArtwork` payload (including `artworkId`) is
-   * accessible via `message.metadata`.
-   */
   onArtworkPress?: (message: ChatUiMessage) => void;
-  /**
-   * D-06 (cycle D, 2026-05-26) — fired when the user taps a C3 compare match
-   * card. Parent owns the navigation target (Wikidata sheet/browser for the
-   * `qid`). Mirrors the `onArtworkPress` plumbing: the bubble only forwards a
-   * real handler to `<ImageCompareCarousel>`. When omitted, a graceful no-op is
-   * forwarded so the carousel stays callable and the tap never throws.
-   */
-  onMatchPress?: (qid: string) => void;
 }
 
-/**
- * Facade that composes the four NL-4.2 bubble sections — StreamingBody, ImageSection,
- * TtsSection, FeedbackSection — around a user/assistant bubble frame. Memoized to
- * skip re-renders when inputs are structurally identical; during streaming, only
- * text + isStreaming trigger a re-render.
- *
- * Sprint D rationale (2026-04-15): the comparator returns true (skip render) when
- * text is unchanged during streaming. Pre-fix, React.memo was unconditionally
- * bypassed during streaming, re-rendering on every flush (every 30ms) — visible
- * "clignotement" in the UI. Don't refactor this comparator without measuring
- * the streaming UX end-to-end.
- */
+type CompareMatch = components['schemas']['CompareMatch'];
+
+interface FullscreenView {
+  images: readonly FullscreenImage[];
+  index: number;
+}
+
+const compareMatchImage = (match: CompareMatch): FullscreenImage => ({
+  url: match.imageUrl,
+  caption: compareMatchCredit(match),
+  attribution: match.attribution,
+});
+
 export const ChatMessageBubble = React.memo(
   ({
     message,
@@ -92,38 +71,17 @@ export const ChatMessageBubble = React.memo(
     feedbackValue,
     onFeedback,
     onArtworkPress,
-    onMatchPress,
   }: ChatMessageBubbleProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
     const reduceTransparency = useReducedTransparency();
     const isAssistant = message.role === 'assistant';
-    const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+    const [fullscreen, setFullscreen] = useState<FullscreenView | null>(null);
 
-    // C2 v2 (2026-05) — Q1 RESOLVED option (b): show a skeleton placeholder
-    // above the streaming body while we wait for image enrichment to land,
-    // then swap to the real carousel once `metadata.images` hydrates.
     const hasImages = (message.metadata?.images?.length ?? 0) > 0;
     const showSkeleton = isStreaming && !hasImages;
     const sources = message.metadata?.sources;
     const hasSources = (sources?.length ?? 0) > 0;
-
-    /**
-     * A6 — tap on a provenance chip opens the FIRST source of that family
-     * via `Linking.openURL` (Q1 option (a) in spec). `ai-knowledge` is a
-     * synthetic family with no source → NO-OP. The confidence chip is also
-     * a NO-OP in V1 (the disclosure popover is deferred per Q5 / §2.7).
-     */
-    const onProvenancePress = useCallback(
-      (family: CitationFamily) => {
-        if (family === 'ai-knowledge') return;
-        const match = sources?.find((s) => FAMILY_FOR_SOURCE_TYPE[s.type] === family);
-        if (match?.url) {
-          void Linking.openURL(match.url);
-        }
-      },
-      [sources],
-    );
 
     const bubbleContent = (
       <>
@@ -134,7 +92,7 @@ export const ChatMessageBubble = React.memo(
               <ImageCarousel
                 images={message.metadata.images}
                 onImagePress={(index) => {
-                  setFullscreenIndex(index);
+                  setFullscreen({ images: message.metadata?.images ?? [], index });
                 }}
               />
             ) : null}
@@ -149,9 +107,6 @@ export const ChatMessageBubble = React.memo(
                   <SourceCitation key={`${s.url}-${String(i)}`} source={s} index={i + 1} />
                 ))}
               </View>
-            ) : null}
-            {!isStreaming ? (
-              <CitationChips metadata={message.metadata} onProvenancePress={onProvenancePress} />
             ) : null}
           </View>
         ) : (
@@ -193,11 +148,6 @@ export const ChatMessageBubble = React.memo(
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onReport(message.id);
             }}
-            // R8 / design §D8 — do NOT set accessibilityRole="text" + a static
-            // accessibilityLabel here: that collapses the subtree and masks the
-            // real response text from screen readers (the audio-description
-            // audience). The inner <StreamingBody>/<MarkdownBubble> text is now
-            // exposed naturally. Keep the long-press affordance hint.
             accessibilityHint={t('a11y.chat.long_press_hint')}
           >
             {reduceTransparency ? (
@@ -275,30 +225,24 @@ export const ChatMessageBubble = React.memo(
           />
         ) : null}
 
-        {/*
-          C3 visual-similarity carousel (Phase 8 / T8.5). Mounts whenever
-          `compareResults` metadata is present, even when `matches` is empty —
-          the carousel owns its own empty-state UX (driven by `fallbackReason`).
-          `locale` is parsed defensively: the bubble receives a BCP-47 string
-          (e.g. `'fr-FR'`); the carousel only knows about `'fr' | 'en'`.
-        */}
         {!isStreaming && isAssistant && message.metadata?.compareResults ? (
           <ImageCompareCarousel
             matches={message.metadata.compareResults.matches}
-            locale={locale.toLowerCase().startsWith('fr') ? 'fr' : 'en'}
             onMatchPress={(qid) => {
-              onMatchPress?.(qid);
+              const matches = message.metadata?.compareResults?.matches ?? [];
+              const index = matches.findIndex((match) => match.qid === qid);
+              if (index >= 0) setFullscreen({ images: matches.map(compareMatchImage), index });
             }}
           />
         ) : null}
 
-        {fullscreenIndex !== null && message.metadata?.images ? (
+        {fullscreen ? (
           <ImageFullscreenModal
-            images={message.metadata.images}
-            initialIndex={fullscreenIndex}
+            images={fullscreen.images}
+            initialIndex={fullscreen.index}
             visible
             onClose={() => {
-              setFullscreenIndex(null);
+              setFullscreen(null);
             }}
           />
         ) : null}
@@ -306,8 +250,6 @@ export const ChatMessageBubble = React.memo(
     );
   },
   (prev, next) => {
-    // During streaming: only re-render when text changes OR isStreaming flips.
-    // Prevents flicker from unrelated prop churn (TTS/feedback) during streaming.
     if (prev.isStreaming || next.isStreaming) {
       return prev.message.text === next.message.text && prev.isStreaming === next.isStreaming;
     }
@@ -334,12 +276,9 @@ const styles = StyleSheet.create({
     padding: semantic.chat.bubblePadding,
     maxWidth: '85%',
     borderWidth: semantic.input.borderWidth,
-    // Inter-section spacing via gap (not child margins, which would reveal this
-    // bubble's backgroundColor as a band — esp. above the surface-coloured image).
     gap: semantic.chat.gap,
   },
   assistantBody: {
-    // Spacing between carousel / streaming text / sources / citation chips.
     gap: semantic.chat.gapSmall,
   },
   bubbleUser: {
@@ -350,7 +289,6 @@ const styles = StyleSheet.create({
   },
   bubbleAssistantBlur: {
     alignSelf: 'flex-start',
-    // Required to clip the frosted-glass effect to the bubble's borderRadius.
     overflow: 'hidden',
   },
   sourcesRow: {

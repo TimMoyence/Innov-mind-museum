@@ -31,7 +31,6 @@ const INTENT_MAP: Record<HomeIntent, 'audio' | 'camera' | 'walk'> = {
   walk: 'walk',
 };
 
-/** Renders the home screen with branding, daily artwork, 3 intent chips, and a primary start-conversation CTA. */
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -81,7 +80,6 @@ export default function HomeScreen() {
           </Text>
         </GlassCard>
 
-        {/* B2 — Conversation resumption banner. Renders null when no eligible session. */}
         <ConversationResumptionBanner
           session={resumableSession}
           onResume={(id) => {
@@ -92,7 +90,6 @@ export default function HomeScreen() {
           }}
         />
 
-        {/* B6 — Proactive in-museum suggestion banner. Renders null when no in-museum match. */}
         <ProactiveMuseumBanner
           museum={proactiveMuseum}
           onStart={(m) => {
@@ -107,9 +104,6 @@ export default function HomeScreen() {
             void dismissProactiveMuseum();
           }}
           onChooseAnother={() => {
-            // C10 — route the confirm-band "Choisir un autre musée" affordance
-            // to the existing nearby-museums picker (NorthStar proximité V1),
-            // instead of the silent onDismiss fallback.
             router.push('/(stack)/museums-picker');
           }}
         />
@@ -130,7 +124,6 @@ export default function HomeScreen() {
           />
         ) : null}
 
-        {/* B1 — Visit notebook link. Always visible (decision §0.5 + Q7) — leads to the empty state when no past sessions exist. */}
         <Pressable
           onPress={() => {
             router.push('/(stack)/carnet');

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { defer } from '@/shared/lib/defer';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { useTranslation } from 'react-i18next';
 
 import { LiquidButton } from '@/shared/ui/LiquidButton';
@@ -8,35 +10,12 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 import { reportError } from '@/shared/observability/errorReporting';
 
-interface SpeechModule {
-  speak: (text: string, options?: { language?: string; onDone?: () => void }) => void;
-  stop: () => void;
-}
-
-const loadSpeech = (): SpeechModule | null => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- mirrors authTokenStore lazy-load pattern from the previous VoiceSessionIntro modal; expo-speech may not be installed in test/web bundles, this graceful fallback preserves Article 50 visual disclosure even when audio fails.
-    return require('expo-speech') as SpeechModule;
-  } catch {
-    return null;
-  }
-};
-
 interface VoiceSessionIntroSheetContentProps {
   close: () => void;
   locale: string;
-  /** Called when the user taps "Start" — typically wired to `useVoiceDisclosure().acknowledge()`. */
   onAcknowledge?: () => void;
 }
 
-/**
- * Bottom-sheet content (full-screen, blocking) for the EU AI Act Article 50
- * voice-disclosure gate. Mounted by `<BottomSheetRouter>` for the
- * `voice-intro` route. Plays a TTS greeting on mount and exposes the
- * acknowledge / dismiss controls required for Article 50 visual disclosure.
- *
- * @see docs/legal/AI_DISCLOSURE.md
- */
 export const VoiceSessionIntroSheetContent = ({
   close,
   locale,
@@ -44,50 +23,34 @@ export const VoiceSessionIntroSheetContent = ({
 }: VoiceSessionIntroSheetContentProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
-  const speechRef = useRef<SpeechModule | null>(null);
-  /**
-   * `audioStatus` reflects an external resource (the OS TTS engine). The
-   * setState calls below project an out-of-React state transition (speak
-   * start / speak end / module unavailable) into React state, which is
-   * exactly what `useEffect` is for. The `react-hooks/set-state-in-effect`
-   * lint rule is a false positive in this shape — we are synchronizing React
-   * with an external system, not chaining derived state.
-   */
-  const [audioStatus, setAudioStatus] = useState<'idle' | 'speaking' | 'unavailable'>('idle');
+  const [audioStatus, setAudioStatus] = useState<'idle' | 'speaking' | 'unavailable'>('speaking');
 
   useEffect(() => {
-    const speech = loadSpeech();
-    speechRef.current = speech;
-    if (!speech) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect -- syncing React with external TTS engine; see hook-level comment above. Approved-by: tim@2026-05-14 (C4 migration of legacy VoiceSessionIntro pattern) */
-      setAudioStatus('unavailable');
-      return;
-    }
-
-    const greeting = t('voice.disclosure.audioGreeting');
-
-    setAudioStatus('speaking');
     try {
-      speech.speak(greeting, {
+      Speech.speak(t('voice.disclosure.audioGreeting'), {
         language: locale,
         onDone: () => {
           setAudioStatus('idle');
         },
+        onError: (error) => {
+          reportError(error, { component: 'VoiceSessionIntroSheetContent', action: 'speak' });
+          setAudioStatus('unavailable');
+        },
       });
     } catch (error) {
       reportError(error, { component: 'VoiceSessionIntroSheetContent', action: 'speak' });
-      setAudioStatus('unavailable');
+      defer(() => {
+        setAudioStatus('unavailable');
+      });
     }
 
     return () => {
-      try {
-        speech.stop();
-      } catch (error) {
+      void Speech.stop().catch((error: unknown) => {
         reportError(error, {
           component: 'VoiceSessionIntroSheetContent',
           action: 'stop-on-unmount',
         });
-      }
+      });
     };
   }, [locale, t]);
 

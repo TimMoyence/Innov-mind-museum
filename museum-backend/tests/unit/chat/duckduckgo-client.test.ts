@@ -5,7 +5,6 @@ import {
   makeDuckDuckGoRelatedTopic,
 } from '../../helpers/search-clients/duckduckgo.fixture';
 
-// Silence logger
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -20,7 +19,6 @@ describe('DuckDuckGoClient', () => {
     jest.clearAllMocks();
   });
 
-  // UC-DD-01 — Abstract normalized into a SearchResult
   it('returns a SearchResult built from the Instant Answer abstract', async () => {
     global.fetch = mockFetch({
       body: makeDuckDuckGoApiResponse({
@@ -39,7 +37,6 @@ describe('DuckDuckGoClient', () => {
     expect(results[0]!.snippet).toBe('Pierre-Auguste Renoir was a French painter.');
   });
 
-  // UC-DD-02 — RelatedTopics with FirstURL+Text mapped
   it('maps RelatedTopics entries that carry FirstURL and Text', async () => {
     global.fetch = mockFetch({
       body: makeDuckDuckGoApiResponse({
@@ -66,7 +63,6 @@ describe('DuckDuckGoClient', () => {
     );
   });
 
-  // UC-DD-03 — request URL shape
   it('builds the api.duckduckgo.com URL with q, format and no_html params', async () => {
     const fetchSpy = mockFetch({
       body: makeDuckDuckGoApiResponse({ AbstractText: '', AbstractURL: '' }),
@@ -84,7 +80,6 @@ describe('DuckDuckGoClient', () => {
     expect(url.searchParams.get('no_html')).toBe('1');
   });
 
-  // UC-DD-04 — non-ok status -> [] + warn
   it('returns empty array and warns on HTTP error response', async () => {
     global.fetch = mockFetch({ ok: false, status: 503 });
 
@@ -95,7 +90,6 @@ describe('DuckDuckGoClient', () => {
     expect(logger.warn).toHaveBeenCalled();
   });
 
-  // UC-DD-05 — thrown fetch -> [] (fail-open)
   it('returns empty array when fetch throws', async () => {
     global.fetch = mockFetch(new Error('network down'));
 
@@ -105,7 +99,6 @@ describe('DuckDuckGoClient', () => {
     expect(results).toEqual([]);
   });
 
-  // UC-DD-06 — no abstract, no related topics -> []
   it('returns empty array when the Instant Answer payload is empty', async () => {
     global.fetch = mockFetch({ body: {} });
 
@@ -115,7 +108,6 @@ describe('DuckDuckGoClient', () => {
     expect(results).toEqual([]);
   });
 
-  // UC-DD-07 — nested group (no FirstURL/Text) skipped -> [] (no throw)
   it('skips nested RelatedTopics groups that lack FirstURL/Text', async () => {
     global.fetch = mockFetch({
       body: makeDuckDuckGoApiResponse({
@@ -136,7 +128,6 @@ describe('DuckDuckGoClient', () => {
     expect(results).toEqual([]);
   });
 
-  // UC-DD-08 — hard cap <= 10
   it('caps results at 10', async () => {
     const topics = Array.from({ length: 25 }, (_, i) =>
       makeDuckDuckGoRelatedTopic({ FirstURL: `https://ddg.example/${i}`, Text: `t${i}` }),
@@ -151,7 +142,6 @@ describe('DuckDuckGoClient', () => {
     expect(results.length).toBeLessThanOrEqual(10);
   });
 
-  // UC-DD-09 — empty/whitespace query -> [] with no fetch
   it('returns empty array for whitespace query without fetching', async () => {
     const fetchSpy = mockFetch({ body: makeDuckDuckGoApiResponse() });
     global.fetch = fetchSpy;
@@ -163,7 +153,6 @@ describe('DuckDuckGoClient', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  // UC-DD-10 — signal propagation
   it('propagates query.signal into fetch', async () => {
     const fetchSpy = mockFetch({
       body: makeDuckDuckGoApiResponse({ AbstractText: '', AbstractURL: '' }),
@@ -178,7 +167,6 @@ describe('DuckDuckGoClient', () => {
     expect(callArgs[1].signal).toBe(controller.signal);
   });
 
-  // INV-10 — readonly name
   it('exposes a stable readonly name', () => {
     const client = new DuckDuckGoClient();
     expect(client.name).toBe('duckduckgo');

@@ -1,7 +1,6 @@
 import '../helpers/test-utils';
 import { render, screen } from '@testing-library/react-native';
 
-// Patch expo-router mock to include Stack and Link
 const expoRouter = require('expo-router');
 expoRouter.Stack = { Screen: () => null };
 expoRouter.Link = ({ children }: { children: React.ReactNode }) => children;

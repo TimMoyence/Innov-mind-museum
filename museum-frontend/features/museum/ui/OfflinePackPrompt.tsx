@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'rea
 import { useTranslation } from 'react-i18next';
 
 import type { CityPackState } from '@/features/museum/application/useOfflinePacks';
+import { formatBytes } from '@/shared/lib/formatBytes';
 import { LiquidButton } from '@/shared/ui/LiquidButton';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
@@ -19,12 +20,6 @@ export interface OfflinePackPromptProps {
   testID?: string;
 }
 
-const ONE_MB = 1024 * 1024;
-const formatBytes = (bytes: number): string =>
-  bytes < ONE_MB
-    ? `${Math.round(bytes / 1024).toString()} KB`
-    : `${(bytes / ONE_MB).toFixed(1)} MB`;
-
 export function OfflinePackPrompt({
   visible,
   cityName,
@@ -39,10 +34,6 @@ export function OfflinePackPrompt({
   const { t } = useTranslation();
   const { theme } = useTheme();
 
-  // Gate backdrop dismiss while a download is in flight — an accidental tap
-  // outside the sheet must NOT silently abort the active download (audit #13).
-  // Hardware back (`onRequestClose`) intentionally remains functional per the
-  // Android convention "back = always exits the modal".
   const handleBackdropPress = useCallback(() => {
     if (packState.status === 'active') return;
     onDismiss();

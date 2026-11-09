@@ -1,10 +1,3 @@
-/**
- * F11 — Google OAuth state JWT round-trip.
- *
- * Asserts that the signed state token preserves nonce + returnTo across
- * sign/verify, rejects tampering, and rejects tokens minted with a
- * different issuer (so a stolen access JWT cannot be cross-cast).
- */
 import jwt from 'jsonwebtoken';
 
 jest.mock('@src/config/env', () => ({
@@ -38,8 +31,6 @@ describe('Google OAuth state JWT', () => {
   });
 
   it('defaults platform to "web" when the signed token omits the field', () => {
-    // Backward-compat: states minted before the platform field existed are
-    // re-verified as platform=web so the existing admin web flow keeps working.
     const legacy = jwt.sign(
       { nonce: 'n', returnTo: '/x' },
       'unit-test-state-secret-that-is-long-enough',
@@ -74,11 +65,10 @@ describe('Google OAuth state JWT', () => {
   });
 
   it('rejects a payload with the wrong shape', () => {
-    const bogus = jwt.sign(
-      { nonce: 'n' /* returnTo missing */ },
-      'unit-test-state-secret-that-is-long-enough',
-      { issuer: 'oauth-google-state', expiresIn: 60 },
-    );
+    const bogus = jwt.sign({ nonce: 'n' }, 'unit-test-state-secret-that-is-long-enough', {
+      issuer: 'oauth-google-state',
+      expiresIn: 60,
+    });
     expect(() => verifyGoogleOAuthState(bogus)).toThrow();
   });
 });

@@ -1,18 +1,3 @@
-/**
- * MuseumMapView tests — mocks @maplibre/maplibre-react-native so the component
- * can be rendered without the native module, exposing callbacks and
- * GeoJSON data as props we can assert against.
- *
- * The Camera mock uses `useImperativeHandle` to expose shared jest.fn()
- * instances for `fitBounds` + `flyTo` (accessible via `mockCameraApi`).
- * `Map` also forwards `onDidFinishLoadingMap` so tests can trigger the
- * retry-fit codepath, and captures `initialViewState` off Camera so the
- * P0 cache-restore behavior can be asserted without a real map.
- */
-
-// Shared jest.fn() refs for the mocked Camera ref. Re-used across every
-// test — reset via `mockCameraApi.reset()` in beforeEach so each test starts
-// with a clean call log.
 export const mockCameraApi = {
   fitBounds: jest.fn(),
   flyTo: jest.fn(),
@@ -24,8 +9,6 @@ export const mockCameraApi = {
   },
 };
 
-// Shared cluster-expansion handle for the mocked GeoJSONSource ref.
-// Tests can override `nextZoom` / `shouldReject` per-case.
 export const mockSourceApi = {
   getClusterExpansionZoom: jest.fn(),
   nextZoom: 17,
@@ -56,7 +39,6 @@ jest.mock('@/features/diagnostics/PerfOverlay', () => ({
   PerfOverlay: () => null,
 }));
 
-// ── NetInfo — default to wifi; individual tests can override ─────────────────
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   default: {
@@ -64,7 +46,6 @@ jest.mock('@react-native-community/netinfo', () => ({
   },
 }));
 
-// ── offlinePackChoiceStore — isolated per test via zustand reset util ─────────
 jest.mock('@/features/museum/infrastructure/offlinePackChoiceStore', () => {
   const { create } = require('zustand') as { create: typeof ZustandCreate };
   const mockStore = create<{
@@ -102,7 +83,6 @@ jest.mock('@/features/museum/infrastructure/offlinePackChoiceStore', () => {
   return { useOfflinePackChoiceStore: mockStore };
 });
 
-// ── OfflinePackPrompt — lightweight stub that renders testID-bearing buttons ──
 jest.mock('@/features/museum/ui/OfflinePackPrompt', () => {
   const { View, Pressable, Text } = require('react-native');
   return {
@@ -165,8 +145,6 @@ jest.mock('@maplibre/maplibre-react-native', () => {
         fitBounds: (...args: unknown[]) => mockCameraApi.fitBounds(...args),
         flyTo: (...args: unknown[]) => mockCameraApi.flyTo(...args),
       }));
-      // Capture the latest initialViewState so tests can assert the camera
-      // started on the cache / GPS / default view.
       if (props.initialViewState) {
         mockCameraApi.lastInitialViewState = props.initialViewState;
       }
@@ -218,13 +196,8 @@ import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museu
 
 describe('MuseumMapView', () => {
   beforeEach(async () => {
-    // Restore any spies from a previous test (e.g. spyOn(mapCameraCache.save))
-    // so they don't accumulate calls across the suite, then reset the Camera
-    // imperative-handle call logs + cached initialViewState capture.
     jest.restoreAllMocks();
     mockCameraApi.reset();
-    // Clear any persisted camera from a previous test — mapCameraCache is
-    // backed by AsyncStorage which persists across jest test cases.
     await mapCameraCache.clear();
   });
 
@@ -236,7 +209,6 @@ describe('MuseumMapView', () => {
         userLongitude={2.35}
       />,
     );
-    // initialViewState resolves asynchronously (AsyncStorage lookup in mapCameraCache).
     expect(await screen.findByTestId('maplibre-map')).toBeTruthy();
     expect(screen.getByTestId('source-museums')).toBeTruthy();
     expect(screen.getByTestId('layer-museum-points')).toBeTruthy();
@@ -250,8 +222,6 @@ describe('MuseumMapView', () => {
 
   it('renders the empty-state overlay when the museum list is empty', async () => {
     render(<MuseumMapView museums={[]} userLatitude={null} userLongitude={null} />);
-    // Empty overlay is announced as an alert with the i18n key as translation fallback.
-    // Wait for the async initialViewState to resolve so the Map (and its empty overlay) mount.
     const alert = await screen.findByRole('alert');
     expect(alert).toBeTruthy();
   });
@@ -286,8 +256,6 @@ describe('MuseumMapView', () => {
       />,
     );
     const map = await screen.findByTestId('maplibre-map');
-    // react-i18next without a backend echoes the key itself — we only assert
-    // the component passed the right key to t(), and that the hint exists.
     expect(map.props.accessibilityLabel).toBe('museumDirectory.map_a11y_label');
     expect(map.props.accessibilityHint).toBe('museumDirectory.map_a11y_hint');
   });
@@ -306,11 +274,6 @@ describe('MuseumMapView', () => {
     });
     expect(screen.getByRole('alert')).toBeTruthy();
   });
-
-  // ── camera persistence and fit guards ──────────────────────────────────────
-  // Protects the P0 fix: the Map is held until mapCameraCache resolves, the
-  // restored view wins over GPS, and auto-fit is bounded so users zoomed into
-  // a city aren't yanked out to a country-wide view on the next data refresh.
 
   describe('camera persistence and fit guards', () => {
     it('restores camera from mapCameraCache on mount when cache is valid', async () => {
@@ -390,9 +353,6 @@ describe('MuseumMapView', () => {
         });
       });
 
-      // save() is called synchronously on every region change — the debounce
-      // lives INSIDE save() itself (see mapCameraCache). Assert save() was
-      // invoked once per user pan with the right shape + flag.
       expect(saveSpy).toHaveBeenCalledTimes(3);
       expect(saveSpy).toHaveBeenLastCalledWith({ centerLng: 2.3, centerLat: 48.3, zoom: 12 }, true);
     });
@@ -424,9 +384,6 @@ describe('MuseumMapView', () => {
         });
       });
 
-      // save() IS called by the component — the cache itself is responsible
-      // for skipping on `isUserInteraction=false`. Assert the correct flag
-      // propagated so the cache can make that decision.
       expect(saveSpy).toHaveBeenCalledTimes(1);
       expect(saveSpy).toHaveBeenCalledWith({ centerLng: 2.1, centerLat: 48.1, zoom: 10 }, false);
     });
@@ -437,7 +394,6 @@ describe('MuseumMapView', () => {
       render(
         <MuseumMapView
           museums={[
-            // Paris ↔ Marseille ≈ 660 km — way over the 50km MAX_FIT_SPAN.
             makeMuseum({ id: 1, name: 'Louvre', latitude: 48.8606, longitude: 2.3376 }),
             makeMuseum({ id: 2, name: 'MuCEM', latitude: 43.2965, longitude: 5.3698 }),
           ]}
@@ -448,8 +404,6 @@ describe('MuseumMapView', () => {
 
       await screen.findByTestId('maplibre-camera');
 
-      // Trigger the onDidFinishLoadingMap retry path too (camera ref is ready
-      // by then) — the guard still suppresses the country-wide fitBounds.
       const map = screen.getByTestId('maplibre-map');
       act(() => {
         (map.props.onDidFinishLoadingMap as () => void)();
@@ -464,7 +418,6 @@ describe('MuseumMapView', () => {
       render(
         <MuseumMapView
           museums={[
-            // All within Bordeaux proper — well below the 50km cap.
             makeMuseum({ id: 1, name: 'CAPC', latitude: 44.8495, longitude: -0.5688 }),
             makeMuseum({ id: 2, name: 'Aquitaine', latitude: 44.8333, longitude: -0.575 }),
             makeMuseum({ id: 3, name: 'Beaux-Arts', latitude: 44.8378, longitude: -0.5795 }),
@@ -474,9 +427,6 @@ describe('MuseumMapView', () => {
         />,
       );
 
-      // `initialViewState` resolves asynchronously, so the data-driven effect
-      // may run BEFORE cameraRef is populated. `handleDidFinishLoadingMap`
-      // is the documented retry entrypoint once the Map is ready.
       await screen.findByTestId('maplibre-camera');
       const map = screen.getByTestId('maplibre-map');
       act(() => {
@@ -484,8 +434,6 @@ describe('MuseumMapView', () => {
       });
       expect(mockCameraApi.fitBounds).toHaveBeenCalledTimes(1);
 
-      // Second load-finish must NOT re-fit — the hasFittedRef guard blocks
-      // the retry after the first successful fit.
       act(() => {
         (map.props.onDidFinishLoadingMap as () => void)();
       });
@@ -493,19 +441,11 @@ describe('MuseumMapView', () => {
     });
   });
 
-  // ── Offline-pack prompt ─────────────────────────────────────────────────────
-  // Verifies T6.3: prompt surfaces when nearestCity is in catalog + wifi + no
-  // prior choice, and that accept/decline record intent via the store.
-
   describe('offline pack prompt', () => {
-    // Paris centroid — inside the Paris bounding box in cityCatalog.ts
-    // [2.224, 48.815, 2.47, 48.902]
     const PARIS_LAT = 48.86;
     const PARIS_LNG = 2.35;
 
     beforeEach(() => {
-      // Reset the in-process store choices before each test so decisions
-      // from one test don't leak into the next.
       const { useOfflinePackChoiceStore } = jest.requireMock(
         '@/features/museum/infrastructure/offlinePackChoiceStore',
       );
@@ -514,7 +454,6 @@ describe('MuseumMapView', () => {
         state.clearChoice(id);
       });
 
-      // Default: wifi connection
       const NetInfo = jest.requireMock('@react-native-community/netinfo');
       NetInfo.default.fetch.mockResolvedValue({ type: 'wifi', isConnected: true, details: null });
     });
@@ -527,13 +466,11 @@ describe('MuseumMapView', () => {
           userLongitude={PARIS_LNG}
         />,
       );
-      // Wait for map to mount and the NetInfo promise to resolve
       await screen.findByTestId('maplibre-map');
       expect(await screen.findByTestId('museum-map-offline-prompt')).toBeTruthy();
     });
 
     it('hides the prompt when the user already has a choice for that city', async () => {
-      // Pre-record a decline for Paris before render
       const { useOfflinePackChoiceStore } = jest.requireMock(
         '@/features/museum/infrastructure/offlinePackChoiceStore',
       );
@@ -547,7 +484,6 @@ describe('MuseumMapView', () => {
         />,
       );
       await screen.findByTestId('maplibre-map');
-      // Give the NetInfo promise time to settle
       await act(async () => {
         await Promise.resolve();
       });
@@ -571,9 +507,6 @@ describe('MuseumMapView', () => {
         fireEvent.press(screen.getByTestId('museum-map-offline-prompt-accept'));
         await Promise.resolve();
       });
-      // Contract change (2026-05-12): the prompt now stays visible after accept
-      // so it can render the download progress / completion / error states.
-      // Dismissal is now an explicit user action (Fermer button) or decline.
       expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('accepted');
     });
 
@@ -597,12 +530,6 @@ describe('MuseumMapView', () => {
       expect(useOfflinePackChoiceStore.getState().choices.paris?.decision).toBe('declined');
     });
   });
-
-  // ── Marker-press dispatching ────────────────────────────────────────────────
-  // Pins the dual-branch contract of `handleMuseumPress`:
-  //  - cluster feature → `getClusterExpansionZoom` resolves → camera.flyTo at
-  //    the resolved zoom; on rejection, fallback zoom is used.
-  //  - non-cluster feature → `onMuseumSelect` invoked with the matching museum.
 
   describe('marker press dispatching', () => {
     beforeEach(() => {
@@ -680,12 +607,10 @@ describe('MuseumMapView', () => {
             ],
           },
         });
-        // flush the rejection
         await Promise.resolve();
         await Promise.resolve();
       });
 
-      // CLUSTER_EXPAND_ZOOM_FALLBACK = 16
       expect(mockCameraApi.flyTo).toHaveBeenCalledWith({
         center: [2.35, 48.85],
         zoom: 16,
@@ -779,17 +704,10 @@ describe('MuseumMapView', () => {
     });
   });
 
-  // ── fitCameraToData edge cases ─────────────────────────────────────────────
-  // Pins the FIT_MIN_SPAN_DEG widening branch (two museums with identical
-  // coordinates → zero-span dataset → expanded by FIT_MIN_SPAN_DEG / 2 on
-  // both axes before fitBounds is called) and the "no points" early return.
-
   describe('fitCameraToData edge cases', () => {
     it('widens an effectively-zero-span dataset before fitBounds', async () => {
       jest.spyOn(mapCameraCache, 'load').mockResolvedValue(null);
 
-      // Two museums at the *same* lat/lng → maxLng-minLng = 0 < FIT_MIN_SPAN
-      // and maxLat-minLat = 0 < FIT_MIN_SPAN → both widening branches run.
       render(
         <MuseumMapView
           museums={[
@@ -812,7 +730,6 @@ describe('MuseumMapView', () => {
         [number, number, number, number],
         unknown,
       ];
-      // FIT_MIN_SPAN_DEG = 0.01 → expanded by 0.005 each side around 2.35/48.85.
       expect(bounds[0]).toBeCloseTo(2.345, 5);
       expect(bounds[2]).toBeCloseTo(2.355, 5);
       expect(bounds[1]).toBeCloseTo(48.845, 5);

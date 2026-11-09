@@ -1,27 +1,7 @@
-/**
- * Tests for `useProactiveMuseumSuggestion` — refactored to consume
- * `museumApi.detectMuseum` (W3 cluster B, R11-R14, R18).
- *
- * Key invariants:
- *   - GPS gate: status !== 'granted' OR null coords → no fetch.
- *   - Calls `museumApi.detectMuseum({ lat, lng })` exactly once per ~111 m tile.
- *   - Returns ProactiveMuseum WHEN confidence > 0.5 AND museumId > 0.
- *   - Returns null when confidence <= 0.5 (boundary).
- *   - Returns null when museumId is null or <= 0.
- *   - Dismiss-until storage gate suppresses the banner for 4 h.
- *   - Tolerates fetch / storage failure silently.
- *
- * Baseline-replacement note: pre-W3 the hook called `searchMuseums` and ran a
- * manual `<200m` filter ; the new flow trusts BE-side confidence model and
- * surfaces ANY confidence > 0.5 (auto-pickup vs confirm-sheet branch picked
- * by the banner).
- */
-
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 
-// ── storage façade mock ────────────────────────────────────────────────────
 const mockGetItem = jest.fn<Promise<string | null>, [string]>();
 const mockSetItem = jest.fn<Promise<void>, [string, string]>();
 
@@ -35,13 +15,11 @@ jest.mock('@/shared/infrastructure/storage', () => ({
   },
 }));
 
-// ── useLocation mock ───────────────────────────────────────────────────────
 const mockUseLocation = jest.fn();
 jest.mock('@/features/museum/application/useLocation', () => ({
   useLocation: () => mockUseLocation(),
 }));
 
-// ── museumApi.detectMuseum mock ────────────────────────────────────────────
 const mockDetectMuseum = jest.fn<Promise<unknown>, [unknown]>();
 jest.mock('@/features/museum/infrastructure/museumApi', () => ({
   museumApi: {

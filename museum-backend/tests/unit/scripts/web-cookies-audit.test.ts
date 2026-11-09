@@ -1,18 +1,3 @@
-/**
- * T2.2 / R18 — web-cookies-audit sentinel (RED phase, UFR-022).
- *
- * The sentinel `museum-backend/scripts/sentinels/web-cookies-audit.mjs` scans
- * `museum-web/package.json` (deps), `instrumentation-client.ts`,
- * `sentry.*.config.ts`, `app/layout.tsx` for any forbidden non-essential-
- * cookie-setting SDK: @vercel/analytics, @sentry/replay, posthog, amplitude,
- * gtag, google-analytics, hotjar, matomo, plausible, umami, fathom, segment,
- * mixpanel. Also flags a numeric `replaysSessionSampleRate` in Sentry config.
- *
- * Positive: current `museum-web` deps clean → exit 0.
- * Negative: inject `@vercel/analytics` → exit ≠ 0 + names the dep.
- *
- * Pre-impl state (RED): script does not exist → ENOENT non-zero exit.
- */
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -27,10 +12,6 @@ interface PkgJson {
   devDependencies?: Record<string, string>;
 }
 
-/**
- * Build a museum-web mirror under fixturesDir with a clean (non-forbidden)
- * package.json + minimal config files the sentinel scans.
- */
 function buildCleanFixture(root: string): void {
   mkdirSync(path.join(root, 'museum-web/src/app'), { recursive: true });
   const pkg: PkgJson = {

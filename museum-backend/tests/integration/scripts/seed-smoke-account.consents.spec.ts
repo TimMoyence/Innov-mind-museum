@@ -1,29 +1,3 @@
-/**
- * RED — Regression lock for the 5th deploy-prod cascade layer :
- *   llm-promptfoo-smoke (cron) → 0/10 recall because the seeded smoke
- *   user had no `third_party_ai_text_openai` consent, so every chat POST
- *   returned the synthetic `consent_refusal::<scope>` text instead of
- *   real LLM output. Same root cause sibling :
- *     - smoke-api.cjs (prod deploy)  — fixed at HTTP layer in 294467c2a
- *     - llm-security-promptfoo cron  — silently broken since GDPR #294
- *     - ci-cd-backend.yml staging+prod smoke — same risk
- *
- * Fix : `scripts/seed-smoke-account.ts` inserts active `user_consents`
- * rows for `third_party_ai_text_openai` and `third_party_ai_audio_openai`
- * at create time. Centralized so all 4 workflows using `seed:smoke-account`
- * inherit the fix from one place.
- *
- * Cycle C (run 2026-05-26-auth-mfa-rgpd-zerodefect) — the permanent
- * `seedSmokeAccount` upsert is REPLACED by the ephemeral `createSmokeAccount`
- * (fresh insert + random password, no update/heal branch). This spec migrates
- * its R2/R3/R4 consent assertions onto the new surface: R2/R3 idempotence is
- * now expressed as `create → cleanup → create` (delete-then-insert, no
- * resident account), and R4 (revoke→re-grant) stays on `ensureSmokeConsents`.
- *
- * Run scope :
- *   RUN_INTEGRATION=true pnpm jest tests/integration/scripts/seed-smoke-account.consents.spec.ts --runInBand
- */
-
 import { IsNull } from 'typeorm';
 
 import { makeSmokeEmail } from 'tests/helpers/auth/smoke-account.fixtures';
@@ -72,10 +46,7 @@ describeIntegration(
     beforeAll(async () => {
       harness = await createIntegrationHarness();
       harness.scheduleStop();
-      // Lazy-require AFTER harness has pinned PGDATABASE — env-cache race
-      // protection (same pattern as the TOTP + seed-museums integration specs).
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- intentional lazy require: must run AFTER harness pins PGDATABASE (env-cache race protection)
       const mod = require('../../../scripts/seed-smoke-account') as {
         createSmokeAccount: CreateSmokeAccount;
         cleanupSmokeAccount: CleanupSmokeAccount;
@@ -109,7 +80,6 @@ describeIntegration(
       expect(result.consents.created).toEqual(expect.arrayContaining([...SMOKE_CONSENT_SCOPES]));
       expect(result.consents.alreadyActive).toEqual([]);
 
-      // DB invariant : exactly one ACTIVE row per required scope.
       const repo = harness.dataSource.getRepository(UserConsent);
       for (const scope of SMOKE_CONSENT_SCOPES) {
         const rows = await repo.find({
@@ -128,12 +98,10 @@ describeIntegration(
       await cleanupSmokeAccount(harness.dataSource, { email });
       const second = await createSmokeAccount(harness.dataSource, { email });
 
-      // Ephemeral: every create is a fresh insert (no upsert/heal).
       expect(second.createdUser).toBe(true);
       expect(second.consents.created).toEqual(expect.arrayContaining([...SMOKE_CONSENT_SCOPES]));
       expect(second.consents.alreadyActive).toEqual([]);
 
-      // The first account is gone; the second carries exactly the required scopes.
       const repo = harness.dataSource.getRepository(UserConsent);
       expect(await repo.count({ where: { userId: first.userId, revokedAt: IsNull() } })).toBe(0);
       expect(await repo.count({ where: { userId: second.userId, revokedAt: IsNull() } })).toBe(
@@ -146,7 +114,6 @@ describeIntegration(
         email: makeSmokeEmail('consents-r4'),
       });
 
-      // Simulate an admin / GDPR revoke for the text scope.
       const repo = harness.dataSource.getRepository(UserConsent);
       await repo.update({ userId, scope: 'third_party_ai_text_openai' }, { revokedAt: new Date() });
       const activeAfterRevoke = await repo.count({
@@ -158,7 +125,6 @@ describeIntegration(
       });
       expect(activeAfterRevoke).toBe(0);
 
-      // Re-running the consent step re-grants because the prior row is no longer active.
       const result = await ensureSmokeConsents(harness.dataSource, userId);
       expect(result.created).toContain('third_party_ai_text_openai');
 

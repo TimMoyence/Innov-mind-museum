@@ -1,9 +1,5 @@
-// Periodic sweep + bounded size. Used by rate-limit middleware + login limiter.
-
 interface InMemoryBucketStoreOptions<T> {
-  /** Default 100_000. Oldest-first eviction. */
   maxSize?: number;
-  /** Default 5 min. */
   sweepIntervalMs?: number;
   isExpired: (entry: T, now: number) => boolean;
 }
@@ -25,7 +21,6 @@ export class InMemoryBucketStore<T> {
     return this.buckets.get(key);
   }
 
-  /** Evicts oldest at capacity. */
   set(key: string, value: T): void {
     if (!this.buckets.has(key) && this.buckets.size >= this.maxSize) {
       const oldest = this.buckets.keys().next().value;
@@ -39,7 +34,6 @@ export class InMemoryBucketStore<T> {
     this.buckets.delete(key);
   }
 
-  /** Clears entries + stops sweep timer. */
   clear(): void {
     this.buckets.clear();
     this.stopSweep();
@@ -49,7 +43,6 @@ export class InMemoryBucketStore<T> {
     return this.buckets.size;
   }
 
-  /** Doesn't clear entries. */
   stopSweep(): void {
     if (this.sweepTimer) {
       clearInterval(this.sweepTimer);
@@ -70,10 +63,6 @@ export class InMemoryBucketStore<T> {
         this.stopSweep();
       }
     }, this.sweepIntervalMs);
-    // Guard for non-Node runtimes (browser setInterval returns number, no .unref).
-    // In Node both sub-expressions true → &&/|| flips unobservable. Behaviour-skip
-    // mutants killed by unrefStub test in in-memory-bucket-store.test.ts.
-    // Stryker disable next-line ConditionalExpression,LogicalOperator: defensive guard for non-Node runtimes.
     if (typeof this.sweepTimer === 'object' && 'unref' in this.sweepTimer) {
       this.sweepTimer.unref();
     }

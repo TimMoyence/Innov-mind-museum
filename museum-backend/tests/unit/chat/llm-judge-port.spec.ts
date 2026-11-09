@@ -1,26 +1,3 @@
-/**
- * T3.1.5 — LlmJudgePort extraction test.
- *
- * The KnowledgeRouter cascade (C4.1 design D4) needs a port-shaped judge it
- * can call between the KB and WebSearch legs. The existing
- * `judgeWithLlm()` function and its `JudgeDecision` shape are an internal
- * guardrail concern with verdict labels (`allow|block:abuse|...`); the router
- * only needs `{confidence, decision: allow|block|review}`.
- *
- * C9.7 (2026-05-18) — judge now consumes a raw `ChatModel` instead of the
- * full `ChatOrchestrator`. Fake model below simulates `withStructuredOutput`
- * with the same parse-or-throw contract as the real LangChain provider.
- *
- * Contract :
- *   - `useCase/llm/llm-judge-guardrail.ts` exposes `LlmJudgePort.evaluate`
- *     + `LlmJudgeResult` (inlined alongside the sole impl — TD-8 cull 2026-05-15).
- *   - a wrapper class `LlmJudgeGuardrail` in `useCase/llm/llm-judge-guardrail.ts`
- *     implements `LlmJudgePort`, mapping the internal `JudgeDecision` shape to
- *     `LlmJudgeResult`. Fail-open of the underlying function (`null` →
- *     `{confidence: 0, decision: 'review'}`) is preserved.
- *   - the function `judgeWithLlm` MUST remain exported untouched (backward
- *     compat — 5 call-sites in production code still consume it).
- */
 import { z } from 'zod';
 
 import { resetBudget } from '@modules/chat/useCase/guardrail/guardrail-budget';
@@ -76,7 +53,6 @@ describe('LlmJudgePort (T3.1.5)', () => {
     const model = buildModel({});
     const guardrail = new LlmJudgeGuardrail({ model });
 
-    // Compile-time : assignable to the port type.
     const port: LlmJudgePort = guardrail;
 
     expect(typeof port.evaluate).toBe('function');

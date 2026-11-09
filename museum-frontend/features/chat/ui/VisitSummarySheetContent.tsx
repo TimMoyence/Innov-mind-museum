@@ -14,12 +14,6 @@ interface VisitSummarySheetContentProps {
 
 const THUMBNAIL_SIZE = semantic.chat.thumbnailSize;
 
-/**
- * Bottom-sheet content (centered card presentation) showing the aggregated
- * summary of a museum visit session. Mounted by `<BottomSheetRouter>` for the
- * `summary` route. Replaces the previous `<VisitSummaryModal>` (Modal wrapper
- * stripped).
- */
 export const VisitSummarySheetContent = React.memo(function VisitSummarySheetContent({
   summary,
   close,

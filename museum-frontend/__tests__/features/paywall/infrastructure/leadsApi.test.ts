@@ -1,24 +1,3 @@
-/**
- * C1 Red — leadsApi infra service.
- *
- * Cluster C1 (hexagonal violations, 2026-05-23-frontend-dry-audit) — the
- * `features/paywall/ui/QuotaUpsellModal.tsx` component currently imports
- * `httpClient` directly (UI → transport, the worst kind of hexagonal layering
- * violation). Plan T2.7 extracts the POST to
- * `features/paywall/infrastructure/leadsApi.ts` exposed as
- * `leadsApi.submitPaywallInterest(payload)`.
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL because
- * `@/features/paywall/infrastructure/leadsApi` does not yet exist.
- *
- * Contract:
- *  - POST `/api/leads/paywall-interest`.
- *  - Body shape preserved byte-for-byte: `{ email, consent: true, website }`.
- *    `website` is the honeypot (RGPD Art. 7 enforced by `consent: true` literal).
- *  - Service returns void / passthrough — the component flips error state on
- *    any rejection.
- */
-
 const mockHttpPost = jest.fn();
 jest.mock('@/shared/infrastructure/httpClient', () => ({
   httpClient: {
@@ -26,7 +5,6 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
   },
 }));
 
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import { leadsApi } from '@/features/paywall/infrastructure/leadsApi';
 
 describe('leadsApi (C1 hexagonal façade)', () => {

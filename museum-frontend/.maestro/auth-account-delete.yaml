@@ -1,130 +1,82 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth — Account deletion (login → settings → delete → confirm → logout)
-#
-# Logs in with its own seeded account (e2e-delete@test.musaium.dev, used by no
-# other flow), then Settings → Danger Zone → "Delete account" → confirm the
-# native Alert, and expects to land back on the auth screen. The account is
-# recreated before every shard attempt (scripts/maestro-seed-accounts.sh).
-#
-# Notes (see AUTH_FLOWS_NOTES.md):
-#   - Home reaches Settings only via the hero gear button (testID
-#     "hero-settings-button"); there is no tappable "Settings" text on home.
-#   - "Delete account" Pressable has accessibilityLabel a11y.settings.delete_account
-#     but NO testID — we tap by visible text ("Supprimer le compte" / "Delete account").
-#   - The confirmation is a native Alert.alert: title="Supprimer le compte",
-#     destructive button=common.delete ("Supprimer"/"Delete").
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 0: Cold start -> auth screen
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Phase 1: Login with the dedicated deletable account
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-delete@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-delete@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - waitForAnimationToEnd:
     timeout: 10000
 
-# Skip onboarding if it shows on first login
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Navigate to Settings (hero gear button)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "Settings|Paramètres"
+      text: 'Settings|Paramètres'
     timeout: 10000
 
-# ──────────────────────────────────────────────
-# Phase 3: Scroll to Danger Zone + tap Delete account
-# ──────────────────────────────────────────────
-# Low visibility threshold — the Danger Zone heading sits at the bottom of the
-# settings scroll and rarely reaches 100% visibility. The settings list is a
-# long GlassCard (blur) column; without waitToSettleTimeoutMs Maestro snapshots
-# the view hierarchy mid-swipe (while the blur/animation is still settling) and
-# misses the heading even though it is fully rendered — the debug screenshot
-# shows "Danger Zone" + "Delete Account" on screen at the moment of the timeout.
-# Let each scroll step settle before the visibility check (Maestro's own tip).
 - scrollUntilVisible:
     element:
-      text: "Zone de danger|Danger Zone"
+      text: 'Zone de danger|Danger Zone'
     direction: DOWN
     timeout: 30000
     visibilityPercentage: 1
     speed: 25
     waitToSettleTimeoutMs: 800
 - assertVisible:
-    text: "Zone de danger|Danger Zone"
+    text: 'Zone de danger|Danger Zone'
 
-# Tap the "Delete account" row button (no testID). Its visible label is
-# "Supprimer le compte" but its accessibilityLabel (a11y.settings.delete_account
-# = "Supprimer le compte définitivement" / "Delete account permanently")
-# COLLAPSES the subtree, so match the a11y label.
 - tapOn:
-    id: "settings-delete-account"
+    id: 'settings-delete-account'
 
-# ──────────────────────────────────────────────
-# Phase 4: Confirm native Alert (settings.delete_confirm_title / _body)
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: ".*(permanently|définitivement).*"
+      text: '.*(permanently|définitivement).*'
     timeout: 5000
 
-# Tap the destructive alert button (common.delete = "Supprimer" / "Delete").
 - tapOn:
-    text: "^Delete$|^Supprimer$"
+    text: '^Delete$|^Supprimer$'
 
-# ──────────────────────────────────────────────
-# Phase 5: Verify logout — back on auth screen
-# ──────────────────────────────────────────────
 - waitForAnimationToEnd:
     timeout: 10000
 
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 
-# Sanity: app evicted us from settings
 - assertNotVisible:
-    text: "Danger zone|Zone de danger"
+    text: 'Danger zone|Zone de danger'
 - assertNotVisible:
-    text: "Your museum companion|Votre compagnon de musée"
+    text: 'Your museum companion|Votre compagnon de musée'

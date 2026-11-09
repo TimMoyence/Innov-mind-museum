@@ -43,7 +43,6 @@ describeE2E('auth /refresh rate-limit e2e (F1 contract)', () => {
       current = (r.body as { refreshToken: string }).refreshToken;
     }
 
-    // The 31st should be rate-limited
     const overLimit = await harness.request('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: current }),
@@ -77,7 +76,6 @@ describeE2E('auth /refresh rate-limit e2e (F1 contract)', () => {
     const userA = await loginAndGetTokens();
     let aRefresh = userA.refreshToken;
 
-    // Burn user A's quota
     for (let i = 0; i < REFRESH_LIMIT_PER_MIN; i += 1) {
       const r = await harness.request('/api/auth/refresh', {
         method: 'POST',
@@ -92,7 +90,6 @@ describeE2E('auth /refresh rate-limit e2e (F1 contract)', () => {
     });
     expect(aOver.status).toBe(429);
 
-    // User B has its own family; should not be limited
     const userB = await loginAndGetTokens();
     const bRefresh = await harness.request('/api/auth/refresh', {
       method: 'POST',

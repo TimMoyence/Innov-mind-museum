@@ -9,30 +9,9 @@ import {
 import type { AppError } from '@shared/errors/app.error';
 import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 
-/**
- * Security test suite — brute-force login resistance and multi-instance
- * consistency. Targets `src/modules/auth/useCase/login-rate-limiter.ts`.
- *
- * Focus:
- *  - Single-instance sliding window + exponential lockout shape.
- *  - Retry-After header on 6th failure after reaching LOCKOUT_THRESHOLD (5).
- *  - Longer lockout after further failures (exponential backoff).
- *  - Two "instances" backed by the SAME mocked Redis store see a CONSISTENT
- *    lockout state (the Lua EVAL script is atomic: INCR + PEXPIRE in one
- *    round-trip, preventing split-counter races).
- *  - Counter reset on successful login after a lockout.
- */
-
 type IncrementFn = RedisRateLimitStore['increment'];
 type ResetFn = RedisRateLimitStore['reset'];
 
-/**
- * Simulates a shared Redis instance backing multiple app processes. The
- * `eval` counter increments atomically — just like the real Lua INCR +
- * PEXPIRE script. Two calls from two "instances" pointing at the same mock
- * see the monotonically growing count, which is exactly the property we
- * depend on to defend against distributed brute force.
- */
 const makeSharedRedisMock = (): {
   store: jest.Mocked<RedisRateLimitStore>;
   state: { slidingCount: number; lockoutCount: number };
@@ -106,7 +85,6 @@ describe('brute-force login — single instance', () => {
     expect(err.code).toBe('AUTH_LOCKED_OUT');
     expect(err.headers?.['Retry-After']).toBeDefined();
 
-    // Overshoot 0 → 2^0 * 30s = 30s. Parse and sanity-check.
     const retryAfterSec = Number.parseInt(err.headers?.['Retry-After'] ?? '0', 10);
     expect(retryAfterSec).toBeGreaterThan(0);
     expect(retryAfterSec).toBeLessThanOrEqual(30);
@@ -116,7 +94,6 @@ describe('brute-force login — single instance', () => {
     jest.useFakeTimers();
     const email = 'persistent@test.com';
 
-    // Cross the threshold: 5 failures → 30s lockout on the 6th check.
     for (let i = 0; i < 5; i += 1) {
       recordFailedLogin(email);
     }
@@ -126,8 +103,6 @@ describe('brute-force login — single instance', () => {
     });
     const firstRetry = Number.parseInt(first.headers?.['Retry-After'] ?? '0', 10);
 
-    // Advance past the 30s lockout window so the next recordFailedLogin
-    // is treated as a new datapoint, then bump the counter to 6 failures.
     jest.advanceTimersByTime(31 * 1000);
     recordFailedLogin(email);
 
@@ -136,7 +111,6 @@ describe('brute-force login — single instance', () => {
     });
     const secondRetry = Number.parseInt(second.headers?.['Retry-After'] ?? '0', 10);
 
-    // 6 failures → 2^1 * 30s = 60s. Must be strictly larger than the first.
     expect(secondRetry).toBeGreaterThan(firstRetry);
     expect(secondRetry).toBeLessThanOrEqual(60);
 
@@ -169,7 +143,6 @@ describe('brute-force login — multi-instance Redis consistency', () => {
 
     const email = 'cluster@test.com';
 
-    // Instance A records 3 failures, instance B records 2 — total 5 in Redis.
     for (let i = 0; i < 3; i += 1) {
       recordFailedLogin(email);
     }
@@ -179,14 +152,10 @@ describe('brute-force login — multi-instance Redis consistency', () => {
     }
     await flushMicrotasks();
 
-    // The shared Lua EVAL stub was called exactly 5 times — one atomic
-    // INCR + PEXPIRE per failure, no split writes across "instances".
     const evalMock = (store.getRedisClient() as unknown as { eval: jest.Mock }).eval;
     expect(evalMock).toHaveBeenCalledTimes(5);
     expect(state.lockoutCount).toBe(5);
 
-    // After mirror, any subsequent check on the local snapshot that has seen
-    // ≥ LOCKOUT_THRESHOLD must throw 429 AUTH_LOCKED_OUT.
     const err = captureAppError(() => {
       checkLoginRateLimit(email);
     });
@@ -206,7 +175,6 @@ describe('brute-force login — multi-instance Redis consistency', () => {
     await flushMicrotasks();
     expect(state.lockoutCount).toBe(5);
 
-    // A successful login on any instance clears local + fires Redis DEL.
     clearLoginAttempts(email);
     await flushMicrotasks();
 

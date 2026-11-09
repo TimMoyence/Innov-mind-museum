@@ -31,13 +31,6 @@ interface MuseumMapMarkersProps {
   onMuseumPress: (event: NativeSyntheticEvent<PressEventWithFeatures>) => void;
 }
 
-/**
- * Renders the museum cluster + per-point GeoJSON layers and the user-position
- * halo + dot. Extracted from `MuseumMapView` so the component shell stays
- * under the 300 LOC budget. The source / layer IDs and paint expressions are
- * preserved verbatim so the existing component test suite (which asserts via
- * the mocked `source-*` / `layer-*` testIDs) continues to pass without edits.
- */
 export const MuseumMapMarkers = ({
   museumCollection,
   userCollection,

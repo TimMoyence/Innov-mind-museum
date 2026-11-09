@@ -11,6 +11,5 @@ export interface ReviewModerationPayload {
 }
 
 export interface ReviewModerationNotifier {
-  /** Idempotency/retry is up to the adapter. */
   notify(payload: ReviewModerationPayload): Promise<void>;
 }

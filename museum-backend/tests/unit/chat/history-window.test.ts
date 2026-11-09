@@ -89,17 +89,12 @@ describe('applyHistoryWindow', () => {
         makeMessage({ id: 'm1', text: 'hello', createdAt: new Date('2026-01-01T00:00:01.000Z') }),
       ];
 
-      // maxTokens = 0 is falsy, so the token-trimming branch is skipped — but
-      // explicitly passing 0 means we rely on `maxTokens && maxTokens > 0` being false.
-      // The function returns the maxMessages-trimmed slice without further token trimming.
       const result = applyHistoryWindow(history, 10, 0);
 
-      // 0 is falsy so the token budget branch is skipped; messages pass through
       expect(result).toHaveLength(1);
     });
 
     it('trims oldest messages when token budget is exceeded', () => {
-      // Each char ~ 0.25 tokens, so 40 chars ~ 10 tokens
       const history = [
         makeMessage({
           id: 'm1',
@@ -118,7 +113,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // Budget = 15 tokens, each message is ~10 tokens → only 1 fits
       const result = applyHistoryWindow(history, 10, 15);
 
       expect(result).toHaveLength(1);
@@ -144,7 +138,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // Budget = 25 tokens, each message is ~10 tokens → 2 fit
       const result = applyHistoryWindow(history, 10, 25);
 
       expect(result).toHaveLength(2);
@@ -160,7 +153,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // 400 chars ~ 100 tokens, budget = 5
       const result = applyHistoryWindow(history, 10, 5);
 
       expect(result).toEqual([]);
@@ -190,7 +182,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // maxMessages = 2 limits before token budget kicks in. Budget = 1000 (very generous).
       const result = applyHistoryWindow(history, 2, 1000);
 
       expect(result).toHaveLength(2);
@@ -207,14 +198,12 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // null text → '' → 0 tokens, so both fit in any budget
       const result = applyHistoryWindow(history, 10, 100);
 
       expect(result).toHaveLength(2);
     });
 
     it('keeps message when totalTokens exactly equals maxTokens (> not >=)', () => {
-      // 20 chars → Math.ceil(20/4) = 5 tokens each; 3 messages = 15 tokens total
       const history = [
         makeMessage({
           id: 'm1',
@@ -233,17 +222,13 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // maxTokens = 15, exactly enough for all 3 messages (5+5+5 = 15)
       const result = applyHistoryWindow(history, 10, 15);
 
-      // With `>` (correct): 15 > 15 is false → all 3 kept
-      // With `>=` (mutant): 15 >= 15 is true → only 2 kept → test fails → mutant killed
       expect(result).toHaveLength(3);
       expect(result.map((item) => item.id)).toEqual(['m1', 'm2', 'm3']);
     });
 
     it('skips token trimming when maxTokens is undefined', () => {
-      // Each message has a large text that would exceed a typical token budget
       const history = [
         makeMessage({
           id: 'm1',
@@ -257,7 +242,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // No maxTokens → token trimming branch skipped entirely
       const result = applyHistoryWindow(history, 10);
 
       expect(result).toHaveLength(2);
@@ -278,8 +262,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // m2: 8 chars → ceil(8/4) = 2 tokens; m1: null → '' → 0 tokens; total = 2
-      // maxTokens = 2 → both fit (0 + 2 = 2, and 2 > 2 is false)
       const result = applyHistoryWindow(history, 10, 2);
 
       expect(result).toHaveLength(2);
@@ -287,7 +269,6 @@ describe('applyHistoryWindow', () => {
     });
 
     it('token budget drops oldest first preserving chronological order', () => {
-      // 3 messages: 40 chars each → ceil(40/4) = 10 tokens each
       const history = [
         makeMessage({
           id: 'old',
@@ -306,7 +287,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // Budget = 20 → fits 2 messages (10+10), drops oldest
       const result = applyHistoryWindow(history, 10, 20);
 
       expect(result).toHaveLength(2);
@@ -338,7 +318,6 @@ describe('applyHistoryWindow', () => {
         }),
       ];
 
-      // maxTokens=0 → falsy → token trimming branch NOT entered → both messages returned
       const result = applyHistoryWindow(history, 10, 0);
 
       expect(result).toHaveLength(2);

@@ -10,7 +10,6 @@ describe('StepIndicator', () => {
 
     const tree = toJSON();
     expect(tree).toBeTruthy();
-    // The container has 3 child dots
     if (tree && 'children' in tree && tree.children) {
       expect(tree.children).toHaveLength(3);
     }

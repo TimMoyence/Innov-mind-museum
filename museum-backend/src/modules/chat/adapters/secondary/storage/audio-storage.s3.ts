@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { startSpan } from '@shared/observability/sentry';
+import { nonEmpty } from '@shared/utils/defaults';
 
 import { buildS3PresignedReadUrl, type S3ImageStorageConfig } from './s3-operations';
 import { buildS3SignedHeadersForPut, deleteObjectsBatch, httpPut } from './s3-operations';
@@ -12,7 +13,6 @@ import type {
   SignedAudioReadUrl,
 } from '@modules/chat/domain/ports/audio-storage.port';
 
-/** TTS audio reuses the same S3 backend as images. */
 export type S3AudioStorageConfig = S3ImageStorageConfig;
 
 const AUDIO_PREFIX = 'chat-audios';
@@ -47,8 +47,7 @@ export class S3CompatibleAudioStorage implements AudioStorage {
         `${randomUUID()}.${extension}`,
       ].join('/');
       const key = normalizeObjectKey({
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        key: input.objectKey || fallbackKey,
+        key: nonEmpty(input.objectKey) ?? fallbackKey,
         objectKeyPrefix: this.config.objectKeyPrefix,
       });
 
@@ -71,18 +70,18 @@ export class S3CompatibleAudioStorage implements AudioStorage {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- buildS3PresignedReadUrl is synchronous; async required by AudioStorage interface
-  async getSignedReadUrl(ref: string, ttlSeconds?: number): Promise<SignedAudioReadUrl | null> {
+  getSignedReadUrl(ref: string, ttlSeconds?: number): Promise<SignedAudioReadUrl | null> {
     const parsed = parseS3AudioRef(ref);
-    if (!parsed) return null;
-    return buildS3PresignedReadUrl({
-      key: parsed.key,
-      config: this.config,
-      ttlSeconds,
-    });
+    if (!parsed) return Promise.resolve(null);
+    return Promise.resolve(
+      buildS3PresignedReadUrl({
+        key: parsed.key,
+        config: this.config,
+        ttlSeconds,
+      }),
+    );
   }
 
-  /** No-op if ref is invalid or not found. */
   async deleteByRef(ref: string): Promise<void> {
     const parsed = parseS3AudioRef(ref);
     if (!parsed) return;

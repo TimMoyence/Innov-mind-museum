@@ -1,16 +1,3 @@
-/**
- * Red tests for blocking-route non-regression (R7).
- *
- * UFR-022 run `2026-05-23-chat-composer-buttons-modal-dismiss`.
- *
- * For every blocking C4 route (`consent`, `voice-intro`, `daily-limit`):
- * - backdrop tap MUST be a no-op (sheet stays open) ;
- * - CTA-driven close MUST still dismiss the sheet (`CTA_CLOSE` path).
- *
- * This is a regression-guard — it PASSES on current code. If the green phase
- * accidentally makes blocking routes backdrop-dismissable, this fails.
- */
-
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 
@@ -75,7 +62,6 @@ describe('<BottomSheetContainer /> — blocking-route non-regression (R7)', () =
       });
       expect(view.queryByTestId(contentTestID)).not.toBeNull();
 
-      // Tap backdrop — blocking route MUST ignore this.
       const backdrop = view.getByTestId('bottom-sheet-backdrop');
       const onPress = (backdrop.props as { onPress?: () => void }).onPress;
       act(() => {
@@ -86,11 +72,6 @@ describe('<BottomSheetContainer /> — blocking-route non-regression (R7)', () =
       });
       expect(view.queryByTestId(contentTestID)).not.toBeNull();
 
-      // CTA path closes — the in-content button calls the `close` prop the
-      // router passes through, which dispatches CTA_CLOSE (bypasses the
-      // blocking gate, per `BottomSheetRouter.tsx:128-134`). Drain the exit
-      // `Animated.timing` so the container fires CLOSE_DONE and the reducer
-      // settles back to `idle` (spec R12 sequencing).
       act(() => {
         fireEvent.press(view.getByTestId(ctaTestID));
       });

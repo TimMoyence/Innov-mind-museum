@@ -10,23 +10,15 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, fontSize } from '@/shared/ui/tokens';
 
 interface ConversationItemProps {
-  /** The session card data to render. */
   item: DashboardSessionCard;
-  /** Whether bulk-edit mode is active. */
   editMode: boolean;
-  /** Set of selected session IDs (for bulk-edit checkboxes). */
   selectedIds: ReadonlySet<string>;
-  /** IDs of sessions the user has bookmarked. */
   savedSessionIds: string[];
-  /** Toggle selection of a session in bulk-edit mode. */
   toggleSelection: (id: string) => void;
-  /** Toggle the saved/bookmarked state of a session (long-press). */
   toggleSavedSession: (id: string) => void;
-  /** Confirm deletion of a single session (swipe-to-delete). */
   confirmDeleteSingle: (id: string) => void;
 }
 
-/** Renders a single conversation card with swipe-to-delete support. Memoized for FlashList performance. */
 export const ConversationItem = React.memo(function ConversationItem({
   item,
   editMode,
@@ -38,6 +30,7 @@ export const ConversationItem = React.memo(function ConversationItem({
 }: ConversationItemProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const title = item.title ?? t('conversations.untitled');
 
   const cardContent = (
     <Pressable
@@ -58,7 +51,7 @@ export const ConversationItem = React.memo(function ConversationItem({
         }
       }}
       accessibilityRole="button"
-      accessibilityLabel={item.title}
+      accessibilityLabel={title}
       accessibilityHint={editMode ? undefined : t('a11y.conversations.card_hint')}
     >
       <View style={styles.cardRow}>
@@ -72,9 +65,13 @@ export const ConversationItem = React.memo(function ConversationItem({
           </View>
         ) : null}
         <View style={styles.cardContent}>
-          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.title}</Text>
-          <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
-          <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{title}</Text>
+          {item.subtitle ? (
+            <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.subtitle}</Text>
+          ) : null}
+          {item.timeLabel ? (
+            <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>{item.timeLabel}</Text>
+          ) : null}
           <Text style={[styles.cardTags, { color: theme.primary }]}>
             {t('conversations.message_count', { count: item.messageCount })}
           </Text>

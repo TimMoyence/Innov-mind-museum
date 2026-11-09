@@ -62,7 +62,7 @@ describe('ticketApi', () => {
       expect(mockOpenApiRequest).toHaveBeenCalledWith({
         path: '/api/support/tickets',
         method: 'post',
-        body: JSON.stringify({ subject: 'Help', description: 'I need help', priority: 'high' }),
+        json: { subject: 'Help', description: 'I need help', priority: 'high' },
       });
       expect(result.ticket).toEqual(ticket);
     });
@@ -95,7 +95,7 @@ describe('ticketApi', () => {
         path: '/api/support/tickets/{id}/messages',
         method: 'post',
         pathParams: { id: 'uuid-1' },
-        body: JSON.stringify({ text: 'Thanks' }),
+        json: { text: 'Thanks' },
       });
       expect(result.message).toEqual(message);
     });

@@ -11,7 +11,6 @@ export interface AuditLogEntry {
   requestId?: string | null;
 }
 
-// ─── Auth events ───
 export const AUDIT_AUTH_LOGIN_SUCCESS = 'AUTH_LOGIN_SUCCESS';
 export const AUDIT_AUTH_LOGIN_FAILED = 'AUTH_LOGIN_FAILED';
 export const AUDIT_AUTH_LOGOUT = 'AUTH_LOGOUT';
@@ -26,65 +25,34 @@ export const AUDIT_AUTH_EMAIL_CHANGE_CONFIRMED = 'AUTH_EMAIL_CHANGE_CONFIRMED';
 export const AUDIT_AUTH_ONBOARDING_COMPLETED = 'AUTH_ONBOARDING_COMPLETED';
 export const AUDIT_AUTH_CONTENT_PREFERENCES_UPDATED = 'AUTH_CONTENT_PREFERENCES_UPDATED';
 export const AUDIT_AUTH_TTS_VOICE_UPDATED = 'AUTH_TTS_VOICE_UPDATED';
-// TD-2 — batch update of 5 profile preferences via `/api/auth/me/preferences`.
-// Metadata = raw patch (no PII) for toggle-by-toggle history reconstruction.
 export const AUDIT_AUTH_PROFILE_PREFERENCES_UPDATED = 'AUTH_PROFILE_PREFERENCES_UPDATED';
 
-// ─── Account lifecycle ───
-// Cycle D (R1) — durable "the deletion was requested" trace, emitted BEFORE any
-// erasure runs. Pairs with AUDIT_ACCOUNT_DELETED (emitted only AFTER success):
-// a REQUESTED row without a DELETED row is a forensic signal of a failed/aborted
-// erasure; a DELETED row is never written unless the cascade actually ran.
 export const AUDIT_ACCOUNT_DELETION_REQUESTED = 'ACCOUNT_DELETION_REQUESTED';
 export const AUDIT_ACCOUNT_DELETED = 'ACCOUNT_DELETED';
 export const AUDIT_DATA_EXPORT = 'DATA_EXPORT';
 
-// ─── Security events ───
 export const AUDIT_SECURITY_RATE_LIMIT = 'SECURITY_RATE_LIMIT';
 export const AUDIT_SECURITY_GUARDRAIL_BLOCK = 'SECURITY_GUARDRAIL_BLOCK';
 export const AUDIT_SECURITY_GUARDRAIL_PASS = 'SECURITY_GUARDRAIL_PASS';
-// V13 / STRIDE R3 — phase-scoped (input vs output). Redacted snippet (≤64
-// chars) + sha256 fingerprint for forensic dedup without echoing raw payloads.
 export const AUDIT_GUARDRAIL_BLOCKED_INPUT = 'guardrail_blocked_input';
 export const AUDIT_GUARDRAIL_BLOCKED_OUTPUT = 'guardrail_blocked_output';
 
-// ─── Admin events (future RBAC) ───
 export const AUDIT_ADMIN_ROLE_CHANGE = 'ADMIN_ROLE_CHANGE';
 export const AUDIT_ADMIN_REPORT_RESOLVED = 'ADMIN_REPORT_RESOLVED';
-// ─── Admin user lifecycle (P0 #9 admin user detail — audit-2026-05-12) ───
 export const AUDIT_ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED';
 export const AUDIT_ADMIN_USER_UNSUSPENDED = 'ADMIN_USER_UNSUSPENDED';
 export const AUDIT_ADMIN_USER_DELETED = 'ADMIN_USER_DELETED';
-// R1 (C6) — admin tier override on `users.tier`. Emitted by `ChangeUserTierUseCase`
-// AFTER mutation, BEFORE returning (N3 ordering). Metadata = `{ from, to }`;
-// no counter state (N9 R2: state on user row, audit carries transition only).
 export const AUDIT_ADMIN_USER_TIER_CHANGED = 'ADMIN_USER_TIER_CHANGED';
-// ─── Admin moderation read (chat session view, IDOR matrix / STREAM H11) ───
-// Emitted by GetChatSessionForModerationUseCase AFTER the bypass read resolves
-// and BEFORE the 200 response is observable (SOC2 CC7.2 / GDPR Art. 30 — every
-// admin access to another user's chat content leaves a forensic trail). The
-// admin path deliberately bypasses `ensureSessionOwnership`, so the audit row is
-// the only record that a privileged cross-user read happened.
 export const AUDIT_ADMIN_CHAT_SESSION_VIEWED = 'ADMIN_CHAT_SESSION_VIEWED';
-// ─── Admin CSV export (R2 W3.4) ───
-// Distinct from AUDIT_DATA_EXPORT (user-self DSAR) — mixing breaks audit-chain
-// filter semantics. Per-kind constants make `WHERE action =` trivial.
 export const AUDIT_ADMIN_EXPORT_SESSIONS = 'ADMIN_EXPORT_SESSIONS';
 export const AUDIT_ADMIN_EXPORT_REVIEWS = 'ADMIN_EXPORT_REVIEWS';
 export const AUDIT_ADMIN_EXPORT_TICKETS = 'ADMIN_EXPORT_TICKETS';
 
-// ─── Support ticket events ───
 export const AUDIT_SUPPORT_TICKET_CREATED = 'SUPPORT_TICKET_CREATED';
 export const AUDIT_ADMIN_TICKET_UPDATED = 'ADMIN_TICKET_UPDATED';
 
-// ─── Review moderation events ───
 export const AUDIT_ADMIN_REVIEW_MODERATED = 'ADMIN_REVIEW_MODERATED';
 
-// ─── GDPR consent events (S4-P0-02 — Apple Guideline 5.1.2(i) + GDPR Art. 7) ───
-// Hash-chained row from GrantConsentUseCase/RevokeConsentUseCase after
-// user_consents mutation, before HTTP response. Payload: `{ scope, version,
-// source }` min; third-party AI rows add `{ provider, category }`. Generic
-// CONSENT_GRANTED/CONSENT_REVOKED catches scopes outside specialised families.
 export const AUDIT_CONSENT_GRANTED = 'CONSENT_GRANTED';
 export const AUDIT_CONSENT_REVOKED = 'CONSENT_REVOKED';
 export const AUDIT_CONSENT_GRANTED_TOS = 'CONSENT_GRANTED_TOS';

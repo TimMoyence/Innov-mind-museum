@@ -1,13 +1,3 @@
-/**
- * B1 — Carnet (visit notebook) list screen.
- *
- * Groups past chat sessions by museum then date (descending). Reuses the
- * standard `<EmptyState>` / `<ErrorState>` / `<SkeletonConversationCard>`
- * surfaces — no new design tokens introduced.
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.2 R11-R17 ; §4 AC4-AC7.
- */
-
 import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -29,7 +19,6 @@ import { fontSize, semantic } from '@/shared/ui/tokens';
 
 const SKELETON_COUNT = 4;
 
-/** Renders the carnet list screen with group sections and standard surface states. */
 export default function CarnetListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();

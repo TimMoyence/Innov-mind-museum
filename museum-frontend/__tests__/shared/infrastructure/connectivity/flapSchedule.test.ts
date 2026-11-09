@@ -1,19 +1,3 @@
-/**
- * W1-REG-05 (RED) — flapScheduleAt duty-cycle phase math.
- *
- * Spec: master spec §"flapping duty cycle (shared schedule)" + tasks.md W1-REG-05.
- *   flapping.dutyCycle = { onlineMs:5000, offlineMs:3000, baseProfile:'3g-lossy' }.
- *   phase = elapsedMs % (onlineMs + offlineMs)  → period 8000.
- *   online = phase < onlineMs  → online for [0,5000) and [8000,13000); offline for [5000,8000).
- *   FlapTick = { online: boolean, baseProfile: NetworkProfile } where baseProfile
- *   resolves to NETWORK_PROFILES['3g-lossy'].
- *   Throws on a non-flapping profile (no dutyCycle).
- *
- * Pure/deterministic: elapsedMs is injected; no Date.now / Math.random (NFR).
- *
- * lib-docs: none (pure phase math, no external libs imported).
- * No inline test entities — boundaries are asserted against the registry itself.
- */
 import {
   NETWORK_PROFILES,
   flapScheduleAt,

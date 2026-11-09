@@ -1,36 +1,7 @@
-/**
- * UFR-022 red phase — PR-8 `paginate` helper.
- * RUN_ID: 2026-05-23-pr-8-paginate.
- *
- * These tests intentionally FAIL pre-green: the module
- * `@shared/pagination/offset-paginate` does not yet exist. Green phase MUST
- * implement the helper per `design.md` §2.1 to make these pass.
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-8-paginate/spec.md §4 R1 (signature),
- *                                                              §4 R5 (test cases),
- *                                                              §5 NFR-3 (type safety),
- *                                                              §6 W4 (key-order invariance),
- *                                                              §6 W6 (totalPages math).
- *   .claude/skills/team/team-state/2026-05-23-pr-8-paginate/design.md §2.1 (body),
- *                                                                §4.1 (test design table).
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * `red-test-manifest.json`. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>`, do NOT touch.
- */
 import type { ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 
 import { paginate } from '@shared/pagination/offset-paginate';
 
-/**
- * Hand-rolled `SelectQueryBuilder` stub. Only the three methods the helper
- * calls are mocked (`skip`, `take`, `getManyAndCount`); all others would
- * throw via the cast if the helper ever invoked them — which it MUST NOT
- * per spec R1.4 (no `orderBy`) and R1.1 (no side-effects beyond `qb`).
- * @param entities
- * @param total
- */
 function makeQbStub<T extends ObjectLiteral>(
   entities: T[],
   total: number,
@@ -87,8 +58,6 @@ describe('paginate — offset pagination helper (PR-8)', () => {
 
       const result = await paginate(qb, { page: 1, limit: 10 });
 
-      // Field ORDER matters for JSON.stringify byte-identity across the wire.
-      // Spec §6 W4 + design §4.1 C5 / spec R5.5.
       expect(Object.keys(result)).toEqual(['data', 'total', 'page', 'limit', 'totalPages']);
     });
   });
@@ -134,7 +103,6 @@ describe('paginate — offset pagination helper (PR-8)', () => {
 
       const result = await paginate(qb, { page: 1, limit: 10 });
 
-      // Identity branch: same reference, no per-element copy.
       expect(result.data).toBe(entities);
       expect(result.data).toEqual(entities);
     });
@@ -152,7 +120,6 @@ describe('paginate — offset pagination helper (PR-8)', () => {
       const result = await paginate<FakeEntity, FakeDTO>(qb, { page: 1, limit: 10 }, mapper);
 
       expect(mapper).toHaveBeenCalledTimes(2);
-      // Per-call argument check — order preserved.
       expect(mapper).toHaveBeenNthCalledWith(1, entities[0]);
       expect(mapper).toHaveBeenNthCalledWith(2, entities[1]);
       expect(result.data).toEqual([

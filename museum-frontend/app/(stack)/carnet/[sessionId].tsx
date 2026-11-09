@@ -1,20 +1,10 @@
-/**
- * B1 — Carnet (visit notebook) detail screen.
- *
- * Read-only consultation of a past visit : header (museum + date +
- * duration + message count) + scanned artworks + chronological transcript.
- * No composer, no mic, no action menu, no feedback (R29). A single CTA
- * "Continue this conversation" routes back to the live chat screen.
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.4 R23-R29 ; §4 AC8, AC10-AC12, AC14.
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 
 import {
   buildVisitCarnetDetail,
@@ -25,7 +15,6 @@ import {
 } from '@/features/chat/application/chatSessionLogic.pure';
 import { incrementCounter } from '@/features/chat/application/phase-telemetry';
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
-import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -38,7 +27,6 @@ import { fontSize, radius, semantic, space } from '@/shared/ui/tokens';
 const SKELETON_COUNT = 3;
 const THUMBNAIL_SIZE = semantic.chat.thumbnailSize;
 
-/** Renders the carnet detail screen — fetch + reuse `buildVisitCarnetDetail`. */
 export default function CarnetDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -46,25 +34,16 @@ export default function CarnetDetailScreen(): React.ReactElement {
   const params = useLocalSearchParams<{ sessionId: string }>();
   const sessionId = useMemo(() => params.sessionId || '', [params.sessionId]);
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(sessionId.length > 0);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<VisitCarnetDetail | null>(null);
 
   const cancelledRef = useRef(false);
   const telemetryEmittedRef = useRef(false);
 
-  /**
-   * Synchronises React state with the BE get-session endpoint — projecting
-   * an out-of-React fetch result into state. The `react-hooks/set-state-in-effect`
-   * lint rule flags this as a cascade risk, but the fetch is awaited (no
-   * synchronous setState chain) and the cancellation flag breaks the loop on
-   * unmount.
-   */
   useEffect(() => {
     cancelledRef.current = false;
     if (sessionId.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing React with empty-route guard; mirrors useResumableSession (B2). Approved-by: green-code-agent-2026-05-15-B1-001
-      setIsLoading(false);
       return () => {
         cancelledRef.current = true;
       };
@@ -75,7 +54,7 @@ export default function CarnetDetailScreen(): React.ReactElement {
         const response = await chatApi.getSession(sessionId);
         if (cancelledRef.current) return;
 
-        const locale = useRuntimeSettingsStore.getState().defaultLocale;
+        const locale = i18n.language;
         const uiMessages: ChatUiMessage[] = response.messages.map((msg) =>
           mapApiMessageToUiMessage(msg as ApiMessage),
         );
@@ -99,7 +78,6 @@ export default function CarnetDetailScreen(): React.ReactElement {
   }, [sessionId]);
 
   const handleContinue = useCallback((): void => {
-    // R36 / AC14 — telemetry BEFORE navigation.
     incrementCounter('carnet_continue_pressed_total');
     router.push(`/(stack)/chat/${sessionId}`);
   }, [sessionId]);
@@ -141,7 +119,6 @@ export default function CarnetDetailScreen(): React.ReactElement {
 
         {!isLoading && error === null && detail ? (
           <>
-            {/* Header card — museum + date + duration + count */}
             <GlassCard style={styles.headerCard} intensity={60}>
               <Text
                 style={[styles.headerTitle, { color: theme.textPrimary }]}
@@ -150,9 +127,11 @@ export default function CarnetDetailScreen(): React.ReactElement {
               >
                 {detail.summary.museumName ?? t('carnet.unknownMuseum')}
               </Text>
-              <Text style={[styles.headerMeta, { color: theme.textSecondary }]}>
-                {detail.dateLabel}
-              </Text>
+              {detail.dateLabel ? (
+                <Text style={[styles.headerMeta, { color: theme.textSecondary }]}>
+                  {detail.dateLabel}
+                </Text>
+              ) : null}
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Ionicons name="time-outline" size={18} color={theme.primary} />
@@ -171,7 +150,6 @@ export default function CarnetDetailScreen(): React.ReactElement {
               </View>
             </GlassCard>
 
-            {/* Artworks section */}
             <View style={styles.section}>
               <Text
                 style={[styles.sectionHeader, { color: theme.textSecondary }]}
@@ -234,7 +212,6 @@ export default function CarnetDetailScreen(): React.ReactElement {
               )}
             </View>
 
-            {/* Transcript section — read-only (R29) */}
             <View style={styles.section}>
               <Text
                 style={[styles.sectionHeader, { color: theme.textSecondary }]}
@@ -274,7 +251,6 @@ export default function CarnetDetailScreen(): React.ReactElement {
                 ))}
             </View>
 
-            {/* Continue CTA */}
             <Pressable
               onPress={handleContinue}
               style={({ pressed }) => [

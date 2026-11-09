@@ -1,23 +1,3 @@
-/**
- * Tests for shared/audit/audit-cron.registrar.ts.
- *
- * Mirrors the mock layout of tests/unit/shared/queue/scheduled-jobs.test.ts:
- * bullmq is hoisted-mocked so `new Worker(...)` captures the callback that
- * processes a tick, and we replay that callback to exercise the body and
- * its error paths. Logger / sentry / job-failure handler / anonymizer job
- * are all jest.mock'd so the registrar runs without Redis or Postgres.
- *
- * Covers the 39 NoCoverage mutants reported by Stryker against this file:
- *   - String + object literals for AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
- *     DEFAULT_AUDIT_IP_CRON, upsertJobScheduler payload, info/error/warn
- *     event keys, and the cron tick log payload.
- *   - LogicalOperator at L78 (`config.cron ?? DEFAULT_AUDIT_IP_CRON`).
- *   - BlockStatement bodies of onAuditCronJobFailed, the try/catch in
- *     registerAuditCron, the worker callback, and the stop() handler.
- *   - BooleanLiteral at L39 (`treatNoAttemptsAsFinal: true`).
- *   - ArrowFunction at L37 (`summarize: () => ({})`) and L103 (no-op stop).
- */
-
 import { Worker } from 'bullmq';
 
 import {
@@ -32,8 +12,6 @@ import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
 import type { ConnectionOptions, Job, Queue } from 'bullmq';
 import type { DataSource } from 'typeorm';
-
-// ─── Mocks ────────────────────────────────────────────────────────────────────
 
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -80,8 +58,6 @@ jest.mock('bullmq', () => ({
     ),
 }));
 
-// ─── Shared fixtures ─────────────────────────────────────────────────────────
-
 interface QueueMock {
   name: string;
   upsertJobScheduler: jest.Mock;
@@ -101,8 +77,6 @@ const asQueue = (q: QueueMock): Queue => q as unknown as Queue;
 
 const FAKE_DATA_SOURCE = {} as unknown as DataSource;
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 describe('audit-cron.registrar / constants', () => {
   it('exports AUDIT_IP_ANONYMIZE_SCHEDULER_ID with the exact "audit-ip-anonymize" id (kills StringLiteral L13)', () => {
     expect(AUDIT_IP_ANONYMIZE_SCHEDULER_ID).toBe('audit-ip-anonymize');
@@ -114,8 +88,6 @@ describe('audit-cron.registrar / constants', () => {
     expect(DEFAULT_AUDIT_IP_CRON).not.toBe('');
   });
 });
-
-// ─── registerAuditCron happy path ─────────────────────────────────────────────
 
 describe('registerAuditCron — happy path', () => {
   beforeEach(() => {
@@ -142,9 +114,6 @@ describe('registerAuditCron — happy path', () => {
   });
 
   it('uses the overridden cron pattern when supplied (kills L78 LogicalOperator → `&&` mutant)', async () => {
-    // With `&&`, `config.cron && DEFAULT` would yield the *default* whenever cron
-    // is truthy — flipping it to the default rather than honoring the override.
-    // Asserting on a custom value that is NOT the default kills the mutant.
     const queue = makeQueueMock();
     await registerAuditCron(asQueue(queue), FAKE_DATA_SOURCE, {
       connection: CONNECTION,
@@ -156,7 +125,6 @@ describe('registerAuditCron — happy path', () => {
       { pattern: '*/15 * * * *' },
       expect.any(Object),
     );
-    // Belt-and-braces: pattern must NOT be the default.
     const [, scheduleSpec] = queue.upsertJobScheduler.mock.calls[0] as [
       string,
       { pattern: string },
@@ -208,8 +176,6 @@ describe('registerAuditCron — happy path', () => {
   });
 });
 
-// ─── Worker tick callback ─────────────────────────────────────────────────────
-
 describe('registerAuditCron — worker tick callback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -240,8 +206,6 @@ describe('registerAuditCron — worker tick callback', () => {
     await registerAuditCron(asQueue(queue), FAKE_DATA_SOURCE, { connection: CONNECTION });
 
     await expect(capturedWorker!.callback()).rejects.toBe(boom);
-    // The completion log MUST NOT fire on failure — proves the BlockStatement
-    // body is executed sequentially, not short-circuited to {}.
     const completedCalls = (logger.info as jest.Mock).mock.calls.filter(
       ([key]) => key === 'audit_cron_tick_completed',
     );
@@ -249,10 +213,7 @@ describe('registerAuditCron — worker tick callback', () => {
   });
 });
 
-// ─── onAuditCronJobFailed (via wired handler) ────────────────────────────────
-
 describe('registerAuditCron — onAuditCronJobFailed', () => {
-  /** Builds a Job-like value with the four fields the handler reads. */
   const makeFakeJob = (
     overrides: Partial<{
       id: string;
@@ -267,7 +228,6 @@ describe('registerAuditCron — onAuditCronJobFailed', () => {
       ...overrides,
     }) as unknown as Job;
 
-  /** Boots the registrar and returns the captured `failed` handler. */
   const getFailedHandler = async (): Promise<(job: Job | undefined, err: Error) => void> => {
     const queue = makeQueueMock();
     await registerAuditCron(asQueue(queue), FAKE_DATA_SOURCE, { connection: CONNECTION });
@@ -328,8 +288,6 @@ describe('registerAuditCron — onAuditCronJobFailed', () => {
     expect(sinks.log).toBeInstanceOf(Function);
     expect(sinks.capture).toBe(captureExceptionWithContext);
 
-    // Replay log to prove it proxies to logger.warn with the exact (event, meta)
-    // — kills the BlockStatement L28 mutant that would empty the closure body.
     sinks.log('proxied_event', { foo: 'bar' });
     expect(logger.warn).toHaveBeenCalledWith('proxied_event', { foo: 'bar' });
   });
@@ -352,16 +310,12 @@ describe('registerAuditCron — onAuditCronJobFailed', () => {
     expect(opts.treatNoAttemptsAsFinal).toBe(true);
     expect(opts.treatNoAttemptsAsFinal).not.toBe(false);
 
-    // summarize must be a function that returns an *empty* object regardless of
-    // input — kills the L37 ArrowFunction mutant `() => undefined`.
     expect(opts.summarize).toBeInstanceOf(Function);
     expect(opts.summarize({})).toEqual({});
     expect(opts.summarize({ foo: 'bar', n: 1 })).toEqual({});
     expect(opts.summarize({})).not.toBeUndefined();
   });
 });
-
-// ─── registerAuditCron failure path (upsertJobScheduler rejects) ─────────────
 
 describe('registerAuditCron — register failure path', () => {
   beforeEach(() => {
@@ -396,12 +350,9 @@ describe('registerAuditCron — register failure path', () => {
     expect(capturedErr.message).toBe('redis down');
     expect(sentryCtx).toEqual({ schedulerId: 'audit-ip-anonymize' });
 
-    // No worker must be spawned on the failure path.
     expect(Worker).not.toHaveBeenCalled();
     expect(capturedWorker).toBeUndefined();
 
-    // Returned handle.stop is the no-op arrow — resolves with undefined and
-    // does NOT call removeJobScheduler.
     await expect(handle.stop()).resolves.toBeUndefined();
     expect(queue.removeJobScheduler).not.toHaveBeenCalled();
   });
@@ -423,12 +374,9 @@ describe('registerAuditCron — register failure path', () => {
     expect(wrapped).toBeInstanceOf(Error);
     expect(wrapped.message).toBe('plain string failure');
 
-    // The no-op stop must still resolve cleanly.
     await expect(handle.stop()).resolves.toBeUndefined();
   });
 });
-
-// ─── stop() shutdown semantics ───────────────────────────────────────────────
 
 describe('registerAuditCron — stop() handle', () => {
   beforeEach(() => {
@@ -468,8 +416,6 @@ describe('registerAuditCron — stop() handle', () => {
     expect(warnKeys).toContain('audit_cron_remove_failed');
     expect(warnKeys).not.toContain('');
 
-    // worker.close() must still be invoked — proves the two try/catch blocks
-    // are sequential, not merged.
     expect(mockWorkerClose).toHaveBeenCalledTimes(1);
   });
 

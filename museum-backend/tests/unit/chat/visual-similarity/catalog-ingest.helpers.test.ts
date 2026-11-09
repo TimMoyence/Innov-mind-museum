@@ -1,52 +1,15 @@
-/**
- * RED — T7.2 — `catalog-ingest.helpers` (unit, mocked HTTP via global.fetch).
- *
- * Locks down tasks.md T7.2 + design.md §3 / §9 D8:
- *   - `fetchArtworksOfMuseum(qid, lang)` issues a SPARQL query against
- *     Wikidata (`https://query.wikidata.org/sparql`), parses the JSON binding
- *     format, and yields one `ArtworkSeed` per result row. Optional bindings
- *     (artist, inception, …) collapse to `undefined` cleanly.
- *   - `downloadThumbnail(url, maxBytes)` rate-limits to 1 req/s per hostname
- *     so the Wikimedia "polite" budget is respected, and aborts/throws when
- *     the response payload exceeds `maxBytes`.
- *   - `normalizeMetadata(seed)` is a pure transform (table-driven test).
- *
- * SUT does not yet exist (Phase 7). Tests are RED until the editor lands the
- * file.
- */
-
 import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
 
 import type { ArtworkMetadata } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
-// Silence logger noise from the SUT during these tests.
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-/**
- * T-A1 (RED — C2 license URI→slug — UFR-022 fresh-context red phase).
- *
- * Constants verified 2026-05-21 against query.wikidata.org/sparql (cf.
- * `.claude/skills/team/team-reports/working/2026-05-21-p0-feature-gates/`
- * `c2-license-uris.md`). Pattern strict : `http://www.wikidata.org/entity/Qxxx`.
- *
- *   - `WIKIDATA_URI_PUBLIC_DOMAIN`  → slug `'public-domain'` (free / accepted).
- *   - `WIKIDATA_URI_CC0`            → slug `'cc-0'` (free / accepted).
- *   - `WIKIDATA_URI_UNKNOWN`        → null (rejected — non-free or unmapped).
- *
- * These constants pin the fixtures + the URI→slug mapper contract. Changing
- * them in this file = changing the C2 contract.
- */
 const WIKIDATA_URI_PUBLIC_DOMAIN = 'http://www.wikidata.org/entity/Q19652';
 const WIKIDATA_URI_CC0 = 'http://www.wikidata.org/entity/Q6938433';
 const WIKIDATA_URI_UNKNOWN = 'http://www.wikidata.org/entity/Q99999999';
 
-/**
- * Shape of one row yielded by `fetchArtworksOfMuseum`. Mirrors the SPARQL
- * SELECT clause: `?item ?itemLabel ?creatorLabel ?inception ?image ?license`.
- * Optional fields collapse to `undefined` when the binding is absent.
- */
 interface ArtworkSeed {
   qid: string;
   title: string;
@@ -57,25 +20,15 @@ interface ArtworkSeed {
   museumQid: string;
 }
 
-// SUT — Phase 7 file, must not yet exist. Path is relative to the test
-// file because `scripts/` lives outside the `src/` tree (no path alias).
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load to surface a useful Jest failure when the module is missing
 const helpers = require('../../../../scripts/catalog-ingest.helpers') as {
   fetchArtworksOfMuseum: (qid: string, lang: string) => AsyncIterable<ArtworkSeed>;
   downloadThumbnail: (url: string, maxBytes: number) => Promise<Buffer>;
   normalizeMetadata: (seed: ArtworkSeed) => ArtworkMetadata;
-  // T-A1 (RED) — SUT not yet implemented. The mapper resolves a Wikidata P275
-  // license URI to the internal slug used by `classifyLicense` ; unknown URI
-  // → null (rejected). Existence of this export is the C2 contract.
   mapLicenseUriToSlug: (uriOrSlug: string) => string | null;
 };
 
 const originalFetch = global.fetch;
 
-/**
- * Build a synthetic SPARQL JSON binding row in the shape Wikidata returns.
- * Every binding is `{ value: string }` — optional fields are simply omitted.
- */
 const makeSparqlBinding = (
   overrides: Partial<{
     item: string;
@@ -118,11 +71,6 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
                   creatorLabel: 'Leonardo da Vinci',
                   inception: '1503-01-01T00:00:00Z',
                   image: 'http://commons.wikimedia.org/wiki/Special:FilePath/Mona%20Lisa.jpg',
-                  // T-A1 — Wikidata P275 returns an entity URI, NOT a slug.
-                  // Fixture corrected 2026-05-21 to reflect reality (prior
-                  // `'public-domain'` slug was a misleading fixture that hid
-                  // C2 bug : `classifyLicense` compares slug ⊂ slug → 100 %
-                  // licenseRejected in prod because raw value is URI).
                   license: WIKIDATA_URI_PUBLIC_DOMAIN,
                   museum: 'http://www.wikidata.org/entity/Q19675',
                 }),
@@ -155,7 +103,6 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
       expect(seeds[0].artist).toBe('Leonardo da Vinci');
       expect(seeds[0].museumQid).toBe('Q19675');
       expect(seeds[1].qid).toBe('Q160236');
-      // Inception missing on row 2 collapses to undefined (does not crash).
       expect(seeds[1].inception).toBeUndefined();
     });
 
@@ -168,13 +115,11 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
           body: {
             results: {
               bindings: [
-                // Missing `image` — must be skipped (no image URL → unrenderable).
                 makeSparqlBinding({
                   item: 'http://www.wikidata.org/entity/Q1',
                   itemLabel: 'Broken row',
                   museum: 'http://www.wikidata.org/entity/Q19675',
                 }),
-                // Valid row.
                 makeSparqlBinding({
                   item: 'http://www.wikidata.org/entity/Q43270',
                   itemLabel: 'The Starry Night',
@@ -221,8 +166,6 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
     it('rate-limits 5 sequential calls to the same hostname to ≥ 4s elapsed (1 req/s/hostname)', async () => {
       jest.useFakeTimers();
       try {
-        // Stub fetch to resolve immediately with a tiny payload — rate-limit
-        // is per-hostname client-side, not network-bound.
         const fetchSpy = makeFetchSpy();
         fetchSpy.mockImplementation(() =>
           Promise.resolve(
@@ -238,14 +181,10 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
         const url = 'https://upload.wikimedia.org/fixture.jpg';
         const start = Date.now();
 
-        // Kick off 5 downloads concurrently — they should serialise via the
-        // per-hostname rate-limiter (1 req/s).
         const promises = Array.from({ length: 5 }, () =>
           helpers.downloadThumbnail(url, 1024 * 1024),
         );
 
-        // Drive the rate-limiter forward — every advance unblocks the next slot.
-        // Five calls → first runs immediately, four waits of 1s each = ≥ 4s.
         await jest.advanceTimersByTimeAsync(5_000);
         await Promise.all(promises);
 
@@ -258,7 +197,7 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
     });
 
     it('throws when the downloaded payload exceeds maxBytes', async () => {
-      const oversize = Buffer.alloc(2 * 1024 * 1024); // 2 MiB
+      const oversize = Buffer.alloc(2 * 1024 * 1024);
       const fetchSpy = makeFetchSpy();
       fetchSpy.mockResolvedValueOnce({
         ok: true,
@@ -314,26 +253,11 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
     ])('normalizes seed %# to ArtworkMetadata', (seed, expected) => {
       const meta = helpers.normalizeMetadata(seed);
       expect(meta).toMatchObject(expected);
-      // Title + imageUrl are mandatory in ArtworkMetadata.
       expect(meta.title).toBe(seed.title);
       expect(meta.imageUrl).toBe(seed.imageUrl);
     });
   });
 
-  /**
-   * T-A1 (RED — UFR-022 Wave A) — `mapLicenseUriToSlug` contract.
-   *
-   * The SPARQL P275 predicate yields Wikidata entity URIs
-   * (`http://www.wikidata.org/entity/Qxxx`), NOT slugs. Today `classifyLicense`
-   * (catalog-ingest.ts:175-183) compares `raw ⊂ ['public-domain','cc-0']`
-   * so 100 % of seeds are silently rejected with `licenseRejected += 1`. The
-   * mapper closes the URI→slug gap at the catalog-ingest.helpers boundary so
-   * `classifyLicense` receives slugs (back-compatible) for known free
-   * licenses, and the raw URI for unknowns (still rejected, fail-safe).
-   *
-   * RED expectation: `helpers.mapLicenseUriToSlug` is `undefined` →
-   * `TypeError: helpers.mapLicenseUriToSlug is not a function`.
-   */
   describe('mapLicenseUriToSlug (T-A1 — C2 URI→slug mapping)', () => {
     it('maps the Wikidata public-domain URI (Q19652) to slug "public-domain"', () => {
       expect(helpers.mapLicenseUriToSlug(WIKIDATA_URI_PUBLIC_DOMAIN)).toBe('public-domain');
@@ -344,16 +268,10 @@ describe('catalog-ingest.helpers (T7.2 — unit)', () => {
     });
 
     it('returns null for an unknown Wikidata license URI (rejected fail-safe)', () => {
-      // Q99999999 is well outside the assigned Wikidata Q-code range —
-      // serves as a deterministic "unmapped URI" sentinel. The mapper MUST
-      // return null so `classifyLicense` keeps rejecting the seed.
       expect(helpers.mapLicenseUriToSlug(WIKIDATA_URI_UNKNOWN)).toBeNull();
     });
 
     it('does not crash on empty string (defensive — empty SPARQL cell)', () => {
-      // SPARQL `cell()` helper can return undefined; runIngest guards against
-      // that path, but a defensive empty-string input must still produce a
-      // safe null (no throw, no slug fabrication).
       expect(helpers.mapLicenseUriToSlug('')).toBeNull();
     });
   });

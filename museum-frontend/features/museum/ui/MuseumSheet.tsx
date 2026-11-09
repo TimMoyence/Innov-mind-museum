@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import { BackHandler, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useHardwareBack } from '@/shared/ui/hooks/useHardwareBack';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
 import { useMuseumSheetEnrichmentData } from '../application/useMuseumSheetEnrichmentData';
@@ -32,21 +32,9 @@ export const MuseumSheet = ({
   const { theme } = useTheme();
 
   const visible = museum !== null;
-  // Enrichment is fetched eagerly the moment the sheet opens for a real
-  // (positive-id) museum. Synthetic OSM entries use negative ids and are
-  // skipped by the hook's `enabled` guard.
   const data = useMuseumSheetEnrichmentData(museum, i18n.language, t);
 
-  useEffect(() => {
-    if (!visible) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      onClose();
-      return true;
-    });
-    return () => {
-      sub.remove();
-    };
-  }, [visible, onClose]);
+  useHardwareBack(onClose, visible);
 
   if (!museum) return null;
 

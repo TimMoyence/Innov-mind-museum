@@ -8,13 +8,6 @@ import type { Request, Response, NextFunction } from 'express';
 const tokenRevoked = (): AppError =>
   new AppError({ message: 'Token revoked', statusCode: 401, code: 'TOKEN_REVOKED' });
 
-/**
- * Module-level denylist port. Defaults to a no-op (test-runner with no Redis,
- * dev paths). Composition root `index.ts::initCacheAndRateLimit` calls
- * {@link setAccessTokenDenylist} with the `RedisAccessTokenDenylist` adapter
- * when `env.cache?.enabled === true`. Pattern mirrors `setLlmCostCounter` /
- * `setRedisRateLimitStore` (R7 design §3.1 D6).
- */
 let denylist: IAccessTokenDenylist = {
   add: () => Promise.resolve(),
   has: () => Promise.resolve(false),
@@ -24,10 +17,6 @@ export const setAccessTokenDenylist = (d: IAccessTokenDenylist): void => {
   denylist = d;
 };
 
-/**
- * SEC F7 dual auth: Bearer (mobile, precedence) OR `access_token` cookie (web admin).
- * Bearer wins when both present → mobile webviews carrying stray cookies can't swap identity.
- */
 export function resolveCredential(req: Request): string | null {
   const bearer = req.headers.authorization?.split(' ')[1];
   if (bearer) {
@@ -41,15 +30,6 @@ export function resolveCredential(req: Request): string | null {
   return null;
 }
 
-/**
- * R8 — after `verifyAccessTokenWithClaims` succeeds, the JWT `jti` is checked
- * against the {@link IAccessTokenDenylist}. A denylisted jti throws 401
- * `TOKEN_REVOKED`. The denylist adapter is fail-OPEN on backing-store error
- * (Redis down → token accepted, spec §R9) so the middleware never has to
- * defend against denylist throws.
- *
- * @throws {AppError} 401 on missing/invalid credential OR revoked token.
- */
 export async function isAuthenticated(
   req: Request,
   _res: Response,

@@ -10,7 +10,8 @@ import {
   BADGE_TEXT_COLOR,
   statusColor,
   priorityColor,
-  formatDate,
+  ticketPriorityLabel,
+  formatTicketDate,
 } from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -23,11 +24,6 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 type TicketDTO = components['schemas']['TicketDTO'];
 type TicketStatus = TicketDTO['status'];
 
-/**
- * Props for `TicketsListView` — exact return shape of `useTicketsListScreen`.
- * Declared locally so `react/prop-types` can statically resolve each prop
- * (the rule does not follow cross-file type aliases).
- */
 export interface TicketsListViewProps {
   tickets: TicketDTO[];
   isLoading: boolean;
@@ -42,7 +38,6 @@ export interface TicketsListViewProps {
   dismissError: () => void;
 }
 
-/** Pure presenter for the tickets list — receives state from `useTicketsListScreen`. */
 export const TicketsListView = ({
   tickets,
   isLoading,
@@ -56,7 +51,7 @@ export const TicketsListView = ({
   statusLabel,
   dismissError,
 }: TicketsListViewProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
@@ -81,22 +76,22 @@ export const TicketsListView = ({
             <Text style={styles.badgeText}>{statusLabel(item.status)}</Text>
           </View>
           <View style={[styles.badge, { backgroundColor: priorityColor(item.priority) }]}>
-            <Text style={styles.badgeText}>{item.priority}</Text>
+            <Text style={styles.badgeText}>{ticketPriorityLabel(t, item.priority)}</Text>
           </View>
         </View>
         <View style={styles.metaRow}>
           <Text style={[styles.cardMeta, { color: theme.textSecondary }]}>
-            {formatDate(item.createdAt)}
+            {formatTicketDate(item.createdAt, i18n.language)}
           </Text>
           {item.messageCount !== undefined && (
             <Text style={[styles.cardMeta, { color: theme.primary }]}>
-              {t('tickets.messages')}: {String(item.messageCount)}
+              {t('tickets.messageCount', { count: item.messageCount })}
             </Text>
           )}
         </View>
       </Pressable>
     ),
-    [theme, t, statusLabel],
+    [theme, t, i18n.language, statusLabel],
   );
 
   return (

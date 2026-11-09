@@ -1,16 +1,11 @@
 import { FallbackSearchProvider } from '@modules/chat/adapters/secondary/search/fallback-search.provider';
 import type { WebSearchProvider, WebSearchQuery } from '@modules/chat/domain/ports/web-search.port';
 
-// Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
 import { logger } from '@shared/logger/logger';
-
-// ---------------------------------------------------------------------------
-// Test helper
-// ---------------------------------------------------------------------------
 
 function makeProvider(name: string, behavior: 'success' | 'empty' | 'throw'): WebSearchProvider {
   return {
@@ -24,10 +19,6 @@ function makeProvider(name: string, behavior: 'success' | 'empty' | 'throw'): We
 }
 
 const TEST_QUERY: WebSearchQuery = { query: 'impressionism paintings', maxResults: 5 };
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('FallbackSearchProvider', () => {
   afterEach(() => {
@@ -112,10 +103,6 @@ describe('FallbackSearchProvider', () => {
 
     expect(provider.search).toHaveBeenCalledWith(specificQuery);
   });
-
-  // ---------------------------------------------------------------------------
-  // Logging
-  // ---------------------------------------------------------------------------
 
   it('logs fallback_search_hit on success', async () => {
     const provider = makeProvider('tavily', 'success');

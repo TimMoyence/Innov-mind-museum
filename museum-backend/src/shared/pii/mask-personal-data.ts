@@ -72,7 +72,7 @@ function looksLikeEmail(candidate: string): boolean {
   );
 }
 
-function maskEmails(core: string): MaskedText {
+export function replaceEmails(core: string, replace: (email: string) => string): MaskedText {
   let text = core;
   let count = 0;
   let from = 0;
@@ -82,15 +82,21 @@ function maskEmails(core: string): MaskedText {
     let end = at + 1;
     while (end < text.length && EMAIL_DOMAIN_CHAR.test(text[end])) end += 1;
     while (end > at + 1 && text[end - 1] === '.') end -= 1;
-    if (looksLikeEmail(text.slice(start, end))) {
-      text = `${text.slice(0, start)}[EMAIL]${text.slice(end)}`;
+    const candidate = text.slice(start, end);
+    if (looksLikeEmail(candidate)) {
+      const replacement = replace(candidate);
+      text = `${text.slice(0, start)}${replacement}${text.slice(end)}`;
       count += 1;
-      from = start + '[EMAIL]'.length;
+      from = start + replacement.length;
     } else {
       from = at + 1;
     }
   }
   return { text, count };
+}
+
+function maskEmails(core: string): MaskedText {
+  return replaceEmails(core, () => '[EMAIL]');
 }
 
 function digitCount(parts: readonly string[]): number {

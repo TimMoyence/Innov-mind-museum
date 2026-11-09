@@ -1,10 +1,3 @@
-/**
- * F4 (2026-04-30) + ADR-030 (2026-05-05) — guardrail budget helper tests.
- *
- * Covers the in-process backend (memory) and the Redis backend wired through
- * a stub CacheService. Daily reset is exercised via the `__setNowForTest`
- * clock seam.
- */
 import { type CacheService } from '@shared/cache/cache.port';
 
 import {
@@ -194,7 +187,6 @@ describe('guardrail-budget (redis backend via stub CacheService)', () => {
 
   it('returns 0 (legitimate first-of-day) when ping=true and counter missing', async () => {
     __setNowForTest(new Date('2026-05-05T10:00:00Z'));
-    // InMemoryCacheService.ping() returns true; no recordCost yet → key absent.
     expect(await getBudgetExhausted()).toBe(false);
   });
 });

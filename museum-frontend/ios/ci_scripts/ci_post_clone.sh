@@ -5,12 +5,8 @@ echo "=== ci_post_clone.sh ==="
 
 sh "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/ci_scripts/require-xcode.sh"
 
-# Navigate to frontend root
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 
-# ── Node.js 22 installation (multi-strategy for Xcode Cloud resilience) ──
-# Xcode Cloud runners have intermittent DNS failures to ghcr.io (Homebrew)
-# and raw.githubusercontent.com (nvm). We try multiple strategies in order.
 install_node_brew() {
   echo "[Strategy 1] Installing Node.js 22 via Homebrew..."
   export HOMEBREW_NO_AUTO_UPDATE=1
@@ -65,17 +61,9 @@ fi
 echo "Node: $(node -v)"
 echo "npm: $(npm -v)"
 
-# Install JS dependencies (needed for Metro bundler during build)
 npm install --no-audit --no-fund
 
-# Pods/ is committed to the repo — no pod install needed.
-# If Podfile.lock changes, run `pod install` locally and commit Pods/.
 
-# Always regenerate React Native codegen files (New Architecture).
-# Even when build/generated/ is committed to git, the codegen output must
-# match the exact native module versions installed by `npm install` above.
-# A stale commit (e.g. missing States.cpp for a new module) causes:
-#   "Build input file cannot be found" for States.cpp / ShadowNodes.cpp / *-generated.mm
 echo "Regenerating React Native codegen files..."
 cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend"
 node node_modules/react-native/scripts/generate-codegen-artifacts.js \
@@ -84,8 +72,6 @@ node node_modules/react-native/scripts/generate-codegen-artifacts.js \
   --targetPlatform ios
 echo "Codegen generation complete"
 
-# Write the CI node path into .xcode.env.local so Xcode build phases
-# (e.g. [CP-User] Generate Specs) find the same node binary.
 NODE_PATH=$(which node)
 echo "export NODE_BINARY=$NODE_PATH" > "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/.xcode.env.local"
 echo "Wrote .xcode.env.local: NODE_BINARY=$NODE_PATH"

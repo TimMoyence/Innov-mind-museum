@@ -88,7 +88,7 @@ describe('openapiClient', () => {
       await openApiRequest({
         path: '/api/auth/login' as never,
         method: 'post' as never,
-        body: '{"email":"a@b.com"}',
+        json: { email: 'a@b.com' } as never,
         headers: { 'X-Custom': 'value' },
         requiresAuth: false,
       });

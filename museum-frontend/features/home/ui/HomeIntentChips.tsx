@@ -22,7 +22,6 @@ interface ChipDefinition {
   readonly testID: string;
 }
 
-/** Renders the 3 vertical intent chips (vocal / camera / walk) surfaced on the Home screen. */
 export const HomeIntentChips = ({
   onPress,
   disabled = false,

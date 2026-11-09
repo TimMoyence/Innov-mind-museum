@@ -37,19 +37,12 @@ export class AuditLog {
   @Column({ type: 'uuid', nullable: true, name: 'request_id' })
   requestId!: string | null;
 
-  /** Hash of the immediately preceding row; genesis row uses 64 zeros. */
   @Column({ type: 'varchar', length: 64, nullable: true, name: 'prev_hash' })
   prevHash!: string | null;
 
-  /** SHA-256 of the row payload + prev_hash. Populated at INSERT time. */
   @Column({ type: 'varchar', length: 64, name: 'row_hash' })
   rowHash!: string;
 
-  /**
-   * Serializer version used for `row_hash`. 1 = legacy top-level-only (historical
-   * rows, default), 2 = canonical deep. Carried OUT of the hash payload so adding
-   * it invalidates no existing `row_hash` (AUDIT-01 / TD-61, ADR option A).
-   */
   @Column({ type: 'smallint', name: 'hash_version', default: 1 })
   hashVersion!: number;
 

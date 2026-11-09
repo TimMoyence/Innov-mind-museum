@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { getAdminCreds } from '../fixtures/auth';
 
-// Override storageState — this spec exercises the login UI fresh.
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('admin login flow', async ({ page }) => {
@@ -25,7 +24,6 @@ test('admin login rejects wrong password', async ({ page }) => {
   await page.getByLabel(/password/i).fill('definitely-not-the-password');
   await page.getByRole('button', { name: /log in|sign in|connecter/i }).click();
 
-  // The form keeps the user on /admin/login and surfaces the error message.
   await expect(page).toHaveURL(/\/admin\/login/);
   await expect(page.locator('[role="alert"], .text-red-700, .error').first()).toBeVisible({
     timeout: 5_000,

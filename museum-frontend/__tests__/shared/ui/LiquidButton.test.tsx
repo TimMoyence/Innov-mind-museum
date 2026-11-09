@@ -14,7 +14,6 @@ describe('LiquidButton', () => {
 
   it('renders leading icon when iconName + iconPosition=leading', () => {
     render(<LiquidButton label="Open" onPress={() => {}} iconName="open-outline" />);
-    // icon presence implied by render not throwing; label still visible
     expect(screen.getByText('Open')).toBeTruthy();
   });
 

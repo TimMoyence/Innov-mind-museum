@@ -20,19 +20,6 @@ export interface OfflinePackPromptTrigger {
 
 const ABSENT: CityPackState = { status: 'absent' };
 
-/**
- * Orchestrates the offline-pack prompt: gates visibility on a strong network
- * (wifi / 4G / 5G) once a `nearestCity` is identified and the user has not
- * already decided for that city, then exposes accept / decline / retry /
- * dismiss callbacks plus the live `packState` so the modal can render a
- * progress / completion / error UI without owning the download lifecycle.
- *
- * Composes `useOfflinePacks` so the download lifecycle stays in a single
- * source of truth shared with the Settings screen. Errors thrown by the
- * download are surfaced via the local `errorVisible` flag — `useOfflinePacks`
- * reports them to Sentry but swallows them for callers, which is fine for
- * the Settings list but not for an interactive prompt.
- */
 export function useOfflinePackPromptTrigger(
   nearestCity: NearestCity | null,
 ): OfflinePackPromptTrigger {

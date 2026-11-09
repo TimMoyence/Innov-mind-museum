@@ -1,25 +1,5 @@
-/* eslint-disable max-lines, sonarjs/no-duplicate-string -- JUSTIFIED:
-   i18n dictionary; 8 locales × 8 keys × short summary + recourse strings inflates
-   line count past 400 without offering any split point that doesn't degrade
-   readability. The `'self-retry' | 'signal' | 'support'` recourse-type literals
-   are inlined in each entry by design — they preserve TypeScript narrowing into
-   the `RecourseType` union without a confusing constant indirection that would
-   make every entry less readable. Each locale is a self-contained block —
-   splitting per-locale would create 7 sibling files that all need to evolve in
-   lockstep when a new category is added. Approved-by: tim@2026-05-12 */
 import { SUPPORTED_LOCALES, type SupportedLocale } from './locale';
 
-/**
- * GDPR Art 22 + AI Act Art 14 / 50 — i18n explanations + recourse paths for
- * `GET /api/chat/messages/:id/explanation`. Categories mirror
- * `GuardrailBlockReason` (input + output) plus `allowed` and `unknown`.
- * Strings ≤ 200 chars (chat UI). See `docs/GDPR_ART22_SCOPE.md`.
- */
-
-/**
- * Superset of `GuardrailBlockReason` mapped via `mapToExplanationCategory` so
- * external contract decoupled from internal taxonomy.
- */
 export type ExplanationCategory =
   | 'off_topic'
   | 'prompt_injection'
@@ -27,7 +7,6 @@ export type ExplanationCategory =
   | 'service_unavailable'
   | 'unsafe_output';
 
-/** Adds `allowed` + `unknown` to the public categories. */
 type ExplanationKey = ExplanationCategory | 'allowed' | 'unknown';
 
 export type RecourseType = 'self-retry' | 'signal' | 'support';
@@ -45,7 +24,6 @@ export type ExplanationReasonMap = Record<
   Record<ExplanationKey, ExplanationStrings>
 >;
 
-// FR + EN primary (CLAUDE.md), others mirror same shape (see guardrail-refusals.ts).
 export const EXPLANATION_REASONS: ExplanationReasonMap = {
   en: {
     allowed: {
@@ -496,12 +474,10 @@ export const EXPLANATION_REASONS: ExplanationReasonMap = {
   },
 };
 
-/** Compile-time guarantee every locale has an entry. */
 export type ExplanationReasonsType = {
   [K in SupportedLocale]: (typeof EXPLANATION_REASONS)[K];
 };
 
-/** Raw `GuardrailBlockReason` + historic synonyms → public category. */
 const CATEGORY_MAPPING: Readonly<Record<string, ExplanationCategory>> = {
   off_topic: 'off_topic',
   prompt_injection: 'prompt_injection',
@@ -516,7 +492,6 @@ const CATEGORY_MAPPING: Readonly<Record<string, ExplanationCategory>> = {
   unsafe_output: 'unsafe_output',
 };
 
-/** null when reason has no user-facing category. */
 export function mapToExplanationCategory(
   reason: string | null | undefined,
 ): ExplanationCategory | null {

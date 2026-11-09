@@ -1,42 +1,9 @@
-/**
- * Red tests for B6 — `HomeScreen` integration of `<ProactiveMuseumBanner>`.
- *
- * Asserts that `HomeScreen` :
- *   1. Mounts `<ProactiveMuseumBanner>` when `useProactiveMuseumSuggestion().museum`
- *      is non-null (AC21).
- *   2. Does NOT mount the banner when the hook returns no proactive museum.
- *   3. Wires `onStart` to `chatApi.createSession` via `useStartConversation`
- *      with payload containing `intent: 'audio'`, `museumId`, `museumName`,
- *      `coordinates` (AC22).
- *   4. Wires `onDismiss` to the hook's dismiss function.
- *
- * At baseline (B6 not yet implemented) :
- *   - `HomeScreen` does NOT import `useProactiveMuseumSuggestion` nor render
- *     `<ProactiveMuseumBanner>`. The spy mocks below register fake modules,
- *     but the mocks never fire because the screen does not (yet) reference
- *     them → assertions fail.
- *
- * Why a dedicated file (not merged into home.test.tsx or home-resumption-banner.test.tsx) :
- *   - Independent green/red lifecycle for B6.
- *   - Mirrors the B2 pattern (`home-resumption-banner.test.tsx`).
- *
- * Spec : `docs/chat-ux-refonte/specs/B6.md` §1.3 R27-R29 ; §2.4 wire ;
- *        §4 AC21-AC22.
- * Baseline : `325873b3` (worktree HEAD post-B2 done).
- */
-
 import '../helpers/test-utils';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
-// ── Mock B6 banner so we can spy on its render contract ────────────────────
-// RED ASSERTION : `@/features/chat/ui/ProactiveMuseumBanner` does NOT exist
-// at baseline — `jest.mock(..., { virtual: true })` lets us register a fake
-// module even when the underlying file is absent. The spy fires only when
-// HomeScreen imports + renders the banner — at baseline HomeScreen does NOT
-// import it, so the spy never fires.
 const mockBannerRender = jest.fn();
 jest.mock(
   '@/features/chat/ui/ProactiveMuseumBanner',
@@ -75,9 +42,6 @@ jest.mock(
             testID: 'mock-ProactiveMuseumBanner-dismiss',
             onPress: () => props.onDismiss?.(),
           }),
-          // C10 — choose-another button. Calls ONLY the call-site prop (no
-          // internal onDismiss fallback) so the test fails red until HomeScreen
-          // actually wires `onChooseAnother`.
           ReactNS.createElement(RN.Pressable, {
             testID: 'mock-ProactiveMuseumBanner-choose-another',
             onPress: () => props.onChooseAnother?.(),
@@ -89,7 +53,6 @@ jest.mock(
   { virtual: true },
 );
 
-// ── Mock useProactiveMuseumSuggestion so we drive the screen state ─────────
 const mockUseProactiveMuseumSuggestion = jest.fn();
 jest.mock(
   '@/features/chat/application/useProactiveMuseumSuggestion',
@@ -102,8 +65,6 @@ jest.mock(
   { virtual: true },
 );
 
-// ── Mock B2 banner + hook (already merged on baseline 325873b3) ────────────
-// We render the resumption banner as null so it doesn't interfere with B6.
 jest.mock('@/features/chat/ui/ConversationResumptionBanner', () => {
   return {
     ConversationResumptionBanner: () => null,
@@ -121,7 +82,6 @@ jest.mock('@/features/chat/application/useResumableSession', () => ({
   RESUMPTION_BANNER_WINDOW_MS: 604_800_000,
 }));
 
-// ── Standard home-screen mocks (mirrored from home-resumption-banner.test.tsx) ──
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
     createSession: jest.fn().mockResolvedValue({ session: { id: 'new-sess-id' } }),
@@ -155,7 +115,6 @@ jest.mock('@/features/daily-art/ui/DailyArtCard', () => {
   };
 });
 
-// SUT — must be imported AFTER all jest.mock declarations above.
 import HomeScreen from '@/app/(tabs)/home';
 
 describe('HomeScreen — B6 proactive museum banner integration', () => {
@@ -163,7 +122,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
     jest.clearAllMocks();
     mockCreateSession.mockResolvedValue({ session: { id: 'new-sess-id' } });
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'en-US',
       defaultMuseumMode: false,
       guideLevel: 'beginner',
       _hydrated: true,
@@ -183,9 +141,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §2.4 wire / §4 AC21 — banner renders when museum non-null
-  // ────────────────────────────────────────────────────────────────────────
   describe('banner rendering (AC21)', () => {
     it('renders <ProactiveMuseumBanner> when useProactiveMuseumSuggestion returns a museum', () => {
       mockUseProactiveMuseumSuggestion.mockReturnValue({
@@ -224,18 +179,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.3 R27 / §4 AC22 — wire onStart creates an audio session.
-  //
-  // NOTE — intent propagation is split:
-  //   • PAYLOAD : BE Zod enum (`CHAT_SESSION_INTENTS` in chat.types.ts) accepts only
-  //     'default' | 'walk'. useStartConversation downcasts 'audio'/'camera' to omitted so
-  //     the BE returns 200, not 400.
-  //   • URL QUERY : the UI-level intent ('audio') is forwarded as `?intent=audio` in the
-  //     router.push URL so the chat screen can switch to voice-first.
-  // The first test below asserts museum context fields land in the payload; the second
-  // asserts intent='audio' lands in the URL query (the actual AC22 propagation surface).
-  // ────────────────────────────────────────────────────────────────────────
   describe('onStart wiring (R27, AC22)', () => {
     it('on banner press calls chatApi.createSession with museumId, museumName, coordinates', async () => {
       mockUseProactiveMuseumSuggestion.mockReturnValue({
@@ -253,7 +196,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
       const { getByTestId } = render(<HomeScreen />);
       fireEvent.press(getByTestId('mock-ProactiveMuseumBanner'));
 
-      // useStartConversation runs createSession asynchronously — wait a microtask.
       await Promise.resolve();
       await Promise.resolve();
 
@@ -265,8 +207,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
         museumName?: string;
         coordinates?: { lat: number; lng: number };
       };
-      // intent='audio' is NOT a BE-accepted value — must NOT leak into the payload.
-      // The URL-query assertion below is the actual AC22 propagation surface.
       expect(payload.intent).toBeUndefined();
       expect(payload.museumId).toBe(42);
       expect(payload.museumName).toBe("Musée d'Orsay");
@@ -293,7 +233,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      // useStartConversation appends ?intent=audio when intent !== 'default'.
       expect(router.push).toHaveBeenCalledWith(
         expect.stringContaining('/(stack)/chat/new-sess-id'),
       );
@@ -302,9 +241,6 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §2.4 wire — onDismiss wired to hook.dismiss
-  // ────────────────────────────────────────────────────────────────────────
   describe('onDismiss wiring', () => {
     it('invokes the hook dismiss callback on dismiss press', () => {
       const dismiss = jest.fn().mockResolvedValue(undefined);
@@ -324,22 +260,10 @@ describe('HomeScreen — B6 proactive museum banner integration', () => {
       fireEvent.press(getByTestId('mock-ProactiveMuseumBanner-dismiss'));
 
       expect(dismiss).toHaveBeenCalledTimes(1);
-      // Banner press path NOT triggered by dismiss tap → no session created.
       expect(mockCreateSession).not.toHaveBeenCalled();
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // C10 — onChooseAnother wired to the museum picker (NorthStar proximité).
-  //
-  // The confirm-band "Choisir un autre musée" affordance must route to the
-  // existing picker (`/(stack)/museums-picker`), not silently dismiss.
-  // At baseline HomeScreen does NOT pass `onChooseAnother`, so the mock's
-  // choose-another press is a no-op → router.push never receives the picker
-  // route → these tests fail red until the wiring lands.
-  //
-  // Spec : team-state/2026-05-31-c10-chooseanother/spec.md R1-R3 / AC1-AC2.
-  // ────────────────────────────────────────────────────────────────────────
   describe('onChooseAnother wiring (C10)', () => {
     const louvre = {
       id: 7,

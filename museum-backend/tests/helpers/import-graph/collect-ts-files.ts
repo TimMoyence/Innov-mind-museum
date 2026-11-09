@@ -1,11 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-/**
- * Recursively collect all .ts files under the given root directory,
- * skipping node_modules, dist, and __tests__ paths.
- * @param root
- */
 export async function collectTsFilesRec(root: string): Promise<string[]> {
   const out: string[] = [];
   const entries = await fs.readdir(root, { withFileTypes: true });

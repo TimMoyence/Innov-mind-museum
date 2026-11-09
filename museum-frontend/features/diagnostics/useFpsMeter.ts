@@ -6,12 +6,6 @@ const WINDOW_SIZE = 60;
 const P50_INDEX = Math.floor(WINDOW_SIZE * 0.5);
 const P5_INDEX = Math.floor(WINDOW_SIZE * 0.05);
 
-/**
- * Runs a requestAnimationFrame loop while mounted, computes P50 (median) and
- * P5 FPS over a 60-frame ring buffer, and publishes them to the shared
- * perfStore every frame. Caller is expected to gate this hook behind `__DEV__`
- * — it is safe to run in production but there is no consumer for the values.
- */
 export const useFpsMeter = (enabled: boolean): void => {
   useEffect(() => {
     if (!enabled) return;
@@ -30,9 +24,7 @@ export const useFpsMeter = (enabled: boolean): void => {
       lastTime = now;
 
       const sorted = [...deltas].sort((a, b) => a - b);
-      // Median delta → P50 FPS.
       const p50Delta = sorted[P50_INDEX] ?? 16.67;
-      // 95th-percentile delta → worst-5% FPS (high delta = low FPS).
       const p5Delta = sorted[WINDOW_SIZE - 1 - P5_INDEX] ?? p50Delta;
       perfStore.updateFps(p50Delta > 0 ? 1000 / p50Delta : 0, p5Delta > 0 ? 1000 / p5Delta : 0);
 

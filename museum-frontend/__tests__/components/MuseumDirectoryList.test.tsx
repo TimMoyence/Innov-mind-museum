@@ -4,7 +4,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import type { MuseumWithDistance } from '@/features/museum/application/useMuseumDirectory';
 import { makeMuseumWithDistance as makeMuseum } from '../helpers/factories/museum.factories';
 
-// Mock MuseumCard since it's a separate component
 jest.mock('@/features/museum/ui/MuseumCard', () => {
   const { Text, Pressable } = require('react-native');
   return {

@@ -4,13 +4,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { makeChatUiMessage } from '../helpers/factories';
 import { MessageContextMenuSheetContent } from '@/features/chat/ui/MessageContextMenuSheetContent';
 
-/**
- * Sheet-content variant of the legacy `MessageContextMenu` tests (migrated
- * under C4). The router now owns mounting / dismount, so the `null` message
- * branch no longer applies — the router simply does not open this route when
- * no message is targeted. Each remaining behaviour (action visibility per
- * role, preview truncation, cancel callback) is preserved.
- */
 describe('MessageContextMenuSheetContent', () => {
   const onCopy = jest.fn();
   const onShare = jest.fn();

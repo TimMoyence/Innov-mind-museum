@@ -4,7 +4,6 @@ interface UseTypewriterOptions {
   text: string;
   enabled: boolean;
   charDelayMs?: number;
-  /** Delay before the first character appears. Defaults to `charDelayMs`. */
   startDelayMs?: number;
   onDone?: () => void;
 }
@@ -15,13 +14,6 @@ interface UseTypewriterReturn {
   reset: () => void;
 }
 
-/**
- * Reveals `text` character by character via chained timeouts.
- *
- * When `enabled` is false (e.g. OS reduced-motion), returns the full text
- * immediately and skips scheduling — honors WCAG 2.3.3 without the decorative
- * reveal. `reset()` restarts the reveal from the first character.
- */
 export function useTypewriter({
   text,
   enabled,
@@ -65,9 +57,6 @@ export function useTypewriter({
       timers.push(timer);
     };
 
-    // Reveal is driven exclusively by timer callbacks — no setState in effect
-    // body, satisfying react-hooks/set-state-in-effect. State resets happen in
-    // `reset()` (event-driven) and in the useState initializer.
     const startTimer = setTimeout(() => {
       revealChar(1);
     }, firstCharDelayMs);

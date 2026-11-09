@@ -16,16 +16,6 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/**
- * Magic-link target for resetting a forgotten password (TD-RNAV-01 cycle 2).
- *
- * Reached via a Universal/App Link rewritten by `app/+native-intent.tsx`.
- * Interactive variant (mirrors web `ResetPasswordForm` + the local
- * `change-password.tsx` form): a missing token short-circuits to the
- * `invalidToken` state; otherwise the user enters a new password (+ confirm),
- * client-validated (length ≥ 8 + match) before `authService.resetPassword`.
- * The token is opaque and never logged or rendered (R13).
- */
 export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -42,7 +32,6 @@ export default function ResetPasswordScreen() {
     router.replace(AUTH_ROUTE);
   };
 
-  // R6 — no token: render the invalidToken state, never call the API.
   if (!token) {
     return (
       <LiquidScreen
@@ -82,7 +71,6 @@ export default function ResetPasswordScreen() {
     );
   }
 
-  // Success state after a resolved reset.
   if (isSuccess) {
     return (
       <LiquidScreen
@@ -142,10 +130,6 @@ export default function ResetPasswordScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsSuccess(true);
     } catch (err) {
-      // Surface the LOCALIZED key (mirrors TokenExchangeFlow's `t(copy.error)`),
-      // never the raw backend string (R10). `reportError` forwards the AppError
-      // for diagnostics — the token is NOT part of that error and is never
-      // logged, breadcrumbed, or echoed here (R13).
       reportError(err, { feature: 'reset-password' });
       setError(t('reset_password.error'));
     } finally {

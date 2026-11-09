@@ -5,6 +5,7 @@ import {
   postMessageSchema,
 } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 import { invalidInput } from '@shared/errors/app.error';
+import { isRecord } from '@shared/utils/is-record';
 import { formatZodIssues } from '@shared/validation/zod-issue.formatter';
 
 import type {
@@ -24,10 +25,6 @@ export type {
 } from './chat.shared-types';
 
 type RecordValue = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is RecordValue => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
 
 const optionalString = (payload: RecordValue, key: string): string | undefined => {
   const value = payload[key];
@@ -85,7 +82,6 @@ export interface PostMessageResponse {
     role: 'assistant';
     text: string;
     createdAt: string;
-    /** Walk-intent only. Sanitized, max 60 chars each. */
     suggestions?: string[];
   };
   metadata: {
@@ -103,8 +99,6 @@ export interface PostMessageResponse {
     citations?: string[];
     deeperContext?: string;
     openQuestion?: string;
-    /** B3 — ≤80 chars, anchored to a fact in answer; omit when no anchor. */
-    suggestedFollowUp?: string;
     imageDescription?: string;
   };
 }
@@ -164,7 +158,6 @@ export interface FeedbackMessageResponse {
   status: 'created' | 'updated' | 'removed';
 }
 
-/** Standard API error envelope returned by all chat endpoints on failure. */
 export interface ApiErrorResponse {
   error: {
     code: string;
@@ -270,8 +263,6 @@ export {
   isListSessionsResponse,
 } from './chat.type-guards';
 
-// GDPR Art. 22 right-to-explanation contract — see docs/GDPR_ART22_SCOPE.md + ADR-048.
-
 export const EXPLANATION_CATEGORIES = [
   'off_topic',
   'prompt_injection',
@@ -293,7 +284,6 @@ const ExplanationProvidedBySchema = z.object({
   version: z.string().min(1).max(64),
 });
 
-/** Wire schema for `GET /api/chat/messages/:id/explanation`. */
 export const ExplanationResponseSchema = z.object({
   decision: z.enum(['allowed', 'blocked']),
   category: z.enum(EXPLANATION_CATEGORIES).nullable(),
@@ -315,7 +305,6 @@ export interface ExplanationParams {
   messageId: string;
 }
 
-/** Throws 400 if `:id` is not a UUID. */
 export const parseExplanationParams = (params: unknown): ExplanationParams => {
   const result = ExplanationParamsSchema.safeParse(params);
   if (!result.success) {

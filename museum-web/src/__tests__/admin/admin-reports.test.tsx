@@ -1,6 +1,3 @@
-/**
- * Admin reports page tests — report list, status filter, review modal, pagination, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -9,8 +6,6 @@ import ReportsPage from '@/app/[locale]/admin/reports/page';
 import type { Report, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/reports',
@@ -33,8 +28,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 
@@ -45,8 +38,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -54,8 +45,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 function makeReport(overrides: Partial<Report> = {}): Report {
   return {
@@ -100,10 +89,6 @@ const mockReportsPage1: PaginatedResponse<Report> = {
   totalPages: 2,
 };
 
-// ============================================================================
-// Reports page
-// ============================================================================
-
 describe('ReportsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -122,11 +107,7 @@ describe('ReportsPage', () => {
   });
 
   it('shows loading spinner while fetching data', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending */
-      }),
-    );
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -153,7 +134,6 @@ describe('ReportsPage', () => {
 
     expect(screen.getByText('spam')).toBeInTheDocument();
     expect(screen.getByText('off-topic')).toBeInTheDocument();
-    // Statuses appear both in the table and in the filter dropdown options
     expect(screen.getAllByText('pending').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('reviewed').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('dismissed').length).toBeGreaterThanOrEqual(1);
@@ -392,7 +372,6 @@ describe('ReportsPage', () => {
     );
 
     await waitFor(() => {
-      // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
       expect(mockApiGet).toHaveBeenCalled();
       expect(mockApiGet.mock.calls[0]?.[0]).toEqual(expect.stringContaining('/api/admin/reports'));
     });

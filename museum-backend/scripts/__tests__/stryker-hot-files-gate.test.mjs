@@ -67,8 +67,8 @@ describe('stryker-hot-files-gate', () => {
       { path: 'src/b.ts', killRatioMin: 80 },
     ]);
     writeMutationJson({
-      'src/a.ts': makeFileMutants(8, 2), // 80%
-      'src/b.ts': makeFileMutants(9, 1), // 90%
+      'src/a.ts': makeFileMutants(8, 2),
+      'src/b.ts': makeFileMutants(9, 1),
     });
     const r = runScript();
     expect(r.code).toBe(0);
@@ -77,7 +77,7 @@ describe('stryker-hot-files-gate', () => {
 
   it('exits 1 when a hot file falls below killRatioMin', () => {
     writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
-    writeMutationJson({ 'src/a.ts': makeFileMutants(7, 3) }); // 70%
+    writeMutationJson({ 'src/a.ts': makeFileMutants(7, 3) });
     const r = runScript();
     expect(r.code).toBe(1);
     expect(r.stderr + r.stdout).toMatch(/src\/a\.ts/);
@@ -94,7 +94,6 @@ describe('stryker-hot-files-gate', () => {
 
   it('counts NoCoverage in denominator only (NoCoverage = gap, not a kill)', () => {
     writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
-    // 8 killed, 1 survived, 1 noCoverage, 0 timeout → (8+0)/10 = 80% — passes
     writeMutationJson({ 'src/a.ts': makeFileMutants(8, 1, 1, 0) });
     const r = runScript();
     expect(r.code).toBe(0);
@@ -102,7 +101,6 @@ describe('stryker-hot-files-gate', () => {
 
   it('counts Timeout as a kill (official Stryker mutationScore convention)', () => {
     writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
-    // 0 killed, 0 survived, 0 noCoverage, 10 timeout → (0+10)/10 = 100% — passes
     writeMutationJson({ 'src/a.ts': makeFileMutants(0, 0, 0, 10) });
     const r = runScript();
     expect(r.code).toBe(0);
@@ -110,7 +108,6 @@ describe('stryker-hot-files-gate', () => {
 
   it('fails when survivors push the official score below threshold', () => {
     writeRegistry([{ path: 'src/a.ts', killRatioMin: 80 }]);
-    // 5 killed, 3 survived, 0 noCoverage, 0 timeout → 5/8 = 62.5% — fails
     writeMutationJson({ 'src/a.ts': makeFileMutants(5, 3, 0, 0) });
     const r = runScript();
     expect(r.code).toBe(1);

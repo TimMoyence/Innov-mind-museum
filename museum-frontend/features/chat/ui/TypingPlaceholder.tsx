@@ -43,7 +43,6 @@ function AnimatedDot({ delay, color, reduceMotion }: AnimatedDotProps): ReactEle
         -1,
       ),
     );
-    // TD-REA-02 — cancel the infinite withRepeat on unmount.
     return () => {
       cancelAnimation(opacity);
     };
@@ -73,7 +72,6 @@ function SkeletonBubble({ color, reduceMotion }: SkeletonBubbleProps): ReactElem
       ),
       -1,
     );
-    // TD-REA-02 — cancel the infinite withRepeat on unmount.
     return () => {
       cancelAnimation(opacity);
     };
@@ -84,12 +82,10 @@ function SkeletonBubble({ color, reduceMotion }: SkeletonBubbleProps): ReactElem
 }
 
 export interface TypingPlaceholderProps {
-  /** When true, shows the skeleton bubble + dots. When false, renders nothing. */
   visible: boolean;
   testID?: string;
 }
 
-/** Assistant slot component: pulsing skeleton bubble + 3-dot animation while pending/streaming. */
 export function TypingPlaceholder({
   visible,
   testID,

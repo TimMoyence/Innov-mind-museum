@@ -17,7 +17,6 @@ export class ChangeEmailUseCase {
     private readonly frontendUrl?: string,
   ) {}
 
-  /** @returns plain-text token (useful in dev/test; prod relies on email). */
   async execute(
     userId: number,
     newEmail: string,
@@ -41,9 +40,8 @@ export class ChangeEmailUseCase {
       throw badRequest('This email is already in use');
     }
 
-    // 32-byte raw → hex; SHA-256 hash persisted (raw sent in email).
     const { raw: token, hashed: hashedToken } = issueEmailToken();
-    const expires = new Date(Date.now() + 3600000); // 1 hour
+    const expires = new Date(Date.now() + 3600000);
 
     await this.userRepository.setEmailChangeToken(userId, hashedToken, normalizedEmail, expires);
 

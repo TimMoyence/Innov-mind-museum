@@ -98,7 +98,7 @@ Backend `@src/*`, `@modules/*`, `@data/*`, `@shared/*` ; frontend `@/*` → `./*
 - Frontend RTL : `marginStart/End`, `paddingStart/End`, `start/end`, `borderStart/End*` ; `textAlign: 'auto'` seulement. Ne pas toucher `hitSlop`, `fitBounds({padding})`, `Confetti.tsx`, `alignSelf`.
 - Frontend : aucun emoji unicode, visuels en PNG `require(...)` et icônes Ionicons.
 - Frontend : un conteneur coloré s'espace par `padding` + `gap`, jamais par la `margin` verticale d'un enfant.
-- Frontend : un `<Modal>` monté en permanence garde son état ; le réinitialiser par `useEffect(reset, [visible])`.
+- Frontend : un `<Modal>` monté en permanence garde son état ; le réinitialiser pendant le rendu quand `visible` change (`const [wasVisible, setWasVisible] = useState(visible)` puis comparaison), jamais par un `setState` dans un `useEffect`, que `react-hooks/set-state-in-effect` refuse.
 - Dates : le backend émet de l'ISO 8601 UTC, le front formate par `Intl.DateTimeFormat`, jamais d'ISO brut à l'écran.
 - NetInfo `isConnectionExpensive` mesure le coût (metered), pas la lenteur : `resolveDataMode` (`DataModeProvider.tsx`) n'utilise que disponibilité, étiquette 2g/3g et le moteur de qualité passif ; metered ne gouverne que prefetch et compression d'upload.
 - Jetons d'auth mobiles `WHEN_UNLOCKED_THIS_DEVICE_ONLY` (`authTokenStore.ts`) : ne pas relâcher.

@@ -1,27 +1,3 @@
-/**
- * UFR-022 red phase — PR-11 dailyChatLimit migration to createRateLimitMiddleware.
- * RUN_ID: 2026-05-23-pr-11-dailyChatLimit.
- *
- * Behavioural contract for the MIGRATED `dailyChatLimit` middleware. Pre-green:
- * this entire file FAILS because the current implementation:
- *   1. Imports `setDailyChatLimitCacheService` / `_resetDailyChatLimitCacheService`
- *      / `clearDailyChatLimitBuckets` — those exports will be deleted in green.
- *   2. Uses a non-atomic `cache.get` → `cache.set` pattern with `CacheService`,
- *      not the shared `RedisRateLimitStore.increment` Lua-atomic path.
- *   3. Does NOT set a `Retry-After` header on 429 (the shared factory does).
- *
- * Post-green: `dailyChatLimit` is a single `createRateLimitMiddleware({...})`
- * call. The Redis surface mocked here is `RedisRateLimitStore`, wired via
- * `setRedisRateLimitStore`. The atomic guarantee (R4) comes for free.
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/spec.md §4-§5
- *   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/design.md §3 / §5.2
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify these tests. Suspected
- * bug → emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
- */
 import type { Request, Response } from 'express';
 
 import { dailyChatLimit } from '@shared/middleware/daily-chat-limit.middleware';
@@ -34,7 +10,6 @@ import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-st
 import { env } from '@src/config/env';
 import { makePartialRequest, makePartialResponse } from '../../helpers/http/express-mock.helpers';
 
-/** Flush microtask cycles — needed for the Redis path's promise chain. */
 const flushAsync = async (): Promise<void> => {
   for (let i = 0; i < 5; i++) await new Promise(process.nextTick);
 };
@@ -55,14 +30,6 @@ const makeMockRes = (): MockRes => makePartialResponse() as MockRes;
 
 const todayStr = (): string => new Date().toISOString().slice(0, 10);
 
-/**
- * Factory for a RedisRateLimitStore mock that mimics atomic INCR semantics:
- * an internal per-key counter increments on each `increment(key, windowMs)`
- * call and returns `{ count, resetAt }`. Used to drive concurrency tests
- * (R4 / D3.b) where N parallel requests must result in `min(N, limit)`
- * allowed + `max(0, N - limit)` blocked.
- * @param initialCounters
- */
 const makeAtomicMockRedisStore = (
   initialCounters: Record<string, number> = {},
 ): RedisRateLimitStore & { _counters: Map<string, number> } => {
@@ -84,7 +51,6 @@ const makeAtomicMockRedisStore = (
   } as unknown as RedisRateLimitStore & { _counters: Map<string, number> };
 };
 
-/** Mock that always rejects — drives fail-OPEN / fail-CLOSED branches. */
 const makeFailingMockRedisStore = (): RedisRateLimitStore =>
   ({
     increment: jest.fn().mockRejectedValue(new Error('Redis connection refused')),
@@ -93,12 +59,6 @@ const makeFailingMockRedisStore = (): RedisRateLimitStore =>
     stopSweep: jest.fn(),
   }) as unknown as RedisRateLimitStore;
 
-/**
- * Pin `env.rateLimit.failClosed` for a single test, restore in afterEach.
- * Uses Object.defineProperty because `env.rateLimit` may be a frozen literal.
- * @param value
- * @param fn
- */
 const withFailClosed = (value: boolean, fn: () => void | Promise<void>): void | Promise<void> => {
   const original = env.rateLimit.failClosed;
   Object.defineProperty(env.rateLimit, 'failClosed', {
@@ -116,10 +76,6 @@ const withFailClosed = (value: boolean, fn: () => void | Promise<void>): void | 
     });
   }
 };
-
-// ---------------------------------------------------------------------------
-// In-memory path (no Redis store wired) — anonymous skip + cap behaviour
-// ---------------------------------------------------------------------------
 
 describe('dailyChatLimit middleware — in-memory path (no Redis store wired)', () => {
   beforeEach(() => {
@@ -147,7 +103,6 @@ describe('dailyChatLimit middleware — in-memory path (no Redis store wired)', 
     const limit = Math.max(1, env.freeTierDailyChatLimit);
     const req = makeMockReq({ user: { id: 'cap-user' } });
 
-    // Exhaust the limit.
     for (let i = 0; i < limit; i++) {
       const res = makeMockRes();
       const next = jest.fn();
@@ -155,7 +110,6 @@ describe('dailyChatLimit middleware — in-memory path (no Redis store wired)', 
       expect(next).toHaveBeenCalledWith();
     }
 
-    // The (limit+1)-th call must be blocked with the documented wire format.
     const res = makeMockRes();
     const next = jest.fn();
     dailyChatLimit(req, res, next);
@@ -182,10 +136,8 @@ describe('dailyChatLimit middleware — in-memory path (no Redis store wired)', 
     dailyChatLimit(req, makeMockRes(), blockedNext);
     expect(blockedNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
 
-    // Jump to the next UTC day.
     jest.useFakeTimers();
     jest.setSystemTime(new Date(Date.now() + 25 * 60 * 60 * 1000));
-    // Refresh the in-memory bucket store so day-keyed entries are not seen.
     clearRateLimitBuckets();
 
     const next = jest.fn();
@@ -219,10 +171,6 @@ describe('dailyChatLimit middleware — in-memory path (no Redis store wired)', 
   });
 });
 
-// ---------------------------------------------------------------------------
-// Redis distributed path — atomic increment + wire format + fail semantics
-// ---------------------------------------------------------------------------
-
 describe('dailyChatLimit middleware — Redis distributed path (atomic increment)', () => {
   beforeEach(() => {
     clearRateLimitBuckets();
@@ -245,10 +193,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
     dailyChatLimit(req, res, next);
     await flushAsync();
 
-    // Spec §8 D1 + design §3.1 — key is `daily-chat:<id>:<UTC-date>` with no
-    // namespace prefix (`bucketName: ''` opts out). The `ratelimit:` prefix is
-    // added INSIDE `RedisRateLimitStore.increment`, so the mock spy sees the
-    // unprefixed key as-emitted by the factory.
     expect(store.increment).toHaveBeenCalledWith(
       `daily-chat:100:${todayStr()}`,
       expect.any(Number),
@@ -259,7 +203,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
   it('D2.b — Redis path at cap → AppError emitted with the documented wire format + Retry-After header', async () => {
     const limit = Math.max(1, env.freeTierDailyChatLimit);
     const store = {
-      // Force a count > limit on the first call.
       increment: jest.fn().mockResolvedValue({ count: limit + 1, resetAt: Date.now() + 60_000 }),
       reset: jest.fn(),
       clear: jest.fn(),
@@ -282,8 +225,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
         details: { limit },
       }),
     );
-    // R5.2 — Retry-After header is set on cap (additive enrichment over the
-    // legacy implementation, which did NOT set it).
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', expect.any(String));
   });
 
@@ -298,7 +239,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
       dailyChatLimit(req, res, next);
       await flushAsync();
 
-      // Fall through to memory — request passes (under cap on a fresh bucket).
       expect(next).toHaveBeenCalledWith();
       expect(next).not.toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
       expect(next).not.toHaveBeenCalledWith(
@@ -331,7 +271,7 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
     const store = makeAtomicMockRedisStore();
     setRedisRateLimitStore(store);
 
-    const req = makeMockReq(); // no user
+    const req = makeMockReq();
     const res = makeMockRes();
     const next = jest.fn();
 
@@ -351,7 +291,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
 
     const userId = 'burst-user';
 
-    // Fire N requests in parallel; collect each call's `next` result.
     const nextSpies: jest.Mock[] = [];
     const promises: Promise<void>[] = [];
     for (let i = 0; i < N; i++) {
@@ -368,8 +307,6 @@ describe('dailyChatLimit middleware — Redis distributed path (atomic increment
     let allowed = 0;
     let blocked = 0;
     for (const spy of nextSpies) {
-      // Each `next` is called exactly once — either with no args (allowed) or
-      // with an AppError of statusCode 429 (blocked).
       const calls = spy.mock.calls;
       expect(calls).toHaveLength(1);
       const arg = calls[0][0] as { statusCode?: number; code?: string } | undefined;

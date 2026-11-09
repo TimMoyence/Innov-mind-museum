@@ -17,9 +17,8 @@ on:
       - '.github/workflows/ci-cd-web.yml'
     branches: ['main']
   schedule:
-    - cron: '23 3 * * *'   # 03:23 UTC nightly — multi-browser Playwright run
+    - cron: '23 3 * * *'
 
-# Top-level least-privilege default. Deploy job overrides with packages: write.
 permissions:
   contents: read
 
@@ -50,8 +49,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        # pnpm audit uses retired npm endpoints (both /audits and /audits/quick return 410).
-        # Trivy fs scan reads pnpm-lock.yaml directly — consistent with image scanning below.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           scan-type: fs
@@ -75,25 +72,11 @@ jobs:
       - name: Test
         run: pnpm test
 
-      # R18 — Web cookies audit sentinel. Moved here from ci-cd-backend.yml
-      # (reviewer feedback IMPORTANT 3 — R18 acceptance explicitly scopes the
-      # gate to the web quality job). The audit script itself still lives in
-      # the backend workspace (single source of truth — design D9 cross-app
-      # sentinel acceptable) and is pure Node (no pnpm install needed). The
-      # working-directory job default points at museum-web, so reach into
-      # the sibling backend tree via a relative path.
       - name: Web cookies audit sentinel (R18)
         run: node ../museum-backend/scripts/sentinels/web-cookies-audit.mjs
-      # web-domain-canonical — blocks the non-owned domain musaium.app from
-      # leaking into user-facing web surfaces (notably the EAA accessibility
-      # contact email). Same cross-app sentinel convention as R18: pure Node,
-      # lives in the backend tree, invoked via relative path from museum-web.
       - name: Web canonical-domain sentinel (no musaium.app)
         run: node ../museum-backend/scripts/sentinels/web-domain-canonical.mjs
-      # Coverage gate (vitest.config.ts thresholds) activates after Bloc C5 lands
-      # 10 admin panel tests bringing museum-web above the 70 % floor — see ADR-007.
 
-  # ─── Playwright e2e (Chromium on PR + push) ─────────────────────────────
   playwright-pr:
     needs: quality
     if: ${{ github.event_name != 'schedule' }}
@@ -104,9 +87,6 @@ jobs:
         working-directory: museum-web
     services:
       postgres:
-        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
-        # Required because BE migration AddArtworkEmbeddings1778406339944
-        # runs `CREATE EXTENSION IF NOT EXISTS vector`, which fails on vanilla postgres:16.
         image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
         env:
           POSTGRES_USER: museum_dev
@@ -132,7 +112,6 @@ jobs:
             museum-web/pnpm-lock.yaml
             museum-backend/pnpm-lock.yaml
 
-      # Backend: install + migrate + start
       - name: Install backend deps
         working-directory: museum-backend
         run: pnpm install --frozen-lockfile
@@ -166,12 +145,6 @@ jobs:
           done
           echo "Backend did not become healthy"; tail -50 /tmp/be.log; exit 1
 
-      # Web: install + build + start the PRODUCTION server.
-      # We test the prod build (`next build` + `next start`), NOT `next dev`:
-      # the dev server differs from prod (no minification, different hydration
-      # timing, dev-only error overlays) and was masking real prod e2e failures.
-      # API_BASE_URL is read at build time (next.config.ts rewrites manifest) AND
-      # at runtime (server-side proxy + src/lib/api.ts) — set on both steps.
       - name: Install web deps
         run: pnpm install --frozen-lockfile
       - name: Build Next.js (production)
@@ -190,7 +163,6 @@ jobs:
           done
           echo "Web did not come up"; tail -50 /tmp/web.log; exit 1
 
-      # Playwright
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright suite (Chromium)
@@ -210,7 +182,6 @@ jobs:
           path: museum-web/playwright-report/
           retention-days: 7
 
-  # ─── Playwright e2e (3-browser matrix nightly) ──────────────────────────
   playwright-nightly:
     needs: quality
     if: ${{ github.event_name == 'schedule' }}
@@ -221,9 +192,6 @@ jobs:
         working-directory: museum-web
     services:
       postgres:
-        # pgvector/pgvector:pg16 = postgres 16 + pgvector ≥ 0.7 preinstalled.
-        # Required because BE migration AddArtworkEmbeddings1778406339944
-        # runs `CREATE EXTENSION IF NOT EXISTS vector`, which fails on vanilla postgres:16.
         image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
         env:
           POSTGRES_USER: museum_dev
@@ -280,8 +248,6 @@ jobs:
             sleep 2
           done
           tail -50 /tmp/be.log; exit 1
-      # Build + start the PRODUCTION server (see playwright-pr rationale):
-      # the nightly multi-browser run must exercise the real prod build, not dev.
       - name: Install web deps
         run: pnpm install --frozen-lockfile
       - name: Build Next.js (production)
@@ -318,14 +284,6 @@ jobs:
           path: museum-web/playwright-report/
           retention-days: 14
 
-  # ─── Web nightly issue-on-red alert ─────────────────────────────────────
-  # Mirrors the mobile `maestro-full-alert` pattern: the nightly multi-browser
-  # Playwright run is otherwise a dead gate (nobody watches the cron). On a red
-  # nightly this opens (or re-pings) a tracking issue via the native GITHUB_TOKEN
-  # — the repo owner gets a GitHub notification and the issue stays visible in
-  # the Issues tab until fixed. On a green nightly it auto-closes the issue.
-  # No external secret/webhook needed. Dedicated label `nightly-web-e2e-alert`
-  # (MUST NOT collide with the mobile `nightly-maestro-alert` label).
   playwright-nightly-alert:
     if: ${{ always() && github.event_name == 'schedule' }}
     needs: [playwright-nightly]
@@ -444,9 +402,6 @@ jobs:
         with:
           dockerfile: ./museum-web/deploy/Dockerfile.prod
           tag: museum-web:ci
-          # Bake the Plausible site domain into the client bundle (NEXT_PUBLIC_*
-          # is inlined at build, not read at runtime). Repo var overrides the
-          # musaium.com default. Keep in sync with the Push step below.
           build-args: |
             NEXT_PUBLIC_PLAUSIBLE_DOMAIN=${{ vars.PLAUSIBLE_DOMAIN || 'musaium.com' }}
 
@@ -456,8 +411,6 @@ jobs:
           context: .
           file: ./museum-web/deploy/Dockerfile.prod
           push: true
-          # Same build-arg as the Build/Trivy step above so the scanned image
-          # and the pushed image are byte-for-byte the same artifact.
           build-args: |
             NEXT_PUBLIC_PLAUSIBLE_DOMAIN=${{ vars.PLAUSIBLE_DOMAIN || 'musaium.com' }}
           tags: |
@@ -481,16 +434,9 @@ jobs:
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
 
-            # Export WEB_IMAGE_TAG so docker-compose.yml can interpolate ${WEB_IMAGE_TAG}.
             export WEB_IMAGE_TAG
             echo "[deploy] using WEB_IMAGE_TAG=${WEB_IMAGE_TAG}"
 
-            # Persist WEB_IMAGE_TAG to /srv/museum/.env so out-of-band restarts
-            # reuse the right tag instead of silently falling back to `:latest`.
-            # Same root cause + fix as backend (see ci-cd-backend.yml deploy-prod
-            # comment) — 2026-05-13 OTel crash-loop showed the local `:latest`
-            # can lag prod by days when CI always pulls `:<sha>` only.
-            # /srv/museum/.env is root-owned, sudo required.
             ENV_FILE=/srv/museum/.env
             BACKUP_DIR="${HOME}/.museum-env-backups"
             mkdir -p "${BACKUP_DIR}"
@@ -500,20 +446,10 @@ jobs:
             sudo mv "${ENV_FILE}.tmp" "${ENV_FILE}"
             echo "[deploy] persisted WEB_IMAGE_TAG=${WEB_IMAGE_TAG} to ${ENV_FILE}"
 
-            # 1. Pull the new image
             docker compose pull museum-web
 
-            # 2. Restart with 30s grace period for in-flight requests to drain.
-            # `--no-deps` est CRITIQUE : sans lui compose voit que .env a changé
-            # (WEB_IMAGE_TAG patch) et décide de recréer aussi museum-backend
-            # par cascade dependencies → race condition "Container name
-            # /museum-backend-1 is already in use" (vu run 25987976752 + 25987305512).
-            # `--no-deps` isole le restart à museum-web seul, backend reste
-            # intact. Pérein 10y : tout deploy service-spécifique DOIT utiliser
-            # --no-deps si .env est partagé entre services.
             docker compose up -d --no-deps --remove-orphans --timeout 30 museum-web
 
-            # 3. Wait for the new container to pass its healthcheck
             echo "Waiting for museum-web healthcheck..."
             TRIES=0
             MAX_TRIES=20
@@ -535,17 +471,14 @@ jobs:
           BASE_URL="${BASE_URL%/}"
           sleep 10
 
-          # 1. Landing renders with locale middleware (lang attribute set, meta description present)
           echo "[smoke] checking landing page SSR..."
           LANDING="$(curl -sfL "${BASE_URL}/")"
           echo "$LANDING" | grep -q '<html lang="' || (echo "FAIL: locale middleware did not set lang attribute" && exit 1)
           echo "$LANDING" | grep -q '<meta name="description"' || (echo "FAIL: meta description missing — SEO broken" && exit 1)
 
-          # 2. Sitemap reachable (Next.js routing alive)
           echo "[smoke] checking sitemap..."
           curl -sfL "${BASE_URL}/sitemap.xml" | grep -q '<urlset' || (echo "FAIL: sitemap.xml unreachable or malformed" && exit 1)
 
-          # 3. Static asset bundle reachable (CSS/JS shipped)
           echo "[smoke] checking _next static assets..."
           ASSET_URL="$(echo "$LANDING" | grep -oE '/_next/static/[^" ]+\.(js|css)' | head -1 || true)"
           if [ -n "$ASSET_URL" ]; then
@@ -554,7 +487,6 @@ jobs:
             echo "WARN: no /_next/static asset reference found in landing HTML"
           fi
 
-          # 4. Backend API reachable through web proxy (/api/health round-trip)
           echo "[smoke] checking /api/health round-trip..."
           HEALTH_HTTP="$(curl -s -o /tmp/health.json -w '%{http_code}' "${BASE_URL}/api/health" || echo 000)"
           if [ "$HEALTH_HTTP" != "200" ]; then

@@ -1,151 +1,105 @@
 appId: com.musaium.mobile.preview
 ---
-# Onboarding Flow: Walk the v2 carousel end-to-end and complete to home.
-#
-# The v2 carousel (app/(stack)/onboarding.tsx) has 4 slides:
-#   greeting → museumMode → cameraIntent → walkIntent
-# The legacy 3-slide ("Practical Tips" / "Help & Support") path no longer
-# exists, and Home has no "Onboarding" button — the deterministic entry is
-# Settings → "Onboarding Help" (settings.onboarding_help) for a logged-in user.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 1: Cold start -> auth -> login
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
 - runFlow:
     when:
       visible:
-        text: "Welcome back|Bon retour"
+        text: 'Welcome back|Bon retour'
     file: helpers/quick-login.yaml
 
-# iOS native "Save Password?" dialog after login submit
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Reach the carousel via Settings → Onboarding Help
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "Settings|Paramètres"
+      text: 'Settings|Paramètres'
     timeout: 10000
-# The settings row sets accessibilityLabel a11y.settings.onboarding_link
-# ("Revoir le guide de démarrage" / "Replay onboarding guide") which COLLAPSES
-# the subtree — the visible "Aide à l'utilisation" Text is NOT separately
-# queryable. Match the accessibility label, partial visibility OK.
 - scrollUntilVisible:
     element:
-      text: "Replay onboarding guide|Revoir le guide de démarrage"
+      text: 'Replay onboarding guide|Revoir le guide de démarrage'
     direction: DOWN
     visibilityPercentage: 40
 - tapOn:
-    text: "Replay onboarding guide|Revoir le guide de démarrage"
+    text: 'Replay onboarding guide|Revoir le guide de démarrage'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Slide 1 — Greeting
-# ──────────────────────────────────────────────
-# NOTE: the Skip / Next / Get-Started buttons set accessibilityLabel
-# (a11y.onboarding.*) which COLLAPSES the visible label text — match the
-# accessibility labels: skip="Passer l'introduction"/"Skip onboarding",
-# next="Diapositive suivante"/"Next slide", get_started="Commencer"/"Get started".
 - extendedWaitUntil:
     visible:
-      text: "Welcome to Musaium|Bienvenue sur Musaium"
+      text: 'Welcome to Musaium|Bienvenue sur Musaium'
     timeout: 10000
-# UFR-021 anchor for app/(stack)/onboarding.tsx — Settings → "Replay onboarding
-# guide" opened the /(stack)/onboarding route (the sentinel matches the
-# "/onboarding" route literal). The "Welcome to Musaium" greeting is the runtime
-# proof we reached the carousel; the deep-link re-resolves the same route (lands
-# back on slide 1).
 - openLink:
-    link: "musaium:///(stack)/onboarding"
+    link: 'musaium:///(stack)/onboarding'
 - extendedWaitUntil:
     visible:
-      text: "Welcome to Musaium|Bienvenue sur Musaium"
+      text: 'Welcome to Musaium|Bienvenue sur Musaium'
     timeout: 10000
 - assertVisible:
     text: "Skip onboarding|Passer l'introduction"
 - assertVisible:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 4: Slide 2 — Museum mode
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Museum mode|Mode musée"
+      text: 'Museum mode|Mode musée'
     timeout: 5000
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 5: Slide 3 — Camera intent
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Photograph artworks|Photographier des œuvres"
+      text: 'Photograph artworks|Photographier des œuvres'
     timeout: 5000
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 6: Slide 4 — Walk intent (last slide, Get Started CTA)
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Guided walks|Visites guidées"
+      text: 'Guided walks|Visites guidées'
     timeout: 5000
 - assertVisible:
-    text: "Get started|Commencer"
+    text: 'Get started|Commencer'
 - tapOn:
-    text: "Get started|Commencer"
+    text: 'Get started|Commencer'
 - waitForAnimationToEnd:
     timeout: 8000
 
-# ──────────────────────────────────────────────
-# Phase 7: Verify we land on home screen
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
-# Confirm the start-conversation CTA exists (its accessibilityLabel — the Pressable
-# collapses the visible "Démarrer une conversation" Text). Scroll into view first.
 - scrollUntilVisible:
     element:
-      text: "Commencer une nouvelle conversation|Start a new conversation"
+      text: 'Commencer une nouvelle conversation|Start a new conversation'
     direction: DOWN
     timeout: 20000
     visibilityPercentage: 30

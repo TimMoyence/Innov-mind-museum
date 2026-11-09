@@ -32,7 +32,6 @@ export const SkeletonBox = ({
 
   useEffect(() => {
     if (reduceMotion) {
-      // WCAG 2.3.3: hold a static mid-opacity value instead of pulsing.
       opacity.value = 0.5;
       return;
     }
@@ -41,8 +40,6 @@ export const SkeletonBox = ({
       -1,
       false,
     );
-    // TD-REA-02 — cancel the infinite withRepeat on unmount so the worklet
-    // does not survive the React tree teardown (lib-docs/react-native-reanimated/PATTERNS.md).
     return () => {
       cancelAnimation(opacity);
     };

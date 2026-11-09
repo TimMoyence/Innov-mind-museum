@@ -1,96 +1,59 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: ChatScreen
-# runtime: NIGHTLY weak-net (device→Toxiproxy, not validated in unit CI)
-#
-# W3-06 — Chat under EDGE / low-data + an offline blip (Layer 3 device track).
-#
-# Drives the REAL low-data path the user takes: Settings → "Data saving mode"
-# → "Saving enabled" (persisted preference → resolveDataMode 'low' → the
-# chat-scoped LowDataBadge lights — US-13.2), sends a chat message under the
-# shaped condition, flips airplane mode ON to assert the OFFLINE banner
-# surfaces and the chat surface degrades gracefully (an i18n offline string,
-# NOT a raw error token like "NETWORK_ERROR"). Restoring connectivity must
-# clear the banner (resync). Then taps the badge → data settings screen
-# (US-09.3 happy path, UFR-021), and cleans up there by choosing "Automatic"
-# (R6 no-leak).
-#
-# The preference is set AFTER chat-entry: its `launchApp clearState` wipes any
-# preference set before it. The settings route is a regular route, so this
-# works in the release APK the nightly runs.
-#
-# DEVICE→PROXY: on the Android nightly matrix the app's API base URL points at
-# the Toxiproxy shaped listener (10.0.2.2:3100) seeded from
-# `node scripts/net-shaping/profile-to-toxics.mjs edge`. setAirplaneMode is
-# reliable on Android; the iOS sim cannot be forced offline (best-effort) so the
-# offline assertions are `optional` (mirrors connectivity-offline-banner.yaml).
-#
-# Prereqs: seeded account e2e-test-login@test.musaium.dev / TestPassword123!,
-# backend reachable through the shaped proxy, working LLM provider.
-
-# ── Reach the chat composer via the proven deterministic entry helper ──
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ── Turn the data saving mode on from Settings, then come back to the chat ──
 - runFlow:
     file: helpers/data-saving-mode.yaml
     env:
-      MODE: "Économie activée|Saving enabled"
+      MODE: 'Économie activée|Saving enabled'
 
-# ── Low-data badge must light (preference 'low' + online) — NON-optional ──
 - extendedWaitUntil:
     visible:
-      id: "low-data-badge"
+      id: 'low-data-badge'
     timeout: 15000
 
-# ── Send a message under the shaped (EDGE) condition ──
 - tapOn:
-    id: "chat-input"
-- inputText: "Parle-moi de cette oeuvre."
+    id: 'chat-input'
+- inputText: 'Parle-moi de cette oeuvre.'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
+    id: 'send-button'
 
-# ── Go offline mid-conversation (Android: reliable; iOS sim: no-op best-effort) ──
 - setAirplaneMode: enabled
 - waitForAnimationToEnd
 
-# Offline banner surfaces — an i18n string, never a raw token.
 - extendedWaitUntil:
     visible:
       text: "Vous êtes hors ligne|You're offline"
     timeout: 12000
     optional: true
 - assertNotVisible:
-    text: "NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError"
+    text: 'NETWORK_ERROR|ECONNREFUSED|undefined|null|TypeError'
 
-# ── Restore connectivity → banner clears (resync) ──
 - setAirplaneMode: disabled
 - waitForAnimationToEnd
 - extendedWaitUntil:
     notVisible:
-      id: "offline-banner"
+      id: 'offline-banner'
     timeout: 20000
     optional: true
 
-# ── Badge tap-through → data settings screen (US-09.3, UFR-021 happy path) ──
 - extendedWaitUntil:
     visible:
-      id: "low-data-badge"
+      id: 'low-data-badge'
     timeout: 15000
 - tapOn:
-    id: "low-data-badge"
+    id: 'low-data-badge'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 40000
 
-# ── Cleanup: back to "Automatic" so the preference never leaks (R6 no-leak) ──
 - scrollUntilVisible:
     element:
-      text: "Automatique|Automatic"
+      text: 'Automatique|Automatic'
     direction: DOWN
     timeout: 20000
 - tapOn:
-    text: "Automatique|Automatic"
+    text: 'Automatique|Automatic'

@@ -32,7 +32,6 @@ const makeConsentRepo = (rows: UserConsent[]): IUserConsentRepository => ({
   listForUser: jest.fn().mockResolvedValue(rows),
 });
 
-/** B3 — the new DSAR export ports, defaulted to empty so the legacy assertions hold. */
 const emptyExtraExportPorts = () => ({
   userMemoryExport: { getForUser: async () => null },
   auditLogExport: { listForUser: async () => [] },
@@ -195,9 +194,7 @@ describe('ExportUserDataUseCase', () => {
 
     expect(result.user.firstname).toBeNull();
     expect(result.user.lastname).toBeNull();
-    // B3 — `locale` placeholder replaced by `defaultLocale` (schemaVersion '2').
     expect(result.user).not.toHaveProperty('locale');
-    expect(typeof result.user.defaultLocale).toBe('string');
   });
 
   it('preserves revokedAt timestamp for revoked consents', async () => {

@@ -14,15 +14,6 @@ import {
   mockWbSearchResponse,
 } from '../../../helpers/http/wikidata-fixtures';
 
-/**
- * R14 / V2 / H1 — SPARQL parametrization defense-in-depth.
- *
- * Goal: every public surface that interpolates a Wikidata id / lang / literal
- * into a SPARQL string MUST throw {@link ValidationError} on tampered input
- * BEFORE the SPARQL is composed. The pre-existing loose regex prefilter
- * remains, but is no longer the trust boundary.
- */
-
 describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
   describe('assertEntityId', () => {
     const cases: [string, unknown][] = [
@@ -36,9 +27,6 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       ['empty string', ''],
       ['null', null],
       ['undefined', undefined],
-      // U+01EA "Latin capital letter O with ogonek" — visually similar enough
-      // to bypass naive byte-equality checks; here we use the Cyrillic Q
-      // homoglyph to verify the regex pins to ASCII `Q` (U+0051).
       ['Cyrillic Q homoglyph U+01EA', 'Ǫ123'],
       ['decimal point in id', 'Q1.2'],
       ['overflow attempt — 20 trailing digits', `Q${'1'.repeat(20)}`],
@@ -59,7 +47,6 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       expect(() => {
         assertEntityId('Q12345678');
       }).not.toThrow();
-      // Boundary: 12 digits is the max allowed (Q + up to 12 digits).
       expect(() => {
         assertEntityId(`Q9${'0'.repeat(11)}`);
       }).not.toThrow();
@@ -73,14 +60,11 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(ValidationError);
         const msg = (err as Error).message;
-        // Echoed slice should not exceed 32 chars from the original payload.
         expect(msg.length).toBeLessThan(80);
         expect(msg).not.toContain('A'.repeat(100));
       }
     });
 
-    // Kills L57:31 StringLiteral, L39 ConditionalExpression/StringLiteral,
-    // L42:10 StringLiteral mutations on the error message + describeForError.
     it('throws with a message-anchored prefix and verbatim echo for short strings', () => {
       expect(() => {
         assertEntityId('Q!!!short');
@@ -102,10 +86,8 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       }).toThrow(/^invalid Wikidata entity id: <object>$/);
     });
 
-    // Boundary: exactly 32 chars must echo verbatim (no ellipsis).
-    // Kills L40:12 EqualityOperator (> → >=).
     it('does not truncate a 32-character string (boundary, no ellipsis)', () => {
-      const at32 = `Q!!!${'A'.repeat(28)}`; // 32 chars total
+      const at32 = `Q!!!${'A'.repeat(28)}`;
       expect(at32).toHaveLength(32);
       try {
         assertEntityId(at32);
@@ -117,11 +99,8 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       }
     });
 
-    // 33 chars must truncate to 32 + ellipsis.
-    // Kills L40:44 StringLiteral (slice template → empty) and L40:12
-    // ConditionalExpression (length > 32 → true forces truncation regardless).
     it('truncates a 33-character string to 32 chars plus ellipsis', () => {
-      const at33 = `Q!!!${'A'.repeat(29)}`; // 33 chars total
+      const at33 = `Q!!!${'A'.repeat(29)}`;
       expect(at33).toHaveLength(33);
       try {
         assertEntityId(at33);
@@ -130,7 +109,7 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
         const msg = (err as Error).message;
         expect(msg).toBe(`invalid Wikidata entity id: ${at33.slice(0, 32)}…`);
         expect(msg).toContain('…');
-        expect(msg).not.toContain(at33); // full 33-char string must NOT appear
+        expect(msg).not.toContain(at33);
       }
     });
   });
@@ -174,7 +153,6 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       }).not.toThrow();
     });
 
-    // Kills L69:31 StringLiteral on the error message prefix.
     it('throws with a message-anchored prefix', () => {
       expect(() => {
         assertPropertyId('PA');
@@ -216,7 +194,6 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       }).not.toThrow();
     });
 
-    // Kills L84:31 StringLiteral on the error message prefix.
     it('throws with a message-anchored prefix', () => {
       expect(() => {
         assertLang('engl');
@@ -240,7 +217,6 @@ describe('Wikidata strict id validators (R14 / V2 / H1)', () => {
       expect(() => escapeSparqlLiteral(42 as unknown)).toThrow(ValidationError);
     });
 
-    // Kills L104:31 StringLiteral on the error message prefix.
     it('throws with a message-anchored prefix', () => {
       expect(() => escapeSparqlLiteral(null)).toThrow(/^invalid SPARQL literal: <object>$/);
       expect(() => escapeSparqlLiteral(42 as unknown)).toThrow(
@@ -278,7 +254,6 @@ describe('WikidataClient (chat) — fail-open on tampered ids', () => {
     const result = await client.lookup({ searchTerm: 'evil' });
 
     expect(result).toBeNull();
-    // SPARQL endpoint should NEVER be called when the smuggled id fails assertEntityId.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -345,16 +320,9 @@ describe('HttpWikidataMuseumClient — fail-open on tampered ids', () => {
 
   it('fetchFacts returns null on injection-style locale without making any HTTP call', async () => {
     const client = new HttpWikidataMuseumClient();
-    // Locale falls back to 'en' in fetchFacts before reaching SPARQL,
-    // but the inner sparqlFacts assertLang also defends. Either way: no
-    // SPARQL must include the tampered locale. Smoke test: legit qid +
-    // invalid locale → fallback path runs without exposing tampered locale.
-    fetchSpy.mockResolvedValue(
-      asFetchResponse(mockSparqlResponse([])), // empty bindings
-    );
+    fetchSpy.mockResolvedValue(asFetchResponse(mockSparqlResponse([])));
     await client.fetchFacts({ qid: 'Q19675', locale: 'en;DROP' });
 
-    // fetchFacts collapses bad locale → 'en'; assert no fetched URL contains the payload.
     for (const call of fetchSpy.mock.calls) {
       const url = call[0] as string;
       expect(url).not.toContain('DROP');

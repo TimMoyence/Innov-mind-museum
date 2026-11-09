@@ -1,14 +1,6 @@
-/**
- * C4.1 — `KnowledgeRouterService` cascades KB → judge → WebSearch with per-leg
- * AbortSignal.any budgets (D4 — Node ≥ 22.3). Fail-open (ADR-035): every leg
- * wrapped in `.catch`; `resolve()` NEVER throws — errors become `source: 'none'`.
- * No feature flag (D11 — pre-launch V1); env vars are tuning-only.
- */
-
-import { createHash } from 'node:crypto';
-
 import { CitationSourceSchema } from '@modules/chat/domain/chat.types';
-import { RerankerUnavailableError } from '@modules/chat/domain/ports/reranker.port';
+import { logRerankFallback, runRerankWithSignal } from '@modules/chat/useCase/rerank/rerank-guard';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type { CitationSource } from '@modules/chat/domain/chat.types';
@@ -19,23 +11,16 @@ import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports
 import type { LlmJudgePort } from '@modules/chat/useCase/llm/llm-judge-guardrail';
 import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 
-// Re-exported (identity-preserving, spec R5) so existing
-// `@modules/chat/useCase/knowledge/knowledge-router.service` importers of this
-// type compile unchanged after the domain relocation (ARCH-02 close).
 export type { KnowledgeRouterSource };
 
 export interface KnowledgeRouterResult {
   facts: string[];
-  /** Web pages the facts were taken from, citable as-is; empty unless source = web. */
   sources: CitationSource[];
   source: KnowledgeRouterSource;
-  /** True iff the WebSearch leg was exercised (regardless of outcome). */
   fallback_triggered: boolean;
-  /** Populated only when judge leg ran. */
   judge_confidence?: number;
   metadata?: {
     searchTerm: string;
-    /** Per-leg latencies in ms; missing keys = leg not exercised. */
     latencyMs: {
       kb?: number;
       judge?: number;
@@ -44,14 +29,7 @@ export interface KnowledgeRouterResult {
   };
 }
 
-/** Implementations must never throw (fail-open R9/R10) and honor `signal`. */
 export interface KnowledgeRouterPort {
-  /**
-   * TD-20 (R13d) — optional `scope` 3rd arg forwards per-tenant attribution
-   * (`museumId`/`tier`/`requestId`) to the judge leg's `generation`. Optional
-   * data on an existing port method (not a new port). Optional => existing
-   * callers compile unchanged.
-   */
   resolve(
     searchTerm: string,
     signal?: AbortSignal,
@@ -59,14 +37,11 @@ export interface KnowledgeRouterPort {
   ): Promise<KnowledgeRouterResult>;
 }
 
-/** Tuning only — no field can disable the feature (D11). */
 export interface KnowledgeRouterConfig {
-  /** Confidence cutoff [0..1] above which WebSearch is skipped (default 0.7). */
   threshold: number;
   kbTimeoutMs: number;
   judgeTimeoutMs: number;
   wsTimeoutMs: number;
-  /** C9.13 — hard deadline on a single rerank call before fail-open (default 2000). */
   rerankTimeoutMs: number;
 }
 
@@ -74,45 +49,19 @@ export interface KnowledgeRouterDeps {
   kb: KnowledgeBaseProvider;
   ws: WebSearchProvider;
   judge: LlmJudgePort;
-  /** C9.13 — cross-encoder reranker. Fail-open; baseline preserved on throw/timeout. */
   reranker: RerankerPort;
   config: KnowledgeRouterConfig;
 }
 
 const MAX_WEB_FACTS = 5;
 
-/** C9.13 — telemetry caller label, kept as a constant so labels stay in sync. */
 const RERANK_CALLER_LABEL = 'knowledge-router';
 
-/**
- * D4 — uses `AbortSignal.any` (NOT `Promise.race`) to avoid the "loser leak"
- * pattern: Promise.race resolves with the winner but does not abort losers,
- * which keep consuming tokens/network.
- */
 function buildLegSignal(legBudgetMs: number, parentSignal?: AbortSignal): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(legBudgetMs);
   return parentSignal ? AbortSignal.any([timeoutSignal, parentSignal]) : timeoutSignal;
 }
 
-/**
- * C9.13 — maps rerank failure cause to the `reason` label on
- * `musaium_rerank_fallback_total`. Distinguishes:
- *  - `'unavailable'` = adapter signalled intentional disabled state
- *    (e.g. `NullRerankerAdapter`, V1 scaffold throws).
- *  - `'timeout'` = our caller-side AbortSignal fired (message contains "timed out").
- *  - `'error'` = any other failure (unexpected throw, native module load failure).
- */
-function pickRerankFallbackReason(err: unknown): 'unavailable' | 'timeout' | 'error' {
-  if (err instanceof RerankerUnavailableError) {
-    return err.message.includes('timed out') ? 'timeout' : 'unavailable';
-  }
-  return 'error';
-}
-
-/**
- * Independent of `buildKnowledgeBasePromptBlock` so T2.4 validator can match
- * quotes against individual fact lines rather than the full block.
- */
 function formatKbFacts(facts: {
   qid: string;
   title: string;
@@ -136,11 +85,6 @@ function formatKbFacts(facts: {
 export class KnowledgeRouterService implements KnowledgeRouterPort {
   constructor(private readonly deps: KnowledgeRouterDeps) {}
 
-  /**
-   * Enforce per-leg budget when the underlying port has no AbortSignal arg
-   * (KB leg). REJECTS with AbortError on timeout/parent abort — caller's
-   * `.catch` performs fail-open conversion (R10).
-   */
   private async runWithLegBudget<T>(
     inner: Promise<T>,
     budgetMs: number,
@@ -171,10 +115,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     });
   }
 
-  /**
-   * Never throws (D8). PII safety (NFR7): raw `searchTerm` never leaves this
-   * method — telemetry carries sha256[:16] hash only.
-   */
   async resolve(
     searchTerm: string,
     parentSignal?: AbortSignal,
@@ -191,7 +131,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     const latencyMs: { kb?: number; judge?: number; web?: number } = {};
     const searchTermNormalised = searchTerm;
 
-    // Caller already aborted: skip every leg (fail-open).
     if (parentSignal?.aborted) {
       return {
         facts: [],
@@ -202,8 +141,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       };
     }
 
-    // Leg 1 — KB (Wikidata). `KnowledgeBaseProvider.lookup` has no signal arg;
-    // 200ms cap enforced externally via runWithLegBudget.
     const kbStart = performance.now();
     const kbLeg = this.runWithLegBudget(
       this.deps.kb.lookup({ searchTerm: searchTermNormalised }),
@@ -212,7 +149,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     );
     const kbFacts = await kbLeg.catch((err: unknown) => {
       logger.warn('knowledge_router_kb_error', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     });
@@ -228,15 +165,13 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       };
     }
 
-    // Leg 2 — LLM judge (500ms). Fail-open neutral = confidence 0 → forces WS
-    // leg (safer default: more grounding, not less).
     const judgeStart = performance.now();
     const judgeSignal = buildLegSignal(this.deps.config.judgeTimeoutMs, parentSignal);
     const judge = await this.deps.judge
       .evaluate(searchTermNormalised, judgeSignal, scope)
       .catch((err: unknown) => {
         logger.warn('knowledge_router_judge_error', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
         return { confidence: 0, decision: 'review' as const };
       });
@@ -253,8 +188,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       };
     }
 
-    // Leg 3 — WebSearch (Tavily → Brave → Google CSE → SearXNG → DuckDuckGo
-    // fallback, 1500ms; each present iff its env key(s) are set — C9.15 reversed 2026-06-13).
     const { webFacts, webSources, webResultCount, latencyWeb } = await this.runWebSearchLeg(
       searchTermNormalised,
       parentSignal,
@@ -271,15 +204,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     };
   }
 
-  /**
-   * Fail-open: WS error → `wsErrored=true`, `webResults=[]`, counter outcome='error'.
-   *
-   * C9.13 — when `webResults.length > 1`, results are re-ordered by the
-   * injected `RerankerPort` BEFORE slicing to `MAX_WEB_FACTS`. Any reranker
-   * failure (throw / timeout) is caught and the baseline order is preserved
-   * (counter `musaium_rerank_fallback_total{caller='knowledge-router'}`
-   * incremented).
-   */
   private async runWebSearchLeg(
     searchTermNormalised: string,
     parentSignal: AbortSignal | undefined,
@@ -295,7 +219,7 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
       .search({ query: searchTermNormalised, signal: webSignal })
       .catch((err: unknown) => {
         logger.warn('knowledge_router_ws_error', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
         return [];
       });
@@ -318,17 +242,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     return { webFacts, webSources, webResultCount: webResults.length, latencyWeb };
   }
 
-  /**
-   * C9.13 — optional rerank phase. Fail-open: throw / timeout → baseline.
-   *
-   * Telemetry contract (design §10):
-   *  - Langfuse span `chat.rerank` with metadata `{ caller, candidateCount,
-   *    topN, latencyMs, outcome, queryHash }`. `queryHash` = sha256(query)[:16].
-   *  - Prom histogram `musaium_rerank_latency_ms{caller='knowledge-router',
-   *    outcome=...}` per call.
-   *  - Prom counter `musaium_rerank_fallback_total{caller='knowledge-router',
-   *    reason=...}` on fail-open.
-   */
   private async maybeRerankWebResults(
     searchTerm: string,
     webResults: readonly SearchResult[],
@@ -338,12 +251,16 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
     const candidateCount = webResults.length;
     const topN = Math.min(MAX_WEB_FACTS, candidateCount);
     const docs = webResults.map((r) => `${r.title}: ${r.snippet}`);
-    const rerankStart = performance.now();
 
     try {
-      const rerankSignal = AbortSignal.timeout(this.deps.config.rerankTimeoutMs);
-      const rerankResults = await this.runRerankWithSignal(searchTerm, docs, topN, rerankSignal);
-      const latencyMs = performance.now() - rerankStart;
+      const rerankResults = await runRerankWithSignal({
+        reranker: this.deps.reranker,
+        timeoutMs: this.deps.config.rerankTimeoutMs,
+        query: searchTerm,
+        docs,
+        topN,
+        signal: AbortSignal.timeout(this.deps.config.rerankTimeoutMs),
+      });
 
       const reordered: SearchResult[] = [];
       const usedIndices = new Set<number>();
@@ -352,9 +269,6 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
         reordered.push(webResults[docIndex]);
         usedIndices.add(docIndex);
       }
-      // Append any unranked tail so total count is preserved (defensive —
-      // reranker SHOULD return topN ≤ candidateCount entries, but if it
-      // returns fewer the baseline tail still feeds the slice).
       if (reordered.length < candidateCount) {
         for (let i = 0; i < webResults.length; i += 1) {
           if (!usedIndices.has(i)) {
@@ -363,96 +277,10 @@ export class KnowledgeRouterService implements KnowledgeRouterPort {
         }
       }
 
-      this.emitRerankTelemetry({
-        searchTerm,
-        candidateCount,
-        topN,
-        latencyMs,
-        outcome: 'success',
-      });
       return reordered;
     } catch (err) {
-      const latencyMs = performance.now() - rerankStart;
-      const reason = pickRerankFallbackReason(err);
-
-      this.emitRerankTelemetry({
-        searchTerm,
-        candidateCount,
-        topN,
-        latencyMs,
-        outcome: 'fallback',
-        reason,
-        errorClass: err instanceof Error ? err.constructor.name : 'Unknown',
-      });
+      logRerankFallback(RERANK_CALLER_LABEL, searchTerm, candidateCount, err);
       return webResults;
-    }
-  }
-
-  /**
-   * Wraps `reranker.rerank(...)` with an AbortSignal-aware timeout. The
-   * underlying port has no signal arg; abort path rejects with a synthetic
-   * timeout-flavoured `RerankerUnavailableError` so the caller's fallback
-   * counter sees `reason='timeout'`.
-   */
-  private async runRerankWithSignal(
-    query: string,
-    docs: string[],
-    topN: number,
-    signal: AbortSignal,
-  ): Promise<readonly { docIndex: number; score: number }[]> {
-    const budgetMs = String(this.deps.config.rerankTimeoutMs);
-    if (signal.aborted) {
-      throw new RerankerUnavailableError(`rerank aborted before start (${budgetMs}ms budget)`);
-    }
-
-    return await new Promise((resolve, reject) => {
-      let settled = false;
-      const onAbort = (): void => {
-        if (settled) return;
-        settled = true;
-        reject(new RerankerUnavailableError(`rerank timed out after ${budgetMs}ms`));
-      };
-      signal.addEventListener('abort', onAbort, { once: true });
-
-      this.deps.reranker.rerank(query, docs, topN).then(
-        (value) => {
-          if (settled) return;
-          settled = true;
-          signal.removeEventListener('abort', onAbort);
-          resolve(value);
-        },
-        (err: unknown) => {
-          if (settled) return;
-          settled = true;
-          signal.removeEventListener('abort', onAbort);
-          reject(err instanceof Error ? err : new Error(String(err)));
-        },
-      );
-    });
-  }
-
-  /**
-   * Emits Langfuse span + Prom histogram (+ fallback counter when outcome
-   * `fallback`). Both wrapped in `safeTrace` — telemetry outage cannot
-   * propagate to chat pipeline.
-   */
-  private emitRerankTelemetry(payload: {
-    searchTerm: string;
-    candidateCount: number;
-    topN: number;
-    latencyMs: number;
-    outcome: 'success' | 'fallback';
-    reason?: 'unavailable' | 'timeout' | 'error';
-    errorClass?: string;
-  }): void {
-    if (payload.outcome === 'fallback') {
-      logger.warn('reranker_fallback', {
-        caller: RERANK_CALLER_LABEL,
-        reason: payload.reason,
-        errorClass: payload.errorClass,
-        originalCount: payload.candidateCount,
-        queryHash: createHash('sha256').update(payload.searchTerm).digest('hex').slice(0, 16),
-      });
     }
   }
 }

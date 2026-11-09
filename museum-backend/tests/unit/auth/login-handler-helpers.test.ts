@@ -1,25 +1,3 @@
-/**
- * Tests for src/modules/auth/adapters/primary/http/helpers/login-handler.helpers.ts.
- *
- * Targets the 33 Stryker NoCoverage mutants on this file by exercising:
- *   - finalizeLoginSuccess
- *       - String literal payload keys: action ('AUTH_LOGIN_SUCCESS'),
- *         actorType ('user'), targetType ('user').
- *       - Object-literal payload metadata + the body of the if-block at L34.
- *       - The unconditional call to setAuthCookies(res, session) at L57.
- *   - auditLoginError
- *       - Early-return when error is not an AppError (L65 BlockStatement, L66 boolean
- *         + conditional flips).
- *       - Optional-chaining on req.body?.email (L67) — undefined body must not throw.
- *       - typeof email === 'string' branch at L68 (typeof flip + string literal).
- *       - error.code === 'INVALID_CREDENTIALS' branch at L69 (action 'AUTH_LOGIN_FAILED',
- *         actorType 'anonymous', metadata.email present/absent).
- *       - error.code === 'TOO_MANY_REQUESTS' branch at L79 (action 'SECURITY_RATE_LIMIT',
- *         metadata.endpoint '/login').
- *
- * No production code is modified.
- */
-
 import {
   auditLoginError,
   finalizeLoginSuccess,
@@ -35,8 +13,6 @@ import { AppError } from '@shared/errors/app.error';
 
 import type { Request, Response } from 'express';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
@@ -44,8 +20,6 @@ jest.mock('@shared/audit', () => ({
 jest.mock('@modules/auth/adapters/primary/http/helpers/auth-cookies', () => ({
   setAuthCookies: jest.fn(),
 }));
-
-// ─── Shared fixtures ─────────────────────────────────────────────────────────
 
 interface LoginSession {
   user: { id: number };
@@ -80,7 +54,6 @@ const makeSession = (overrides: Partial<LoginSession> = {}): LoginSession => ({
   ...overrides,
 });
 
-// Strongly-typed mock handle obtained via the `unknown` two-step cast.
 const auditLogMock = auditService.log as unknown as jest.Mock;
 const setAuthCookiesMock = setAuthCookies as unknown as jest.Mock;
 
@@ -89,8 +62,6 @@ beforeEach(() => {
   auditLogMock.mockResolvedValue(undefined);
   setAuthCookiesMock.mockReset();
 });
-
-// ─── finalizeLoginSuccess ────────────────────────────────────────────────────
 
 describe('finalizeLoginSuccess', () => {
   it('always invokes setAuthCookies with the response + session (kills L57 BlockStatement / dual-mode contract)', async () => {
@@ -124,8 +95,6 @@ describe('finalizeLoginSuccess', () => {
   });
 });
 
-// ─── auditLoginError ──────────────────────────────────────────────────────────
-
 describe('auditLoginError — non-AppError early-return', () => {
   it('does not call auditService.log when error is a plain Error (kills L66 ConditionalExpression flip)', async () => {
     const req = makeReq({ body: { email: 'plain@example.com' } });
@@ -141,16 +110,12 @@ describe('auditLoginError — non-AppError early-return', () => {
     await auditLoginError(req, null);
     await auditLoginError(req, undefined);
     await auditLoginError(req, 'not an error');
-    await auditLoginError(req, { code: 'INVALID_CREDENTIALS' }); // duck-type, NOT instanceof
+    await auditLoginError(req, { code: 'INVALID_CREDENTIALS' });
 
     expect(auditLogMock).not.toHaveBeenCalled();
   });
 
   it('does not call auditService.log when AppError has an unrecognised code (kills L69 + L79 conditional → true)', async () => {
-    // Both L69 (=== 'INVALID_CREDENTIALS') and L79 (=== 'TOO_MANY_REQUESTS') are
-    // false → no audit emitted. If either ConditionalExpression mutant flips to
-    // `true`, the corresponding `auditService.log` would still fire and this
-    // assertion would fail.
     const req = makeReq({ body: { email: 'x@y.z' } });
     const err = new AppError({
       message: 'forbidden',
@@ -180,8 +145,6 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
     await auditLoginError(req, err);
 
     expect(auditLogMock).toHaveBeenCalledTimes(1);
-    // Strict shape — kills L70 ObjectLiteral, L72 'AUTH_LOGIN_FAILED', L73 metadata.
-    // A1 / GDPR Art. 5(1)(c): only the email DOMAIN is retained, never the raw address.
     expect(auditLogMock).toHaveBeenCalledWith({
       action: AUDIT_AUTH_LOGIN_FAILED,
       actorType: 'anonymous',
@@ -193,10 +156,6 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
   });
 
   it('emits AUDIT_AUTH_LOGIN_FAILED with metadata.emailDomain === undefined when req.body.email is a number (kills L68 typeof + L68 string literal flip)', async () => {
-    // If L68 EqualityOperator `===` flips to `!==`, a non-string would be kept
-    // and we'd see `email: 12345` in metadata. If L68 StringLiteral '' replaces
-    // 'string', the check becomes `typeof email === ''` which is never true → all
-    // non-undefined emails become undefined → contradicts the alice case above.
     const req = makeReq({ body: { email: 12345 } });
     const err = new AppError({
       message: 'bad creds',
@@ -216,9 +175,6 @@ describe('auditLoginError — INVALID_CREDENTIALS', () => {
   });
 
   it('tolerates an undefined req.body (kills L67 OptionalChaining → non-optional flip)', async () => {
-    // If the OptionalChaining mutant strips `?.` the cast `(req.body as ...)`
-    // becomes a property access on `undefined` → throws TypeError. We assert
-    // the helper resolves and emits with `metadata.email: undefined`.
     const req = makeReq({ body: undefined });
     const err = new AppError({
       message: 'bad creds',
@@ -268,7 +224,6 @@ describe('auditLoginError — TOO_MANY_REQUESTS', () => {
     await auditLoginError(req, err);
 
     expect(auditLogMock).toHaveBeenCalledTimes(1);
-    // A1 / GDPR Art. 5(1)(c): only the email DOMAIN is retained, never the raw address.
     expect(auditLogMock).toHaveBeenCalledWith({
       action: AUDIT_SECURITY_RATE_LIMIT,
       actorType: 'anonymous',

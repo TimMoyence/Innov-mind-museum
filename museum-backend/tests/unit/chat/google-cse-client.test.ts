@@ -5,7 +5,6 @@ import {
   makeGoogleCseApiResponse,
 } from '../../helpers/search-clients/google-cse.fixture';
 
-// Silence logger
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -20,7 +19,6 @@ describe('GoogleCseClient', () => {
     jest.clearAllMocks();
   });
 
-  // UC-GC-01 — happy normalize
   it('returns normalized search results from a successful API response', async () => {
     global.fetch = mockFetch({
       body: makeGoogleCseApiResponse([
@@ -48,7 +46,6 @@ describe('GoogleCseClient', () => {
     });
   });
 
-  // UC-GC-02 — request URL params (key, cx, q, num)
   it('builds the customsearch URL with key, cx, q and num params', async () => {
     const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
     global.fetch = fetchSpy;
@@ -65,7 +62,6 @@ describe('GoogleCseClient', () => {
     expect(url.searchParams.get('num')).toBe('3');
   });
 
-  // UC-GC-03 — non-ok status -> [] + warn
   it('returns empty array and warns on HTTP error response', async () => {
     global.fetch = mockFetch({ ok: false, status: 403 });
 
@@ -79,7 +75,6 @@ describe('GoogleCseClient', () => {
     );
   });
 
-  // UC-GC-04 — thrown fetch -> [] + warn (fail-open)
   it('returns empty array and warns when fetch throws', async () => {
     global.fetch = mockFetch(new Error('network down'));
 
@@ -93,7 +88,6 @@ describe('GoogleCseClient', () => {
     );
   });
 
-  // UC-GC-05 — missing items field graceful
   it('handles missing items field gracefully', async () => {
     global.fetch = mockFetch({ body: {} });
 
@@ -103,7 +97,6 @@ describe('GoogleCseClient', () => {
     expect(results).toEqual([]);
   });
 
-  // UC-GC-06 — garbage items (not an array)
   it('returns empty array when items is not an array (garbage body)', async () => {
     global.fetch = mockFetch({ body: { items: 'not-an-array' } });
 
@@ -113,7 +106,6 @@ describe('GoogleCseClient', () => {
     expect(results).toEqual([]);
   });
 
-  // UC-GC-07 — maxResults hard cap = 10
   it('caps num at 10', async () => {
     const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
     global.fetch = fetchSpy;
@@ -126,7 +118,6 @@ describe('GoogleCseClient', () => {
     expect(url.searchParams.get('num')).toBe('10');
   });
 
-  // UC-GC-08 — default num = 5
   it('uses default 5 num when maxResults not specified', async () => {
     const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
     global.fetch = fetchSpy;
@@ -139,7 +130,6 @@ describe('GoogleCseClient', () => {
     expect(url.searchParams.get('num')).toBe('5');
   });
 
-  // UC-GC-09 — empty/whitespace query -> [] with no fetch
   it('returns empty array for whitespace query without fetching', async () => {
     const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
     global.fetch = fetchSpy;
@@ -151,7 +141,6 @@ describe('GoogleCseClient', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  // UC-GC-10 — signal propagation
   it('propagates query.signal into fetch', async () => {
     const fetchSpy = mockFetch({ body: makeGoogleCseApiResponse([]) });
     global.fetch = fetchSpy;
@@ -164,7 +153,6 @@ describe('GoogleCseClient', () => {
     expect(callArgs[1].signal).toBe(controller.signal);
   });
 
-  // INV-10 — readonly name
   it('exposes a stable readonly name', () => {
     const client = new GoogleCseClient({ apiKey: 'fake-api-key', cseId: 'fake-cx' });
     expect(client.name).toBe('google-cse');

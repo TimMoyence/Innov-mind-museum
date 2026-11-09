@@ -1,7 +1,6 @@
 import { escapeHtml } from '../escape-html';
 import { renderEmailLayout } from './layout';
 
-/** Input payload for the internal B2B-lead notification template (R4 §3.4). */
 export interface B2bLeadEmailInput {
   email: string;
   name: string;

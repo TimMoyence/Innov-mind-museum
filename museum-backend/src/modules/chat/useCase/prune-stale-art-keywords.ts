@@ -4,11 +4,6 @@ import { logger } from '@shared/logger/logger';
 
 import type { DataSource } from 'typeorm';
 
-/**
- * Pause inserted between non-empty chunks so a runaway purge cannot monopolise
- * pgbouncer (incident 2026-05-08 hardening — see /team run
- * `2026-05-08-prune-hardening`).
- */
 const CHUNK_THROTTLE_MS = 50;
 
 export interface PruneArtKeywordsResult {
@@ -17,27 +12,11 @@ export interface PruneArtKeywordsResult {
 }
 
 export interface PruneStaleArtKeywordsConfig {
-  /** Days since `updatedAt` before a low-hit keyword becomes eligible. Default 90. */
   days: number;
-  /** hitCount threshold — keywords with hitCount <= this value are candidates. Default 1. */
   hitThreshold: number;
-  /** Max rows deleted per chunk (single transaction). Default 1000. */
   batchLimit: number;
 }
 
-/**
- * Hard-deletes art_keywords where hitCount <= hitThreshold AND
- * updatedAt < NOW() - days. Idempotent — re-running deletes only
- * newly eligible rows.
- *
- * Chunked DELETE LIMIT N per transaction so each chunk holds the row lock
- * for milliseconds. Loop until RETURNING returns 0 rows.
- *
- * Returns total rowsAffected + details (cutoffDate, hitThreshold).
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
- * ADR: docs/adr/ADR-020-art-keywords-retention.md
- */
 export async function pruneStaleArtKeywords(
   dataSource: DataSource,
   cfg: PruneStaleArtKeywordsConfig,
@@ -47,8 +26,6 @@ export async function pruneStaleArtKeywords(
   let chunkDeleted = -1;
 
   while (chunkDeleted !== 0) {
-    // TypeORM 0.3.x DELETE result is `[rows, rowCount]` — see prune-support-tickets.ts
-    // for the production-incident background (2026-05-08).
     const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "art_keywords"
        WHERE id IN (

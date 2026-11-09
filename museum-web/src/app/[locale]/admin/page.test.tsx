@@ -1,7 +1,3 @@
-/**
- * AdminDashboardPage — verifies stat labels are read from the dictionary
- * (post-T2.1 refactor that removed the hardcoded STAT_LABELS map).
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -9,8 +5,6 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from './page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import type { AdminStats } from '@/lib/admin-types';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/fr/admin',
@@ -33,8 +27,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 
 vi.mock('@/lib/api', () => ({
@@ -42,8 +34,6 @@ vi.mock('@/lib/api', () => ({
   apiPost: vi.fn(),
   registerLogoutHandler: vi.fn(),
 }));
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 const mockStats: AdminStats = {
   totalUsers: 12,
@@ -54,7 +44,6 @@ const mockStats: AdminStats = {
   recentSessions: 9,
 };
 
-/** French dictionary slice — exercises the new `dashboardPage.stats` lookup. */
 const frenchDict: typeof mockAdminDict = {
   ...mockAdminDict,
   dashboardPage: {
@@ -84,8 +73,6 @@ function EnglishProviders({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ============================================================================
 
 describe('AdminDashboardPage stats labels (T2.1: dictionary-driven)', () => {
   beforeEach(() => {
@@ -122,17 +109,12 @@ describe('AdminDashboardPage stats labels (T2.1: dictionary-driven)', () => {
       expect(screen.getByText('Utilisateurs totaux')).toBeInTheDocument();
     });
 
-    // Each stat card holds the label <p> and the value <p> as siblings inside
-    // the same card <div>. Asserting the value *within its own card* catches a
-    // valueKey-swap regression (e.g. totalUsers rendering 7 instead of 12),
-    // which a label-only assertion would silently pass.
     const cardFor = (label: string): HTMLElement => {
       const card = screen.getByText(label).closest('div');
       if (!card) throw new Error(`No card found for label "${label}"`);
       return card as HTMLElement;
     };
 
-    // totalUsers: 12, totalSessions: 7, totalMessages: 42 (toLocaleString form).
     expect(within(cardFor('Utilisateurs totaux')).getByText('12')).toBeInTheDocument();
     expect(within(cardFor('Sessions totales')).getByText('7')).toBeInTheDocument();
     expect(within(cardFor('Messages totaux')).getByText('42')).toBeInTheDocument();

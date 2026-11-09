@@ -1,20 +1,5 @@
-/**
- * Tests for the env.ts module's actual behavior at import time.
- *
- * Because env.ts is a singleton that runs on import, each test that needs
- * different env vars must use jest.resetModules() and re-require.
- *
- * Complementary to env-helpers.test.ts which tests the helper functions
- * via local copies. These tests exercise the real module.
- */
-
 import { validProductionEnv } from '../../helpers/config/prod-env.fixtures';
 
-// Prevent dotenv.config() (called inside @src/config/env at module load) from
-// re-injecting REDIS_*/SENTRY_DSN/etc. from the host's .env file after the
-// test sets process.env to a clean override. Without this mock, deleting
-// process.env.X then re-requiring env.ts would silently restore the host
-// value via dotenv, defeating the per-test isolation.
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 describe('env.ts module', () => {
@@ -28,23 +13,13 @@ describe('env.ts module', () => {
     process.env = { ...originalEnv };
   });
 
-  /**
-   * Helper to import env.ts fresh with controlled env vars.
-   * @param envOverrides
-   */
   function loadEnv(envOverrides: Record<string, string | undefined> = {}) {
-    // Set NODE_ENV to test by default to avoid production validation.
-    // PGDATABASE is required at module load (no fallback) — default it here so
-    // tests that don't care about DB config don't need to set it explicitly.
-    // Tests that DO want to assert missing-PGDATABASE behavior pass it as
-    // undefined in `envOverrides`.
     process.env = {
       ...originalEnv,
       NODE_ENV: 'test',
       PGDATABASE: 'museum_test',
       ...envOverrides,
     };
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import needed for module-level singleton
     const mod = require('@src/config/env') as typeof import('@src/config/env');
     return mod.env;
   }
@@ -157,7 +132,6 @@ describe('env.ts module', () => {
     it('tts is always populated (TTS_ENABLED was retired in V1)', () => {
       const env = loadEnv({});
       expect(env.tts).toBeDefined();
-      // Default model upgraded from tts-1 to gpt-4o-mini-tts in V1.
       expect(env.tts.model).toBe('gpt-4o-mini-tts');
     });
 
@@ -224,8 +198,6 @@ describe('env.ts module', () => {
     });
   });
 
-  // feature-flags block retired 2026-04-22 — all features always-on (no env-driven flags remain).
-
   describe('NODE_ENV validation', () => {
     it('throws on invalid NODE_ENV', () => {
       expect(() => {
@@ -239,10 +211,6 @@ describe('env.ts module', () => {
     });
 
     it('accepts "production" (with required vars)', () => {
-      // OPENAI_USER_DAILY_USD_CAP=0 = explicit cost-guard opt-out so this
-      // node-env parsing test needs no Redis (post-WAVE1-C2 prod contract:
-      // cap>0 requires REDIS_URL). The cap>0+no-Redis throw is covered by
-      // env-production-validation-cost-guard.test.ts.
       const env = loadEnv(validProductionEnv({ OPENAI_USER_DAILY_USD_CAP: '0' }));
       expect(env.nodeEnv).toBe('production');
     });
@@ -292,9 +260,6 @@ describe('env.ts module', () => {
 
   describe('LLM diagnostics', () => {
     it('forces includeDiagnostics false in production', () => {
-      // OPENAI_USER_DAILY_USD_CAP=0 = cost-guard opt-out (no Redis needed) so
-      // this diagnostics test exercises the prod path without the WAVE1-C2
-      // cap>0-requires-REDIS_URL fail-closed throw (covered elsewhere).
       const env = loadEnv(
         validProductionEnv({ LLM_INCLUDE_DIAGNOSTICS: 'true', OPENAI_USER_DAILY_USD_CAP: '0' }),
       );
@@ -423,7 +388,6 @@ describe('env.ts module', () => {
     });
   });
 
-  // C3 (2026-05) — visual similarity engine config (additive block, T1.3).
   describe('visualSimilarity defaults', () => {
     it('applies all spec defaults when no env vars are set', () => {
       const env = loadEnv({
@@ -511,7 +475,6 @@ describe('env.ts module', () => {
     });
   });
 
-  // C9.13 (2026-05-18) — cross-encoder reranker block (T2.1).
   describe('rerank defaults', () => {
     it('applies all spec defaults when no RERANK_* env vars are set', () => {
       const env = loadEnv({
@@ -547,8 +510,6 @@ describe('env.ts module', () => {
       expect(env.rerank.provider).toBe('bge-reranker-v2-m3');
     });
 
-    // Fail-open contract: a misconfigured RERANK_PROVIDER must not brick boot.
-    // resolveRerankerProvider() falls back to 'null' on unknown values.
     it('falls back to "null" for unknown provider value (fail-open)', () => {
       const env = loadEnv({ RERANK_PROVIDER: 'cohere-rerank' });
       expect(env.rerank.provider).toBe('null');

@@ -1,25 +1,7 @@
-/**
- * RED — T4.3 — `ReplicateEmbeddingsAdapter` (mocked HTTP via `global.fetch`).
- *
- * Locks down tasks.md T4.3 and design.md §3 / §9 D6:
- *   - POST `https://api.replicate.com/v1/predictions` with the configured model,
- *   - polls the prediction URL until status `'succeeded'`,
- *   - returns a 768-dim Float32Array tagged with a Replicate-flavoured
- *     `modelVersion`,
- *   - maps timeouts and 4xx / 5xx responses to `EncoderUnavailableError`.
- *
- * No external HTTP is performed: the test suite stubs `global.fetch` via the
- * shared `mockFetch` helper. SUT does not yet exist (RED until Phase 4 lands).
- */
-
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
-import {
-  makePartialResponse,
-  makeFetchSpy,
-} from '../../../helpers/fetch/fetch-mock.helpers';
+import { makePartialResponse, makeFetchSpy } from '../../../helpers/fetch/fetch-mock.helpers';
 import { makeSiglipJpegBuffer } from '../../../helpers/chat/visual-similarity/image-fixtures';
 
-// Silence logger noise from the SUT during these tests.
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
@@ -30,16 +12,18 @@ interface ReplicateAdapterCtorArgs {
   timeoutMs: number;
 }
 
-// SUT — Phase 4 file, must not yet exist.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { ReplicateEmbeddingsAdapter } = require('@modules/chat/adapters/secondary/embeddings/replicate.adapter') as {
-  ReplicateEmbeddingsAdapter: new (args: ReplicateAdapterCtorArgs) => {
-    encode: (input: { buffer: Buffer; mimeType: 'image/jpeg' | 'image/png' | 'image/webp' }) => Promise<{
-      vector: Float32Array;
-      modelVersion: string;
-    }>;
+const { ReplicateEmbeddingsAdapter } =
+  require('@modules/chat/adapters/secondary/embeddings/replicate.adapter') as {
+    ReplicateEmbeddingsAdapter: new (args: ReplicateAdapterCtorArgs) => {
+      encode: (input: {
+        buffer: Buffer;
+        mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+      }) => Promise<{
+        vector: Float32Array;
+        modelVersion: string;
+      }>;
+    };
   };
-};
 
 const SIGLIP_OUTPUT = Array.from({ length: 768 }, (_, i) => (i === 0 ? 1 : 0));
 const REPLICATE_MODEL = 'lucataco/siglip-base-patch16-224';
@@ -88,7 +72,6 @@ describe('ReplicateEmbeddingsAdapter (T4.3)', () => {
 
   it('polls the prediction URL until status="succeeded"', async () => {
     const fetchSpy = makeFetchSpy();
-    // 1) initial create — returns processing
     fetchSpy.mockResolvedValueOnce(
       makePartialResponse({
         ok: true,
@@ -100,7 +83,6 @@ describe('ReplicateEmbeddingsAdapter (T4.3)', () => {
         },
       }),
     );
-    // 2) first poll — still processing
     fetchSpy.mockResolvedValueOnce(
       makePartialResponse({
         ok: true,
@@ -112,7 +94,6 @@ describe('ReplicateEmbeddingsAdapter (T4.3)', () => {
         },
       }),
     );
-    // 3) second poll — succeeded with output
     fetchSpy.mockResolvedValueOnce(
       makePartialResponse({
         ok: true,
@@ -136,7 +117,6 @@ describe('ReplicateEmbeddingsAdapter (T4.3)', () => {
 
   it('throws EncoderUnavailableError when polling exceeds timeoutMs', async () => {
     const fetchSpy = makeFetchSpy();
-    // Always return processing — adapter must time out.
     fetchSpy.mockResolvedValue(
       makePartialResponse({
         ok: true,

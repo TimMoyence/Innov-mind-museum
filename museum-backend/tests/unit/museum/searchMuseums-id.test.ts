@@ -1,38 +1,11 @@
-/**
- * RED — Museum picker bug (run 2026-06-01-museum-picker-osm-select).
- *
- * Proves the current `SearchMuseumsUseCase` projection DROPS the DB `id` of
- * local museums (spec R1/R2) and that OSM entries never carry an `id` (R3).
- *
- * These tests are EXPECTED TO FAIL until the green phase propagates `m.id`
- * through `LocalMuseumWithCoords` → projection. The failing assertion is
- * `entry.id === N` on the `source:'local'` rows (currently `undefined`).
- *
- * Test data via shared factories ONLY (CLAUDE.md test discipline):
- *   - `makeMuseum({ id })` / `makeMuseumRepo({ findAll })` — museum.fixtures.ts
- *   - OSM results via the local `makeOsmResult` helper (mirrors the established
- *     pattern in tests/unit/search-museums.test.ts; OverpassMuseumResult has no
- *     entity factory — it is a plain external DTO, not a domain entity).
- */
-
 import { SearchMuseumsUseCase } from '@modules/museum/useCase/search/searchMuseums.useCase';
 import { makeMuseum, makeMuseumRepo } from 'tests/helpers/museum/museum.fixtures';
 
 import type { SearchMuseumEntry } from '@modules/museum/useCase/search/searchMuseums.useCase';
 import type { OverpassMuseumResult } from '@shared/http/overpass.client';
 
-/** Paris reference point. */
 const PARIS = { lat: 48.8566, lng: 2.3522 };
 
-/**
- * Builds an OSM result offset from Paris. OverpassMuseumResult is an external
- * HTTP DTO (not a TypeORM/domain entity), so it has no shared entity factory;
- * this local builder mirrors `makeOsmResult` in search-museums.test.ts.
- * @param name
- * @param latOffset
- * @param lonOffset
- * @param osmId
- */
 const makeOsmResult = (
   name: string,
   latOffset: number,
@@ -54,8 +27,6 @@ const idOf = (entry: SearchMuseumEntry): unknown => (entry as { id?: unknown }).
 
 describe('SearchMuseumsUseCase — local entries expose DB id, OSM entries do not (R1/R2/R3)', () => {
   it('radius search: a source:local entry from Museum id=7 carries id===7, and the OSM entry has no id', async () => {
-    // Two local museums (Paris-ish, within radius) + one OSM POI far enough
-    // (~1.4 km) to dodge the OSM↔local dedup (<500 m name-gated / <100 m pure).
     const repo = makeMuseumRepo({
       findAll: jest.fn().mockResolvedValue([
         makeMuseum({
@@ -82,12 +53,10 @@ describe('SearchMuseumsUseCase — local entries expose DB id, OSM entries do no
     const seven = museums.find((m) => m.name === 'Local Seven');
     const osm = museums.find((m) => m.source === 'osm');
 
-    // R1/R2 — the local entry must carry its originating Museum.id.
     expect(seven).toBeDefined();
     expect(seven?.source).toBe('local');
     expect(idOf(seven!)).toBe(7);
 
-    // R3 — the OSM entry must NOT carry any DB id.
     expect(osm).toBeDefined();
     expect(hasId(osm!)).toBe(false);
   });
@@ -107,10 +76,8 @@ describe('SearchMuseumsUseCase — local entries expose DB id, OSM entries do no
     const overpassSearch = jest.fn().mockResolvedValue([]);
     const useCase = new SearchMuseumsUseCase(repo, { overpassSearch });
 
-    // No lat/lng/bbox/q → no-coords branch (returns local DB museums only).
     const { museums } = await useCase.execute({});
 
-    // No Overpass call on the no-coords branch.
     expect(overpassSearch).not.toHaveBeenCalled();
 
     const seven = museums.find((m) => m.name === 'Local Seven');
@@ -123,7 +90,6 @@ describe('SearchMuseumsUseCase — local entries expose DB id, OSM entries do no
   });
 
   it('bbox search: source:local entries inside the bbox carry their Museum.id', async () => {
-    // Bbox around Paris center; Museum id=42 inside it.
     const bbox: [number, number, number, number] = [
       PARIS.lng - 0.02,
       PARIS.lat - 0.02,

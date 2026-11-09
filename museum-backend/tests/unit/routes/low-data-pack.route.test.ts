@@ -21,9 +21,7 @@ const buildApp = (service: LowDataPackService) => {
   return app;
 };
 
-const makeServiceMock = (
-  override?: Partial<LowDataPackService>,
-): LowDataPackService =>
+const makeServiceMock = (override?: Partial<LowDataPackService>): LowDataPackService =>
   ({
     getLowDataPack: jest.fn().mockResolvedValue({
       museumId: 'm-1',
@@ -79,9 +77,11 @@ describe('GET /api/museums/:id/low-data-pack', () => {
 
   it('surfaces service errors via the error middleware', async () => {
     const service = makeServiceMock({
-      getLowDataPack: jest.fn().mockRejectedValue(
-        new AppError({ message: 'museum not found', statusCode: 404, code: 'NOT_FOUND' }),
-      ),
+      getLowDataPack: jest
+        .fn()
+        .mockRejectedValue(
+          new AppError({ message: 'museum not found', statusCode: 404, code: 'NOT_FOUND' }),
+        ),
     });
     const app = buildApp(service);
 

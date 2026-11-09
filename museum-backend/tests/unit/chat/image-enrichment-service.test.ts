@@ -39,7 +39,6 @@ describe('ImageEnrichmentService', () => {
       const second = await service.enrich('Mona Lisa');
 
       expect(first).toEqual(second);
-      // Unsplash should only be called once
       expect(unsplash.searchPhotos).toHaveBeenCalledTimes(1);
     });
 
@@ -113,7 +112,6 @@ describe('ImageEnrichmentService', () => {
         jest.advanceTimersByTime(11);
         const result = await promise;
 
-        // Should still return wikidata image even though Unsplash timed out
         expect(result.length).toBe(1);
         expect(result[0].source).toBe('wikidata');
       } finally {
@@ -163,12 +161,10 @@ describe('ImageEnrichmentService', () => {
 
       await service.enrich('First', 'https://wiki.org/1.jpg');
       await service.enrich('Second', 'https://wiki.org/2.jpg');
-      // This should trigger eviction of "first"
       await service.enrich('Third', 'https://wiki.org/3.jpg');
 
-      // All calls should succeed
       const result = await service.enrich('Third');
-      expect(result.length).toBe(1); // should be cached
+      expect(result.length).toBe(1);
     });
   });
 
@@ -235,7 +231,6 @@ describe('ImageEnrichmentService', () => {
       ];
 
       const merged = service.mergeWikidataImage(existing, 'https://wiki.org/high.jpg', 'high');
-      // Wikidata images typically score higher
       expect(merged[0].source).toBe('wikidata');
     });
 
@@ -275,12 +270,10 @@ describe('ImageEnrichmentService', () => {
 
         await service.enrich('Mona Lisa');
 
-        // Advance past the 1ms cache TTL
         jest.advanceTimersByTime(10);
 
         await service.enrich('Mona Lisa');
 
-        // Should fetch twice because cache expired
         expect(unsplash.searchPhotos).toHaveBeenCalledTimes(2);
       } finally {
         jest.useRealTimers();
@@ -297,7 +290,6 @@ describe('ImageEnrichmentService', () => {
 
       const result = await service.enrich('Art', 'https://wiki.org/art.jpg');
 
-      // Should still return the wikidata image
       expect(result.length).toBe(1);
       expect(result[0].source).toBe('wikidata');
     });
@@ -318,9 +310,6 @@ describe('ImageEnrichmentService', () => {
     });
   });
 
-  // =========================================================================
-  // C2 v2 (2026-05) — multi-source aggregator + tie-break + spans + R13 pin
-  // =========================================================================
   describe('C2 v2 multi-source aggregator', () => {
     it('R1 — fans out one enrich() call per searchTerm in parallel', async () => {
       const unsplash = makeMockUnsplash();
@@ -410,7 +399,6 @@ describe('ImageEnrichmentService', () => {
       const sources = result.map((r) => r.source);
       expect(sources).toContain('wikidata');
       expect(sources).toContain('unsplash');
-      // commons contributed [], no entry
       expect(sources).not.toContain('commons');
     });
 
@@ -422,7 +410,7 @@ describe('ImageEnrichmentService', () => {
           {
             url: 'https://museum.example/mona.jpg',
             thumbnailUrl: 'https://museum.example/mona.jpg',
-            caption: 'Mona Lisa', // photo caption
+            caption: 'Mona Lisa',
             width: 0,
             height: 0,
             photographerName: 'Musaium curated',
@@ -442,7 +430,6 @@ describe('ImageEnrichmentService', () => {
     });
   });
 
-  // Existing factory used by tests above
   it('factory makeEnrichedImage returns the v2 default shape', () => {
     const img = makeEnrichedImage();
     expect(img.rationale).toBeDefined();

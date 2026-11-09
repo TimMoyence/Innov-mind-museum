@@ -38,8 +38,6 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
   const reviewRouter: Router = Router();
   const resolveAuthor = deps.authorResolver ?? defaultAuthorResolver;
 
-  // SEC: userName is derived server-side from the authenticated user's profile
-  // (never accepted from client) to prevent impersonation / spoofing.
   reviewRouter.post(
     '/',
     isAuthenticated,
@@ -58,11 +56,6 @@ export const createReviewRouter = (deps: CreateReviewRouterDeps = {}): Router =>
         throw unauthorized('User authentication required');
       }
 
-      // NPS attribution (C2 / R1-R4 / Q1) — thread the VISITED session, NOT the
-      // author's tenant claim. The use-case resolves the session (ownership-
-      // checked) and derives `museum_id`. Absent / foreign session → NULL
-      // museum (global / public review). `authedUser.museumId` is deliberately
-      // never read here (R4 — it would mis-attribute a manager's reviews).
       const review = await createReviewUseCase.execute({
         user: author,
         rating,

@@ -23,7 +23,6 @@ describe('PerfOverlay', () => {
   });
 
   it('formats zero or negative FPS as "--"', () => {
-    // store starts at 0/0 after reset
     const { getByText } = render(<PerfOverlay />);
 
     expect(getByText('FPS P50 --')).toBeTruthy();

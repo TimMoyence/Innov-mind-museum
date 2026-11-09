@@ -3,12 +3,11 @@ import crypto from 'node:crypto';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
 import { AppError, unauthorized } from '@shared/errors/app.error';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import type { UserRole } from '@modules/auth/domain/user/user-role';
 
-// lib-docs/jsonwebtoken/PATTERNS.md §3: DO pin iss+aud on every internal token
-// to prevent token-confusion across token families (defense-in-depth).
 export const ACCESS_TOKEN_ISSUER = 'musaium-access';
 export const REFRESH_TOKEN_ISSUER = 'musaium-refresh';
 
@@ -54,21 +53,10 @@ const ttlToSeconds = (value: string): number => {
   return amount * multipliers[unit];
 };
 
-/** Stateless, DB-free. Reads `env.auth.*` once at construction. */
 export class TokenJwtService {
   readonly accessTtlSeconds = ttlToSeconds(env.auth.accessTokenTtl);
   readonly refreshTtlSeconds = ttlToSeconds(env.auth.refreshTokenTtl);
 
-  /**
-   * Variant of {@link verifyAccessToken} exposing the JWT `jti` + `exp` claims
-   * (RFC 7519 §4.1.4/4.1.7). Used by the denylist middleware (R8) and the
-   * logout handler (R7) which both need the `jti` to consult / write the
-   * `IAccessTokenDenylist`. Existing `verifyAccessToken` shape unchanged so
-   * the 5 other call sites stay frozen (design §3.1 D3 — additive, no
-   * blast radius on the wider auth surface).
-   *
-   * @throws {AppError} 401 INVALID_ACCESS_TOKEN on any failure.
-   */
   verifyAccessTokenWithClaims(token: string): {
     id: number;
     role: UserRole;
@@ -77,21 +65,18 @@ export class TokenJwtService {
     expSec: number;
   } {
     try {
-      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
       const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
         algorithms: ['HS256'],
         issuer: ACCESS_TOKEN_ISSUER,
         audience: ACCESS_TOKEN_ISSUER,
-      }) as AccessTokenClaims;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
+      }) as Partial<AccessTokenClaims>;
       if (decoded.type !== 'access' || !decoded.sub || typeof decoded.jti !== 'string') {
         throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
       }
       const expSec = typeof decoded.exp === 'number' ? decoded.exp : 0;
       return {
         id: Number(decoded.sub),
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        role: decoded.role || 'visitor',
+        role: nonEmpty(decoded.role) ?? 'visitor',
         museumId: decoded.museumId ?? null,
         jti: decoded.jti,
         expSec,
@@ -102,24 +87,20 @@ export class TokenJwtService {
     }
   }
 
-  /** @throws {Error} 401 AppError on any failure. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     try {
-      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
       const decoded = jwt.verify(token, env.auth.accessTokenSecret, {
         algorithms: ['HS256'],
         issuer: ACCESS_TOKEN_ISSUER,
         audience: ACCESS_TOKEN_ISSUER,
-      }) as AccessTokenClaims;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime
+      }) as Partial<AccessTokenClaims>;
       if (decoded.type !== 'access' || !decoded.sub) {
         throw unauthorized(INVALID_ACCESS_TOKEN_MSG, INVALID_ACCESS_TOKEN_CODE);
       }
 
       return {
         id: Number(decoded.sub),
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        role: decoded.role || 'visitor',
+        role: nonEmpty(decoded.role) ?? 'visitor',
         museumId: decoded.museumId ?? null,
       };
     } catch (error) {
@@ -131,27 +112,29 @@ export class TokenJwtService {
     }
   }
 
-  /** @throws {Error} 401 AppError on any failure. */
   verifyRefreshToken(token: string): RefreshTokenClaims {
     try {
-      // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud to reject cross-family tokens.
       const decoded = jwt.verify(token, env.auth.refreshTokenSecret, {
         algorithms: ['HS256'],
         issuer: REFRESH_TOKEN_ISSUER,
         audience: REFRESH_TOKEN_ISSUER,
-      }) as RefreshTokenClaims;
-      /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive: JWT payload may not match expected type at runtime */
+      }) as Partial<RefreshTokenClaims>;
       if (
         decoded.type !== 'refresh' ||
         typeof decoded.sub !== 'string' ||
         typeof decoded.jti !== 'string' ||
         typeof decoded.familyId !== 'string'
       ) {
-        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
         throw unauthorized('Invalid refresh token', 'INVALID_REFRESH_TOKEN');
       }
 
-      return decoded;
+      return {
+        ...decoded,
+        sub: decoded.sub,
+        type: decoded.type,
+        jti: decoded.jti,
+        familyId: decoded.familyId,
+      };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -166,7 +149,6 @@ export class TokenJwtService {
     museumId?: number | null;
     jti: string;
   }): string {
-    // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
     return jwt.sign(
       {
         sub: String(params.userId),
@@ -185,9 +167,7 @@ export class TokenJwtService {
     );
   }
 
-  /** Bound to a token family. */
   signRefreshToken(params: { userId: number; jti: string; familyId: string }): string {
-    // lib-docs/jsonwebtoken/PATTERNS.md §3: pin iss+aud on every internal token.
     return jwt.sign(
       {
         sub: String(params.userId),
@@ -205,7 +185,6 @@ export class TokenJwtService {
     );
   }
 
-  /** SHA-256 hex — tamper-detectable copy of the refresh JWT. */
   sha256(value: string): string {
     return crypto.createHash('sha256').update(value).digest('hex');
   }

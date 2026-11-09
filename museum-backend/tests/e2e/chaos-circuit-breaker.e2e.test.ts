@@ -6,22 +6,10 @@ import type { LangChainChatOrchestratorDeps } from '@modules/chat/adapters/secon
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
-// Phase 6 chaos: tune the breaker to short windows for fast deterministic tests.
-// These env vars are read by LLMCircuitBreaker constructor only when set; default
-// behavior (longer windows) is preserved in real deployments.
 process.env.LLM_CB_FAILURE_THRESHOLD ??= '3';
 process.env.LLM_CB_WINDOW_MS ??= '1000';
 process.env.LLM_CB_OPEN_DURATION_MS ??= '500';
 
-/**
- * Build a LangChainChatOrchestrator wired with a fake model that always throws.
- * The real circuit breaker inside the orchestrator trips after LLM_CB_FAILURE_THRESHOLD
- * consecutive failures — this is what the circuit-breaker chaos tests exercise.
- * Returns BOTH the orchestrator and its breaker instance so callers can share
- * the breaker across an orchestrator swap (TD-6 — HALF_OPEN → CLOSED test).
- * @param errorMessage - Message of the synthetic error thrown by the fake model on every call.
- * @returns The orchestrator and the breaker it was constructed with.
- */
 async function buildFailingOrchestrator(errorMessage = 'LLM provider 500'): Promise<{
   orchestrator: ChatOrchestrator;
   breaker: import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker').LLMCircuitBreaker;
@@ -31,11 +19,6 @@ async function buildFailingOrchestrator(errorMessage = 'LLM provider 500'): Prom
   const { LLMCircuitBreaker } =
     await import('@modules/chat/adapters/secondary/llm/llm-circuit-breaker');
 
-  // Fake ChatModel: every invoke/stream/withStructuredOutput call throws to
-  // simulate provider down. C9.17 (2026-05-18) — post legacy-[META] sunset,
-  // the orchestrator routes through `withStructuredOutput(schema).invoke()`
-  // exclusively; this fake must expose the structured-output adapter so the
-  // breaker's `.execute()` wraps the failing invoke as intended.
   const makeError = () => {
     const err = new Error(errorMessage);
     (err as Error & { statusCode: number }).statusCode = 500;
@@ -92,18 +75,11 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       );
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
-      // 3 failing calls — each one increments the breaker's failure count.
-      // Per the orchestrator contract (resolveSummary fallback + unit tests),
-      // a section-level LLM error degrades gracefully to a synthetic fallback
-      // 201, so we accept either 200/201 (degraded fallback) or 503 (breaker
-      // already OPEN at entry). Bubbling 5xx for individual failures is
-      // explicitly NOT the contract — see langchain-orchestrator unit tests.
       for (let i = 0; i < 3; i += 1) {
         const r = await chatOnce(harness, token, sid, `fail-${i}`);
         expect([200, 201, 503]).toContain(r.status);
       }
 
-      // 4th call: breaker OPEN — should return 503 with CIRCUIT_BREAKER_OPEN code
       const fourth = await chatOnce(harness, token, sid, 'after-threshold');
       expect(fourth.status).toBe(503);
       const fourthBody = JSON.stringify(fourth.body);
@@ -125,19 +101,13 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       );
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
-      // Trip the breaker: 3 failing calls -> OPEN.
       for (let i = 0; i < 3; i += 1) await chatOnce(harness, token, sid, `trip-${i}`);
       const blocked = await chatOnce(harness, token, sid, 'check-open');
       expect(blocked.status).toBe(503);
       expect(breaker.getState().state).toBe('OPEN');
 
-      // Build a success orchestrator that SHARES the same breaker, so the post-trip
-      // OPEN state is what the new model observes — without this, a fresh breaker
-      // would start CLOSED and the test would not exercise HALF_OPEN -> CLOSED.
       const { LangChainChatOrchestrator } =
         await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
-      // C9.17 (2026-05-18) — must expose withStructuredOutput so the
-      // breaker's `.execute()` wraps a real recoverable invocation.
       const successModel = {
         invoke: async () => ({ content: 'recovered response' }),
         stream: async function* () {
@@ -148,7 +118,6 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
             text: 'recovered response',
             deeperContext: null,
             openQuestion: null,
-            suggestedFollowUp: null,
             imageDescription: null,
             suggestedImages: null,
             detectedArtwork: null,
@@ -161,24 +130,18 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       };
       const successOrchestrator = new LangChainChatOrchestrator({
         model: successModel as unknown as LangChainChatOrchestratorDeps['model'],
-        circuitBreaker: breaker, // SAME breaker instance — critical invariant
+        circuitBreaker: breaker,
       });
 
-      // Wait past openDurationMs so the breaker auto-transitions OPEN -> HALF_OPEN
-      // on the next state read.
       const openDuration = Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 500);
       await new Promise((r) => setTimeout(r, openDuration + 100));
 
-      // Swap to the success orchestrator.
       harness.orchestratorReset(successOrchestrator);
 
-      // Next call: breaker reads HALF_OPEN, probes the (now success) model,
-      // probe succeeds, breaker transitions CLOSED.
       const recovered = await chatOnce(harness, token, sid, 'after-recovery');
       expect([200, 201]).toContain(recovered.status);
       expect(breaker.getState().state).toBe('CLOSED');
 
-      // Sanity: a second call also passes (breaker stays CLOSED, not re-tripped).
       const stillClosed = await chatOnce(harness, token, sid, 'confirm-closed');
       expect([200, 201]).toContain(stillClosed.status);
       expect(breaker.getState().state).toBe('CLOSED');
@@ -199,21 +162,15 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       );
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
-      // Round 1: trip breaker
       for (let i = 0; i < 3; i += 1) await chatOnce(harness, token, sid, `r1-${i}`);
       const r1Open = await chatOnce(harness, token, sid, 'r1-check');
       expect(r1Open.status).toBe(503);
 
-      // Wait for cooldown
       const openDuration = Number(process.env.LLM_CB_OPEN_DURATION_MS ?? 500);
       await new Promise((r) => setTimeout(r, openDuration + 100));
 
-      // Round 2: HALF_OPEN attempt fails (model still failing) → re-OPEN.
-      // Either the section degrades to fallback 201 or the breaker has already
-      // reopened from the HALF_OPEN single-failure rule and returns 503.
       const r2Half = await chatOnce(harness, token, sid, 'r2-half');
       expect([200, 201, 503]).toContain(r2Half.status);
-      // Breaker should be OPEN again
       const r2Check = await chatOnce(harness, token, sid, 'r2-check');
       expect(r2Check.status).toBe(503);
     } finally {
@@ -223,7 +180,6 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
 
   it('breaker does NOT trip on a single isolated failure within window', async () => {
     let callCount = 0;
-    // Model: throws once, then succeeds
     const { LangChainChatOrchestrator } =
       await import('@modules/chat/adapters/secondary/llm/langchain.orchestrator');
     const { LLMCircuitBreaker } =
@@ -258,11 +214,8 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       const sid = (sessionRes.body as { session: { id: string } }).session.id;
 
       const fail1 = await chatOnce(harness, token, sid, 'fail-1');
-      // Single failure degrades to fallback 201 (per the section-runner
-      // contract); 503 is also acceptable if the orchestrator surfaces it.
       expect([200, 201, 503]).toContain(fail1.status);
 
-      // Subsequent calls succeed; breaker should NOT have opened (1 < 3 failureThreshold)
       const success = await chatOnce(harness, token, sid, 'success-after-isolated-fail');
       expect([200, 201]).toContain(success.status);
     } finally {
@@ -284,7 +237,7 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
 
       for (let i = 0; i < 3; i += 1) await chatOnce(harness, token, sid, `trip-${i}`);
       const blocked = await chatOnce(harness, token, sid, 'blocked');
-      expect(blocked.status).toBe(503); // not 500, not 502, exactly 503
+      expect(blocked.status).toBe(503);
     } finally {
       await harness.stop();
     }
@@ -305,7 +258,7 @@ describeE2E('chaos: circuit breaker CLOSED→OPEN→HALF_OPEN', () => {
       for (let i = 0; i < 3; i += 1) await chatOnce(harness, token, sid, `t-${i}`);
       const blocked = await chatOnce(harness, token, sid, 'blocked');
       const body = JSON.stringify(blocked.body);
-      expect(body).not.toMatch(/at .* \(.*:\d+:\d+\)/); // no JS stack trace
+      expect(body).not.toMatch(/at .* \(.*:\d+:\d+\)/);
       expect(body).toMatch(/code|error/i);
     } finally {
       await harness.stop();

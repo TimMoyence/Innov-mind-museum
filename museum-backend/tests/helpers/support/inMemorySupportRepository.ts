@@ -20,7 +20,6 @@ interface StoredTicket {
   priority: string;
   category: string | null;
   assignedTo: number | null;
-  /** Wave B C7 — multi-tenant scope. Null for unscoped tickets. */
   museumId: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -35,7 +34,6 @@ interface StoredMessage {
   createdAt: Date;
 }
 
-/** In-memory implementation of ISupportRepository for unit tests. */
 export class InMemorySupportRepository implements ISupportRepository {
   private tickets: StoredTicket[] = [];
   private messages: StoredMessage[] = [];
@@ -70,7 +68,6 @@ export class InMemorySupportRepository implements ISupportRepository {
     if (filters.priority) {
       filtered = filtered.filter((t) => t.priority === filters.priority);
     }
-    // Wave B C7 — multi-tenant scope mirror of pg repo.
     if (filters.museumId !== undefined && filters.museumId !== null) {
       filtered = filtered.filter((t) => t.museumId === filters.museumId);
     }
@@ -114,7 +111,6 @@ export class InMemorySupportRepository implements ISupportRepository {
     };
     this.messages.push(message);
 
-    // Bump ticket updatedAt
     const ticket = this.tickets.find((t) => t.id === input.ticketId);
     if (ticket) {
       ticket.updatedAt = new Date();
@@ -153,21 +149,15 @@ export class InMemorySupportRepository implements ISupportRepository {
     }));
   }
 
-  /** Test helper: reset all stored data. */
   clear(): void {
     this.tickets = [];
     this.messages = [];
   }
 
-  /** Test helper: get all stored tickets. */
   getAllTickets(): StoredTicket[] {
     return [...this.tickets];
   }
 
-  /**
-   * Test helper: seed a ticket directly.
-   * @param ticket
-   */
   seed(
     ticket: Partial<StoredTicket> & {
       id: string;

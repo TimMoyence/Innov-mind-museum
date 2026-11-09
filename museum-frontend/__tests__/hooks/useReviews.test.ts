@@ -7,8 +7,6 @@ import type {
 } from '@/features/review/infrastructure/reviewApi';
 import { makeReview } from '../helpers/factories/review.factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockGetReviews = jest.fn<Promise<ReviewListResponse>, [number?, number?]>();
 const mockGetStats = jest.fn<Promise<ReviewStatsResponse>, []>();
 const mockSubmitReview = jest.fn<Promise<{ review: ReviewDTO }>, [number, string, string]>();
@@ -21,8 +19,6 @@ jest.mock('@/features/review/infrastructure/reviewApi', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const defaultStats: ReviewStatsResponse = { average: 4.2, count: 15 };
 
 const makeListResponse = (reviews: ReviewDTO[], page = 1, totalPages = 1): ReviewListResponse => ({
@@ -32,8 +28,6 @@ const makeListResponse = (reviews: ReviewDTO[], page = 1, totalPages = 1): Revie
   limit: 10,
   totalPages,
 });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useReviews', () => {
   beforeEach(() => {
@@ -91,10 +85,9 @@ describe('useReviews', () => {
   it('adds review optimistically but does not inflate stats before refetch', async () => {
     const newReview = makeReview({ id: 'new-1', rating: 5, comment: 'Amazing!' });
     mockSubmitReview.mockResolvedValue({ review: newReview });
-    // Server returns updated stats after the post-submit refetch
     mockGetStats
-      .mockResolvedValueOnce(defaultStats) // initial load
-      .mockResolvedValueOnce({ average: 4.3, count: 16 }); // post-submit refetch
+      .mockResolvedValueOnce(defaultStats)
+      .mockResolvedValueOnce({ average: 4.3, count: 16 });
 
     const { result } = renderHook(() => useReviews());
 
@@ -108,9 +101,7 @@ describe('useReviews', () => {
     });
 
     expect(submitResult).toBe(true);
-    // Review is added to the local list immediately
     expect(result.current.reviews[0]?.id).toBe('new-1');
-    // Stats come from a server refetch, not a local calculation
     await waitFor(() => {
       expect(result.current.stats?.count).toBe(16);
     });

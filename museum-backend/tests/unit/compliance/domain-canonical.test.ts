@@ -1,10 +1,3 @@
-/**
- * A11Y-02 / C11 — canonical-domain sentinel test.
- *
- * The owned domain is musaium.com; musaium.app is not owned. The sentinel must
- * flag musaium.app anywhere in application source (backend UA strings, frontend
- * i18n, web surfaces) but must NOT flag test files that assert its absence.
- */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';

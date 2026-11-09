@@ -10,7 +10,6 @@ import {
 describe('s3-signing', () => {
   describe('sha256Hex', () => {
     it('returns correct SHA-256 hex digest for a string', () => {
-      // SHA-256 of empty string is well-known
       const result = sha256Hex('');
       expect(result).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
     });
@@ -53,7 +52,7 @@ describe('s3-signing', () => {
         'us-east-1',
       );
       expect(Buffer.isBuffer(key)).toBe(true);
-      expect(key.length).toBe(32); // HMAC-SHA256 output is always 32 bytes
+      expect(key.length).toBe(32);
     });
 
     it('produces different keys for different regions', () => {

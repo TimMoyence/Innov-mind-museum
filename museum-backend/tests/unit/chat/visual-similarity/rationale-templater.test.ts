@@ -1,27 +1,9 @@
-/**
- * RED — T5.2 — pure rationale templater `rationale-templater.ts`.
- *
- * Locks down tasks.md T5.2 + design.md §9 D5 + spec R-glossary `Rationale`:
- *   - Output is templated FR / EN (no LLM, deterministic),
- *   - Output is bounded ≤ 80 characters even at maximum shared-attribute fan-out,
- *   - When NO attribute is shared the output falls back to the literal
- *     `'Œuvre similaire'` (FR) / `'Similar artwork'` (EN),
- *   - Unknown locale never crashes — defaults to EN per the locale-invariant
- *     contract (defensive — backstops future locale add-ons).
- *
- * SUT does not yet exist (Phase 5). Tests are RED until the editor lands the
- * templater file.
- */
-
 import { makeArtworkFacts } from '../../../helpers/chat/visual-similarity/artwork-facts.fixtures';
 
 import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.port';
 
-/** Same-shape `SharedAttribute` enum the SUT will export — keep test-side mirror minimal. */
 type SharedAttribute = 'artist' | 'movement' | 'era' | 'technique';
 
-// SUT — Phase 5 file, must not yet exist.
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
 const templater = require('@modules/chat/useCase/visual-similarity/rationale-templater') as {
   templateRationale: (
     facts: ArtworkFacts,
@@ -85,8 +67,6 @@ describe('templateRationale (T5.2 — pure templater)', () => {
 
   it('does not crash on an unknown locale (defensive fallback)', () => {
     const facts = makeArtworkFacts();
-    // Cast through unknown — we are deliberately exercising the runtime guard
-    // for locales the type union does not allow at compile time.
     const unsafeLocale = 'xx' as unknown as 'fr' | 'en';
 
     expect(() => templateRationale(facts, unsafeLocale, ALL_ATTRIBUTES)).not.toThrow();

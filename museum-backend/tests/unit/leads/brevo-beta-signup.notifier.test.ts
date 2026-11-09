@@ -1,31 +1,3 @@
-/**
- * R3 RED tests — BrevoBetaSignupNotifier + NoopBetaSignupNotifier adapters.
- *
- * Pins R3 §3.4 (Brevo adapter doctrine) + R14 + R15 + R16 down BEFORE
- * implementation:
- *  - `subscribe(email)` POSTs to `https://api.brevo.com/v3/contacts` with the
- *    correct headers + body shape (api-key header, listIds, updateEnabled).
- *  - 201 Created → resolves with `{ outcome: 'subscribed' }`.
- *  - 400 with `code: "duplicate_parameter"` → resolves with
- *    `{ outcome: 'duplicate' }` (R16 anti-enumeration).
- *  - Other 4xx / 5xx → throws with status + truncated body slice (R15).
- *  - API key sourced from constructor (env-injected), NOT logged.
- *  - `NoopBetaSignupNotifier.subscribe()` resolves silently with
- *    `{ outcome: 'noop' }` (R14 — local dev / missing config fallback).
- *
- * MUST FAIL at baseline `d5919dd3` — the adapter file doesn't exist yet.
- *
- * Expected production location (R3 §0.3):
- *   museum-backend/src/modules/leads/adapters/secondary/notifier/
- *     brevo-beta-signup.notifier.ts
- *
- * Note on the outcome shape: spec §3.4 sketches `subscribe(): Promise<void>`
- * but the route-level R3 R16 + the structured-log `beta_signup_already_subscribed`
- * (logged at info level for duplicates) need an observable signal. We pin a
- * structured return value `{ outcome }` here so the green-code-agent decides
- * between two compatible implementations (return value OR thrown sentinel).
- * Spec drift logged in the report.
- */
 import {
   BrevoBetaSignupNotifier,
   NoopBetaSignupNotifier,
@@ -80,7 +52,6 @@ describe('BrevoBetaSignupNotifier (R3 §3.4)', () => {
       email: 'visitor@example.com',
       listIds: [LIST_ID],
     });
-    // updateEnabled flag is required for idempotent add-or-update (R3 §3.4).
     expect(body).toHaveProperty('updateEnabled');
   });
 

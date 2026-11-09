@@ -7,13 +7,9 @@ import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/me
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
-// Silence logger during tests (no assertions on logger here — see
-// `feedback-cache-invalidation.test.ts` for shape-of-log assertions).
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
-
-// ── Factories ──────────────────────────────────────────────────────────
 
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
@@ -48,12 +44,8 @@ const makeTts = (): jest.Mocked<TextToSpeechService> => ({
   }),
 });
 
-// ── Tests ──────────────────────────────────────────────────────────────
-
 describe('ChatMediaService', () => {
   beforeEach(() => jest.clearAllMocks());
-
-  // ── getMessageImageRef ─────────────────────────────────────────────
 
   describe('getMessageImageRef', () => {
     it('returns external URL image ref as-is', async () => {
@@ -100,8 +92,6 @@ describe('ChatMediaService', () => {
     });
   });
 
-  // ── reportMessage ──────────────────────────────────────────────────
-
   describe('reportMessage', () => {
     it('reports an assistant message successfully', async () => {
       const row = makeMessageRow({ role: 'assistant' });
@@ -144,8 +134,6 @@ describe('ChatMediaService', () => {
     });
   });
 
-  // ── synthesizeSpeech ───────────────────────────────────────────────
-
   describe('synthesizeSpeech', () => {
     it('synthesizes speech from assistant message text', async () => {
       const row = makeMessageRow({ role: 'assistant', text: 'Hello world' });
@@ -161,8 +149,6 @@ describe('ChatMediaService', () => {
         text: 'Hello world',
         voice: 'alloy',
         requestId: MESSAGE_ID,
-        // TD-20 (R13a/R12) — per-tenant scope propagated (museumId omitted when
-        // the fixture session has null museumId; tier derived from the owner).
         tier: 'free',
       });
     });
@@ -170,7 +156,7 @@ describe('ChatMediaService', () => {
     it('throws 501 when TTS is not configured', async () => {
       const row = makeMessageRow({ role: 'assistant', text: 'Hello' });
       const repo = makeRepo(row);
-      const svc = new ChatMediaService({ repository: repo }); // no tts
+      const svc = new ChatMediaService({ repository: repo });
 
       await expect(svc.synthesizeSpeech(MESSAGE_ID, 42)).rejects.toMatchObject({
         statusCode: 501,
@@ -196,9 +182,6 @@ describe('ChatMediaService', () => {
       expect(tts.synthesize).not.toHaveBeenCalled();
     });
 
-    // C9.12c (2026-05-17) — cache key MUST include voice id, otherwise switching
-    // user.ttsVoice serves stale audio from a previous voice. The cache key
-    // shape is `tts:v2:<messageId>:<voiceId>` — voice change → cache miss.
     it('cache key is voice-aware (different voice → cache miss)', async () => {
       const row = makeMessageRow({ role: 'assistant', text: 'Hello' });
       const repo = makeRepo(row);
@@ -239,8 +222,6 @@ describe('ChatMediaService', () => {
       });
     });
   });
-
-  // ── setMessageFeedback ──────────────────────────────────────────────
 
   describe('setMessageFeedback', () => {
     it('creates positive feedback on an assistant message', async () => {
@@ -335,20 +316,4 @@ describe('ChatMediaService', () => {
       });
     });
   });
-
-  // ── Feedback-invalidation ──────────────────────────────────────────────
-  //
-  // PR-P0-1 (2026-05-23) — the previous F2 cartesian block (8/4 `del` calls
-  // across {audioDescriptionMode × voiceMode} × {global + user-scoped})
-  // tested the now-removed `buildFeedbackInvalidationKeys` helper, which
-  // emitted `chat:llm:*` keys that have NO writers in the production cache
-  // (real writes go through `LlmCacheServiceImpl` under `llm:v4:*` since the
-  // 2026-06-12 lowDataMode KEY_VERSION bump ; `llm:v2:*` at the time). The
-  // cartesian targeted 0 real entries.
-  //
-  // The corrected contract — targeted 1-entry `del(message.cacheKey)` with
-  // fail-open WARN log on throw, INFO skip when `cacheKey` is null — is
-  // pinned non-tautologically in
-  // `tests/unit/chat/feedback-cache-invalidation.test.ts` (the RED/GREEN
-  // suite for this fix). See `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.
 });

@@ -1,7 +1,3 @@
-/**
- * Admin user detail page tests — render, RBAC actions, role change, suspend,
- * unsuspend, delete-with-typed-email guard. Closes audit-2026-05-12 P0 #9.
- */
 import { Suspense, useEffect, useMemo } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -12,8 +8,6 @@ import UserDetailPage from '@/app/[locale]/admin/users/[id]/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 import type { AdminUserDTO } from '@/lib/admin-types';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
@@ -37,12 +31,6 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
-
-// ── API mock ────────────────────────────────────────────────────────────────
-//
-// `ApiError` must be exported by the mocked module because src/lib/auth.tsx
-// (loaded transitively when the page is rendered) imports from `@/lib/api`.
-// vi.hoisted ensures the class is defined before the vi.mock factory runs.
 
 const { mockApiGet, mockApiPost, mockApiPatch, mockApiDelete, ApiError } = vi.hoisted(() => {
   class ApiError extends Error {
@@ -72,8 +60,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
   ApiError,
 }));
-
-// ── Fixtures ────────────────────────────────────────────────────────────────
 
 function makeUser(overrides: Partial<AdminUserDTO> = {}): AdminUserDTO {
   return {
@@ -115,9 +101,6 @@ function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
       <AuthProvider>
-        {/* React 19 `use(params)` inside the page suspends until the promise
-            resolves; the App Router wraps every page in a Suspense boundary
-            in production. Mirror it here. */}
         <Suspense fallback={<div>Loading…</div>}>{children}</Suspense>
       </AuthProvider>
     </AdminDictProvider>
@@ -137,8 +120,6 @@ function AuthenticatedDetailPage({
       void login(loginAs.email, 'pass');
     }
   }, [isAuthenticated, login, loginAs.email]);
-  // Stable Promise — React 19 `use(params)` requires a referentially stable
-  // promise across renders to avoid re-suspending the page.
   const params = useMemo(() => Promise.resolve({ locale: 'en', id: targetId }), [targetId]);
   if (!isAuthenticated) return <div>Logging in…</div>;
   return <UserDetailPage params={params} />;
@@ -171,7 +152,6 @@ const MOD_LOGIN: LoginUser = {
   onboardingCompleted: true,
 };
 
-// ════════════════════════════════════════════════════════════════════════════
 describe('UserDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -193,7 +173,6 @@ describe('UserDetailPage', () => {
     });
     expect(screen.getByText('bob@test.com')).toBeInTheDocument();
     expect(screen.getByText('visitor')).toBeInTheDocument();
-    // Verified badge present
     expect(screen.getByText('Verified')).toBeInTheDocument();
   });
 
@@ -226,7 +205,6 @@ describe('UserDetailPage', () => {
       expect(screen.getByRole('heading', { level: 1, name: 'Bob Smith' })).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: 'Change role' })).toBeInTheDocument();
-    // admin (NOT super_admin) does not see Suspend / Delete
     expect(screen.queryByRole('button', { name: 'Suspend' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
@@ -294,7 +272,6 @@ describe('UserDetailPage', () => {
         role: 'moderator',
       });
     });
-    // Updated badge appears
     await waitFor(() => {
       expect(screen.getByText('moderator')).toBeInTheDocument();
     });
@@ -320,7 +297,6 @@ describe('UserDetailPage', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // Confirm button inside the dialog
     const confirmBtns = screen
       .getAllByRole('button', { name: 'Suspend' })
       .filter((btn) => btn.classList.contains('bg-red-600'));
@@ -330,7 +306,6 @@ describe('UserDetailPage', () => {
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenLastCalledWith('/api/admin/users/42/suspend', undefined);
     });
-    // New "Suspended" badge appears
     await waitFor(() => {
       const badges = screen.getAllByText('Suspended');
       expect(badges.length).toBeGreaterThan(0);
@@ -356,7 +331,6 @@ describe('UserDetailPage', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // Disabled until match.
     const input = screen.getByLabelText('Type email to confirm');
     const deleteButtonsInModal = screen
       .getAllByRole('button', { name: 'Delete' })
@@ -364,11 +338,9 @@ describe('UserDetailPage', () => {
     const firstDeleteBtn = requireIndex(deleteButtonsInModal, 0, 'delete modal buttons');
     expect(firstDeleteBtn).toBeDisabled();
 
-    // Wrong email keeps it disabled.
     fireEvent.change(input, { target: { value: 'wrong@test.com' } });
     expect(firstDeleteBtn).toBeDisabled();
 
-    // Correct email enables the destructive action.
     fireEvent.change(input, { target: { value: 'bob@test.com' } });
     expect(firstDeleteBtn).not.toBeDisabled();
 

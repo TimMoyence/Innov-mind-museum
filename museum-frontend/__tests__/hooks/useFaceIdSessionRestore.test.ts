@@ -1,12 +1,3 @@
-/**
- * F11-mobile (2026-05) — useFaceIdSessionRestore unit tests.
- *
- * Surfaces a "Continue with Face ID" affordance on the login screen for users
- * who still have a stored refresh token (e.g. cold start where the biometric
- * gate was dismissed, or when the AuthContext bootstrap is bypassed). Returns
- * `canRestore=false` whenever any precondition fails so the UI hides the
- * button cleanly.
- */
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 import { act, waitFor } from '@testing-library/react-native';
 
@@ -25,8 +16,6 @@ jest.mock('@/features/auth/infrastructure/biometricStore', () => ({
   getBiometricEnabled: () => mockGetBiometricEnabled(),
 }));
 
-// C1 hexagonal (2026-05-23) — hook now goes through `authSessionService.refresh()`
-// instead of importing `runAuthRefresh` from `@/shared/infrastructure/httpClient`.
 jest.mock('@/features/auth/infrastructure/authSessionService', () => ({
   authSessionService: {
     refresh: () => mockRunAuthRefresh(),
@@ -68,7 +57,6 @@ describe('useFaceIdSessionRestore', () => {
     mockGetRefreshToken.mockResolvedValue(null);
     const { result } = renderHookWithQueryClient(() => useFaceIdSessionRestore());
 
-    // Wait one tick so the effect resolves before asserting.
     await waitFor(() => {
       expect(result.current.isReady).toBe(true);
     });
@@ -116,7 +104,6 @@ describe('useFaceIdSessionRestore', () => {
     });
 
     expect(restored).toBe(false);
-    // Refresh must NOT be attempted when biometric fails.
     expect(mockRunAuthRefresh).not.toHaveBeenCalled();
   });
 

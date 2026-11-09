@@ -143,7 +143,6 @@ describe('llm-section-runner', () => {
         retryBaseDelayMs: 1,
         totalBudgetMs: 1,
         now: () => {
-          // First call sets deadline, second call (start of executeTask) returns past deadline
           clockValue += 1000;
           return clockValue;
         },
@@ -282,7 +281,7 @@ describe('llm-section-runner', () => {
           timeoutMs: 200,
           payloadBytes: 24,
           run: async () => {
-            throw 'string error'; // eslint-disable-line no-throw-literal
+            throw 'string error';
           },
         },
       ],
@@ -301,9 +300,6 @@ describe('llm-section-runner', () => {
   });
 
   it('handles allSettled rejection as error result', async () => {
-    // This tests the settled.map fallback for rejected promises
-    // In practice this is very hard to trigger because executeTask catches everything,
-    // but we can verify the runSectionTasks settled mapping works with maxConcurrent=1
     const results = await runSectionTasks(
       [
         {
@@ -387,9 +383,7 @@ describe('llm-section-runner', () => {
           clockValue += 1;
           return clockValue;
         },
-        sleep: async () => {
-          // no-op sleep
-        },
+        sleep: async () => {},
       },
     );
 

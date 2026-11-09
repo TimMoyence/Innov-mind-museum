@@ -5,8 +5,6 @@ import { CityPackRow } from '@/features/settings/ui/CityPackRow';
 import type { City } from '@/features/museum/infrastructure/cityCatalog';
 import type { CityPackState } from '@/features/museum/application/useOfflinePacks';
 
-// ── Fixtures ────────────────────────────────────────────────────────────────
-
 const makeCity = (overrides: Partial<City> = {}): City => ({
   id: 'paris',
   name: 'Paris',
@@ -23,8 +21,6 @@ describe('CityPackRow', () => {
     onDownload = jest.fn();
     onDelete = jest.fn();
   });
-
-  // ── Status: absent ────────────────────────────────────────────────────────
 
   describe('status=absent', () => {
     const state: CityPackState = { status: 'absent' };
@@ -58,8 +54,6 @@ describe('CityPackRow', () => {
           onDelete={onDelete}
         />,
       );
-      // i18n mock returns the key, so the interpolated `{city}` placeholder
-      // does not get filled — the label key itself is what we assert on.
       expect(getByLabelText('offlineMaps.download_a11y')).toBeTruthy();
     });
 
@@ -75,8 +69,6 @@ describe('CityPackRow', () => {
     });
   });
 
-  // ── Status: active (downloading) ──────────────────────────────────────────
-
   describe('status=active', () => {
     const state: CityPackState = { status: 'active', percentage: 42.6, bytesOnDisk: 1024 };
 
@@ -84,7 +76,6 @@ describe('CityPackRow', () => {
       const { getByText } = render(
         <CityPackRow city={makeCity()} state={state} onDownload={onDownload} onDelete={onDelete} />,
       );
-      // 42.6 rounds to 43.
       expect(getByText('43%')).toBeTruthy();
     });
 
@@ -111,8 +102,6 @@ describe('CityPackRow', () => {
       expect(queryByText('offlineMaps.ready_size')).toBeNull();
     });
   });
-
-  // ── Status: complete ──────────────────────────────────────────────────────
 
   describe('status=complete', () => {
     it('renders the Delete button with i18n key', () => {
@@ -141,8 +130,6 @@ describe('CityPackRow', () => {
       const { getByText } = render(
         <CityPackRow city={makeCity()} state={state} onDownload={onDownload} onDelete={onDelete} />,
       );
-      // i18n mock returns the key without interpolation, so the assertion
-      // is on the key itself; size formatting is exercised separately.
       expect(getByText('offlineMaps.ready_size')).toBeTruthy();
     });
 

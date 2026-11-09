@@ -3,10 +3,8 @@ import { REDACTED, SENSITIVE_QUERY_KEYS } from '@shared/observability/sentry-scr
 
 import type { Request, Response, NextFunction } from 'express';
 
-/** Health/metrics polling paths — too noisy to log. Matched against `req.originalUrl` exactly. */
 const SILENT_PATHS: readonly string[] = ['/api/health', '/health', '/health/deep', '/metrics'];
 
-/** F11 — Mirrors sentry-scrubber redaction list (single source of truth). */
 function redactQueryString(originalUrl: string): string {
   const queryIndex = originalUrl.indexOf('?');
   if (queryIndex < 0) return originalUrl;

@@ -20,7 +20,9 @@ import {
   BADGE_TEXT_COLOR,
   statusColor,
   priorityColor,
-  formatDateWithTime,
+  ticketStatusLabel,
+  ticketPriorityLabel,
+  formatTicketDateTime,
 } from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
@@ -35,11 +37,9 @@ const STAFF_TIME_COLOR = 'rgba(255,255,255,0.7)';
 
 type TicketDetailDTO = components['schemas']['TicketDetailDTO'];
 type TicketMessageDTO = components['schemas']['TicketMessageDTO'];
-type TicketStatus = TicketDetailDTO['status'];
 
-/** Renders a ticket detail screen with message thread and reply input. */
 export default function TicketDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const params = useLocalSearchParams<{ ticketId: string }>();
@@ -76,10 +76,8 @@ export default function TicketDetailScreen() {
     try {
       await ticketApi.addTicketMessage(ticketId, replyText.trim());
       setReplyText('');
-      // Re-fetch to get updated messages
       const response = await ticketApi.getTicketDetail(ticketId);
       setTicket(response.ticket);
-      // Scroll to bottom after a short delay to let the list render
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 200);
@@ -88,16 +86,6 @@ export default function TicketDetailScreen() {
     } finally {
       setIsSending(false);
     }
-  };
-
-  const statusLabel = (s: TicketStatus): string => {
-    const map: Record<TicketStatus, string> = {
-      open: t('tickets.statusOpen'),
-      in_progress: t('tickets.statusInProgress'),
-      resolved: t('tickets.statusResolved'),
-      closed: t('tickets.statusClosed'),
-    };
-    return map[s];
   };
 
   const renderMessage = useCallback(
@@ -128,13 +116,15 @@ export default function TicketDetailScreen() {
               isVisitor ? { color: theme.textSecondary } : styles.staffMessageTimeColor,
             ]}
           >
-            {formatDateWithTime(item.createdAt)}
+            {formatTicketDateTime(item.createdAt, i18n.language)}
           </Text>
         </View>
       );
     },
-    [theme],
+    [theme, i18n.language],
   );
+
+  const createdOn = ticket ? formatTicketDateTime(ticket.createdAt, i18n.language) : null;
 
   if (isLoading) {
     return (
@@ -185,15 +175,17 @@ export default function TicketDetailScreen() {
               </Text>
               <View style={styles.badgeRow}>
                 <View style={[styles.badge, { backgroundColor: statusColor(ticket.status) }]}>
-                  <Text style={styles.badgeText}>{statusLabel(ticket.status)}</Text>
+                  <Text style={styles.badgeText}>{ticketStatusLabel(t, ticket.status)}</Text>
                 </View>
                 <View style={[styles.badge, { backgroundColor: priorityColor(ticket.priority) }]}>
-                  <Text style={styles.badgeText}>{ticket.priority}</Text>
+                  <Text style={styles.badgeText}>{ticketPriorityLabel(t, ticket.priority)}</Text>
                 </View>
               </View>
-              <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                {t('tickets.created')}: {formatDateWithTime(ticket.createdAt)}
-              </Text>
+              {createdOn ? (
+                <Text style={[styles.meta, { color: theme.textSecondary }]}>
+                  {t('tickets.createdOn', { date: createdOn })}
+                </Text>
+              ) : null}
               {ticket.category ? (
                 <Text style={[styles.meta, { color: theme.textSecondary }]}>{ticket.category}</Text>
               ) : null}

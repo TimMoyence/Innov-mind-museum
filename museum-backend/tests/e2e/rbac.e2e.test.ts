@@ -37,29 +37,23 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const password = 'Password123!';
     const { token: visitorToken, userId, email } = await registerAndLogin(harness, { password });
 
-    // Verify visitor is blocked
     const beforeUsers = await harness.request('/api/admin/users', { method: 'GET' }, visitorToken);
     expect(beforeUsers.status).toBe(403);
 
-    // Promote user to admin via direct DB query
     await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [userId]);
 
-    // Re-login to get a fresh JWT with the updated role
     const login = await loginUser(harness.request, email, password);
     const adminToken = login.accessToken;
 
-    // GET /api/admin/users should now succeed
     const usersRes = await harness.request('/api/admin/users', { method: 'GET' }, adminToken);
     expect(usersRes.status).toBe(200);
     const usersBody = usersRes.body as { data?: unknown[]; total?: number };
     expect(Array.isArray(usersBody.data)).toBe(true);
     expect(typeof usersBody.total).toBe('number');
 
-    // GET /api/admin/stats should succeed
     const statsRes = await harness.request('/api/admin/stats', { method: 'GET' }, adminToken);
     expect(statsRes.status).toBe(200);
 
-    // GET /api/admin/audit-logs should succeed
     const auditRes = await harness.request('/api/admin/audit-logs', { method: 'GET' }, adminToken);
     expect(auditRes.status).toBe(200);
   });
@@ -67,16 +61,13 @@ describeE2E('rbac e2e (role-based access control)', () => {
   it('admin can change another user role via PATCH /api/admin/users/:id/role', async () => {
     const password = 'Password123!';
 
-    // Create the admin user
     const admin = await registerAndLogin(harness, { password });
     await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [admin.userId]);
     const adminLogin = await loginUser(harness.request, admin.email, password);
     const adminToken = adminLogin.accessToken;
 
-    // Create a target visitor user
     const target = await registerAndLogin(harness, { password });
 
-    // Promote target to moderator
     const patchRes = await harness.request(
       `/api/admin/users/${target.userId}/role`,
       {
@@ -89,7 +80,6 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const patchBody = patchRes.body as { user?: { role?: string } };
     expect(patchBody.user?.role).toBe('moderator');
 
-    // Target re-logs in and can now access admin/users as moderator
     const modLogin = await loginUser(harness.request, target.email, password);
     const modToken = modLogin.accessToken;
 
@@ -100,7 +90,6 @@ describeE2E('rbac e2e (role-based access control)', () => {
   it('moderator cannot change user roles (admin-only)', async () => {
     const password = 'Password123!';
 
-    // Create and promote to moderator via DB
     const mod = await registerAndLogin(harness, { password });
     await harness.dataSource.query(`UPDATE users SET role = 'moderator' WHERE id = $1`, [
       mod.userId,
@@ -108,10 +97,8 @@ describeE2E('rbac e2e (role-based access control)', () => {
     const modLogin = await loginUser(harness.request, mod.email, password);
     const modToken = modLogin.accessToken;
 
-    // Create target
     const target = await registerAndLogin(harness, { password });
 
-    // Moderator tries to change role → should be 403
     const patchRes = await harness.request(
       `/api/admin/users/${target.userId}/role`,
       {

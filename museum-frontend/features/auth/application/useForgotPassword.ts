@@ -7,30 +7,17 @@ import { authService } from '@/features/auth/infrastructure/authApi';
 import { getErrorMessage } from '@/shared/lib/errors';
 
 interface UseForgotPasswordArgs {
-  /**
-   * Read the current email at click time. Lets the parent screen use
-   * react-hook-form's `getValues` (or any equivalent) without subscribing to
-   * per-keystroke re-renders (TD-RHF-01).
-   */
   getEmail: () => string;
 }
 
 interface UseForgotPasswordResult {
-  /** Trigger the forgot-password flow for the current email. */
   handleForgotPassword: () => void;
   isPending: boolean;
   errorMessage: string | null;
   infoMessage: string | null;
-  /** Resets the forgot-password mutation error + info message. */
   clearError: () => void;
 }
 
-/**
- * Encapsulates the "forgot password" flow triggered from the auth
- * screen: validates the email, shows a confirmation modal (native
- * Alert), and on confirm calls the password reset API, surfacing
- * success or error state through the hook's own return value.
- */
 export function useForgotPassword({ getEmail }: UseForgotPasswordArgs): UseForgotPasswordResult {
   const { t } = useTranslation();
   const [infoMessage, setInfoMessage] = useState<string | null>(null);

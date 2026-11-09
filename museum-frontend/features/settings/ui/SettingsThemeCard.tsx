@@ -19,7 +19,6 @@ interface SettingsThemeCardProps {
   onSetMode: (mode: ThemeMode) => void;
 }
 
-/** Theme mode selector card (system/light/dark). */
 export const SettingsThemeCard = ({ mode, onSetMode }: SettingsThemeCardProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -56,8 +55,7 @@ export const SettingsThemeCard = ({ mode, onSetMode }: SettingsThemeCardProps) =
               style={[
                 styles.themeButtonText,
                 { color: theme.textSecondary },
-                // eslint-disable-next-line react-native/no-inline-styles -- conditional bold
-                mode === option.value && { color: theme.primary, fontWeight: '700' },
+                mode === option.value && [styles.themeButtonTextSelected, { color: theme.primary }],
               ]}
             >
               {t(option.key as 'settings.theme_system')}
@@ -92,5 +90,8 @@ const styles = StyleSheet.create({
   themeButtonText: {
     fontSize: semantic.card.bodySize,
     fontWeight: '600',
+  },
+  themeButtonTextSelected: {
+    fontWeight: '700',
   },
 });

@@ -72,7 +72,12 @@ export class GuardrailEvaluationService {
   ): Promise<InputGuardrailResult> {
     const decision = evaluateUserInputGuardrail({ text });
     if (!decision.allow) {
-      await this.logBlock({ phase: 'input', reason: decision.reason, fullText: text ?? '', context });
+      await this.logBlock({
+        phase: 'input',
+        reason: decision.reason,
+        fullText: text ?? '',
+        context,
+      });
       return decision;
     }
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, {
@@ -169,8 +174,17 @@ export class GuardrailEvaluationService {
       text: aggregateOutputText(text, metadata),
     });
     if (!safetyDecision.allow) {
-      await this.logBlock({ phase: 'output', reason: safetyDecision.reason, fullText: text, context });
-      return buildBlockedOutputPayload({ reason: safetyDecision.reason, requestedLocale, metadata });
+      await this.logBlock({
+        phase: 'output',
+        reason: safetyDecision.reason,
+        fullText: text,
+        context,
+      });
+      return buildBlockedOutputPayload({
+        reason: safetyDecision.reason,
+        requestedLocale,
+        metadata,
+      });
     }
     logger.info(AUDIT_SECURITY_GUARDRAIL_PASS, { phase: 'output' });
     return { text, metadata, allowed: true };

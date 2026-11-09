@@ -16,7 +16,6 @@ import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/dom
 import type { ExtractionQueuePort } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { DataSource } from 'typeorm';
 
-/** Consumed by ChatModule and admin routes. */
 export interface BuiltKnowledgeExtractionModule {
   dbLookup: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
@@ -31,8 +30,6 @@ export class KnowledgeExtractionModule {
     const museumRepo = new TypeOrmMuseumEnrichmentRepo(dataSource.getRepository(MuseumEnrichment));
     const dbLookup = new DbLookupService(artworkRepo, museumRepo);
 
-    // EXTRACTION_WORKER_ENABLED=false short-circuits BEFORE any BullMQ / Redis
-    // wiring so test environments without Redis don't open ioredis clients.
     if (!env.extractionWorkerEnabled) {
       logger.info('knowledge_extraction_disabled', { reason: 'extraction_worker_flag_off' });
       return { dbLookup, artworkKnowledgeRepo: artworkRepo, close: () => Promise.resolve() };
@@ -80,10 +77,7 @@ export class KnowledgeExtractionModule {
         host: env.redis.host,
         port: env.redis.port,
         password: env.redis.password,
-        // BullMQ Worker REQUIRES this to be null (https://docs.bullmq.io/guide/connections).
         maxRetriesPerRequest: null,
-        // Circuit-breaker: fail fast when Redis is down instead of buffering commands
-        // and paying 20x retries per chat message.
         enableOfflineQueue: false,
       },
     });

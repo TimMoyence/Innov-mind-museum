@@ -1,11 +1,3 @@
-// Cluster A R4 — `createMediaRouter` (under test via `createApp`) now wires a
-// `third_party_ai_audio_<provider>` consent gate (`chat-media.route.ts:54-66`).
-// The production `buildThirdPartyAiConsentChecker()` lazy-imports
-// `@modules/auth/useCase` and hits Postgres on `isGranted`, which fails 500 in
-// unit tests with no DB. We swap in a permissive checker so the audio happy
-// path + AppError forwarding assertions exercise the route handler instead of
-// crashing on consent lookup. Audio CONSENT semantics are exercised by
-// `tests/unit/chat/chat-media-audio-consent.test.ts` (frozen, RED-phase).
 jest.mock('@modules/chat/useCase/third-party-ai-consent-checker', () => ({
   buildThirdPartyAiConsentChecker: () => ({
     isGranted: async () => await Promise.resolve(true),
@@ -21,8 +13,6 @@ import { userToken } from 'tests/helpers/auth/token.helpers';
 import { buildSignedChatImageReadUrl } from '@modules/chat/adapters/primary/http/chat.image-url';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
-
-// ── Mock ChatService ────────────────────────────────────────────────
 
 const mockPostMessage = jest.fn();
 const mockCreateSession = jest.fn();
@@ -55,8 +45,6 @@ const app = createApp({
   healthCheck: async () => ({ database: 'up' }),
 });
 
-// ── Tests ──────────────────────────────────────────────────────────
-
 describe('chat-media.route — uncovered paths', () => {
   beforeEach(() => {
     resetRateLimits();
@@ -66,8 +54,6 @@ describe('chat-media.route — uncovered paths', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── POST /messages/:messageId/tts — voice always-on (V1) ────────
 
   describe('POST /api/chat/messages/:id/tts — TTS handler', () => {
     it('returns audio buffer on success', async () => {
@@ -114,8 +100,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
   });
 
-  // ── POST /messages/:messageId/report — auth checks ─────────────
-
   describe('POST /api/chat/messages/:id/report — user auth', () => {
     it('returns 401 when no token is provided', async () => {
       const res = await request(app)
@@ -160,8 +144,6 @@ describe('chat-media.route — uncovered paths', () => {
       expect(res.body.error.code).toBe('NOT_FOUND');
     });
   });
-
-  // ── POST /messages/:messageId/feedback — auth checks ───────────
 
   describe('POST /api/chat/messages/:id/feedback — user auth', () => {
     it('returns 401 when no token is provided', async () => {
@@ -225,8 +207,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
   });
 
-  // ── POST /messages/:messageId/image-url ────────────────────────
-
   describe('POST /api/chat/messages/:id/image-url', () => {
     it('returns signed URL on success', async () => {
       mockGetMessageImageRef.mockResolvedValueOnce({
@@ -245,7 +225,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
 
     it('returns 400 when buildImageReadUrl returns null (no baseUrl or unsupported backend)', async () => {
-      // S3 ref but no S3 config -> buildImageReadUrl returns null
       mockGetMessageImageRef.mockResolvedValueOnce({
         imageRef: 's3://bucket/key',
         fileName: 'image.jpg',
@@ -256,8 +235,6 @@ describe('chat-media.route — uncovered paths', () => {
         .post('/api/chat/messages/msg-uuid/image-url')
         .set('Authorization', `Bearer ${userToken()}`);
 
-      // Depending on S3 config, this may return 400 or 200
-      // When S3 config is incomplete, buildImageReadUrl returns null -> 400
       expect([200, 400]).toContain(res.status);
     });
 
@@ -279,8 +256,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
   });
 
-  // ── GET /messages/:messageId/image — image serve handler ───────
-
   describe('GET /api/chat/messages/:id/image — image serving', () => {
     it('returns 400 for missing token/signature query params', async () => {
       const res = await request(app).get('/api/chat/messages/msg-uuid/image');
@@ -297,7 +272,6 @@ describe('chat-media.route — uncovered paths', () => {
     });
 
     it('serves S3 image via 302 redirect with valid signed URL', async () => {
-      // Generate a valid signed URL for the message
       const signed = buildSignedChatImageReadUrl({
         baseUrl: 'http://127.0.0.1',
         messageId: 'msg-s3',
@@ -315,14 +289,10 @@ describe('chat-media.route — uncovered paths', () => {
 
       const res = await request(app).get('/api/chat/messages/msg-s3/image').query({ token, sig });
 
-      // With S3 ref + valid config: 302 redirect
-      // With S3 ref + no config: buildImageReadUrl returns null -> 400 (bad request)
-      // The behavior depends on the env.storage.s3 config in test env
       expect([302, 400]).toContain(res.status);
     });
 
     it('returns 501 for unsupported image storage backend', async () => {
-      // Generate a valid signed URL
       const signed = buildSignedChatImageReadUrl({
         baseUrl: 'http://127.0.0.1',
         messageId: 'msg-unsupported',
@@ -332,7 +302,6 @@ describe('chat-media.route — uncovered paths', () => {
       const token = url.searchParams.get('token');
       const sig = url.searchParams.get('sig');
 
-      // Return a non-S3, non-local imageRef that resolveLocalImageFilePath can't handle
       mockGetMessageImageRefBySignedToken.mockResolvedValueOnce({
         imageRef: 'azure://container/blob',
         fileName: 'image.jpg',
@@ -372,8 +341,6 @@ describe('chat-media.route — uncovered paths', () => {
       expect(res.status).toBe(404);
     });
   });
-
-  // ── POST /sessions/:id/audio — audio upload ────────────────────
 
   describe('POST /api/chat/sessions/:id/audio', () => {
     it('returns 400 when no audio file is provided', async () => {

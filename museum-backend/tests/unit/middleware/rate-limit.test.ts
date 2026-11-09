@@ -39,7 +39,6 @@ describe('rate-limit middleware — branch coverage', () => {
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // First two should pass
     const next1 = jest.fn();
     mw(req, res, next1);
     expect(next1).toHaveBeenCalledWith();
@@ -48,7 +47,6 @@ describe('rate-limit middleware — branch coverage', () => {
     mw(req, res, next2);
     expect(next2).toHaveBeenCalledWith();
 
-    // Third should be rejected
     const next3 = jest.fn();
     mw(req, res, next3);
     expect(next3).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
@@ -66,7 +64,6 @@ describe('rate-limit middleware — branch coverage', () => {
     mw(req, res, next1);
     expect(next1).toHaveBeenCalledWith();
 
-    // Advance past the window
     jest.advanceTimersByTime(windowMs + 1);
 
     const next2 = jest.fn();
@@ -76,11 +73,6 @@ describe('rate-limit middleware — branch coverage', () => {
     jest.useRealTimers();
   });
 
-  // Stryker survivor (L85): `current.resetAt <= now` flipped to `<`.
-  // At the exact boundary `resetAt === now` the window has just elapsed and the
-  // bucket MUST be considered expired (resetAt <= now → true). With the mutated
-  // `<` operator the bucket would still be considered live and the next request
-  // would be rejected once the bucket is at capacity.
   it('treats resetAt === now as expired (boundary kill for `<=` mutant)', () => {
     jest.useFakeTimers();
     const startEpoch = 1_700_000_000_000;
@@ -91,16 +83,12 @@ describe('rate-limit middleware — branch coverage', () => {
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // First call fills the bucket: count=1, resetAt = startEpoch + 1000.
     const next1 = jest.fn();
     mw(req, res, next1);
     expect(next1).toHaveBeenCalledWith();
 
-    // Jump to the EXACT resetAt instant — boundary case.
     jest.setSystemTime(startEpoch + windowMs);
 
-    // With `<=` the window is expired → bucket reset → request allowed.
-    // With `<`  the window is NOT yet expired → count would hit the limit → 429.
     const next2 = jest.fn();
     mw(req, res, next2);
     expect(next2).toHaveBeenCalledWith();
@@ -109,17 +97,12 @@ describe('rate-limit middleware — branch coverage', () => {
     jest.useRealTimers();
   });
 
-  // Stryker survivor (L91): `current.count >= limit` flipped to `>`.
-  // Off-by-one boundary — count=limit MUST block, count=limit-1 MUST allow.
-  // The mutant `>` would let count reach limit before blocking, allowing one
-  // extra request through.
   it('blocks at count=limit and allows at count=limit-1 (boundary kill for `>=` mutant)', () => {
     const limit = 3;
     const mw = createRateLimitMiddleware({ limit, windowMs: 60_000, keyGenerator: byIp });
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // Calls 1..limit-1 must pass (count=limit-1 is the last allowed state).
     for (let i = 1; i < limit; i++) {
       const next = jest.fn();
       mw(req, res, next);
@@ -127,21 +110,14 @@ describe('rate-limit middleware — branch coverage', () => {
       expect(next).not.toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
     }
 
-    // Call `limit` (the limit-th request) — internal counter is now at `limit`,
-    // i.e. count >= limit → must reject. The mutant `>` would let this through.
     const nextAtLimit = jest.fn();
     mw(req, res, nextAtLimit);
     expect(nextAtLimit).toHaveBeenCalledWith();
 
-    // Call `limit + 1` — guaranteed reject under either operator; serves as a
-    // sanity anchor.
     const nextOver = jest.fn();
     mw(req, res, nextOver);
     expect(nextOver).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
 
-    // Critical assertion — under the `>` mutant, the limit-th request would
-    // ALSO have passed (since count===limit is not strictly greater). Verify
-    // exactly which call hit 429 first.
     const next429First = jest.fn();
     const reqFresh = makeMockReq({ ip: '198.51.100.7' });
     const mwFresh = createRateLimitMiddleware({
@@ -150,11 +126,8 @@ describe('rate-limit middleware — branch coverage', () => {
       keyGenerator: byIp,
       bucketName: 'boundary-ge-mutant',
     });
-    // First two pass.
     mwFresh(reqFresh, res, jest.fn());
     mwFresh(reqFresh, res, jest.fn());
-    // Third (count would become 3, but check is `>= limit` i.e. `>= 2` after the
-    // second call already brought count to 2 → block on third call entry).
     mwFresh(reqFresh, res, next429First);
     expect(next429First).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
   });
@@ -175,12 +148,6 @@ describe('byIp key generator', () => {
     expect(byIp(makeMockReq({ ip: undefined, socket: {} }))).toBe('unknown-ip');
   });
 
-  // Stryker survivor (L175): NullishCoalescing chain
-  // `req.ip ?? req.socket?.remoteAddress ?? 'unknown-ip'`. Cover the full
-  // fallthrough where ALL three fail-overs trigger — req.ip undefined,
-  // req.socket undefined (so optional chain short-circuits), final literal
-  // 'unknown-ip' must be returned. Any mutation of the third operand or of
-  // either `??` must change this output.
   it('returns the literal "unknown-ip" when ip, socket, and remoteAddress are all undefined', () => {
     const req = makeMockReq({ ip: undefined, socket: undefined });
     expect(byIp(req)).toBe('unknown-ip');
@@ -212,11 +179,6 @@ describe('bySession key generator', () => {
     expect(bySession(req)).toBe('9.8.7.6');
   });
 
-  // Stryker survivor (L186): OrderSensitive fallback chain
-  // `req.params.id ?? req.body?.sessionId ?? req.header('x-session-id')`.
-  // When ALL THREE are present with distinct values, `params.id` MUST win.
-  // Any reordering of the chain (body before params, header before params,
-  // etc.) would surface as a different selected value.
   it('prefers params.id over body.sessionId AND header when all three are present', () => {
     const req = makeMockReq({
       params: { id: 'sess-from-params' },
@@ -253,10 +215,6 @@ describe('byUserId key generator', () => {
   });
 });
 
-// SEC-20 (2026-04-08): per-user limiter must catch abuse spread across many
-// sessions. Without it, a single user can multiply throughput by spawning
-// new chat sessions in parallel — each session would get its own bucket under
-// `bySession`, but the byUserId limiter shares one bucket per user.
 describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
   beforeEach(() => {
     clearRateLimitBuckets();
@@ -269,8 +227,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     const mw = createRateLimitMiddleware({ limit: 3, windowMs: 60_000, keyGenerator: byUserId });
     const res = makeMockRes();
 
-    // Same user user.id=42, three different session ids (would each get its
-    // own bucket under bySession). The byUserId limiter must collapse them.
     const sessionIds = ['s1', 's2', 's3', 's4'];
     const calls: jest.Mock[] = [];
     for (const id of sessionIds) {
@@ -280,7 +236,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
       calls.push(next);
     }
 
-    // First 3 pass, 4th rejected (limit=3 per user-bucket regardless of session).
     expect(calls[0]).toHaveBeenCalledWith();
     expect(calls[1]).toHaveBeenCalledWith();
     expect(calls[2]).toHaveBeenCalledWith();
@@ -291,8 +246,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     const mw = createRateLimitMiddleware({ limit: 1, windowMs: 60_000, keyGenerator: byUserId });
     const res = makeMockRes();
 
-    // Two distinct users, each at the limit ceiling. Neither should affect
-    // the other's bucket.
     const reqA1 = makeMockReq({ user: { id: 1 } });
     const reqA2 = makeMockReq({ user: { id: 1 } });
     const reqB1 = makeMockReq({ user: { id: 2 } });
@@ -314,7 +267,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     const mw = createRateLimitMiddleware({ limit: 1, windowMs: 60_000, keyGenerator: byUserId });
     const res = makeMockRes();
 
-    // Authenticated user 42 hits the limit.
     const reqUser = makeMockReq({ user: { id: 42 } });
     const reqUser2 = makeMockReq({ user: { id: 42 } });
     const nextUser = jest.fn();
@@ -324,7 +276,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
     expect(nextUser).toHaveBeenCalledWith();
     expect(nextUser2).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 429 }));
 
-    // Unauthenticated request from a different IP must NOT collide.
     const reqAnon = makeMockReq({ ip: '203.0.113.5', user: undefined });
     const nextAnon = jest.fn();
     mw(reqAnon, res, nextAnon);
@@ -332,7 +283,6 @@ describe('byUserId limiter — multi-session abuse (SEC-20)', () => {
   });
 });
 
-/** Creates a mock RedisRateLimitStore whose increment() always rejects. */
 const createFailingRedisStore = (): RedisRateLimitStore =>
   ({
     increment: jest.fn().mockRejectedValue(new Error('Redis connection refused')),
@@ -364,7 +314,6 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
 
     mw(req, res, next);
 
-    // Wait for the async Redis → catch path to resolve
     await new Promise(process.nextTick);
 
     expect(next).toHaveBeenCalledWith();
@@ -379,7 +328,6 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // Exhaust the in-memory limit (2 requests)
     for (let i = 0; i < 2; i++) {
       const next = jest.fn();
       mw(req, res, next);
@@ -387,7 +335,6 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
       expect(next).toHaveBeenCalledWith();
     }
 
-    // Third request should be rejected via in-memory fallback
     const next3 = jest.fn();
     mw(req, res, next3);
     await new Promise(process.nextTick);
@@ -413,9 +360,6 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
     mw(req, res, next);
     await new Promise(process.nextTick);
 
-    // F2 (2026-04-30) — log message renamed: legacy fall-back path is now
-    // explicitly named "degraded_to_local_bucket" since the failClosed=true
-    // path emits its own distinct log + Sentry event. See rate-limit-fail-closed.test.ts.
     expect(logger.warn).toHaveBeenCalledWith(
       'rate_limit_redis_unavailable_degraded_to_local_bucket',
       {
@@ -425,14 +369,6 @@ describe('rate-limit middleware — Redis fail-closed fallback', () => {
   });
 });
 
-/**
- * Creates a mock RedisRateLimitStore whose increment() resolves with a caller-supplied
- * (count, resetAt) pair. Used to drive the boundary check on the Redis path.
- * @param scripted - Scripted resolution payload for `increment()`.
- * @param scripted.count - Bucket count value the mock will return.
- * @param scripted.resetAt - Bucket reset epoch (ms) the mock will return.
- * @returns A typed RedisRateLimitStore mock.
- */
 const createScriptedRedisStore = (scripted: {
   count: number;
   resetAt: number;
@@ -456,11 +392,6 @@ describe('rate-limit middleware — Redis path boundary (count > limit)', () => 
     clearRateLimitBuckets();
   });
 
-  // Stryker survivor (L149): Redis path `count > limit` flipped to `>=` (or `>`
-  // becoming `<`/`<=`). With a scripted Redis store returning count===limit,
-  // the request MUST be allowed (count > limit is false). The `>=` mutant
-  // would reject this request, the `<` and `<=` mutants would mis-classify
-  // either side of the boundary.
   it('allows the request when Redis returns count === limit (boundary kill)', async () => {
     const limit = 5;
     setRedisRateLimitStore(
@@ -508,26 +439,6 @@ describe('rate-limit middleware — Redis path boundary (count > limit)', () => 
   });
 });
 
-// ---------------------------------------------------------------------------
-// PR-11 extensions — `RateLimitOptions` surface widening (R1/R2/R7/R8)
-//
-// UFR-022 red phase — RUN_ID 2026-05-23-pr-11-dailyChatLimit.
-//
-// These tests assert the EXTENDED RateLimitOptions contract spec'd for the
-// dailyChatLimit migration. Pre-green: every block below FAILS — the current
-// factory hard-codes `tooManyRequests('Too many requests. …')`, keyGenerator
-// is typed `(req) => string` (no null skip), windowMs is `number` only, and
-// `bucketName: ''` still prepends a stray `:` in the final key.
-//
-// Spec sources of truth:
-//   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/spec.md §4
-//   .claude/skills/team/team-state/2026-05-23-pr-11-dailyChatLimit/design.md §2
-//
-// Frozen-test discipline (UFR-022): this file is sha256-hashed in
-// red-test-manifest.json. Green phase MUST NOT modify these tests. Suspected
-// bug → emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
-// ---------------------------------------------------------------------------
-
 describe('PR-11 extensions — custom errorCode / errorMessage / statusCode (R1)', () => {
   beforeEach(() => {
     clearRateLimitBuckets();
@@ -552,10 +463,8 @@ describe('PR-11 extensions — custom errorCode / errorMessage / statusCode (R1)
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // First request fills the bucket.
     mw(req, res, jest.fn());
 
-    // Second request — should be rejected with the CUSTOM AppError shape.
     const next = jest.fn();
     mw(req, res, next);
 
@@ -652,7 +561,6 @@ describe('PR-11 extensions — keyGenerator returning null skips the middleware 
     const mw = createRateLimitMiddleware({
       limit: 5,
       windowMs: 60_000,
-      // Null return — spec R2.1 contract: skip, no counter read/write.
       keyGenerator: () => null,
       bucketName: 'pr11-null-skip',
     });
@@ -663,10 +571,8 @@ describe('PR-11 extensions — keyGenerator returning null skips the middleware 
     mw(req, res, next);
     await new Promise(process.nextTick);
 
-    // next() called with zero arguments — no error, no skip flag.
     expect(next).toHaveBeenCalledTimes(1);
     expect(next).toHaveBeenCalledWith();
-    // Redis untouched — proves no counter side-effect on null skip.
     expect(incrementSpy).not.toHaveBeenCalled();
   });
 
@@ -680,8 +586,6 @@ describe('PR-11 extensions — keyGenerator returning null skips the middleware 
     const req = makeMockReq();
     const res = makeMockRes();
 
-    // Call many times — with `limit: 1`, if the skip path were not honoured
-    // the second call would be rejected with 429. Every call must pass.
     for (let i = 0; i < 5; i++) {
       const next = jest.fn();
       mw(req, res, next);
@@ -713,7 +617,6 @@ describe('PR-11 extensions — windowMs as function resolved per-request (R7)', 
 
     const mw = createRateLimitMiddleware({
       limit: 5,
-      // Function form — design §2.3 step 5.
       windowMs: () => 5000,
       keyGenerator: byIp,
       bucketName: 'pr11-windowms-fn',
@@ -725,7 +628,6 @@ describe('PR-11 extensions — windowMs as function resolved per-request (R7)', 
     mw(req, res, next);
     await new Promise(process.nextTick);
 
-    // increment(key, windowMs) — the 2nd argument is the resolved value.
     expect(incrementSpy).toHaveBeenCalledWith(expect.any(String), 5000);
   });
 
@@ -747,7 +649,7 @@ describe('PR-11 extensions — windowMs as function resolved per-request (R7)', 
     });
 
     const mw = createRateLimitMiddleware({
-      limit: 999, // never trip — only checking windowMs propagation
+      limit: 999,
       windowMs: windowMsFn,
       keyGenerator: byIp,
       bucketName: 'pr11-windowms-perreq',
@@ -760,7 +662,6 @@ describe('PR-11 extensions — windowMs as function resolved per-request (R7)', 
       await new Promise(process.nextTick);
     }
 
-    // Three calls — each saw a different windowMs.
     expect(windowMsFn).toHaveBeenCalledTimes(3);
     expect(incrementSpy).toHaveBeenNthCalledWith(1, expect.any(String), 1000);
     expect(incrementSpy).toHaveBeenNthCalledWith(2, expect.any(String), 2000);
@@ -801,9 +702,7 @@ describe('PR-11 extensions — bucketName empty string opts out of namespace pre
     mw(req, res, next);
     await new Promise(process.nextTick);
 
-    // No leading ':', no namespace prefix — exactly the keyGenerator output.
     expect(incrementSpy).toHaveBeenCalledWith('daily-chat:42:2026-05-23', expect.any(Number));
-    // Defensive: no stray ':<key>' form sneaking in.
     expect(incrementSpy).not.toHaveBeenCalledWith(':daily-chat:42:2026-05-23', expect.any(Number));
   });
 

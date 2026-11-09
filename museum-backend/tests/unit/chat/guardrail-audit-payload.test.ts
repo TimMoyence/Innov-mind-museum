@@ -1,9 +1,5 @@
-import {
-  buildGuardrailBlockAuditEntry,
-} from '@modules/chat/useCase/guardrail/guardrail-audit-payload';
-import {
-  AUDIT_GUARDRAIL_BLOCKED_INPUT,
-} from '@shared/audit/audit.types';
+import { buildGuardrailBlockAuditEntry } from '@modules/chat/useCase/guardrail/guardrail-audit-payload';
+import { AUDIT_GUARDRAIL_BLOCKED_INPUT } from '@shared/audit/audit.types';
 
 describe('guardrail-audit-payload', () => {
   describe('buildGuardrailBlockAuditEntry', () => {
@@ -19,9 +15,6 @@ describe('guardrail-audit-payload', () => {
       expect(entry.metadata?.snippetFingerprint).toMatch(/^[0-9a-f]{64}$/);
     });
 
-    // TD-66 — the block path passes the RAW user text. A short email/phone
-    // (< 64 chars) currently survives the slice into the 13-month audit hash
-    // chain. The snippetPreview must carry placeholders, never the raw PII.
     it('TD-66 — never leaks raw user email/phone into the block audit entry', () => {
       const entry = buildGuardrailBlockAuditEntry({
         phase: 'input',
@@ -36,10 +29,8 @@ describe('guardrail-audit-payload', () => {
       expect(preview).toContain('[EMAIL]');
       expect(preview).toContain('[PHONE]');
 
-      // Belt-and-braces: nothing raw survives full stringification of the entry.
       const serialized = JSON.stringify(entry);
       expect(serialized).not.toContain('john.doe@example.com');
     });
   });
-
 });

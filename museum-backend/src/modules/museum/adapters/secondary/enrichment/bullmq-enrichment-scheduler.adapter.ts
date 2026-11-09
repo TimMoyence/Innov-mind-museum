@@ -1,5 +1,6 @@
 import { Queue, Worker } from 'bullmq';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
@@ -12,23 +13,15 @@ import type { ConnectionOptions } from 'bullmq';
 
 export const ENRICHMENT_SCHEDULER_QUEUE_NAME = 'museum-enrichment-scheduler';
 
-/** BullMQ upserts on this id so re-boot = idempotent. */
 export const STALE_ENRICHMENT_SCAN_SCHEDULER_ID = 'stale-enrichment-scan';
 
-/** Daily 03:00 UTC — off-peak, well before Wikidata replication (06:00 UTC). */
 export const DEFAULT_STALE_ENRICHMENT_CRON = '0 3 * * *';
 
 export interface BullmqEnrichmentSchedulerConfig {
   connection: ConnectionOptions;
-  /** Defaults to {@link DEFAULT_STALE_ENRICHMENT_CRON}. */
   cron?: string;
 }
 
-/**
- * Runs on a dedicated queue (not the main `museum-enrichment` queue) so
- * scheduler ticks never interleave with on-demand enrichment jobs or compete
- * for the same concurrency budget. Uses BullMQ v5 `upsertJobScheduler`.
- */
 export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort {
   private readonly queue: Queue;
   private worker?: Worker;
@@ -49,7 +42,6 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
     });
   }
 
-  /** Idempotent across restarts via `upsertJobScheduler` + stable scheduler id. */
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
@@ -68,7 +60,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       });
     } catch (err) {
       logger.error('enrichment_scheduler_start_failed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       captureExceptionWithContext(err instanceof Error ? err : new Error(String(err)), {
         queue: ENRICHMENT_SCHEDULER_QUEUE_NAME,
@@ -81,8 +73,6 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       ENRICHMENT_SCHEDULER_QUEUE_NAME,
       async () => {
         const result = await this.useCase.execute();
-        // Purge AFTER refresh so rows newly re-fetched are never caught by the
-        // same pass. Skipped when no purge use case / threshold wired.
         let purged = 0;
         if (this.purgeUseCase && this.purgeThresholdDays !== undefined) {
           const purgeResult = await this.purgeUseCase.execute(new Date(), this.purgeThresholdDays);
@@ -103,7 +93,6 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
         jobId: job?.id,
       });
     });
-    // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md §3 DO).
     this.worker.on('error', (err) => {
       captureExceptionWithContext(err, {
         queue: ENRICHMENT_SCHEDULER_QUEUE_NAME,
@@ -118,7 +107,6 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
     }
   }
 
-  /** Best-effort on each step so a failure draining one resource doesn't leak the others. */
   async stop(): Promise<void> {
     if (this.started) {
       this.started = false;
@@ -126,7 +114,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
         await this.queue.removeJobScheduler(STALE_ENRICHMENT_SCAN_SCHEDULER_ID);
       } catch (err) {
         logger.warn('enrichment_scheduler_remove_failed', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
       }
     }
@@ -136,7 +124,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
         await this.worker.close();
       } catch (err) {
         logger.warn('enrichment_scheduler_worker_close_failed', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
       }
       this.worker = undefined;
@@ -146,7 +134,7 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       await this.queue.close();
     } catch (err) {
       logger.warn('enrichment_scheduler_queue_close_failed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     }
 

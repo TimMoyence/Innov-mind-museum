@@ -10,8 +10,6 @@ import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
 
-// ── Factories ──────────────────────────────────────────────────────────
-
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 
 const makeRepo = (
@@ -38,12 +36,8 @@ const makeRepo = (
     } satisfies ChatSessionsPage),
   });
 
-// ── Tests ──────────────────────────────────────────────────────────────
-
 describe('ChatSessionService', () => {
   beforeEach(() => jest.clearAllMocks());
-
-  // ── createSession ──────────────────────────────────────────────────
 
   describe('createSession', () => {
     it('creates a session for an authenticated user', async () => {
@@ -151,16 +145,12 @@ describe('ChatSessionService', () => {
       await svc.createSession({ userId: 42, museumId: 99, museumMode: true });
 
       expect(repo.createSession).toHaveBeenCalledWith(expect.objectContaining({ museumId: 99 }));
-      // visitContext should be undefined since no museum name and no coordinates repo
       expect(repo.createSession).toHaveBeenCalledWith(
         expect.objectContaining({ visitContext: undefined }),
       );
     });
 
     it('still looks up museum when museumName is provided (to fetch description)', async () => {
-      // Museum description is only available from the DB — we must look up by id
-      // even when the caller already provided the name. The caller-provided name
-      // takes precedence, but description comes from the museum entity.
       const museum = makeMuseum({
         id: 1,
         name: 'DB Name',
@@ -182,7 +172,6 @@ describe('ChatSessionService', () => {
       expect(museumRepo.findById).toHaveBeenCalledWith(1);
       expect(repo.createSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          // Caller-provided name wins
           museumName: 'Custom Name',
           visitContext: expect.objectContaining({
             museumName: 'Custom Name',
@@ -235,8 +224,6 @@ describe('ChatSessionService', () => {
     });
 
     it('keeps caller museumName when museum repo returns null', async () => {
-      // External museumId not in our DB — caller-provided name must survive even
-      // when the DB lookup finds nothing, and visitContext must still be created.
       const museumRepo = makeMuseumRepo({
         findById: jest.fn().mockResolvedValue(null),
       });
@@ -262,8 +249,6 @@ describe('ChatSessionService', () => {
       );
     });
   });
-
-  // ── getSession ─────────────────────────────────────────────────────
 
   describe('getSession', () => {
     it('returns session with paginated messages', async () => {
@@ -310,8 +295,6 @@ describe('ChatSessionService', () => {
     });
   });
 
-  // ── listSessions ───────────────────────────────────────────────────
-
   describe('listSessions', () => {
     it('returns paginated sessions for the user', async () => {
       const repo = makeRepo();
@@ -342,8 +325,6 @@ describe('ChatSessionService', () => {
       await expect(svc.listSessions({ limit: 20 })).rejects.toMatchObject({ statusCode: 400 });
     });
   });
-
-  // ── deleteSessionIfEmpty ───────────────────────────────────────────
 
   describe('deleteSessionIfEmpty', () => {
     it('deletes an empty session and invalidates cache', async () => {

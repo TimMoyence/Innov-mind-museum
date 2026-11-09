@@ -1,9 +1,3 @@
-// Pre-computed env-derived values used by AppEnv in env.ts.
-//
-// Side effects:
-//   - `resolveDeploymentMode()` writes JSON info to stderr on autodetect 'multi'.
-//   - `warnLegacyJwtSecret()` writes JSON warn to stderr when prod still has JWT_SECRET.
-// Uses stderr directly (NOT @shared/logger): logger imports env → circular init.
 import { z } from 'zod';
 
 import { toOptionalString } from './env-helpers';
@@ -23,13 +17,6 @@ const storageDriverSchema = z.enum(['local', 's3']);
 const embeddingsProviderSchema = z.enum(['siglip-onnx', 'replicate']);
 const rerankerProviderSchema = z.enum(['null', 'bge-reranker-v2-m3']);
 
-/**
- * Resolves Redis config. Priority:
- *   1. REDIS_HOST (+ REDIS_PORT / REDIS_PASSWORD)
- *   2. REDIS_URL parsed via URL() for managed-Redis providers
- *   3. localhost:6379 defaults
- * Prevents ECONNREFUSED floods when only REDIS_URL set in prod.
- */
 export function parseRedisUrlFallback(): {
   host: string;
   port: number;
@@ -57,9 +44,7 @@ export function parseRedisUrlFallback(): {
           toOptionalString(process.env.REDIS_PASSWORD) ||
           (url.password ? decodeURIComponent(url.password) : undefined),
       };
-    } catch {
-      /* malformed URL — fall through to defaults */
-    }
+    } catch {}
   }
 
   return {
@@ -69,14 +54,6 @@ export function parseRedisUrlFallback(): {
   };
 }
 
-/**
- * Resolves deployment topology for `assertDeploymentInvariants`. Precedence:
- *   1. Explicit `DEPLOYMENT_MODE` (`single` | `multi`); invalid → auto-detect.
- *   2. Auto-detect: PM2 (`NODE_APP_INSTANCE`/`pm_id`) or K8s
- *      (`KUBERNETES_SERVICE_HOST`/`K8S_POD_NAME`).
- *   3. Default `single`.
- * Autodetect emits JSON info line to stderr (NOT logger — circular init).
- */
 export function resolveDeploymentMode(): DeploymentMode {
   const explicit = toOptionalString(process.env.DEPLOYMENT_MODE)?.toLowerCase();
   if (explicit === 'single' || explicit === 'multi') {
@@ -108,7 +85,6 @@ export function resolveDeploymentMode(): DeploymentMode {
   return 'single';
 }
 
-/** Throws on invalid `NODE_ENV`. */
 export function resolveNodeEnv(): NodeEnv {
   const raw = process.env.NODE_ENV || 'development';
   const result = nodeEnvSchema.safeParse(raw);
@@ -118,40 +94,28 @@ export function resolveNodeEnv(): NodeEnv {
   return result.data;
 }
 
+const choiceOr = <T extends string>(
+  schema: z.ZodType<T>,
+  value: string | undefined,
+  fallback: T,
+): T => schema.safeParse((value || fallback).toLowerCase()).data ?? fallback;
+
 export function resolveLlmProvider(): LlmProvider {
-  const raw = (process.env.LLM_PROVIDER || 'openai').toLowerCase();
-  return llmProviderSchema.safeParse(raw).data ?? 'openai';
+  return choiceOr(llmProviderSchema, process.env.LLM_PROVIDER, 'openai');
 }
 
 export function resolveStorageDriver(): StorageDriver {
-  const raw = (process.env.OBJECT_STORAGE_DRIVER || 'local').toLowerCase();
-  return storageDriverSchema.safeParse(raw).data ?? 'local';
+  return choiceOr(storageDriverSchema, process.env.OBJECT_STORAGE_DRIVER, 'local');
 }
 
-/**
- * C3 (2026-05) — `EMBEDDINGS_PROVIDER`. Default `'siglip-onnx'` (self-hosted
- * CPU, no per-call cost). Unknown values fall back to default rather than throw.
- */
 export function resolveEmbeddingsProvider(): EmbeddingsProvider {
-  const raw = (process.env.EMBEDDINGS_PROVIDER || 'siglip-onnx').toLowerCase();
-  return embeddingsProviderSchema.safeParse(raw).data ?? 'siglip-onnx';
+  return choiceOr(embeddingsProviderSchema, process.env.EMBEDDINGS_PROVIDER, 'siglip-onnx');
 }
 
-/**
- * C9.13 (2026-05) — `RERANK_PROVIDER`. Default `'null'` (V1 prod default,
- * no-op adapter, zero behavior change). Unknown values fall back to default
- * rather than throw — fail-open ethos: misconfigured reranker MUST NOT brick boot.
- */
 export function resolveRerankerProvider(): RerankerProvider {
-  const raw = (process.env.RERANK_PROVIDER || 'null').toLowerCase();
-  return rerankerProviderSchema.safeParse(raw).data ?? 'null';
+  return choiceOr(rerankerProviderSchema, process.env.RERANK_PROVIDER, 'null');
 }
 
-/**
- * SEC-HARDENING (H12): warn if prod still has `JWT_SECRET` set. No longer
- * honored — orchestration injecting it forgot to rotate to JWT_ACCESS_SECRET +
- * JWT_REFRESH_SECRET. Stderr direct (logger imports env → circular init).
- */
 export function warnLegacyJwtSecret(isProduction: boolean): void {
   if (!isProduction) return;
   if (!toOptionalString(process.env.JWT_SECRET)) return;
@@ -164,7 +128,6 @@ export function warnLegacyJwtSecret(isProduction: boolean): void {
   );
 }
 
-/** APP_VERSION → npm_package_version → 'unknown'. */
 export function resolveAppVersion(): string {
   const explicit = toOptionalString(process.env.APP_VERSION);
   if (explicit) return explicit;
@@ -173,7 +136,6 @@ export function resolveAppVersion(): string {
   return 'unknown';
 }
 
-/** COMMIT_SHA / GITHUB_SHA — undefined if neither set. */
 export function resolveCommitSha(): string | undefined {
   const source = process.env.COMMIT_SHA || process.env.GITHUB_SHA;
   const trimmed = source?.trim();

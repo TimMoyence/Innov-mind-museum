@@ -1,29 +1,9 @@
-/**
- * RED tests for `useCompareImage` (T8.1, Phase 8 — C3 Image Comparative).
- *
- * SUT: `museum-frontend/features/chat/application/useCompareImage.ts` —
- * a React Query mutation hook that POSTs a multipart `image + sessionId`
- * payload to `/api/chat/compare` and returns a `CompareResult`.
- *
- * Contract under test:
- *  - Idle initial state (`isPending=false`, no data, no error).
- *  - Success path: mutateAsync resolves with the backend `CompareResult`.
- *  - Network error → exposes `error`, no `data`.
- *  - 503 (`COMPARE_ENCODER_UNAVAILABLE`) → mapped to a user-friendly message.
- *  - Retry policy: only retries on 5xx, never on 4xx.
- *
- * The SUT does NOT exist yet — these tests must FAIL on import.
- */
 import '../../../helpers/test-utils';
 import { act, waitFor } from '@testing-library/react-native';
 
 import { renderHookWithQueryClient } from '../../../helpers/data/renderWithQueryClient';
 import { makeCompareResult } from '../../../helpers/factories';
 
-// ── Mock the infra service used by the hook (C1 hexagonal 2026-05-23) ────
-// Previously mocked `httpClient.post` directly ; now mocks
-// `imageComparisonApi.compare`. The service unwraps `response.data` for the
-// hook, so mock resolutions are raw `CompareResult` payloads (no `.data` wrap).
 const mockCompare = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/imageComparisonApi', () => ({
@@ -32,9 +12,6 @@ jest.mock('@/features/chat/infrastructure/imageComparisonApi', () => ({
   },
 }));
 
-// SUT import must come AFTER jest.mock() so the mock is hoisted in time.
-// We import lazily inside each test via require() so a missing module fails
-// the test (RED-confirmed) instead of the whole file failing to load.
 interface UseCompareImageInput {
   image: { uri: string; name: string; type: string };
   sessionId: string;
@@ -56,9 +33,6 @@ interface UseCompareImageMutation {
 type UseCompareImageHook = () => UseCompareImageMutation;
 
 const loadHook = (): UseCompareImageHook => {
-  // Lazy require so the missing-SUT failure mode is a clean test-level
-  // "Cannot find module" rather than a file-load crash that hides which test
-  // triggered it. Standard RED-test pattern across this PR.
   const mod = require('@/features/chat/application/useCompareImage') as {
     useCompareImage: UseCompareImageHook;
   };
@@ -88,7 +62,6 @@ describe('useCompareImage (T8.1)', () => {
 
   it('returns the backend CompareResult on a successful POST /chat/compare', async () => {
     const compareResult = makeCompareResult();
-    // Service unwraps response.data for the hook — mock returns the payload.
     mockCompare.mockResolvedValue(compareResult);
 
     const useCompareImage = loadHook();
@@ -100,11 +73,7 @@ describe('useCompareImage (T8.1)', () => {
 
     expect(mockCompare).toHaveBeenCalledTimes(1);
     const [calledInput] = mockCompare.mock.calls[0] as [unknown];
-    // Hook now passes the input shape directly to the service.
     expect(calledInput).toEqual(sampleInput);
-    // React Query's notifyManager flushes state via setTimeout(0); without a
-    // waitFor the assertion would race the post-mutationFn setState even though
-    // mutateAsync's promise has already resolved.
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
@@ -148,16 +117,9 @@ describe('useCompareImage (T8.1)', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    // Hook contract: error message is normalized to a friendly i18n-ready
-    // string (NOT the raw "encoder down" / Axios stack). Using getErrorMessage
-    // — mocked in test-utils to return err.message — the hook is expected to
-    // wrap the AppError with a stable user message keyed off the 503 code.
     const message = result.current.error?.message ?? '';
     expect(message.length).toBeGreaterThan(0);
     expect(message).not.toMatch(/Network Error/i);
-    // It must reference the encoder/unavailable concept — exact wording is
-    // owned by the green editor (i18n key `chat.compare.error.unavailable`),
-    // but the mapped message must not leak the raw axios "encoder down".
     expect(message).not.toBe('encoder down');
   });
 
@@ -180,7 +142,6 @@ describe('useCompareImage (T8.1)', () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
-    // Mutation policy: 4xx is terminal — exactly one service attempt.
     expect(mockCompare).toHaveBeenCalledTimes(1);
   });
 });

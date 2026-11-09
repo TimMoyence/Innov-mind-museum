@@ -20,7 +20,7 @@ const flows = readdirSync(MAESTRO_DIR, { recursive: true })
   }));
 
 const typedEmails = new Set(
-  flows.flatMap(({ body }) => [...body.matchAll(/inputText: "([^"$]+@[^"]+)"/g)].map((match) => match[1])),
+  flows.flatMap(({ body }) => [...body.matchAll(/inputText: (["'])([^"'$]+@[^"']+)\1/g)].map((match) => match[2])),
 );
 const seededEmails = [...seedScript.matchAll(/^seed ([^\s]+@[^\s]+)/gm)].map((match) => match[1]);
 
@@ -51,7 +51,7 @@ describe('Maestro accounts are recreated before every shard attempt', () => {
 
   it('gives account deletion its own account, used by no other flow', () => {
     const deleteFlow = flows.find(({ file }) => file === 'auth-account-delete.yaml');
-    const deleteEmail = deleteFlow?.body.match(/inputText: "([^"]+@[^"]+)"/)?.[1];
+    const deleteEmail = deleteFlow?.body.match(/inputText: (["'])([^"']+@[^"']+)\1/)?.[2];
     expect(deleteEmail).toBeDefined();
     const others = flows.filter(({ file, body }) => file !== 'auth-account-delete.yaml' && body.includes(deleteEmail));
     expect(others.map(({ file }) => file)).toEqual([]);

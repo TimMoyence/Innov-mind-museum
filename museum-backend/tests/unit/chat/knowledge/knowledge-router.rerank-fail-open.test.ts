@@ -1,18 +1,3 @@
-/**
- * RED — C9.13 — `KnowledgeRouterService` rerank phase is fail-open.
- *
- * Contract:
- *  - When reranker returns a valid permutation of webResults, KR's facts
- *    SHALL reflect the rerank order.
- *  - When reranker throws (`RerankerUnavailableError`) or times out, KR
- *    SHALL preserve the baseline order (webResults.slice(0, MAX_WEB_FACTS)).
- *  - In the throw case, `musaium_rerank_fallback_total{caller='knowledge-router'}`
- *    SHALL increment.
- *
- * SUT depends on the new `RerankerPort` dep + `rerank` integration in
- * `runWebSearchLeg`. RED until Phase 4.1 lands.
- */
-
 import { KnowledgeRouterService } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import {
   RerankerUnavailableError,
@@ -30,8 +15,6 @@ import type { SearchResult, WebSearchProvider } from '@modules/chat/domain/ports
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
-
-
 
 const makeSearchResult = (i: number): SearchResult => ({
   url: `https://example.org/r${i}`,
@@ -76,14 +59,12 @@ const makeService = (): Deps => {
 };
 
 describe('KnowledgeRouterService — rerank fail-open (C9.13)', () => {
-  beforeEach(() => {
-  });
+  beforeEach(() => {});
 
   it('reorders webResults when reranker returns a valid permutation', async () => {
     const { ws, reranker, service } = makeService();
     const results = [0, 1, 2, 3, 4].map((i) => makeSearchResult(i));
     ws.search.mockResolvedValueOnce(results);
-    // Reranker reverses the order: pick index 4 then 3 then 2 then 1 then 0.
     const rerankReturn: RerankResult[] = [
       { docIndex: 4, score: 0.95 },
       { docIndex: 3, score: 0.9 },
@@ -112,7 +93,7 @@ describe('KnowledgeRouterService — rerank fail-open (C9.13)', () => {
     const out = await service.resolve('mona lisa');
 
     expect(out.source).toBe('web');
-    expect(out.facts[0]).toContain('Result 0'); // baseline preserved
+    expect(out.facts[0]).toContain('Result 0');
     expect(out.facts[1]).toContain('Result 1');
   });
 

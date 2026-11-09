@@ -1,23 +1,3 @@
-/**
- * TD-JWT-02 — iss/aud pinning on internal HS256 tokens (defense-in-depth).
- *
- * lib-docs/jsonwebtoken/PATTERNS.md §3 (line 187-190):
- *   DO: Always check `aud` and `iss` when validating tokens from a known issuer.
- *   "Skipping them allows token-confusion across audiences (same signing key,
- *    different intended recipients)."
- *
- * Covered scenarios:
- *   1. signAccessToken  produces a JWT with iss === 'musaium-access' AND aud === 'musaium-access'.
- *   2. verifyAccessToken rejects a token with wrong iss (throws INVALID_ACCESS_TOKEN).
- *   3. verifyAccessToken rejects a token with missing iss/aud claims.
- *   4. Same for refresh tokens (iss/aud === 'musaium-refresh').
- *   5. Same for mfa-session tokens (iss/aud === 'musaium-mfa-session').
- *   6. Cross-cast attack: access token payload signed with the refresh secret must
- *      FAIL verifyAccessToken — layered defense (signature mismatch).
- *
- * RED state: these tests FAIL on the current code because iss/aud are not pinned.
- */
-
 jest.mock('@src/config/env', () => ({
   env: {
     auth: {
@@ -36,7 +16,6 @@ import { AppError } from '@shared/errors/app.error';
 const ACCESS_SECRET = 'unit-test-access-secret-that-is-at-least-32c';
 const REFRESH_SECRET = 'unit-test-refresh-secret-that-is-at-least-32c';
 
-// Helper: assert a synchronous function throws AppError and return it.
 const expectAppError = (fn: () => unknown): AppError => {
   try {
     fn();
@@ -49,9 +28,6 @@ const expectAppError = (fn: () => unknown): AppError => {
   throw new Error('Expected function to throw AppError, but it did not throw');
 };
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Access token — iss/aud pinning
-// ──────────────────────────────────────────────────────────────────────────────
 describe('TD-JWT-02 — access token iss/aud pinning', () => {
   let TokenJwtService: typeof import('@modules/auth/useCase/session/token-jwt.service').TokenJwtService;
   let ACCESS_TOKEN_ISSUER: string;
@@ -77,7 +53,6 @@ describe('TD-JWT-02 — access token iss/aud pinning', () => {
     const service = new TokenJwtService();
     const token = service.signAccessToken({ userId: 1, role: 'visitor', jti: 'jti-aud-1' });
     const decoded = jwt.decode(token) as JwtPayload;
-    // aud may be a string or string[] per JwtPayload — normalise.
     const aud = Array.isArray(decoded.aud) ? decoded.aud[0] : decoded.aud;
     expect(aud).toBe('musaium-access');
   });
@@ -90,7 +65,6 @@ describe('TD-JWT-02 — access token iss/aud pinning', () => {
 
   it('verifyAccessToken rejects a token with wrong iss (INVALID_ACCESS_TOKEN)', () => {
     const service = new TokenJwtService();
-    // Manually craft a token with wrong issuer but correct secret.
     const token = jwt.sign({ sub: '1', type: 'access', jti: 'bad-iss' }, ACCESS_SECRET, {
       algorithm: 'HS256',
       expiresIn: '5m',
@@ -126,9 +100,6 @@ describe('TD-JWT-02 — access token iss/aud pinning', () => {
   });
 });
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Refresh token — iss/aud pinning
-// ──────────────────────────────────────────────────────────────────────────────
 describe('TD-JWT-02 — refresh token iss/aud pinning', () => {
   let TokenJwtService: typeof import('@modules/auth/useCase/session/token-jwt.service').TokenJwtService;
   let REFRESH_TOKEN_ISSUER: string;
@@ -189,16 +160,11 @@ describe('TD-JWT-02 — refresh token iss/aud pinning', () => {
   });
 });
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Cross-cast attack scenario — layered defense assertion
-// ──────────────────────────────────────────────────────────────────────────────
 describe('TD-JWT-02 — cross-cast attack: access payload signed with refresh secret', () => {
   it('verifyAccessToken rejects an access-shaped token signed with the refresh secret even if iss is "musaium-access"', async () => {
     const { TokenJwtService } = await import('@modules/auth/useCase/session/token-jwt.service');
     const service = new TokenJwtService();
 
-    // Attacker creates a token with the "correct" issuer for access but signs it
-    // with the REFRESH secret (i.e. they somehow obtained the refresh secret).
     const spoofedToken = jwt.sign(
       { sub: '1', type: 'access', jti: 'cross-cast', role: 'admin' },
       REFRESH_SECRET,
@@ -210,8 +176,6 @@ describe('TD-JWT-02 — cross-cast attack: access payload signed with refresh se
       },
     );
 
-    // The token claims the right iss/aud but was signed with a different secret.
-    // verifyAccessToken must reject it (signature mismatch).
     const err = expectAppError(() => service.verifyAccessToken(spoofedToken));
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('INVALID_ACCESS_TOKEN');

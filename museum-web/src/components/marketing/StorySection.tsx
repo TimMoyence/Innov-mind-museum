@@ -13,7 +13,6 @@ interface StorySectionProps {
   steps: StoryStep[];
 }
 
-// Inline SVG icons — lucide-react not installed in this project
 function BuildingIcon() {
   return (
     <svg
@@ -126,7 +125,6 @@ export function StorySection({ title, subtitle, steps }: StorySectionProps) {
       </motion.p>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-        {/* Connecting line — animates left to right */}
         <motion.div
           aria-hidden="true"
           className="hidden md:block absolute top-12 left-12 right-12 h-px bg-gradient-to-r from-primary-500/30 via-primary-500/60 to-primary-500/30"

@@ -4,30 +4,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiMessageMetadata } from '@/features/chat/application/useChatSession';
-import { AskMoreChip } from '@/features/chat/ui/AskMoreChip';
 import { RecommendationChips } from '@/features/chat/ui/RecommendationChips';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, lineHeightPx } from '@/shared/ui/tokens';
 
 interface MessageActionsProps {
-  /** Metadata from the last assistant message. */
   metadata: ChatUiMessageMetadata | null | undefined;
-  /** Called when a follow-up question is pressed (auto-sends). */
-  onFollowUpPress: (text: string) => void;
-  /** Called when a recommendation chip is pressed (populates input). */
   onRecommendationPress: (text: string) => void;
-  /** Whether send actions should be disabled (e.g. during an active send). */
   isSendingDisabled: boolean;
 }
 
-/**
- * Renders action components that appear after the last assistant message:
- * follow-up question buttons, recommendation chips, deeper context collapsible,
- * and open question prompt chip.
- */
 export const MessageActions = ({
   metadata,
-  onFollowUpPress,
   onRecommendationPress,
   isSendingDisabled,
 }: MessageActionsProps) => {
@@ -43,14 +31,6 @@ export const MessageActions = ({
 
   return (
     <View style={styles.container}>
-      {metadata.suggestedFollowUp && metadata.suggestedFollowUp.length > 0 ? (
-        <AskMoreChip
-          text={metadata.suggestedFollowUp}
-          onPress={onFollowUpPress}
-          disabled={isSendingDisabled}
-        />
-      ) : null}
-
       {metadata.recommendations?.length ? (
         <RecommendationChips
           recommendations={metadata.recommendations}
@@ -133,8 +113,6 @@ const styles = StyleSheet.create({
     borderRadius: semantic.card.radiusCompact,
     borderWidth: semantic.input.borderWidth,
     padding: space['2.5'],
-    // Spacing between toggle and expanded text via gap, not child marginTop,
-    // which would reveal this wrap's glassBackground as a band.
     gap: semantic.chat.gap,
   },
   deeperContextToggle: {

@@ -1,16 +1,3 @@
-/**
- * Single source of truth for the public legal content (privacy + terms).
- *
- * The canonical JSON files in this folder are the immutable origin from
- * which all three public surfaces (`docs/privacy-policy.html`,
- * `museum-web/src/lib/privacy-content.ts`,
- * `museum-frontend/features/legal/{privacyPolicyContent,termsOfServiceContent}.ts`)
- * are regenerated at build time.
- *
- * `museum-frontend/scripts/codegen-legal-content.mjs` derives every surface from it.
- *
- * Rationale: see design.md §9 D1 (run 2026-05-21-p0-gdpr).
- */
 import privacyCanonicalJson from './privacy-content.canonical.json';
 import termsCanonicalJson from './terms-content.canonical.json';
 
@@ -60,18 +47,10 @@ export interface TermsCanonical {
   locales: Record<LegalLocale, TermsLocaleContent>;
 }
 
-/**
- * Load the canonical privacy content (typed). The underlying JSON is
- * imported at module load — no async I/O required.
- */
 export function loadPrivacyCanonical(): PrivacyCanonical {
   return privacyCanonicalJson as PrivacyCanonical;
 }
 
-/**
- * Load the canonical terms-of-service content (typed). The underlying JSON
- * is imported at module load — no async I/O required.
- */
 export function loadTermsCanonical(): TermsCanonical {
   return termsCanonicalJson as TermsCanonical;
 }

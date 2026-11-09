@@ -30,25 +30,11 @@ interface ChatSessionInputHandlers {
   isClosing: boolean;
   clearMedia: () => void;
   onSend: (overrideText?: string) => Promise<void>;
-  onFollowUpPress: (questionText: string) => void;
   onRecommendationPress: (recommendationText: string) => void;
   onWalkChipSelect: (chipText: string) => void;
   onClose: () => Promise<void>;
 }
 
-/**
- * Bundles the chat-session screen's input + navigation handlers:
- *
- *  - the text-input state mirrored across send / follow-up / recommendation;
- *  - the composite `clearMedia` clearing both image and audio;
- *  - `onSend` with the keyboard dismiss + optimistic clear + restore-on-fail
- *    behaviour preserved 1:1 from the original screen file;
- *  - `onClose` deleting an empty session before navigating back, falling
- *    back to `/(tabs)/conversations` when there's no back stack.
- *
- * Pulled out of `app/(stack)/chat/[sessionId].tsx` so the screen file
- * stays under 300 LOC and the handlers are independently testable.
- */
 export const useChatSessionInputHandlers = (
   params: ChatSessionInputHandlersParams,
 ): ChatSessionInputHandlers => {
@@ -86,13 +72,6 @@ export const useChatSessionInputHandlers = (
     [text, params, clearMedia],
   );
 
-  const onFollowUpPress = useCallback(
-    (questionText: string) => {
-      void params.sendMessage({ text: questionText });
-    },
-    [params],
-  );
-
   const onRecommendationPress = useCallback((recommendationText: string) => {
     setText(recommendationText);
   }, []);
@@ -110,7 +89,6 @@ export const useChatSessionInputHandlers = (
     try {
       if (params.isEmpty) await chatApi.deleteSessionIfEmpty(params.sessionId);
     } catch {
-      /* resilient */
     } finally {
       setIsClosing(false);
     }
@@ -127,7 +105,6 @@ export const useChatSessionInputHandlers = (
     isClosing,
     clearMedia,
     onSend,
-    onFollowUpPress,
     onRecommendationPress,
     onWalkChipSelect,
     onClose,

@@ -1,5 +1,8 @@
+import {
+  chargeFailOpen,
+  type LlmCostCircuitBreaker,
+} from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import { AppError, invalidInput } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
 import { extensionByMime } from '@shared/media/mime-extensions';
 import {
   ChatPhaseTimer,
@@ -11,7 +14,6 @@ import { env } from '@src/config/env';
 
 import { estimateSttCostCents } from './voice-cost-pricing';
 
-import type { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import type {
   AudioTranscriberInput,
   AudioTranscriptionResult,
@@ -50,7 +52,6 @@ const assertOpenAiAvailable = (): void => {
   }
 };
 
-/** @throws {Error} 400 on empty/invalid input. */
 const decodeAudioPayload = (base64: string): Buffer => {
   const normalizedBase64 = base64.trim();
   if (!normalizedBase64) {
@@ -80,9 +81,6 @@ const buildTranscriptionFormData = (
   if (languageHint) {
     formData.append('language', languageHint);
   }
-  // W7.4 (2026-05-17) — bias toward expected proper nouns. Hard-capped at
-  // 896 chars (~224 OpenAI tokens) defensively even if the caller already
-  // truncated.
   if (input.prompt) {
     const capped = input.prompt.length > 896 ? input.prompt.slice(0, 896).trimEnd() : input.prompt;
     if (capped) {
@@ -92,7 +90,6 @@ const buildTranscriptionFormData = (
   return formData;
 };
 
-/** Wraps timeout/abort → AppError(504). */
 const fetchTranscription = async (formData: FormData): Promise<Response> => {
   try {
     return await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -145,42 +142,13 @@ const parseTranscriptionResponse = async (response: Response): Promise<string> =
   return payload.text.trim();
 };
 
-/**
- * Default `gpt-4o-mini-transcribe` (env.llm.audioTranscriptionModel).
- * Reuses shared `OPENAI_API_KEY`.
- */
 export class OpenAiAudioTranscriber implements AudioTranscriber {
-  /**
-   * M1 W5-C3 — optional global cost breaker. Nullable so existing tests / dev
-   * paths constructing the adapter without it stay no-op (same contract as the
-   * orchestrator's `deps.costBreaker ?? null`). Observe-only: voice is NEVER
-   * gated on `canAttempt()` (design §D4); the breaker just accumulates spend so
-   * a voice-driven spike can trip the text path.
-   */
   private readonly costBreaker: LlmCostCircuitBreaker | null;
 
   constructor(costBreaker?: LlmCostCircuitBreaker | null) {
     this.costBreaker = costBreaker ?? null;
   }
 
-  /**
-   * Fail-open cost charge (mirrors `langchain.orchestrator.ts` `recordSectionCost`).
-   * Charging is sync in-process arithmetic + map write (no I/O); any failure is
-   * logged but NEVER propagates into the transcription hot path (design §D5/AC5).
-   */
-  private recordVoiceCost(cents: number): void {
-    if (!this.costBreaker) return;
-    try {
-      this.costBreaker.recordCharge(cents);
-    } catch (err) {
-      logger.warn('voice_cost_record_failed', {
-        modality: 'stt',
-        err: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_AUDIO_TRANSCRIPTION_ERROR */
   async transcribe(input: AudioTranscriberInput): Promise<AudioTranscriptionResult> {
     const requestId = input.requestId ?? 'unknown';
     const timer = ChatPhaseTimer.start('stt', 'openai', requestId);
@@ -203,9 +171,9 @@ export class OpenAiAudioTranscriber implements AudioTranscriber {
           const response = await fetchTranscription(formData);
           const text = await parseTranscriptionResponse(response);
 
-          // M1 W5-C3 — feed the global cost breaker only on billable success
-          // (flat STT ceiling — no duration source, design §D1/D3/AC1).
-          this.recordVoiceCost(estimateSttCostCents());
+          chargeFailOpen(this.costBreaker, estimateSttCostCents, 'voice_cost_record_failed', {
+            modality: 'stt',
+          });
 
           return {
             text,

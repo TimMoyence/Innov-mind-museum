@@ -1,11 +1,6 @@
-import { colors } from '../colors';
-import { spacing } from '../spacing';
+import { colors } from '../colors.ts';
+import { spacing } from '../spacing.ts';
 
-/**
- * Per-variant per-size token mappings for the LiquidButton primitive.
- * Each leaf object holds presentation values; consumers map them onto
- * RN style objects (mobile) or CSS variables (web).
- */
 export const buttonTokens = {
   variants: {
     primary: {

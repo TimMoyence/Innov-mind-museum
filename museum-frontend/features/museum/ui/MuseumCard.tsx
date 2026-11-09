@@ -12,7 +12,6 @@ interface MuseumCardProps {
   onPress: (museum: MuseumWithDistance) => void;
 }
 
-/** Pressable card displaying museum name, address, and distance badge. */
 export const MuseumCard = ({ museum, onPress }: MuseumCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

@@ -18,8 +18,6 @@ const makeRepo = (
 describe('UserMemoryService — memory toggle', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // ── getMemoryForPrompt with disabledByUser ────────────────────────
-
   describe('getMemoryForPrompt respects disabledByUser', () => {
     it('returns empty string when disabledByUser is true', async () => {
       const repo = makeRepo(makeMemory({ sessionCount: 5, disabledByUser: true }));
@@ -43,7 +41,6 @@ describe('UserMemoryService — memory toggle', () => {
     it('skips cache and returns empty when disabledByUser is true', async () => {
       const repo = makeRepo(makeMemory({ sessionCount: 5, disabledByUser: true }));
       const cache = makeCache();
-      // Even if cache has a value, we should still check the DB flag
       cache.get.mockResolvedValue(null);
       const svc = new UserMemoryService(repo, cache);
 
@@ -52,8 +49,6 @@ describe('UserMemoryService — memory toggle', () => {
       expect(result).toBe('');
     });
   });
-
-  // ── setDisabledByUser ─────────────────────────────────────────────
 
   describe('setDisabledByUser', () => {
     it('upserts disabledByUser=true and invalidates cache', async () => {
@@ -76,8 +71,6 @@ describe('UserMemoryService — memory toggle', () => {
       expect(repo.upsert).toHaveBeenCalledWith(42, { disabledByUser: false });
     });
   });
-
-  // ── isDisabledByUser ──────────────────────────────────────────────
 
   describe('isDisabledByUser', () => {
     it('returns true when disabledByUser flag is set', async () => {

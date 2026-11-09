@@ -1,19 +1,7 @@
-/**
- * A single enriched image attached to an assistant message.
- *
- * v1 sources: Wikidata, Unsplash. v2 (C2 finition 2026-05) adds Wikimedia
- * Commons and the Musaium curated catalogue plus a `rationale` field
- * (LLM-authored 1-sentence explanation rendered under the carousel thumb).
- *
- * Reading-side compatibility: pre-C2 cached responses lack `rationale`; the
- * UI must read it defensively (`rationale ?? ''`) and fall back to the i18n
- * key `chat.enrichment.rationale_fallback` when empty.
- */
 export interface ChatUiEnrichedImage {
   url: string;
   thumbnailUrl: string;
   caption: string;
-  /** LLM-authored explanation (may be empty for legacy responses). */
   rationale?: string | null;
   source: 'wikidata' | 'unsplash' | 'commons' | 'musaium';
   score: number;
@@ -22,41 +10,20 @@ export interface ChatUiEnrichedImage {
 
 import type { components } from '@/shared/api/generated/openapi';
 
-/**
- * Provenance of a citation source surfaced to the user (C4 citations v2).
- * Mirrors the BE `CitationSourceType` enum — see
- * `museum-backend/src/modules/chat/domain/chat.types.ts`.
- */
+import { formatCarnetDate } from '../domain/carnet';
+
 export type CitationSourceType = 'wikidata' | 'web' | 'museum-catalog' | 'commons';
 
-/**
- * A user-verifiable citation source attached to a factual assistant response
- * (C4 anti-hallucination citations v2). Rendered as inline `[n]` superscript
- * + bottom-sheet preview by `<SourceCitation>`. Pre-v1.1 cached responses
- * may lack this field; readers MUST guard with `metadata?.sources?.length`.
- *
- * Shape mirrors BE `CitationSource` interface — verified at parse-time by
- * `CitationSourceSchema` (Zod). Confidence is optional (absent for KB-direct
- * sources, present when judge-derived).
- */
 export interface CitationSource {
   url: string;
   type: CitationSourceType;
   title: string;
-  /** Verbatim NFKC-normalized substring of a fact block fed to the LLM. */
   quote: string;
-  /** Optional judge-derived confidence (0..1). */
   confidence?: number;
 }
 
-/** Metadata attached to an assistant message, including artwork detection and follow-up suggestions. */
 export interface ChatUiMessageMetadata {
   detectedArtwork?: {
-    /**
-     * C9.18 (2026-05-17) — B2B deep-link target. When present alongside a
-     * known museum id, the FE deep-links the chip tap to
-     * `/museum/[id]/artwork/[artworkId]`.
-     */
     artworkId?: string;
     title?: string;
     artist?: string;
@@ -65,36 +32,15 @@ export interface ChatUiMessageMetadata {
     confidence?: number;
   };
   recommendations?: string[];
-  /**
-   * B3 — Single follow-up question (≤80 chars) anchored to a specific fact
-   * mentioned in the assistant answer. LLM-generated, singular by design.
-   * Replaces legacy `followUpQuestions: string[]` (deleted same commit per
-   * doctrine `feedback_bury_dead_code`, B3 dispatcher override Q4).
-   * See `docs/chat-ux-refonte/specs/B3.md` §1.3 (R11) and NFR13.
-   */
-  suggestedFollowUp?: string;
   expertiseSignal?: 'beginner' | 'intermediate' | 'expert';
   deeperContext?: string;
   openQuestion?: string;
   imageDescription?: string;
   images?: ChatUiEnrichedImage[];
-  /**
-   * C3 visual-similarity payload (Phase 8 / T8.5). Populated when the
-   * backend's `/chat/compare` endpoint returned a `CompareResult` for this
-   * message. The bubble renders an `<ImageCompareCarousel>` whenever this
-   * field is present — even with an empty `matches` array, because the
-   * carousel itself owns the empty-state UX (driven by `fallbackReason`).
-   */
   compareResults?: components['schemas']['CompareResult'];
-  /**
-   * Citations v2 — user-verifiable sources rendered as inline `[n]`
-   * superscript + bottom-sheet preview (C4). Hidden when `undefined` or
-   * empty. Numérotation stable: index = position in array starting at 1.
-   */
   sources?: CitationSource[];
 }
 
-/** UI-layer representation of a single chat message (user, assistant, or system). */
 export interface ChatUiMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -107,25 +53,27 @@ export interface ChatUiMessage {
   } | null;
   metadata?: ChatUiMessageMetadata | null;
   transcription?: { text: string } | null;
-  /** When true the message failed to send and can be retried. */
   sendFailed?: boolean;
-  /** When true the response was served from local cache (low-data mode). */
   cached?: boolean;
-  /**
-   * Walk-mode suggestion chips from the API response (Path A: co-located with
-   * the message they belong to, survives re-renders naturally).
-   */
   suggestions?: string[];
 }
 
-/** Sorts messages by createdAt ascending (earliest first). */
+export const findLastAssistantMessage = (
+  messages: readonly ChatUiMessage[],
+): ChatUiMessage | null => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const candidate = messages[i];
+    if (candidate?.role === 'assistant') return candidate;
+  }
+  return null;
+};
+
 export const sortByTime = (messages: ChatUiMessage[]): ChatUiMessage[] => {
   return [...messages].sort(
     (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
   );
 };
 
-/** API message shape as returned by the backend (OpenAPI-generated types allow null). */
 export interface ApiMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -136,7 +84,6 @@ export interface ApiMessage {
   metadata?: Record<string, unknown> | null;
 }
 
-/** Maps a backend API message to the UI message format. */
 export const mapApiMessageToUiMessage = (apiMsg: ApiMessage): ChatUiMessage => ({
   id: apiMsg.id,
   role: apiMsg.role,
@@ -144,11 +91,9 @@ export const mapApiMessageToUiMessage = (apiMsg: ApiMessage): ChatUiMessage => (
   createdAt: apiMsg.createdAt,
   imageRef: apiMsg.imageRef,
   image: apiMsg.image ?? null,
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-  metadata: (apiMsg.metadata as ChatUiMessageMetadata) ?? null,
+  metadata: (apiMsg.metadata ?? null) as ChatUiMessageMetadata | null,
 });
 
-/** Aggregated summary of a museum visit session, built from chat messages. */
 export interface VisitSummary {
   museumName: string | null;
   artworks: { title: string; artist?: string; room?: string; imageUrl?: string }[];
@@ -158,7 +103,6 @@ export interface VisitSummary {
   expertiseLevel: string | null;
 }
 
-/** Builds a visit summary by aggregating metadata from assistant messages. */
 export const buildVisitSummary = (
   messages: ChatUiMessage[],
   sessionTitle: string | null,
@@ -207,23 +151,13 @@ export const buildVisitSummary = (
   };
 };
 
-/**
- * B1 — Visit notebook (carnet) detail view-model.
- *
- * Composes {@link buildVisitSummary} (artworks list + duration + meta) with a
- * chronologically-ordered transcript and locale-aware labels. Pure helper
- * driven by `buildVisitCarnetDetail` — no side effect, no `Date.now`.
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.5 R30-R33, §4 AC8, AC9, AC13.
- */
 export interface VisitCarnetDetail {
   summary: VisitSummary;
   transcript: ChatUiMessage[];
-  dateLabel: string;
+  dateLabel: string | null;
   durationLabel: string;
 }
 
-/** Minimal session shape consumed by {@link buildVisitCarnetDetail}. */
 export interface VisitCarnetSessionInput {
   id: string;
   locale?: string | null;
@@ -235,16 +169,6 @@ export interface VisitCarnetSessionInput {
   intent?: 'default' | 'walk' | null;
 }
 
-/**
- * Builds the carnet detail view-model from a session + its messages (R30-R33).
- *
- * Reuses {@link buildVisitSummary} verbatim for the artworks list (AC9 dedupe
- * is therefore inherited). The transcript is the same messages sorted ASC by
- * `createdAt`. Labels are locale-formatted via `Date.toLocaleString` (no
- * third-party date lib — NFR2).
- *
- * Pure function : same input → strictly equal output across calls (AC13).
- */
 export const buildVisitCarnetDetail = (
   session: VisitCarnetSessionInput,
   messages: ChatUiMessage[],
@@ -253,35 +177,13 @@ export const buildVisitCarnetDetail = (
   const summary = buildVisitSummary(messages, session.title ?? null);
   const transcript = sortByTime(messages);
 
-  let dateLabel: string;
-  const updatedAtDate = new Date(session.updatedAt);
-  if (Number.isNaN(updatedAtDate.getTime())) {
-    dateLabel = session.updatedAt;
-  } else {
-    try {
-      dateLabel = updatedAtDate.toLocaleString(locale, {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      dateLabel = updatedAtDate.toISOString();
-    }
-  }
+  const dateLabel = formatCarnetDate(session.updatedAt, locale);
 
-  // R33 — return the integer minutes as a string; the screen interpolates
-  // via i18n. `0` → screen renders "< 1 min".
   const durationLabel = String(summary.duration.minutes);
 
   return { summary, transcript, dateLabel, durationLabel };
 };
 
-/**
- * Builds an optimistic user message for immediate display before the server responds.
- * Handles text, image, and audio modalities. When text is empty and media is attached,
- * falls back to a short label — pass `imageFallbackLabel` / `audioFallbackLabel` from
- * i18n (e.g. `t('chat.optimistic.image_placeholder')`) to localize.
- */
 export interface BuildOptimisticMessageParams {
   text?: string;
   imageUri?: string;
@@ -307,27 +209,6 @@ export const buildOptimisticMessage = (params: BuildOptimisticMessageParams): Ch
   };
 };
 
-/**
- * True when an assistant response has renderable content, i.e. it should
- * produce a chat bubble.
- *
- * Cycle 5 (UFR-022) — single source of truth shared by the four strategies
- * that create an assistant bubble (streaming, audio, cache, history-load).
- * The criterion MIRRORS the render condition in `ChatMessageBubble.tsx`
- * (`hasImages = (metadata?.images?.length ?? 0) > 0` at :97 and
- * `metadata?.compareResults` at :276) so the logic and the pixel never
- * diverge (Décision D7): a `text:''` bubble is legitimate when it carries
- * enriched images or visual-compare results (image-only content), but a
- * blank/whitespace/null response with no media must never render a bubble.
- *
- * An `imageDescription`-only message (empty body) carries audio-description
- * content read aloud by the autoplay effect in `useChatSession` (WCAG 1.1.1) —
- * it is meaningful content and MUST be kept in state, so it counts as
- * renderable here (a bodyless image-description message is NOT a phantom).
- * Dropping it (over-filtering) would silence the audio-description autoplay.
- *
- * Pure — no side effect, no `Date.now`, no i18n (NFR-4).
- */
 export const isRenderableAssistantContent = (
   text: string | null | undefined,
   metadata?: ChatUiMessageMetadata | null,
@@ -339,19 +220,11 @@ export const isRenderableAssistantContent = (
   return false;
 };
 
-/**
- * Tracks successful sends and signals when the in-app review threshold is reached.
- * Mutates the ref atomically. Returns true exactly once on the threshold crossing.
- */
 export const bumpSuccessfulSend = (ref: { current: number }, threshold = 3): boolean => {
   ref.current += 1;
   return ref.current === threshold;
 };
 
-/**
- * Formats GPS coordinates into a stable string for the chat API location field.
- * Returns undefined when either coordinate is missing.
- */
 export const formatLocation = (
   latitude: number | null | undefined,
   longitude: number | null | undefined,
@@ -360,39 +233,8 @@ export const formatLocation = (
   return `lat:${String(latitude)},lng:${String(longitude)}`;
 };
 
-/**
- * Decides what to do when the user taps a markdown link inside a chat bubble.
- *
- * Returns an action object describing whether to handle the link in-app
- * (`'in-app'`), let the system handler take it (`'system'`), or ignore it
- * (`'ignore'`). Pure function — no React state, no side effects — so it can
- * be unit-tested in isolation.
- *
- * IMPORTANT: this is wired into `@ronradtke/react-native-markdown-display`,
- * whose `onLinkPress` contract is:
- *   - return `true`  → library calls `Linking.openURL(url)` (system browser)
- *   - return `false` → library does NOT open the URL (we handled it ourselves)
- *
- * The contract is the OPPOSITE of what the prop name suggests, which is why
- * this helper exists: callers pick the action by name, not by boolean.
- */
 export type MarkdownLinkAction = 'in-app' | 'system' | 'ignore';
 
-/**
- * TD-MD-02 — scheme allowlist via `new URL().protocol` (NOT `startsWith`
- * prefix matching, which let `intent://`, `app-scheme://`, `file://`,
- * `javascript:`, `data:` through to `Linking.openURL` = deep-link hijack /
- * RCE-ish vector when the link text is LLM-authored and prompt-injectable).
- *
- * Allowlist :
- *   - `https:`                 → `'in-app'`  (open in the in-app browser)
- *   - `mailto:` `tel:` `sms:`  → `'system'`  (Linking.openURL — safe intents)
- *   - everything else          → `'ignore'`
- *
- * `http:` is intentionally rejected (→ `'ignore'`) : mixed-content +
- * downgrade-attack risk on V1 mobile (HANDOFF §5 Batch G). Malformed URLs
- * that throw in the `URL` constructor also fall through to `'ignore'`.
- */
 const SYSTEM_SCHEMES = new Set(['mailto:', 'tel:', 'sms:']);
 
 export function decideMarkdownLinkAction(url: string | undefined | null): MarkdownLinkAction {

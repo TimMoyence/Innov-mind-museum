@@ -1,18 +1,3 @@
-/**
- * Spec C T1.4 — `UserMemoryRepository.getRecentSessionsForUser` integration test.
- *
- * Validates the SQL aggregate against a real Postgres instance (testcontainer)
- * via {@link createE2EHarness}. Exercises the LEFT JOIN + MAX(createdAt) GROUP BY
- * shape that powers the locale-mode and session-duration p90 mergers.
- *
- * Gated on `RUN_E2E=true` OR `RUN_INTEGRATION=true` (matches the convention
- * used by sibling integration suites that boot a real Postgres testcontainer —
- * see `tests/integration/auth/deleteAccount-cascade.int.test.ts`). The
- * `RUN_INTEGRATION` arm is what makes this suite run in the CI integration job.
- * Run with:
- *
- *   RUN_INTEGRATION=true pnpm test:integration -- --testPathPattern=user-memory-recent-sessions
- */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
@@ -36,10 +21,6 @@ describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
     await harness?.stop();
   });
 
-  /**
-   * Seeds a user with a unique email and returns its numeric id.
-   * @param email
-   */
   async function seedUser(email: string): Promise<number> {
     const userRepo = harness.dataSource.getRepository(User);
     const saved = await userRepo.save(
@@ -55,13 +36,6 @@ describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
     return saved.id;
   }
 
-  /**
-   * Seeds a chat session for a user with optional explicit createdAt override.
-   * @param args
-   * @param args.userId
-   * @param args.locale
-   * @param args.createdAt
-   */
   async function seedChatSession(args: {
     userId: number;
     locale: string;
@@ -76,9 +50,6 @@ describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
       ...(args.createdAt ? { createdAt: args.createdAt } : {}),
     });
     const saved = await sessionRepo.save(session);
-    // `@CreateDateColumn` overrides explicit values on insert in some TypeORM
-    // versions — force the timestamp via raw UPDATE when the test cares about
-    // ordering by createdAt.
     if (args.createdAt) {
       await harness.dataSource
         .createQueryBuilder()
@@ -90,13 +61,6 @@ describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
     return saved.id;
   }
 
-  /**
-   * Seeds a chat message for a session with optional explicit createdAt override.
-   * @param args
-   * @param args.sessionId
-   * @param args.createdAt
-   * @param args.text
-   */
   async function seedChatMessage(args: {
     sessionId: string;
     createdAt?: Date;
@@ -143,7 +107,6 @@ describeE2E('UserMemoryRepository.getRecentSessionsForUser (real PG)', () => {
 
     const result = await repo.getRecentSessionsForUser(userId, 20);
     expect(result).toHaveLength(2);
-    // Most recent first
     expect(result[0].sessionId).toBe(session2);
     expect(result[0].locale).toBe('fr');
     expect(result[0].lastMessageAt?.toISOString()).toBe('2026-04-02T11:00:00.000Z');

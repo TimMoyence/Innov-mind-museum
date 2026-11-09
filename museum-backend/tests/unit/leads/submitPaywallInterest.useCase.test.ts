@@ -1,22 +1,3 @@
-/**
- * R1 RED — SubmitPaywallInterestUseCase (T1.5).
- *
- * Pins R1 §1 R19/R20/R21/R22/R23 + §3.9 D9 down BEFORE implementation :
- *  - Happy path → notifier.subscribe called ONCE with normalized email AND
- *    `source: 'paywall_premium_interest'` (R19 metadata differentiation).
- *  - Missing consent → 400, notifier NOT called (R22 defense-in-depth).
- *  - Invalid email → 400, notifier NOT called.
- *  - Honeypot triggered → silent drop (R23 — resolves without notifying,
- *    mirror R3 R10).
- *  - Noop notifier outcome → use case still resolves (R20 — Brevo creds
- *    absent → 202 anyway).
- *  - Structured log `paywall_email_captured` emitted with
- *    `{requestId, emailDomain, brevoOutcome}` ; full email NEVER logged
- *    (R21 PII discipline, mirror R3 R17).
- *
- * MUST FAIL at baseline `cd7e22bc` —
- * `@modules/leads/useCase/submitPaywallInterest.useCase` does not exist.
- */
 import { SubmitPaywallInterestUseCase } from '@modules/leads/useCase/submitPaywallInterest.useCase';
 import { logger } from '@shared/logger/logger';
 
@@ -29,12 +10,6 @@ import type {
   BetaSignupOutcome,
 } from '@modules/leads/domain/ports/beta-signup-notifier.port';
 
-/**
- * Cycle B (« Aucun lead perdu ») — persist-then-notify: the use-case depends on
- * `ILeadRepository` (2-arg ctor). The `source` discriminator is persisted in the
- * jsonb payload and still forwarded to the notifier (R19). Real persistence
- * ordering is pinned by `submitBetaPaywall.persist-then-notify.test.ts`.
- */
 type PaywallUseCaseCtor = new (
   notifier: BetaSignupNotifier,
   repository: ILeadRepository,
@@ -55,7 +30,6 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
     [Parameters<BetaSignupNotifier['subscribe']>[0]]
   >();
   const notifier: BetaSignupNotifier = { subscribe };
-  // Cast through the public contract — keeps `as any` out of the ratchet.
   const Ctor = SubmitPaywallInterestUseCase as unknown as PaywallUseCaseCtor;
   const useCase = new Ctor(notifier, makeStubLeadRepository());
 
@@ -69,8 +43,6 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
-
-  // ── R19 source differentiation ───────────────────────────────────────
 
   it("R19: forwards source='paywall_premium_interest' to the notifier", async () => {
     await useCase.execute({
@@ -98,8 +70,6 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
     );
   });
 
-  // ── R22 consent / email validation ───────────────────────────────────
-
   it('R22: rejects when consent is false', async () => {
     await expect(
       useCase.execute(makePaywallInterestPayload({ consent: false as unknown as true })),
@@ -114,8 +84,6 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
     expect(subscribe).not.toHaveBeenCalled();
   });
 
-  // ── R23 honeypot silent drop ─────────────────────────────────────────
-
   it('R23: honeypot triggered → resolves without notifying (mirror R3 R10)', async () => {
     await expect(
       useCase.execute(makePaywallInterestPayload({ website: 'https://spam.example.com' })),
@@ -123,15 +91,11 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
     expect(subscribe).not.toHaveBeenCalled();
   });
 
-  // ── R20 noop notifier fallback ───────────────────────────────────────
-
   it('R20: notifier resolves with outcome=noop → use case still resolves', async () => {
     subscribe.mockResolvedValueOnce({ outcome: 'noop' });
     await expect(useCase.execute(makePaywallInterestPayload())).resolves.toBeUndefined();
     expect(subscribe).toHaveBeenCalledTimes(1);
   });
-
-  // ── R21 structured log + PII discipline ──────────────────────────────
 
   it('R21: logs paywall_email_captured with requestId+emailDomain+brevoOutcome, no full email', async () => {
     const infoSpy = jest.spyOn(logger, 'info');
@@ -152,7 +116,6 @@ describe('SubmitPaywallInterestUseCase (R1 §1 R19-R23)', () => {
         brevoOutcome: 'subscribed',
       }),
     );
-    // PII discipline — full email value MUST NOT appear in the structured log.
     expect(JSON.stringify(payload)).not.toContain('someone-secret@example.com');
     expect(JSON.stringify(payload)).not.toContain('someone-secret');
   });

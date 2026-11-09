@@ -1,61 +1,34 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: SourceCitation
-#
-# C2 — SourceCitation happy path (UFR-021 modal coverage).
-#
-# Trigger (prod): tap an inline citation marker `[n]` in an assistant message
-# that carries sources (ChatMessageBubble.tsx). The sourced LLM response comes
-# from a live backend, so this flow is NIGHTLY (backend-dependent), NOT
-# PR-blocking — same class as chat-flow.yaml.
-#
-# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
-#   source-citation-marker     (open trigger)
-#   source-citation-open-url   (assert sheet open)
-#   source-citation-close      (dismiss)
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-#   - Backend returns an assistant message with >=1 citation source.
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - runFlow:
     file: helpers/chat-entry.yaml
 
 - tapOn:
-    id: "chat-input"
-- inputText: "Who painted the Mona Lisa and where is it kept?"
+    id: 'chat-input'
+- inputText: 'Who painted the Mona Lisa and where is it kept?'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
+    id: 'send-button'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 2: Wait for a citation marker, open the source sheet
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "chat-bubble-assistant"
+      id: 'chat-bubble-assistant'
     timeout: 60000
 - scrollUntilVisible:
     element:
-      id: "source-citation-marker"
+      id: 'source-citation-marker'
     direction: DOWN
     timeout: 20000
 - tapOn:
-    id: "source-citation-marker"
+    id: 'source-citation-marker'
     index: 0
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Assert the sheet is open, then dismiss it
-# ──────────────────────────────────────────────
 - assertVisible:
-    id: "source-citation-open-url"
+    id: 'source-citation-open-url'
 - tapOn:
-    id: "source-citation-close"
+    id: 'source-citation-close'
 - waitForAnimationToEnd
 - assertNotVisible:
-    id: "source-citation-open-url"
+    id: 'source-citation-open-url'

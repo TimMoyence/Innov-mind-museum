@@ -13,7 +13,12 @@ interface LandingChatShowcaseProps {
 
 export default function LandingChatShowcase({ dict }: LandingChatShowcaseProps) {
   return (
-    <ShowcaseSection title={dict.title} subtitle={dict.subtitle} bullets={dict.bullets} theme="dark">
+    <ShowcaseSection
+      title={dict.title}
+      subtitle={dict.subtitle}
+      bullets={dict.bullets}
+      theme="dark"
+    >
       <PhoneMockup variant="floating">
         <DemoChat messages={dict.messages} />
       </PhoneMockup>

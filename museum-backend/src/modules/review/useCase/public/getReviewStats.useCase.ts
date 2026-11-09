@@ -5,7 +5,6 @@ export interface ReviewStats {
   count: number;
 }
 
-/** Average rating + count of approved reviews. */
 export class GetReviewStatsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 

@@ -86,7 +86,6 @@ describe('runWithRetry', () => {
       kind: 'Network',
     });
 
-    // 1 initial attempt + 3 retries = 4 total calls with default backoff length.
     expect(op).toHaveBeenCalledTimes(DEFAULT_BACKOFF_MS.length + 1);
     expect(instantSleep).toHaveBeenCalledTimes(DEFAULT_BACKOFF_MS.length);
   });

@@ -1,107 +1,71 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth — Register as a minor (under 15)
-#
-# CNIL Délibération 2021-018 — French digital majority is 15. The backend
-# computes the age from DOB and rejects registrations under 15 with
-# MINOR_PARENTAL_CONSENT_REQUIRED, mapped client-side to
-# error.auth.minor_parental_consent_required.
-#
-# DOB: 01/01/2015 — at the time this test runs (2026+) the user is under 15.
-# The FE-side `parseDateOfBirth` is a format check only (NOT an age check),
-# so the submit proceeds and the backend returns the AGE error.
-# Password is a strong NON-breached value so the rejection is AGE, not breach.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 0: Cold start + switch to register
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
 - tapOn:
-    text: "Passer à l'inscription|Switch to registration"  # accessibilityLabel (collapses visible "Pas de compte ? S'inscrire")
+    text: "Passer à l'inscription|Switch to registration"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "Create your account|Créez votre compte"
-
-# ──────────────────────────────────────────────
-# Phase 2: Fill form with DOB under digital majority
-# ──────────────────────────────────────────────
-- tapOn:
-    id: "firstname-input"
-- inputText: "Maestro"
+    text: 'Create your account|Créez votre compte'
 
 - tapOn:
-    id: "lastname-input"
-- inputText: "Tester"
+    id: 'firstname-input'
+- inputText: 'Maestro'
 
-# Static literal (no account is ever created — the AGE check rejects first — so
-# duplicate-email is impossible). bash-style ${VAR:-default} is invalid JS in Maestro.
 - tapOn:
-    id: "email-input"
-- inputText: "maestro-minor-test@local.dev"
+    id: 'lastname-input'
+- inputText: 'Tester'
 
-# Strong, NOT breached — so the rejection is the AGE check, not breach
 - tapOn:
-    id: "password-input"
-- inputText: "Mx7$kq2Lp9vRt4Wz"
+    id: 'email-input'
+- inputText: 'maestro-minor-test@local.dev'
 
-# Under 15 — parser accepts the format but server rejects via age check
 - tapOn:
-    id: "date-of-birth-input"
-- inputText: "01/01/2015"
+    id: 'password-input'
+- inputText: 'Mx7$kq2Lp9vRt4Wz'
 
-# Dismiss keyboard via a static-text tap — hideKeyboard hard-FAILS on the custom
-# DOB editor (no standard dismiss).
 - tapOn:
-    text: "Create your account|Créez votre compte"
+    id: 'date-of-birth-input'
+- inputText: '01/01/2015'
 
-# Accept GDPR by tapping the checkbox SQUARE (row left edge). Tapping the row
-# center hits the inline Terms/Privacy links (own onPress → navigate away).
 - tapOn:
-    id: "gdpr-consent-checkbox"
+    text: 'Create your account|Créez votre compte'
 
-# Submit (button already on screen; a hard scrollUntilVisible@100% fails when no
-# scroll is needed). Wait + tap by testID.
+- tapOn:
+    id: 'gdpr-consent-checkbox'
+
 - extendedWaitUntil:
     visible:
-      id: "auth-submit"
+      id: 'auth-submit'
     timeout: 10000
 - tapOn:
-    id: "auth-submit"
-# iOS native "Save Password?" dialog can still surface on submit
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 3: Expect minor-consent error, no navigation
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "auth-error-state"
+      id: 'auth-error-state'
     timeout: 10000
 
-# EN: "Sign-up is reserved for users aged 15 and over (French digital majority)."
-# FR: "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
 - extendedWaitUntil:
     visible:
-      text: ".*(aged 15 and over|15 ans et plus).*"
+      text: '.*(aged 15 and over|15 ans et plus).*'
     timeout: 10000
 
-# Sanity: still on register screen
 - assertVisible:
-    text: "Create your account|Créez votre compte"
+    text: 'Create your account|Créez votre compte'
 - assertNotVisible:
-    text: "Your museum companion|Votre compagnon de musée"
+    text: 'Your museum companion|Votre compagnon de musée'

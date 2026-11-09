@@ -9,18 +9,14 @@ function base64url(buf: Buffer): string {
 }
 
 export interface SocialJwtSpoof {
-  /** URL of the spoof JWKS endpoint, e.g. http://127.0.0.1:54321/keys */
   jwksUrl: string;
-  /** Sign an ID token with the spoof private key. */
   signToken: (claims: Record<string, unknown>) => string;
-  /** Stop the HTTP server. Idempotent. */
   stop: () => Promise<void>;
 }
 
 export async function startSocialJwtSpoof(): Promise<SocialJwtSpoof> {
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 
-  // Export public key as JWK
   const jwk = publicKey.export({ format: 'jwk' });
   const jwks = {
     keys: [{ kty: jwk.kty, n: jwk.n, e: jwk.e, kid: KID, use: 'sig', alg: 'RS256' }],

@@ -1,22 +1,3 @@
-/**
- * Unit tests for migrateStorageKey — the one-shot legacy→new AsyncStorage key
- * reader introduced by TD-AS-01. When the 10 inconsistent storage keys are
- * re-prefixed to `musaium.<feature>.<key>`, a naive rename would orphan every
- * persisted user preference. This reader copies the legacy value to the new
- * key (only when the new key is empty AND the legacy key holds data) and then
- * drops the legacy key, so no user data is lost across the rename.
- *
- * Contract under test (design.md §4):
- *   1. read newKey
- *   2. if newKey non-null AND non-empty -> RETURN (no-op; idempotent + no overwrite)
- *   3. else read legacyKey
- *   4. if legacyKey null/empty -> RETURN (no-op)
- *   5. else setItem(newKey, legacyValue) then removeItem(legacyKey)
- *
- * AsyncStorage is replaced by a Map-backed module mock (the canonical FE test
- * double, see storage.test.ts / logoutCleanup.test.ts) — a module mock, NOT an
- * inline test entity.
- */
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = new Map<string, string>();
   return {
@@ -44,8 +25,6 @@ const LEGACY_KEY = 'old.key';
 
 describe('migrateStorageKey', () => {
   beforeEach(async () => {
-    // Drain both keys + reset spy counters so each test starts from a clean,
-    // isolated storage state (the Map is module-level and persists otherwise).
     await AsyncStorage.removeItem(NEW_KEY);
     await AsyncStorage.removeItem(LEGACY_KEY);
     jest.clearAllMocks();
@@ -71,8 +50,6 @@ describe('migrateStorageKey', () => {
 
     expect(await AsyncStorage.getItem(NEW_KEY)).toBe('val');
     expect(await AsyncStorage.getItem(LEGACY_KEY)).toBeNull();
-    // The new key already holds the value, so the reader must short-circuit
-    // before writing anything again.
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
   });
 

@@ -816,7 +816,7 @@ export interface paths {
     head?: never;
     /**
      * TD-2 — Batch-update the authenticated user's profile preferences
-     * @description Persists a partial patch of the 5 profile preferences (defaultLocale, defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.
+     * @description Persists a partial patch of the 4 profile preferences (defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.
      */
     patch: {
       parameters: {
@@ -828,7 +828,6 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
-            defaultLocale?: string;
             defaultMuseumMode?: boolean;
             /** @enum {string} */
             guideLevel?: 'beginner' | 'intermediate' | 'expert';
@@ -846,7 +845,6 @@ export interface paths {
           };
           content: {
             'application/json': {
-              defaultLocale: string;
               defaultMuseumMode: boolean;
               /** @enum {string} */
               guideLevel: 'beginner' | 'intermediate' | 'expert';
@@ -1011,6 +1009,15 @@ export interface paths {
         };
         400: components['responses']['BadRequest'];
         401: components['responses']['Unauthorized'];
+        /** @description Monthly free-tier session quota reached */
+        402: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['QuotaExceededError'];
+          };
+        };
       };
     };
     delete?: never;
@@ -3355,51 +3362,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/chat/describe': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Generate standalone AI description from image or text */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['DescribeRequest'];
-        };
-      };
-      responses: {
-        /** @description Description JSON (or binary audio when format=audio) */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['DescribeResponse'];
-            'audio/mpeg': string;
-          };
-        };
-        400: components['responses']['BadRequest'];
-        401: components['responses']['Unauthorized'];
-        429: components['responses']['TooManyRequests'];
-        500: components['responses']['InternalError'];
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/chat/compare': {
     parameters: {
       query?: never;
@@ -3781,8 +3743,6 @@ export interface components {
       ttsVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | null;
       /** @description Visitor's content preferences (zero or more). Returned by GET /auth/me, written by PATCH /auth/content-preferences. */
       contentPreferences?: ('history' | 'technique' | 'artist')[];
-      /** @description TD-2 — Visitor's preferred BCP-47 locale. Server defaults to `en-US`. FE validates against `SUPPORTED_LOCALES`. */
-      defaultLocale?: string;
       /** @description TD-2 — Whether the visitor opts into auto museum-mode detection on launch. */
       defaultMuseumMode?: boolean;
       /**
@@ -3908,8 +3868,6 @@ export interface components {
         }[];
         deeperContext?: string;
         openQuestion?: string;
-        /** @description B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`. */
-        suggestedFollowUp?: string;
         imageDescription?: string;
         /** @description Enriched images from external sources (Wikidata, Unsplash, Wikimedia Commons, Musaium curated catalogue). C2 v2 (2026-05) adds rationale + commons/musaium sources. */
         images?: {
@@ -4427,38 +4385,6 @@ export interface components {
     TicketDetailDTO: components['schemas']['TicketDTO'] & {
       messages: components['schemas']['TicketMessageDTO'][];
     };
-    /** @description Describe request — either text or image is required */
-    DescribeRequest: {
-      image?: {
-        /** @enum {string} */
-        source: 'base64' | 'url';
-        value: string;
-        mimeType?: string;
-      };
-      text?: string;
-      /** @default en */
-      locale: string;
-      /**
-       * @default beginner
-       * @enum {string}
-       */
-      guideLevel: 'beginner' | 'intermediate' | 'expert';
-      /**
-       * @default text
-       * @enum {string}
-       */
-      format: 'text' | 'audio' | 'both';
-    };
-    DescribeResponse: {
-      description: string;
-      /** @description Base64-encoded audio, present only when format=both */
-      audio?: string;
-      /** @description MIME type of the audio payload when format=both */
-      audioContentType?: string;
-      metadata: {
-        [key: string]: unknown;
-      };
-    };
     MemoryPreferenceResponse: {
       /** @description true when conversation memory is enabled for the user */
       enabled: boolean;
@@ -4537,6 +4463,17 @@ export interface components {
       /** @description Model version used to encode the input image. */
       modelVersion: string;
       fallbackReason?: components['schemas']['FallbackReason'];
+    };
+    QuotaExceededError: {
+      /** @enum {string} */
+      code: 'QUOTA_EXCEEDED';
+      /** @enum {string} */
+      tier: 'free';
+      currentCount: number;
+      limit: number;
+      /** Format: date-time */
+      resetAt: string;
+      message: string;
     };
     /** @description Error envelope for `POST /chat/compare` failures. The `error.code` field takes one of: `COMPARE_INVALID_IMAGE` (400 — missing/unsupported image, R6/R12), `COMPARE_INVALID_TOPK` (400 — `topK` outside `[1, 10]`, R17), `COMPARE_GUARDRAIL_BLOCKED` (400 — OCR/prompt-injection rejected the upload, R18), `BAD_REQUEST` (400 — generic Zod validation failure on other fields), or `COMPARE_ENCODER_UNAVAILABLE` (503 — `fallbackReason: encoder_unavailable`). */
     CompareErrorResponse: components['schemas']['ApiError'];

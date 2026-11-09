@@ -6,8 +6,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { adminToken, visitorToken, makeToken } from '../../helpers/auth/token.helpers';
 
-// ── Mock use cases so handlers execute without DB ────────────────────
-
 const mockListUsers = jest.fn();
 const mockChangeUserRole = jest.fn();
 const mockListAuditLogs = jest.fn();
@@ -35,7 +33,6 @@ jest.mock('@modules/admin/useCase', () => ({
   getEngagementAnalyticsUseCase: {
     execute: (...args: unknown[]) => mockGetEngagementAnalytics(...args),
   },
-  // Admin-side facades wrap peer useCases. admin.route uses these, not the peers directly.
   adminReviewFacade: {
     list: (...args: unknown[]) => mockListAllReviews(...args),
     moderateReview: (...args: unknown[]) => mockModerateReview(...args),
@@ -55,11 +52,6 @@ jest.mock('@modules/review/useCase', () => ({
   listAllReviewsUseCase: { execute: (...args: unknown[]) => mockListAllReviews(...args) },
   moderateReviewUseCase: { execute: (...args: unknown[]) => mockModerateReview(...args) },
 }));
-
-/**
- * Admin route integration tests — RBAC enforcement + validation + happy-path handler bodies.
- * No DB required — use cases are mocked.
- */
 
 const { app } = createRouteTestApp();
 
@@ -139,8 +131,6 @@ describe('Admin Routes — RBAC Enforcement', () => {
       expect(res.status).toBe(401);
     });
   });
-
-  // ── Visitor role (non-admin) gets 403 ─────────────────────────────
 
   describe('Visitor role returns 403 on admin-only routes', () => {
     it('GET /api/admin/users returns 403 for visitor', async () => {
@@ -239,8 +229,6 @@ describe('Admin Routes — RBAC Enforcement', () => {
     });
   });
 
-  // ── Body validation with admin token ──────────────────────────────
-
   describe('Body validation on admin routes (with admin token)', () => {
     it('PATCH /api/admin/users/1/role returns 400 for invalid role value', async () => {
       const res = await request(app)
@@ -307,8 +295,6 @@ describe('Admin Routes — RBAC Enforcement', () => {
     });
   });
 
-  // ── Error response format ─────────────────────────────────────────
-
   describe('Error response format', () => {
     it('403 returns structured JSON with error field', async () => {
       const res = await request(app)
@@ -319,8 +305,6 @@ describe('Admin Routes — RBAC Enforcement', () => {
       expect(res.body.error).toHaveProperty('code', 'FORBIDDEN');
     });
   });
-
-  // ── Happy-path handler body coverage ─────────────────────────────
 
   describe('Happy-path — handler bodies with admin token', () => {
     it('GET /api/admin/users returns paginated user list', async () => {
@@ -551,11 +535,6 @@ describe('Admin Routes — RBAC Enforcement', () => {
       expect(res.body).toEqual({ review: moderated });
     });
 
-    // RBAC tightening (Sprint 1 H3): moderator is now denied on admin-only endpoints
-    // (users/:id/role, audit-logs, analytics/*, museums/:id/cache/purge).
-    // Moderator retains read-only access to GET /users (for ticket/report
-    // triage) plus moderation endpoints (stats, reports, tickets, reviews,
-    // ke/pending, ke/:id/approve). See docs/rbac-matrix.md + rbac-matrix.test.ts.
     describe('moderator token — RBAC scope (tightened in Sprint 1)', () => {
       it('can access admin+moderator GET /users (read-only directory)', async () => {
         const modToken = makeToken({ role: 'moderator' });

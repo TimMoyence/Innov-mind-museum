@@ -1,14 +1,4 @@
-/**
- * Musaium Design System — Functional Tokens (Layer 2)
- *
- * RGBA tokens for recurring transparent colors (used 3+ times in codebase)
- * and a withOpacity() utility for one-off transparency values.
- */
 
-/**
- * Converts a hex color to rgba with the given alpha.
- * Works with 3-char (#fff), 6-char (#ffffff), and 8-char (#ffffffaa) hex.
- */
 export function withOpacity(hex: string, alpha: number): string {
   const clean = hex.replace('#', '');
   let r: number, g: number, b: number;
@@ -25,11 +15,6 @@ export function withOpacity(hex: string, alpha: number): string {
 }
 
 export const functional = {
-  /* ── Light theme glass ────────────────────────────── */
-  // Glass FILLS are tinted with primary.50 (234,242,255) instead of pure white
-  // so cards read as light-blue glass over the blue page, not flat white. Same
-  // luminance as white → WCAG AA on dark text preserved (muted ≥ 5.0:1). The
-  // glassBorder stays pure white: it's the specular sheen of the liquid effect.
   glassBorder: 'rgba(255, 255, 255, 0.58)',
   glassBackground: 'rgba(234, 242, 255, 0.44)',
   cardBackground: 'rgba(234, 242, 255, 0.66)',
@@ -38,37 +23,28 @@ export const functional = {
   inputBorder: 'rgba(148, 163, 184, 0.45)',
   surface: 'rgba(234, 242, 255, 0.64)',
   overlay: 'rgba(255, 255, 255, 0.70)',
-  // Dedicated full-screen page veil for LiquidScreen ONLY (not cards/panels,
-  // which keep surface/overlay). Lighter than surface/overlay so the blue
-  // pageGradient reads through. 0.42 paired with text.muted #556677 keeps muted
-  // ≥ 4.5:1 on every gradient stop (worst = #D8E7FF mid, 4.54:1) — WCAG 1.4.3 AA.
   pageVeil: 'rgba(255, 255, 255, 0.42)',
   separator: 'rgba(148, 163, 184, 0.35)',
 
-  /* ── Light theme bubbles ──────────────────────────── */
   userBubble: 'rgba(30, 64, 175, 0.88)',
   userBubbleBorder: 'rgba(191, 219, 254, 0.6)',
   assistantBubble: 'rgba(234, 242, 255, 0.72)',
   assistantBubbleBorder: 'rgba(148, 163, 184, 0.22)',
 
-  /* ── Light theme accents ──────────────────────────── */
   primaryTint: 'rgba(30, 64, 175, 0.06)',
   primaryBorderSubtle: 'rgba(30, 64, 175, 0.2)',
   timestamp: 'rgba(100, 116, 139, 0.92)',
 
-  /* ── Overlays ─────────────────────────────────────── */
   modalOverlay: 'rgba(0, 0, 0, 0.4)',
   overlayLight: 'rgba(0, 0, 0, 0.15)',
   overlayMedium: 'rgba(0, 0, 0, 0.6)',
   overlayHeavy: 'rgba(0, 0, 0, 0.95)',
 
-  /* ── Shadows ──────────────────────────────────────── */
   shadowSubtle: 'rgba(0, 0, 0, 0.08)',
   shadowMedium: 'rgba(0, 0, 0, 0.15)',
   primaryGlow: 'rgba(37, 99, 235, 0.08)',
   primaryGlowMedium: 'rgba(37, 99, 235, 0.12)',
 
-  /* ── Dark theme glass ─────────────────────────────── */
   darkGlassBorder: 'rgba(255, 255, 255, 0.12)',
   darkGlassBackground: 'rgba(30, 41, 59, 0.72)',
   darkCardBackground: 'rgba(30, 41, 59, 0.66)',
@@ -79,20 +55,17 @@ export const functional = {
   darkOverlay: 'rgba(15, 23, 42, 0.70)',
   darkSeparator: 'rgba(148, 163, 184, 0.25)',
 
-  /* ── Dark theme bubbles ───────────────────────────── */
   darkUserBubble: 'rgba(30, 64, 175, 0.92)',
   darkUserBubbleBorder: 'rgba(96, 165, 250, 0.4)',
   darkAssistantBubble: 'rgba(30, 41, 59, 0.72)',
   darkAssistantBubbleBorder: 'rgba(148, 163, 184, 0.18)',
 
-  /* ── Dark theme accents ───────────────────────────── */
   darkPrimaryTint: 'rgba(96, 165, 250, 0.1)',
   darkPrimaryBorderSubtle: 'rgba(96, 165, 250, 0.2)',
   darkTimestamp: 'rgba(148, 163, 184, 0.72)',
   darkModalOverlay: 'rgba(0, 0, 0, 0.6)',
   darkShadowColor: '#000000',
 
-  /* ── Web glass system ─────────────────────────────── */
   webGlass: 'rgba(255, 255, 255, 0.55)',
   webGlassBorder: 'rgba(255, 255, 255, 0.35)',
   webGlassInset: 'rgba(255, 255, 255, 0.6)',

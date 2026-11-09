@@ -3,10 +3,6 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { chatApi } from '@/features/chat/infrastructure/chatApi';
 import type { ChatUiMessage } from '../chatSessionLogic.pure';
 
-/**
- * Shape of a chatLocalCache lookup hit used by the cache strategy.
- * Kept loosely typed because the production store provides its own record type.
- */
 export interface CacheLookupParams {
   text: string;
   museumId: string;
@@ -38,13 +34,7 @@ export type ClassifyText = (text: string, locale: string) => 'art' | 'unknown';
 
 export type ChatApiPort = typeof chatApi;
 
-/**
- * Aggregated context bag passed to every send strategy. Built once per
- * `sendMessage` call inside `useChatSession` and passed as a single
- * immutable reference to avoid parameter explosion.
- */
 export interface SendMessageContext {
-  // Session & user preferences
   sessionId: string;
   museumMode: boolean;
   museumName: string | null;
@@ -58,7 +48,6 @@ export interface SendMessageContext {
   imageFallbackLabel: string;
   audioFallbackLabel: string;
 
-  // Ports / adapters
   chatApi: ChatApiPort;
   cacheLookup: (params: CacheLookupParams) => {
     question: string;
@@ -73,25 +62,18 @@ export interface SendMessageContext {
   }) => Promise<QueuedMessage | null>;
   classifyText: ClassifyText;
 
-  // State mutators
   setMessages: Dispatch<SetStateAction<ChatUiMessage[]>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
   setError: (error: string | null) => void;
   setDailyLimitReached: Dispatch<SetStateAction<boolean>>;
 
-  // Streaming coordination
   streamTextRef: RefObject<string>;
   streamingIdRef: RefObject<string | null>;
   scheduleFlush: () => void;
   flushStreamText: () => void;
   resetStreaming: () => void;
 
-  // Review prompt counter
   successfulSendsRef: RefObject<number>;
 }
 
-/**
- * Strategy outcome. `true` means the message was fully handled (success or graceful
- * enqueue), `false` means the strategy failed and the UI should surface an error.
- */
 export type SendResult = boolean;

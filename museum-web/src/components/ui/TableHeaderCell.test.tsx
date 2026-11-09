@@ -2,19 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { TableHeaderCell } from './TableHeaderCell';
 
-// ---------------------------------------------------------------------------
-// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p4
-// These tests fail until museum-web/src/components/ui/TableHeaderCell.tsx is created.
-// Spec U-R5, O-R3, O-R5, O-R6, UB-R8, NFR-A11Y-2, NFR-PERF-1 + design §2.2.
-//
-// lib-docs/react/PATTERNS.md §4 (DO keep components PURE) + §8 (RTL conventions).
-// Pure presentational `<th>` — no hooks, no state, no effects.
-//
-// Wrapped in a <table><thead><tr> harness so the rendered <th> sits in a valid
-// table tree (jsdom is lenient but the parent context is required when consumers
-// rely on default scope semantics — WCAG 1.3.1).
-// ---------------------------------------------------------------------------
-
 function renderInTable(ui: React.ReactElement) {
   return render(
     <table>
@@ -26,8 +13,6 @@ function renderInTable(ui: React.ReactElement) {
 }
 
 describe('TableHeaderCell', () => {
-  // ── Element type (U-R5, NFR-A11Y-2) ────────────────────────────────────
-
   describe('element + semantics', () => {
     it('renders a native <th> element (NFR-A11Y-2)', () => {
       const { container } = renderInTable(<TableHeaderCell>Name</TableHeaderCell>);
@@ -48,8 +33,6 @@ describe('TableHeaderCell', () => {
     });
   });
 
-  // ── Default classes (U-R5) ─────────────────────────────────────────────
-
   describe('default classes (U-R5)', () => {
     it('includes the shared defaults "px-6 py-3 font-medium text-text-secondary"', () => {
       const { container } = renderInTable(<TableHeaderCell>X</TableHeaderCell>);
@@ -61,12 +44,8 @@ describe('TableHeaderCell', () => {
     });
   });
 
-  // ── scope attribute (a11y default) ─────────────────────────────────────
-
   describe('scope attribute (WCAG 1.3.1)', () => {
     it('defaults scope="col" (matches the 100% column-header case in admin tables)', () => {
-      // design.md §2.2 — scope="col" by default. All 31 admin sites are column
-      // headers; the default avoids per-site prop noise.
       const { container } = renderInTable(<TableHeaderCell>X</TableHeaderCell>);
       const th = container.querySelector('th') as HTMLElement;
       expect(th.getAttribute('scope')).toBe('col');
@@ -78,8 +57,6 @@ describe('TableHeaderCell', () => {
       expect(th.getAttribute('scope')).toBe('row');
     });
   });
-
-  // ── align prop (O-R3) ──────────────────────────────────────────────────
 
   describe('align prop (O-R3)', () => {
     it('default align="left" emits text-left class', () => {
@@ -103,13 +80,8 @@ describe('TableHeaderCell', () => {
     });
   });
 
-  // ── className merge (O-R5) ─────────────────────────────────────────────
-
   describe('className prop (O-R5 — merge [defaults, align, className])', () => {
     it('appends the caller className AFTER the defaults', () => {
-      // design.md §2.2 — pattern `[defaults, alignClass, className].filter(Boolean).join(' ')`.
-      // Both defaults AND the caller class must be present; merge semantics
-      // (NOT default-OR-override — that pattern belongs to FormFieldError).
       const { container } = renderInTable(
         <TableHeaderCell className="custom-extra">X</TableHeaderCell>,
       );

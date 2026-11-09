@@ -4,12 +4,6 @@ import { makeAssistantMessage, makeChatUiMessage } from '@/__tests__/helpers/fac
 
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-//
-// useAutoTts only consumes useTextToSpeech.togglePlayback / stopPlayback.
-// Mock the underlying hook so we can assert the auto-trigger contract without
-// spinning up the full TTS pipeline (network + audio player + filesystem).
-
 const mockTogglePlayback = jest.fn((_id: string): Promise<void> => Promise.resolve());
 const mockStopPlayback = jest.fn();
 
@@ -26,8 +20,6 @@ jest.mock('@/features/chat/application/useTextToSpeech', () => ({
 }));
 
 import { useAutoTts } from '@/features/chat/application/useAutoTts';
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useAutoTts', () => {
   beforeEach(() => {
@@ -143,7 +135,6 @@ describe('useAutoTts', () => {
     rerender({ msgs: next, en: true });
     expect(mockTogglePlayback).toHaveBeenCalledTimes(1);
 
-    // Re-render with the same length — must NOT re-trigger.
     rerender({ msgs: [...next], en: true });
     expect(mockTogglePlayback).toHaveBeenCalledTimes(1);
   });
@@ -179,11 +170,9 @@ describe('useAutoTts', () => {
       { initialProps: { msgs: initial, en: true } },
     );
 
-    // Auto-play kicks in.
     rerender({ msgs: next, en: true });
     expect(mockTogglePlayback).toHaveBeenCalledTimes(1);
 
-    // User flips the toggle off.
     rerender({ msgs: next, en: false });
     expect(mockStopPlayback).toHaveBeenCalledTimes(1);
   });

@@ -2,11 +2,6 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, renderHook, type RenderOptions } from '@testing-library/react-native';
 
-/**
- * Creates a fresh {@link QueryClient} tuned for tests: zero retries, zero
- * stale-time, no network retries. Every test should build its own client to
- * guarantee isolation.
- */
 export const createTestQueryClient = (): QueryClient =>
   new QueryClient({
     defaultOptions: {
@@ -17,6 +12,7 @@ export const createTestQueryClient = (): QueryClient =>
       },
       mutations: {
         retry: false,
+        gcTime: Infinity,
       },
     },
   });
@@ -28,7 +24,6 @@ const withClient = (client: QueryClient) => {
   return QueryClientTestWrapper;
 };
 
-/** Wraps `render` with a QueryClient scoped to the test. */
 export const renderWithQueryClient = (
   ui: React.ReactElement,
   options: Omit<RenderOptions, 'wrapper'> & { queryClient?: QueryClient } = {},
@@ -41,7 +36,6 @@ export const renderWithQueryClient = (
   };
 };
 
-/** Wraps `renderHook` with a QueryClient scoped to the test. */
 export const renderHookWithQueryClient = <TProps, TResult>(
   callback: (props: TProps) => TResult,
   options: { queryClient?: QueryClient; initialProps?: TProps } = {},

@@ -21,18 +21,8 @@ import { AppError } from '@shared/errors/app.error';
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
 
-/**
- * RED (UFR-022) — A2 / spec R3 + R4.
- * `RegisterUseCase.execute` MUST reject a missing `dateOfBirth` with a 400 AppError
- * (defence-in-depth, design D2) and MUST NOT call `registerUser`. Today
- * `assertDigitalMajority` early-returns on a falsy DOB (`register.useCase.ts:106`),
- * so registration succeeds — making the R3 cases RED until the bypass is removed.
- * The R4 cases (≥15 succeeds, <15 → 422) pin the age-gate behaviour that must be
- * preserved by the fix.
- */
-
 const ADULT_DOB = '1990-06-13';
-const MINOR_DOB = '2020-01-01'; // under 15 as of 2026
+const MINOR_DOB = '2020-01-01';
 
 describe('RegisterUseCase — dateOfBirth required + age gate (A2 / R3, R4)', () => {
   it('throws a 400 AppError when dateOfBirth is missing and does NOT register', async () => {

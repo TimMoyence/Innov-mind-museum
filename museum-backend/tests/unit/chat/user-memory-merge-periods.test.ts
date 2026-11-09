@@ -79,7 +79,7 @@ describe('UserMemoryService.mergePeriods (Spec C)', () => {
 
   it('skips writing when no new period is found', async () => {
     const repo = makeUserMemoryRepoStub({ favoritePeriods: ['Renaissance'] });
-    const artworkRepo = makeArtworkRepoStub({}); // every lookup returns null
+    const artworkRepo = makeArtworkRepoStub({});
     const svc = new UserMemoryService(repo, undefined, { artworkRepo });
 
     await svc.updateAfterSession(

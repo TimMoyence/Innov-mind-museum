@@ -1,20 +1,3 @@
-/**
- * RED — C-R2 (cluster cost-consumers, run undefined-network-detection-reliability).
- *
- * CONTRACT CHANGE (spec §10 invalidated #11, design §2.5/D-06): the compare
- * picker (`useCompareImagePicker`) now feeds the adaptive optimizer through
- * `decideCompression(resolveCompressionMode({ resolved, preference, metered }), true)`
- * — the three values read from `useDataMode()`. Same matrix as the chat-send
- * picker (#10):
- * - resolved='low'                           → aggressive 1024 WebP + MIME from
- *   the optimized URI extension (unchanged);
- * - resolved='normal' + metered, pref 'auto' → aggressive 1024 WebP (US-02.3);
- * - resolved='normal' + non-metered          → LEGACY 1600 JPEG (unchanged);
- * - WebP fallback to JPEG                    → MIME 'image/jpeg' (unchanged).
- *
- * `_internals.normalizeImageMimeTypeFromExtension` is the REAL implementation
- * (URI extension → MIME).
- */
 import { renderHook, act } from '@testing-library/react-native';
 
 jest.mock('react-i18next', () => ({
@@ -33,7 +16,6 @@ jest.mock('@/features/chat/application/DataModeProvider', () => ({
     resolved: mockDataMode.resolved,
     isLowData: mockDataMode.resolved === 'low',
     metered: mockDataMode.metered,
-    setPreference: () => undefined,
   }),
 }));
 
@@ -54,6 +36,7 @@ const mockLaunchImageLibraryAsync = jest.fn<
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: () => mockRequestMediaLibraryPermissionsAsync(),
   launchImageLibraryAsync: () => mockLaunchImageLibraryAsync(),
+  PermissionStatus: { GRANTED: 'granted', DENIED: 'denied', UNDETERMINED: 'undetermined' },
 }));
 
 import { useCompareImagePicker } from '@/features/chat/application/useCompareImagePicker';
@@ -107,7 +90,6 @@ describe('useCompareImagePicker × useDataMode (cost+quality compression, D-06)'
     expect(file?.type).toBe('image/webp');
   });
 
-  // US-02.3 / INV-02 — metered in auto compresses aggressively even on a healthy network.
   it("resolved='normal' + metered (pref 'auto') → AGGRESSIVE profile (1024 WebP)", async () => {
     setDataMode({ resolved: 'normal', preference: 'auto', metered: true });
     mockOptimizeImageAdaptive.mockResolvedValue({ uploadUri: 'file:///tmp/upload.webp' });
@@ -121,7 +103,6 @@ describe('useCompareImagePicker × useDataMode (cost+quality compression, D-06)'
     expect(file?.type).toBe('image/webp');
   });
 
-  // US-08.2 / INV-03 spirit — non-metered healthy network keeps the legacy profile.
   it("resolved='normal' + non-metered → LEGACY profile (1600 JPEG)", async () => {
     setDataMode({ resolved: 'normal', preference: 'auto', metered: false });
     mockOptimizeImageAdaptive.mockResolvedValue({ uploadUri: 'file:///tmp/upload.jpg' });

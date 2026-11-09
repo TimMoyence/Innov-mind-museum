@@ -1,40 +1,44 @@
 #!/usr/bin/env node
 
-/**
- * Validates that all translation files have the same keys as the English reference
- * and that no values are empty strings.
- *
- * Usage: node scripts/check-i18n-completeness.js
- * Exit code 0 = all OK, 1 = missing/empty keys found.
- */
-
 const fs = require('fs');
 const path = require('path');
 
-const LOCALES_DIR = path.join(__dirname, '..', 'shared', 'locales');
+const LOCALES_DIR = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.join(__dirname, '..', 'shared', 'locales');
 const REFERENCE_LANG = 'en';
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
-function flattenKeys(obj, prefix = '') {
-  const keys = [];
+function flattenEntries(obj, prefix = '') {
+  const entries = [];
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      keys.push(...flattenKeys(value, fullKey));
+      entries.push(...flattenEntries(value, fullKey));
     } else {
-      keys.push(fullKey);
+      entries.push([fullKey, value]);
     }
   }
-  return keys;
+  return entries;
 }
 
-function getNestedValue(obj, keyPath) {
-  const parts = keyPath.split('.');
-  let current = obj;
-  for (const part of parts) {
-    if (current === undefined || current === null) return undefined;
-    current = current[part];
+function valuesByBaseKey(obj) {
+  const byBase = new Map();
+  for (const [key, value] of flattenEntries(obj)) {
+    const base = key.replace(PLURAL_SUFFIX, '');
+    const form = key.slice(base.length);
+    const entry = byBase.get(base) ?? { values: [], forms: new Set() };
+    entry.values.push(value);
+    entry.forms.add(form);
+    byBase.set(base, entry);
   }
-  return current;
+  return byBase;
+}
+
+function missingForm(base, entry) {
+  if (!entry) return base;
+  if (entry.forms.has('') || entry.forms.has('_other')) return null;
+  return `${base}_other`;
 }
 
 function run() {
@@ -44,10 +48,9 @@ function run() {
     process.exit(1);
   }
 
-  const reference = JSON.parse(fs.readFileSync(refPath, 'utf8'));
-  const refKeys = flattenKeys(reference);
+  const reference = valuesByBaseKey(JSON.parse(fs.readFileSync(refPath, 'utf8')));
 
-  console.log(`Reference (${REFERENCE_LANG}): ${refKeys.length} keys\n`);
+  console.log(`Reference (${REFERENCE_LANG}): ${reference.size} keys\n`);
 
   const langDirs = fs
     .readdirSync(LOCALES_DIR, { withFileTypes: true })
@@ -64,25 +67,20 @@ function run() {
       continue;
     }
 
-    const translation = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    const missing = [];
-    const empty = [];
-
-    for (const key of refKeys) {
-      const value = getNestedValue(translation, key);
-      if (value === undefined || value === null) {
-        missing.push(key);
-      } else if (typeof value !== 'string') {
-        empty.push(key);
-      } else if (value.trim() === '') {
-        empty.push(key);
-      }
-    }
-
-    const extra = flattenKeys(translation).filter((k) => !refKeys.includes(k));
+    const translation = valuesByBaseKey(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+    const missing = [...reference.keys()]
+      .map((base) => missingForm(base, translation.get(base)))
+      .filter((key) => key !== null);
+    const empty = [...translation]
+      .filter(
+        ([base, { values }]) =>
+          reference.has(base) && values.some((v) => typeof v !== 'string' || v.trim() === ''),
+      )
+      .map(([base]) => base);
+    const extra = [...translation.keys()].filter((base) => !reference.has(base));
 
     if (missing.length === 0 && empty.length === 0) {
-      console.log(`✓ ${lang}: ${flattenKeys(translation).length} keys OK`);
+      console.log(`✓ ${lang}: ${translation.size} keys OK`);
     } else {
       hasErrors = true;
       if (missing.length > 0) {
@@ -97,6 +95,7 @@ function run() {
 
     if (extra.length > 0) {
       console.warn(`  ⚠ ${lang}: ${extra.length} extra keys (not in reference)`);
+      extra.forEach((k) => console.warn(`    - ${k}`));
     }
   }
 

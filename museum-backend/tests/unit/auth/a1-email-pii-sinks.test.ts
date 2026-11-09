@@ -25,25 +25,12 @@ import { makeUserRepo } from 'tests/helpers/auth/user-repo.mock';
 
 import type { Request } from 'express';
 
-/**
- * RED (UFR-022) — A1 / spec R2.
- * Auth log + audit-metadata sinks must NOT carry the raw/full email address; they
- * must carry only the domain (`emailDomain`, via extractEmailDomain) or omit the
- * field. Today these sinks still write `{ email: <full address> }`, so every
- * assertion below is RED until the GREEN phase rewrites the payloads.
- *
- * Contract asserted:
- *  - no emitted payload value equals or contains the full `<local>@<domain>` address
- *  - the domain-only field `emailDomain` is present and equals the domain
- */
-
 const TEST_EMAIL = 'victim.user@example.com';
 const TEST_DOMAIN = 'example.com';
 
 const loggerMock = logger as unknown as Record<'warn' | 'error', jest.Mock>;
 const auditLogMock = auditService.log as jest.Mock;
 
-/** Asserts no value in the payload is, or contains, the full raw email. */
 const expectNoRawEmail = (payload: Record<string, unknown>): void => {
   for (const value of Object.values(payload)) {
     if (typeof value === 'string') {
@@ -78,7 +65,6 @@ describe('A1 — forgotPassword.useCase log sinks carry domain only (R2)', () =>
   it('forgot_password_email_skipped_no_service logs emailDomain, not raw email', async () => {
     const user = makeUser({ email: TEST_EMAIL, email_verified: true });
     const repo = makeUserRepo(user);
-    // No email service / frontend URL → falls into the skipped-no-service branch.
     const useCase = new ForgotPasswordUseCase(repo);
 
     await useCase.execute(TEST_EMAIL);
@@ -144,7 +130,6 @@ describe('A1 — auditLoginError metadata carries domain only (R2)', () => {
     const event = auditLogMock.mock.calls[0][0] as { metadata: Record<string, unknown> };
     expectNoRawEmail(event.metadata);
     expect(event.metadata.emailDomain).toBe(TEST_DOMAIN);
-    // endpoint tag preserved (R2 omits only the raw email, keeps forensic context).
     expect(event.metadata.endpoint).toBe('/login');
   });
 });

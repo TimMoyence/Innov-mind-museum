@@ -1,13 +1,3 @@
-/**
- * Tests for `validateProductionEnv` — focused on SEC-HARDENING items:
- *   - L2: JWT secrets must be ≥ 32 chars in production.
- *   - H12: legacy JWT_SECRET env var must warn loudly when still set.
- *
- * These tests drive the validator directly with a synthesized `AppEnv` object
- * so we don't have to load the full `env.ts` module (which reads real env at
- * import time).
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 
@@ -15,27 +5,18 @@ const LONG = 'a'.repeat(64);
 const ALT_LONG = 'b'.repeat(64);
 const EXPORT_SALT = 'g'.repeat(48);
 
-/**
- * Minimal AppEnv stub — only fields validateProductionEnv inspects.
- * @param overrides
- */
 const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'openai', openAiApiKey: 'sk-test' },
+    llm: { costGuard: { userDailyCapUsd: 0 }, provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     cache: undefined,
-    // I-SEC5 (2026-05-21) — required by `validateExportPseudonymSalt`. Drift
-    // detection requires the AppEnv stub to mirror process.env.
     exportPseudonymSalt: EXPORT_SALT,
     auth: {
       accessTokenSecret: LONG,
       refreshTokenSecret: ALT_LONG,
-      // F7 — CSRF secret must agree with raw env var (drift check) and be
-      // distinct from every other production secret.
       csrfSecret: 'p'.repeat(48),
-      // F10 — production sentinel rejects false; default true keeps the stub valid.
       passwordBreachCheckEnabled: true,
       ...overrides,
     },
@@ -52,9 +33,7 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       MEDIA_SIGNING_SECRET: 'media-signing-secret-long-enough-for-tests',
       JWT_ACCESS_SECRET: LONG,
       JWT_REFRESH_SECRET: ALT_LONG,
-      // F7 — CSRF secret must be present + distinct in prod.
       CSRF_SECRET: 'p'.repeat(48),
-      // I-SEC5 (2026-05-21) — required by `validateExportPseudonymSalt`.
       EXPORT_PSEUDONYM_SALT: EXPORT_SALT,
     };
     delete process.env.JWT_SECRET;
@@ -92,7 +71,7 @@ describe('validateProductionEnv — JWT secret hardening', () => {
 
   it('throws when JWT_ACCESS_SECRET env var is missing (H12 — no JWT_SECRET fallback)', () => {
     delete process.env.JWT_ACCESS_SECRET;
-    process.env.JWT_SECRET = LONG; // legacy — must NOT satisfy requirement
+    process.env.JWT_SECRET = LONG;
 
     expect(() => {
       validateProductionEnv(makeEnv());
@@ -121,8 +100,6 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       warnSpy.mockRestore();
     }
   });
-
-  // ── SEC-HARDENING (L3): MEDIA_SIGNING_SECRET required + distinct ──
 
   describe('MEDIA_SIGNING_SECRET (L3)', () => {
     it('throws when MEDIA_SIGNING_SECRET is missing', () => {
@@ -153,8 +130,6 @@ describe('validateProductionEnv — JWT secret hardening', () => {
       }).not.toThrow();
     });
   });
-
-  // ── F7 (2026-04-30): CSRF_SECRET required + distinct + >= 32 chars ──
 
   describe('CSRF_SECRET (F7)', () => {
     it('throws when CSRF_SECRET is missing', () => {

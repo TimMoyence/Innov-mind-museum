@@ -31,7 +31,6 @@ export class User {
   @Column({ type: 'integer', nullable: true, name: 'museum_id' })
   museumId?: number | null;
 
-  /** Bcrypt-hashed. `null` for social-only accounts. */
   @Column({ type: 'varchar', nullable: true })
   password!: string | null;
 
@@ -54,11 +53,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   onboarding_completed!: boolean;
 
-  /** GDPR Art. 6(1)(a) — default `false`, must explicitly opt-in via profile settings. */
   @Column({ type: 'boolean', default: false, name: 'notify_on_review_moderation' })
   notifyOnReviewModeration!: boolean;
 
-  /** Empty array means "no preference". */
   @Column({
     type: 'text',
     array: true,
@@ -68,19 +65,12 @@ export class User {
   })
   contentPreferences!: ContentPreference[];
 
-  /** `null` = use env-level default (`env.tts.voice`). Validated against catalog. */
   @Column({ type: 'varchar', length: 32, nullable: true, name: 'tts_voice' })
   ttsVoice!: string | null;
 
-  /** TD-2 — BCP-47. BE accepts 2-8 chars for forward-compat (new locales don't require migration). */
-  @Column({ type: 'varchar', length: 8, nullable: false, default: 'en-US', name: 'default_locale' })
-  defaultLocale!: string;
-
-  /** TD-2 */
   @Column({ type: 'boolean', nullable: false, default: true, name: 'default_museum_mode' })
   defaultMuseumMode!: boolean;
 
-  /** TD-2 — Zod-enum validated at route boundary. */
   @Column({
     type: 'varchar',
     length: 16,
@@ -90,11 +80,9 @@ export class User {
   })
   guideLevel!: 'beginner' | 'intermediate' | 'expert';
 
-  /** TD-2 — Zod-enum validated. */
   @Column({ type: 'varchar', length: 8, nullable: false, default: 'auto', name: 'data_mode' })
   dataMode!: 'auto' | 'low' | 'normal';
 
-  /** TD-2 — server-persisted so preference survives reinstall + propagates across devices. */
   @Column({ type: 'boolean', nullable: false, default: false, name: 'audio_description_mode' })
   audioDescriptionMode!: boolean;
 
@@ -114,14 +102,9 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   email_change_token_expiry?: Date | null;
 
-  /**
-   * "Majorité numérique" 15y (CNIL Délibération 2021-018). Nullable for legacy
-   * accounts created before the age-gate; new registrations always set it.
-   */
   @Column({ type: 'date', nullable: true, name: 'date_of_birth' })
   dateOfBirth?: Date | null;
 
-  /** ADR-052 — blocks login + refresh; existing 15-min access tokens expire naturally. */
   @Column({ type: 'boolean', default: false })
   suspended!: boolean;
 
@@ -129,26 +112,12 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'deleted_at' })
   deletedAt!: Date | null;
 
-  /**
-   * R1/C6 soft-paywall. `'free'` subject to monthly session quota (POST /api/sessions),
-   * `'premium'` bypasses. NOT linked to Stripe in V1 — this column is the canonical
-   * grant signal until funnel data unblocks Stripe (R1 §0.1).
-   */
   @Column({ type: 'varchar', length: 16, default: 'free' })
   tier!: UserTier;
 
-  /**
-   * R1/C6 monthly counter. Atomic UPDATE in `monthlySessionQuota` middleware.
-   * Reset to 1 (not 0) on first session of a new UTC month (R6 — same SQL).
-   * Never touched on tier flip (R17). Premium ignores entirely.
-   */
   @Column({ type: 'integer', default: 0, name: 'sessions_month_count' })
   sessionsMonthCount!: number;
 
-  /**
-   * R1/C6 — first-day-of-current-UTC-month sentinel. Nullable for users created
-   * before R1 (first post-deploy session-create initialises). UTC-only per N5.
-   */
   @Column({ type: 'date', nullable: true, name: 'sessions_month_start' })
   sessionsMonthStart!: Date | null;
 

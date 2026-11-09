@@ -18,23 +18,8 @@ import type {
 } from '@modules/admin/domain/export/export-repositories.port';
 import type { DataSource, Repository } from 'typeorm';
 
-// I-SEC5 (2026-05-21) — historical literal fallback REMOVED. The committed
-// constant was a trivial dictionary-attack surface against the pseudonymised
-// export (spec §1.1). The salt now MUST come from `env.exportPseudonymSalt`.
-// Prod boot fail-fast lives in `env.production-validation.ts::validateExportPseudonymSalt`.
-// Rotation doctrine : `docs/SECURITY.md#export-salt-rotation` — rotation = privacy
-// incident only ; post-rotation pseudonyms intentionally non-correlatable with
-// pre-rotation outputs (that IS the property we want).
 const CHUNK_SIZE = 500;
 
-/**
- * PG adapter for admin CSV export (R2 §3.3/§3.4/D3/D4). Streams in chunks of
- * CHUNK_SIZE via TypeORM `take+skip` — HTTP handler pipes without buffering.
- *
- * Sessions enforces `WHERE museum_id = $scope` server-side (R6/D4 defense-in-depth).
- * Reviews + tickets are SQL-unscoped (Q1 BLOCKER — no `museum_id` column);
- * use case layer prevents non-super_admin from reaching the repo.
- */
 export class AdminExportRepositoryPg
   implements ExportSessionsRepository, ExportReviewsRepository, ExportTicketsRepository
 {
@@ -42,13 +27,6 @@ export class AdminExportRepositoryPg
   private readonly reviewRepo: Repository<Review>;
   private readonly ticketRepo: Repository<SupportTicket>;
   private readonly userRepo: Repository<User>;
-  /**
-   * I-SEC5 — resolved at construction (not at module-import) so tests that stub
-   * env BEFORE constructing the repo keep working. Prod boot fail-fast at
-   * `env.production-validation.ts` guarantees this is set before the first
-   * request reaches the adapter ; dev defaults to an explicit throw to force
-   * the operator to set EXPORT_PSEUDONYM_SALT in their `.env` template.
-   */
   private readonly salt: string;
 
   constructor(dataSource: DataSource) {
@@ -112,11 +90,6 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /**
-   * Pseudonymises userId before yielding.
-   *
-   * @yields {ExportRowReview} pseudonymised review row.
-   */
   async *streamReviews(): AsyncIterable<ExportRowReview> {
     let skip = 0;
     for (;;) {
@@ -145,11 +118,6 @@ export class AdminExportRepositoryPg
     }
   }
 
-  /**
-   * Pseudonymises user email for every role (incl. super_admin — R19/D6/Q7).
-   *
-   * @yields {ExportRowTicket} pseudonymised support ticket row.
-   */
   async *streamSupportTickets(): AsyncIterable<ExportRowTicket> {
     let skip = 0;
     for (;;) {
@@ -161,7 +129,6 @@ export class AdminExportRepositoryPg
         .getMany();
       if (rows.length === 0) return;
 
-      // Pseudonymise BEFORE return so raw email never leaves this method.
       const userIds = Array.from(new Set(rows.map((r) => r.userId)));
       const users = await this.userRepo
         .createQueryBuilder('u')

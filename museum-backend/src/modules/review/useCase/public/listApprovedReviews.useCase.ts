@@ -9,7 +9,6 @@ interface ListApprovedReviewsInput {
   limit: number;
 }
 
-/** Approved reviews only, paginated, ordered by createdAt DESC. */
 export class ListApprovedReviewsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 

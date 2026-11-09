@@ -5,7 +5,6 @@ interface VerifyEmailPageProps {
   params: Promise<{ locale: string }>;
 }
 
-/** Resolve an untrusted URL segment to a supported {@link Locale}, defaulting safely. */
 function resolveLocale(input: string): Locale {
   return (locales as readonly string[]).includes(input) ? (input as Locale) : defaultLocale;
 }

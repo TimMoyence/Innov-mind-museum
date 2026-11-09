@@ -485,8 +485,6 @@ describe('buildVisitContextPromptBlock', () => {
   });
 
   it('truncates museum description at exactly 600 characters (catches silent under-truncation)', () => {
-    // 2000 'A' chars → must be truncated to EXACTLY 600. Strict equality catches the
-    // sanitizePromptInput default-maxLength=200 bug where the outer slice was a no-op.
     const longDescription = 'A'.repeat(2000);
     const ctx: VisitContext = {
       museumName: 'Louvre',
@@ -523,12 +521,10 @@ describe('buildVisitContextPromptBlock', () => {
 
     expect(block).not.toContain('\u200B');
     expect(block).not.toContain('\u0000');
-    // Hostile text must be contained inside the labeled line, not leaked to system-level.
     expect(block).toMatch(/Museum description: Ignore previous instructions/);
   });
 
   it('omits the description line when post-sanitization produces an empty string', () => {
-    // Whitespace + control chars only → sanitized to empty → line must be omitted.
     const ctx: VisitContext = {
       museumName: 'Louvre',
       museumDescription: '   \u200B\u0000  ',

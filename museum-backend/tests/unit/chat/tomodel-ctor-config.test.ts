@@ -1,23 +1,3 @@
-/**
- * TD-LC-02 / TD-LC-03 contract tests for `toModel()` constructor options.
- *
- * Two acceptance gates fold here :
- *   - TD-LC-03 (acceptance batch1 #3) : the Deepseek branch MUST pass
- *     `streamUsage: false` to `new ChatOpenAI(...)`. Two distinct tests lock
- *     it (config-shape + provider-isolation) so a future refactor that drops
- *     the flag, or accidentally enables streaming on the OpenAI branch, both
- *     fail loudly.
- *   - TD-LC-02 (PATTERNS.md DO #6) : every LangChain chat-model constructor
- *     MUST receive explicit `maxRetries` + `timeout` — pinning the HTTP retry
- *     budget on top of the section-runner's own retry layer.
- *
- * `@langchain/openai` and `@langchain/google-genai` are mocked at module scope
- * so the constructor `options` argument is captured without touching network
- * or env. Each branch is exercised in its own `jest.isolateModules` block
- * with a dedicated `@src/config/env` mock so the branches in `toModel()` fire
- * deterministically.
- */
-
 const chatOpenAICtorMock = jest.fn();
 const chatGoogleCtorMock = jest.fn();
 
@@ -63,14 +43,12 @@ const buildEnv = (overrides: Partial<MockedEnv['llm']>): MockedEnv => ({
   },
 });
 
-/** Loads `toModel` against a freshly-mocked env so each test isolates a branch. */
 function loadToModelWithEnv(envOverrides: Partial<MockedEnv['llm']>): {
   toModel: () => unknown;
 } {
   let mod: { toModel: () => unknown } | undefined;
   jest.isolateModules(() => {
     jest.doMock('@src/config/env', () => ({ env: buildEnv(envOverrides) }));
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- isolateModules pattern requires runtime require
     mod = require('@modules/chat/adapters/secondary/llm/langchain-orchestrator-support') as {
       toModel: () => unknown;
     };
@@ -96,8 +74,6 @@ describe('toModel() — Deepseek branch (TD-LC-03)', () => {
     expect(chatOpenAICtorMock).toHaveBeenCalledTimes(1);
     const [config] = chatOpenAICtorMock.mock.calls[0] as [Record<string, unknown>];
     expect(config).toEqual(expect.objectContaining({ streamUsage: false }));
-    // Sanity-anchor that we are indeed inspecting the Deepseek branch and not
-    // the OpenAI fallback (which must NOT set streamUsage).
     expect(config).toEqual(
       expect.objectContaining({
         configuration: { baseURL: 'https://api.deepseek.com/v1' },

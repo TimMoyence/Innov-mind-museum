@@ -13,48 +13,31 @@ type CompareMatch = components['schemas']['CompareMatch'];
 
 interface ImageCompareCarouselProps {
   matches: CompareMatch[];
-  locale: 'fr' | 'en';
   onMatchPress: (qid: string) => void;
 }
 
-const SNAP_INTERVAL = 220 + 8; // CARD_WIDTH + gap (sync with ImageCompareCard)
+const SNAP_INTERVAL = 220 + 8;
 
-/**
- * Horizontal carousel of visual-similarity matches (C3 / Phase 8).
- *
- * Distinct file from the C2 `ImageCarousel` (D7 — different surface intent).
- * Uses `./ImageCompareCard` for each match. Renders a localized header above
- * the list and an explicit empty state when `matches` is empty
- * (spec.md Q7 default = (b) — explicit "no match found" card, not silence).
- */
 export const ImageCompareCarousel = React.memo(
-  ({ matches, locale, onMatchPress }: ImageCompareCarouselProps) => {
+  ({ matches, onMatchPress }: ImageCompareCarouselProps) => {
     const { theme } = useTheme();
     const { t } = useTranslation();
 
     const renderItem: ListRenderItem<CompareMatch> = useCallback(
-      ({ item }) => (
-        <ImageCompareCard match={item} locale={locale} onPress={onMatchPress} />
-      ),
-      [locale, onMatchPress],
+      ({ item }) => <ImageCompareCard match={item} onPress={onMatchPress} />,
+      [onMatchPress],
     );
 
     const keyExtractor = useCallback((m: CompareMatch) => m.qid, []);
 
     return (
       <View style={styles.container}>
-        <Text
-          style={[styles.header, { color: theme.textPrimary }]}
-          accessibilityRole="header"
-        >
+        <Text style={[styles.header, { color: theme.textPrimary }]} accessibilityRole="header">
           {t('chat.compare.title')}
         </Text>
         {matches.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text
-              style={[styles.emptyText, { color: theme.textSecondary }]}
-              numberOfLines={3}
-            >
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]} numberOfLines={3}>
               {t('chat.compare.empty')}
             </Text>
           </View>

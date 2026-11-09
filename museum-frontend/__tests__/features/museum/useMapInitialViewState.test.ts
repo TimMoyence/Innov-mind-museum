@@ -19,7 +19,6 @@ describe('useMapInitialViewState', () => {
   });
 
   it('returns null while mapCameraCache.load() is pending (synchronous first render)', () => {
-    // Pending forever — exercises the in-flight branch.
     jest.spyOn(mapCameraCache, 'load').mockImplementation(() => new Promise(() => undefined));
     const { result } = renderHook(() => useMapInitialViewState(NO_MUSEUMS, null, null));
     expect(result.current).toBeNull();
@@ -65,7 +64,6 @@ describe('useMapInitialViewState', () => {
     });
     const first = result.current;
     rerender({ lat: 48.8566, lng: 2.3522 });
-    // hook is one-shot — already-resolved state stays referentially stable
     expect(result.current).toBe(first);
   });
 
@@ -83,8 +81,6 @@ describe('useMapInitialViewState', () => {
       await Promise.resolve();
       resolveCache?.(null);
     });
-    // No unhandled rejection or "set state on unmounted" warning means the
-    // cancelled-flag guard worked.
     expect(true).toBe(true);
   });
 

@@ -3,6 +3,8 @@ import type React from 'react';
 import { StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 
+import { makeEnrichedImage } from '../../../helpers/factories';
+
 jest.mock('react-native-gesture-handler', () => {
   const { View } = require('react-native');
   return {
@@ -63,15 +65,7 @@ describe('fullscreen modals keep their close button below the status bar', () =>
   it('image gallery', () => {
     const view = render(
       <ImageFullscreenModal
-        images={[
-          {
-            url: 'https://example.test/b.jpg',
-            thumbnailUrl: 'https://example.test/b-t.jpg',
-            caption: 'B',
-            source: 'wikidata',
-            score: 1,
-          },
-        ]}
+        images={[makeEnrichedImage({ url: 'https://example.test/b.jpg', caption: 'B' })]}
         initialIndex={0}
         visible
         onClose={jest.fn()}

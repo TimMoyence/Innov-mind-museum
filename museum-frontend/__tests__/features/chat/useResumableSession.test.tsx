@@ -1,43 +1,7 @@
-/**
- * Red tests for B2 — `useResumableSession` hook (conversation resumption
- * banner data layer : list-sessions filter, 7-day window, dismiss-until
- * storage gate).
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B2.md` :
- *
- *   §1.1 (R1-R12) — hook shape + fetch + filter + max-by-updatedAt +
- *                   dismiss-until storage gate + telemetry counters.
- *   §4 (AC1-AC10) — exported constants + filter rules + dismiss flow +
- *                   error tolerance.
- *
- * Key invariants :
- *   - Exposed constants :
- *       RESUMPTION_BANNER_DISMISS_STORAGE_KEY === 'musaium.settings.resumptionBannerDismissedUntil'
- *       RESUMPTION_BANNER_DISMISS_DURATION_MS === 86_400_000
- *       RESUMPTION_BANNER_WINDOW_MS === 604_800_000
- *   - Hook returns `{ session: ResumableSession | null; isLoading: boolean; dismiss: () => Promise<void> }`.
- *   - Filters OUT sessions with `messageCount === 0`.
- *   - Filters OUT sessions older than 7 days.
- *   - Picks the most recent `updatedAt` among eligible.
- *   - Dismiss-until storage gate : ISO timestamp in the future suppresses
- *     the banner ; expired/missing/unparseable → proceeds normally.
- *   - `dismiss()` writes `(now + 24h).toISOString()` AND sets local
- *     session to `null` synchronously.
- *   - No throw on API error / storage error.
- *
- * At baseline (B2 not yet implemented) :
- *   - `@/features/chat/application/useResumableSession` does not exist
- *     (verified : `ls museum-frontend/features/chat/application/useResumableSession*` → 0).
- *     → Jest fails with "Cannot find module" at module load time.
- *
- * Spec : `docs/chat-ux-refonte/specs/B2.md` §1.1 R1-R12 ; §4 AC1-AC10.
- */
-
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 
-// ── storage façade mock — drives the hook deterministically ─────────────────
 const mockGetItem = jest.fn<Promise<string | null>, [string]>();
 const mockSetItem = jest.fn<Promise<void>, [string, string]>();
 
@@ -51,7 +15,6 @@ jest.mock('@/shared/infrastructure/storage', () => ({
   },
 }));
 
-// ── chatApi.listSessions mock — drives BE response ──────────────────────────
 const mockListSessions = jest.fn<Promise<unknown>, [unknown]>();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -60,15 +23,12 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// RED ASSERTION 1 : module does not exist yet at baseline.
 import {
   useResumableSession,
   RESUMPTION_BANNER_DISMISS_STORAGE_KEY,
   RESUMPTION_BANNER_DISMISS_DURATION_MS,
   RESUMPTION_BANNER_WINDOW_MS,
 } from '@/features/chat/application/useResumableSession';
-
-// ── small helpers ───────────────────────────────────────────────────────────
 
 const ONE_HOUR_MS = 3_600_000;
 const ONE_DAY_MS = 86_400_000;
@@ -101,9 +61,6 @@ function makeSessionListItem(
     title: overrides.title ?? null,
     createdAt: overrides.createdAt ?? defaultTs,
     updatedAt: overrides.updatedAt ?? defaultTs,
-    // Defaults to `updatedAt` so the 20 pre-QA-09 tests rank identically
-    // (activityMs falls back to updatedAt); override it to exercise the
-    // lastMessageAt-based ranking introduced by QA-09.
     lastMessageAt: overrides.lastMessageAt ?? overrides.updatedAt ?? defaultTs,
     messageCount: overrides.messageCount ?? 4,
     locale: overrides.locale ?? 'en-US',
@@ -129,9 +86,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     mockSetItem.mockResolvedValue(undefined);
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R12 / §4 AC1 — exported constants contract
-  // ────────────────────────────────────────────────────────────────────────
   describe('exported constants (R12, AC1)', () => {
     it('exposes RESUMPTION_BANNER_DISMISS_STORAGE_KEY === "musaium.settings.resumptionBannerDismissedUntil"', () => {
       expect(RESUMPTION_BANNER_DISMISS_STORAGE_KEY).toBe(
@@ -148,15 +102,11 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R1 / §4 AC2 — hook shape
-  // ────────────────────────────────────────────────────────────────────────
   describe('shape (R1)', () => {
     it('returns { session, isLoading, dismiss } as documented', () => {
       mockListSessions.mockResolvedValue(listResponse([]));
       const { result } = renderHook(() => useResumableSession());
 
-      // Shape check immediately — keys must exist.
       expect(result.current).toEqual(
         expect.objectContaining({
           session: null,
@@ -167,9 +117,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R2 / §4 AC2 — fetch + empty-list path
-  // ────────────────────────────────────────────────────────────────────────
   describe('fetch + empty response (R2, AC2)', () => {
     it('calls chatApi.listSessions exactly once on mount with limit=10', async () => {
       mockListSessions.mockResolvedValue(listResponse([]));
@@ -190,9 +137,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R3 / §4 AC3-AC5 — filter logic
-  // ────────────────────────────────────────────────────────────────────────
   describe('filter rules (R3, AC3-AC5)', () => {
     it('keeps sessions with messageCount > 0 AND age < 7 days (AC3)', async () => {
       const now = Date.now();
@@ -227,7 +171,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
       const now = Date.now();
       const stale = makeSessionListItem({
         id: 'sess-stale',
-        // 7 days + 1 minute in the past — outside the 7-day window.
         updatedAt: new Date(now - SEVEN_DAYS_MS - 60_000).toISOString(),
         messageCount: 5,
       });
@@ -255,9 +198,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R4 / §4 AC3 — picks max updatedAt
-  // ────────────────────────────────────────────────────────────────────────
   describe('selection by max updatedAt (R4)', () => {
     it('picks the most recent session when multiple are eligible', async () => {
       const now = Date.now();
@@ -269,7 +209,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
         id: 'sess-newer',
         updatedAt: new Date(now - ONE_HOUR_MS).toISOString(),
       });
-      // Intentionally NOT pre-sorted — assert the hook does not rely on BE order.
       mockListSessions.mockResolvedValue(listResponse([older, newer]));
       const { result } = renderHook(() => useResumableSession());
       await waitFor(() => {
@@ -279,32 +218,23 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // QA-09 regression — rank by lastMessageAt, NOT the BE-frozen updatedAt
-  // ────────────────────────────────────────────────────────────────────────
   describe('selection by max lastMessageAt (QA-09 regression)', () => {
     it('ranks by lastMessageAt, not the frozen updatedAt — the most recently CHATTED session wins', async () => {
       const now = Date.now();
-      // The BE freezes `updatedAt` at creation. Build the exact QA-09 trap:
-      //  - `stale` was CREATED last (newer updatedAt) but last chatted 4 days ago.
-      //  - `active` was CREATED first (older updatedAt) but chatted 1 hour ago.
-      // Ranking by updatedAt (the old bug) picks `stale`; ranking by
-      // lastMessageAt (the fix) picks `active`. Order-independent discriminator.
       const stale = makeSessionListItem({
         id: 'sess-stale',
         createdAt: new Date(now - 5 * ONE_DAY_MS + 60_000).toISOString(),
-        updatedAt: new Date(now - 5 * ONE_DAY_MS + 60_000).toISOString(), // NEWER createdAt==updatedAt
-        lastMessageAt: new Date(now - 4 * ONE_DAY_MS).toISOString(), // OLD activity
+        updatedAt: new Date(now - 5 * ONE_DAY_MS + 60_000).toISOString(),
+        lastMessageAt: new Date(now - 4 * ONE_DAY_MS).toISOString(),
         messageCount: 2,
       });
       const active = makeSessionListItem({
         id: 'sess-active',
         createdAt: new Date(now - 5 * ONE_DAY_MS).toISOString(),
-        updatedAt: new Date(now - 5 * ONE_DAY_MS).toISOString(), // OLDER createdAt==updatedAt
-        lastMessageAt: new Date(now - ONE_HOUR_MS).toISOString(), // RECENT activity
+        updatedAt: new Date(now - 5 * ONE_DAY_MS).toISOString(),
+        lastMessageAt: new Date(now - ONE_HOUR_MS).toISOString(),
         messageCount: 2,
       });
-      // Not pre-sorted by activity — assert the hook does not rely on BE order.
       mockListSessions.mockResolvedValue(listResponse([stale, active]));
 
       const { result } = renderHook(() => useResumableSession());
@@ -316,8 +246,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
 
     it('falls back to updatedAt for ranking when lastMessageAt is null (legacy/no-message rows)', async () => {
       const now = Date.now();
-      // Neither row carries lastMessageAt → activityMs falls back to updatedAt,
-      // so the more recently updated row wins (graceful degradation).
       const older = makeSessionListItem({
         id: 'sess-older-null',
         updatedAt: new Date(now - 3 * ONE_DAY_MS).toISOString(),
@@ -338,9 +266,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R9 — ResumableSession shape mirrors BE listSessions item
-  // ────────────────────────────────────────────────────────────────────────
   describe('ResumableSession shape (R9)', () => {
     it('exposes id, museumId, museumName, lastArtworkTitle, updatedAt', async () => {
       const item = makeSessionListItem({
@@ -364,9 +289,7 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
 
     it('falls back to null on museumId / lastArtworkTitle when absent from BE response (NFR5 backward-compat)', async () => {
-      // Legacy server (pre-T1) does NOT return museumId / lastArtworkTitle.
       const legacy = makeSessionListItem({ id: 'sess-legacy' });
-      // Strip the new fields so the hook simulates a legacy payload.
       const sanitized: Record<string, unknown> = { ...legacy };
       delete sanitized.museumId;
       delete sanitized.lastArtworkTitle;
@@ -383,9 +306,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R6-R8 / §4 AC6-AC8 — dismiss-until storage gate
-  // ────────────────────────────────────────────────────────────────────────
   describe('dismiss-until storage gate (R6-R8, AC6-AC8)', () => {
     it('returns session=null when storage holds an ISO in the future (AC6)', async () => {
       const futureISO = new Date(Date.now() + 2 * ONE_HOUR_MS).toISOString();
@@ -456,9 +376,6 @@ describe('useResumableSession (B2 — conversation resumption hook)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R7, R11 / §4 AC9-AC10 — error tolerance
-  // ────────────────────────────────────────────────────────────────────────
   describe('error tolerance (R7, R11, AC9-AC10)', () => {
     it('does NOT throw when chatApi.listSessions rejects — session stays null (AC9)', async () => {
       mockListSessions.mockRejectedValue(new Error('Network error'));

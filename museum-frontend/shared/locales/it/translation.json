@@ -125,6 +125,7 @@
     "session_unsaved": "Sessione rimossa dai salvati",
     "session_saved": "Sessione salvata",
     "empty_title": "Nessuna conversazione",
+    "untitled": "Ancora nessun messaggio",
     "empty_saved": "Nessuna sessione salvata. Tieni premuto su una sessione per salvarla.",
     "empty_body": "Inizia una nuova conversazione dalla Home per creare la tua prima sessione.",
     "message_count": "Messaggi: {{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "Chiudi",
       "noQuote": "Nessun estratto disponibile per questa fonte."
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "Catalogo del museo",
-        "reference-db": "Base di riferimento",
-        "web": "Risultato web",
-        "ai-knowledge": "Sapere dell'IA"
-      },
-      "confidence": {
-        "high": "Alta affidabilità",
-        "medium": "Media affidabilità",
-        "low": "Bassa — solo IA"
-      },
-      "chip": {
-        "a11y_hint": "Tocca per i dettagli"
-      },
-      "ai_only": {
-        "disclosure_title": "Risposta solo IA",
-        "disclosure_body": "Questa risposta si basa sulla conoscenza generale dell'IA. Nessuna fonte è stata recuperata. Verifica prima di fidarti dei dettagli."
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "Apri allegati",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "Opera senza titolo",
       "a11y_label": "Opera: {{title}} di {{artist}}, tocca per ingrandire",
+      "a11y_label_no_artist": "Opera: {{title}}, tocca per ingrandire",
       "a11y_label_untitled": "Opera senza titolo, tocca per ingrandire",
       "a11y_hint": "Apre a schermo intero con zoom a pizzico",
       "expand": "Ingrandisci",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "Identificazione in corso"
       },
@@ -569,6 +550,7 @@
       "empty": "Nessuna opera simile trovata — prova una foto più nitida",
       "viewArtist": "Vedi artista",
       "attribution": "Fonte: Wikimedia Commons",
+      "card_a11y": "Opera simile: {{credit}}, {{rationale}}",
       "rationale": {
         "fallback": "Opera simile"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "Visita guidata",
       "suggestionsLabel": "Suggerimenti per la visita",
       "suggestionHint": "Invia questo suggerimento come prossima richiesta"
-    },
-    "askMore": {
-      "a11y_label": "Domanda di approfondimento: {{text}}",
-      "a11y_hint": "Tocca per fare questa domanda"
     },
     "sottoVoce": {
       "a11y_label": "Modalità sotto-voce",
@@ -648,7 +626,7 @@
     "placeholder": "Chiedi di un'opera, un monumento, oppure invia voce/foto...",
     "send": "Invia"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "Principiante",
     "intermediate": "Intermedio",
     "expert": "Esperto"
@@ -1059,6 +1037,7 @@
     },
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, apri visita",
+      "session_card_no_date": "{{title}}, {{museum}}, apri visita",
       "continue_hint": "Apre questa visita passata in sola lettura"
     },
     "bottomSheet": {
@@ -1114,7 +1093,7 @@
     "save": "Salva",
     "skip": "Salta",
     "saved": "Salvato!",
-    "by": "di",
+    "by": "di {{artist}}",
     "fun_fact": "Lo sapevi?",
     "swipeToSave": "Salva"
   },
@@ -1125,7 +1104,8 @@
     "description": "Descrizione",
     "priority": "Priorità",
     "status": "Stato",
-    "messages": "Messaggi",
+    "messageCount_one": "{{count}} messaggio",
+    "messageCount_other": "{{count}} messaggi",
     "noTickets": "Nessun ticket",
     "noTicketsDesc": "Crea un ticket per ricevere assistenza dal nostro team di supporto.",
     "createFirst": "Crea il tuo primo ticket",
@@ -1134,7 +1114,7 @@
     "replyPlaceholder": "Scrivi il tuo messaggio...",
     "send": "Invia",
     "sending": "Invio...",
-    "created": "Creato",
+    "createdOn": "Creato il {{date}}",
     "noMessages": "Nessun messaggio",
     "submitTicket": "Invia ticket",
     "subjectPlaceholder": "Breve riepilogo del tuo problema",
@@ -1174,7 +1154,14 @@
     "alreadyReviewed": "Hai già inviato una recensione",
     "empty": "Ancora nessuna recensione. Sii il primo!",
     "reviewCount": "{{count}} recensioni",
-    "submitFailed": "Invio fallito. Riprova."
+    "submitFailed": "Invio fallito. Riprova.",
+    "age": {
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "days": "{{count}} g",
+      "months": "{{count}} m",
+      "years": "{{count}} a"
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1219,7 @@
     "error": "Qualcosa è andato storto. Riprova più tardi.",
     "dismiss": "Chiudi",
     "consent": "Accetto di ricevere un'email al lancio di premium.",
-    "resetsOn": "Si reimposta il",
+    "resetsOn": "Si reimposta il {{date}}",
     "analyticsConsent": {
       "title": "Aiutaci a migliorare Musaium",
       "description": "Con il tuo consenso misuriamo in modo anonimo come viene usata l'app (pagine viste, funzionalità utilizzate). Nessun dato personale, nessun tracker pubblicitario — solo contatori aggregati che ci aiutano a capire cosa funziona.",

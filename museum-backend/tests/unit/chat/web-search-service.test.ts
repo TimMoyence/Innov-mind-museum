@@ -7,7 +7,6 @@ import type {
   WebSearchServiceConfig,
 } from '@modules/chat/domain/ports/web-search.port';
 
-// Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

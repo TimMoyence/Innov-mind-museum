@@ -36,10 +36,6 @@ jest.mock('@/features/museum/infrastructure/offlinePackChoiceStore', () => {
   return { useOfflinePackChoiceStore: mockStore };
 });
 
-// ── useOfflinePacks mock ─────────────────────────────────────────────────────
-// The hook composes useOfflinePacks for the download lifecycle. We expose a
-// controllable `mockDownload` + a mutable `mockPacksByCity` so each test can
-// drive the state machine (idle → active → complete | error).
 const mockDownload = jest.fn();
 let mockPacksByCity: Record<string, unknown> = {};
 jest.mock('@/features/museum/application/useOfflinePacks', () => ({

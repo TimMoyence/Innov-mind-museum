@@ -1,24 +1,3 @@
-/**
- * B6 / W3 — Proactive in-museum suggestion banner.
- *
- * Two display modes, picked by `museum.confidence`:
- *
- *   - confidence > 0.8 → auto-pickup banner (legacy B6 behaviour).
- *     Single Pressable card "You're at <museumName> — Ask the assistant?"
- *     + a separate close (X) Pressable. Tap card → `onStart(museum)`.
- *
- *   - confidence ∈ (0.5, 0.8] → confirm bottom-sheet card.
- *     "Tu sembles proche du <museumName>, on démarre la balade ?"
- *     + Yes button (`onStart`) + Choose-another button
- *     (`onChooseAnother`, falls back to `onDismiss` when absent).
- *
- * The hook (`useProactiveMuseumSuggestion`) returns null below 0.5, so the
- * banner never renders the low-confidence band — the picker is the manual
- * fallback (R14, wired separately in `useStartConversation`).
- *
- * Spec : `team-state/2026-05-17-w3-geo-walk-intra/spec.md` R12-R13.
- */
-
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,20 +8,12 @@ import { radius, semantic, space } from '@/shared/ui/tokens';
 
 import type { ProactiveMuseum } from '@/features/chat/application/useProactiveMuseumSuggestion';
 
-/** Above this threshold the banner uses the auto-pickup layout (legacy B6). */
 const AUTO_PICKUP_CONFIDENCE_THRESHOLD = 0.8;
 
 interface ProactiveMuseumBannerProps {
-  /** Proactive museum payload, or `null` when no in-museum match was found. */
   readonly museum: ProactiveMuseum | null;
-  /** Invoked with the full museum verbatim when the card / Yes button is tapped. */
   readonly onStart?: (museum: ProactiveMuseum) => void;
-  /** Invoked when the dismiss (X) button is tapped (auto-pickup band only). */
   readonly onDismiss?: () => void;
-  /**
-   * Invoked when the user picks "Choose another" inside the confirm bottom-sheet.
-   * When omitted in the confirm band, the button falls back to `onDismiss`.
-   */
   readonly onChooseAnother?: () => void;
 }
 
@@ -80,7 +51,6 @@ export const ProactiveMuseumBanner = React.memo(function ProactiveMuseumBanner({
     }
   };
 
-  // ── confirm bottom-sheet branch (confidence ∈ (0.5, 0.8]) ────────────────
   if (!isAutoPickup) {
     return (
       <View
@@ -142,7 +112,6 @@ export const ProactiveMuseumBanner = React.memo(function ProactiveMuseumBanner({
     );
   }
 
-  // ── auto-pickup branch (confidence > 0.8) — legacy B6 layout ─────────────
   return (
     <Pressable
       testID="proactive-museum-banner"

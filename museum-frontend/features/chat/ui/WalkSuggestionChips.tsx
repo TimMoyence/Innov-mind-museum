@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { HorizontalStrip } from '@/shared/ui/HorizontalStrip';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
@@ -9,12 +10,6 @@ export interface WalkSuggestionChipsProps {
   onSelect: (text: string) => void;
 }
 
-/**
- * Horizontally scrollable chip strip rendering walk-mode artwork suggestions.
- * Tap a chip to send its text as the next user prompt.
- *
- * Renders nothing when suggestions is empty so the layout collapses cleanly.
- */
 export function WalkSuggestionChips({
   suggestions,
   onSelect,
@@ -25,9 +20,7 @@ export function WalkSuggestionChips({
   if (suggestions.length === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
+    <HorizontalStrip
       contentContainerStyle={styles.row}
       accessibilityRole="list"
       accessibilityLabel={t('chat.walk.suggestionsLabel', { defaultValue: 'Walk suggestions' })}
@@ -50,7 +43,7 @@ export function WalkSuggestionChips({
           <Text style={[styles.chipText, { color: theme.primary }]}>{s}</Text>
         </Pressable>
       ))}
-    </ScrollView>
+    </HorizontalStrip>
   );
 }
 

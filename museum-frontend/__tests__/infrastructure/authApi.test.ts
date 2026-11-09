@@ -26,7 +26,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/login',
       method: 'post',
-      body: JSON.stringify({ email: 'user@test.com', password: 'secret123' }),
+      json: { email: 'user@test.com', password: 'secret123' },
       requiresAuth: false,
     });
     expect(result).toEqual(tokens);
@@ -46,7 +46,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/register',
       method: 'post',
-      body: JSON.stringify(payload),
+      json: payload,
       requiresAuth: false,
     });
   });
@@ -60,7 +60,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/refresh',
       method: 'post',
-      body: JSON.stringify({ refreshToken: 'my-refresh-token' }),
+      json: { refreshToken: 'my-refresh-token' },
       requiresAuth: false,
     });
     expect(result).toEqual(tokens);
@@ -75,7 +75,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/logout',
       method: 'post',
-      body: JSON.stringify({ refreshToken: 'rt-123' }),
+      json: { refreshToken: 'rt-123' },
       requiresAuth: false,
     });
     expect(mockClearAccessToken).toHaveBeenCalledTimes(1);
@@ -117,7 +117,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/social-login',
       method: 'post',
-      body: JSON.stringify({ provider: 'apple', idToken: 'id-token-abc' }),
+      json: { provider: 'apple', idToken: 'id-token-abc' },
       requiresAuth: false,
     });
     expect(result).toEqual(tokens);
@@ -142,7 +142,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/forgot-password',
       method: 'post',
-      body: JSON.stringify({ email: 'user@test.com' }),
+      json: { email: 'user@test.com' },
       requiresAuth: false,
     });
   });
@@ -155,7 +155,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/reset-password',
       method: 'post',
-      body: JSON.stringify({ token: 'reset-token-xyz', newPassword: 'newPass!123' }),
+      json: { token: 'reset-token-xyz', newPassword: 'newPass!123' },
       requiresAuth: false,
     });
   });
@@ -168,7 +168,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/change-password',
       method: 'put',
-      body: JSON.stringify({ currentPassword: 'oldPass', newPassword: 'newPass' }),
+      json: { currentPassword: 'oldPass', newPassword: 'newPass' },
     });
   });
 
@@ -181,7 +181,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/change-email',
       method: 'put',
-      body: JSON.stringify({ newEmail: 'new@test.com', currentPassword: 'myPassword' }),
+      json: { newEmail: 'new@test.com', currentPassword: 'myPassword' },
     });
     expect(result).toEqual(response);
   });
@@ -195,7 +195,7 @@ describe('authApi', () => {
     expect(mockOpenApiRequest).toHaveBeenCalledWith({
       path: '/api/auth/confirm-email-change',
       method: 'post',
-      body: JSON.stringify({ token: 'confirm-token-abc' }),
+      json: { token: 'confirm-token-abc' },
       requiresAuth: false,
     });
     expect(result).toEqual(response);

@@ -6,8 +6,6 @@ const BASELINE = JSON.parse(
   readFileSync(resolve(__dirname, '..', '..', 'e2e', 'a11y', '_disable-rules.json'), 'utf-8'),
 ) as { rules: { route: string; rule: string; reason: string; approved_by: string }[] };
 
-// Phase 3 cap. Set to N + 0 buffer once the first run lands.
-// Cap can shrink, never grow. Add new entries only via ADR amendment.
 const PHASE_3_DISABLE_RULES_CAP = 0;
 
 describe('a11y disable-rules cap', () => {

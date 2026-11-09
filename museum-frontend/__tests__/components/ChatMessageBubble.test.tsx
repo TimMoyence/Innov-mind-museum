@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { makeChatUiMessage, makeAssistantMessage } from '../helpers/factories';
 
-// Mock sub-components used by ChatMessageBubble
 jest.mock('@/features/chat/ui/MarkdownBubble', () => {
   const { Text } = require('react-native');
   return {
@@ -48,8 +47,6 @@ describe('ChatMessageBubble', () => {
     jest.clearAllMocks();
   });
 
-  // ── User messages ───────────────────────────────────────────────────────────
-
   it('renders user message text', () => {
     const message = makeChatUiMessage({ role: 'user', text: 'What is this painting?' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
@@ -62,8 +59,6 @@ describe('ChatMessageBubble', () => {
     expect(screen.getByLabelText('a11y.chat.user_message')).toBeTruthy();
   });
 
-  // ── Assistant messages ──────────────────────────────────────────────────────
-
   it('renders assistant message with markdown', () => {
     const message = makeAssistantMessage({ text: 'This is the **Mona Lisa**.' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
@@ -72,18 +67,12 @@ describe('ChatMessageBubble', () => {
   });
 
   it('exposes the real assistant response text to the a11y tree (R8 / I-CMP3(5))', () => {
-    // R8 / design §D8 — the assistant <Pressable> no longer carries a static
-    // accessibilityLabel={t('a11y.chat.assistant_message')} that would collapse
-    // the subtree and mask the response from screen readers. The real body text
-    // is exposed naturally; the long-press affordance keeps its hint.
     const message = makeAssistantMessage({ text: 'Hello visitor' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
     expect(screen.getByText('Hello visitor')).toBeTruthy();
     expect(screen.queryByLabelText('a11y.chat.assistant_message')).toBeNull();
     expect(screen.getByA11yHint('a11y.chat.long_press_hint')).toBeTruthy();
   });
-
-  // ── Timestamp ───────────────────────────────────────────────────────────────
 
   it('displays timestamp for non-streaming messages', () => {
     const message = makeChatUiMessage({
@@ -92,13 +81,9 @@ describe('ChatMessageBubble', () => {
       createdAt: '2026-01-15T14:30:00Z',
     });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
-    // The toLocaleTimeString with 2-digit hour/minute will render some time text
-    // We verify the metaRow exists by checking that a time-like pattern renders
     const timeText = screen.getByText(/\d{2}:\d{2}/);
     expect(timeText).toBeTruthy();
   });
-
-  // ── Image attachment ────────────────────────────────────────────────────────
 
   it('renders image when message has an image URL', () => {
     const message = makeChatUiMessage({
@@ -107,11 +92,8 @@ describe('ChatMessageBubble', () => {
       image: { url: 'https://example.com/photo.jpg', expiresAt: '2099-01-01T00:00:00Z' },
     });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
-    // Image component renders — we can check it does not crash
     expect(screen.getByText('Look at this')).toBeTruthy();
   });
-
-  // ── Failed state + retry ──────────────────────────────────────────────────
 
   it('shows failed state with retry button', () => {
     const onRetry = jest.fn();
@@ -143,8 +125,6 @@ describe('ChatMessageBubble', () => {
     expect(screen.queryByText('chat.sendFailed')).toBeNull();
   });
 
-  // ── Detected artwork metadata ─────────────────────────────────────────────
-
   it('renders ArtworkCard when assistant message has detected artwork', () => {
     const message = makeAssistantMessage(
       { text: 'Detected artwork' },
@@ -169,8 +149,6 @@ describe('ChatMessageBubble', () => {
     expect(screen.queryByTestId('artwork-card')).toBeNull();
   });
 
-  // ── Report action ─────────────────────────────────────────────────────────
-
   it('renders report button on assistant messages', () => {
     const message = makeAssistantMessage({ text: 'Some response' });
     render(<ChatMessageBubble {...defaultProps} message={message} />);
@@ -183,8 +161,6 @@ describe('ChatMessageBubble', () => {
     fireEvent.press(screen.getByLabelText('messageMenu.report'));
     expect(onReport).toHaveBeenCalledWith(message.id);
   });
-
-  // ── Feedback buttons ──────────────────────────────────────────────────────
 
   it('renders thumbs up/down buttons when onFeedback is provided', () => {
     const onFeedback = jest.fn();
@@ -210,8 +186,6 @@ describe('ChatMessageBubble', () => {
     expect(onFeedback).toHaveBeenCalledWith(message.id, 'negative');
   });
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
-
   it('renders listen button when onToggleTts is provided', () => {
     const onToggleTts = jest.fn().mockResolvedValue(undefined);
     const message = makeAssistantMessage({ text: 'Listen to this' });
@@ -233,17 +207,13 @@ describe('ChatMessageBubble', () => {
     expect(screen.getByLabelText('chat.listening')).toBeTruthy();
   });
 
-  // ── Streaming ─────────────────────────────────────────────────────────────
-
   it('does not show timestamp or metadata while streaming', () => {
     const message = makeAssistantMessage(
       { text: 'Streaming...' },
       { detectedArtwork: { title: 'Should not show' } },
     );
     render(<ChatMessageBubble {...defaultProps} message={message} isStreaming />);
-    // Artwork card should not render during streaming
     expect(screen.queryByTestId('artwork-card')).toBeNull();
-    // Report button should not render during streaming (it's in metaRow)
     expect(screen.queryByLabelText('messageMenu.report')).toBeNull();
   });
 });

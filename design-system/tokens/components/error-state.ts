@@ -1,13 +1,8 @@
-import { colors } from '../colors';
-import { spacing } from '../spacing';
+import { colors } from '../colors.ts';
+import { spacing } from '../spacing.ts';
 
-/**
- * Token mappings for the ErrorState primitive.
- * Covers both inline (banner) and fullscreen error display modes.
- */
 export const errorStateTokens = {
   iconName: 'warning-outline' as const,
-  // Amber-100 equivalent — closest to colors.status.warningBg.light without pulling in RGBA
   iconBg: '#FEF3C7',
   iconColor: colors.status.warning.light,
   titleColor: colors.primary[900],

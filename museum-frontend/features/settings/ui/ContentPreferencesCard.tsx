@@ -7,12 +7,6 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-/**
- * Lets the visitor pick which aspects of an artwork they prefer to learn
- * about (history, technique, artist). Optional — empty means "no preference"
- * which is the zero-friction default. The LLM uses these as soft hints,
- * never as strict filters.
- */
 export const ContentPreferencesCard = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -62,7 +56,6 @@ interface PreferenceRowProps {
   hint: string;
 }
 
-/** Single toggle row for one content preference. Extracted to keep render logic flat. */
 const PreferenceRow = ({
   preference,
   selected,

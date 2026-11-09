@@ -3,8 +3,6 @@ import { Platform } from 'react-native';
 
 import { nonNull } from '@/__tests__/helpers/nonNull';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockSynthesizeSpeech = jest.fn<Promise<ArrayBuffer | null>, [string]>();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -27,8 +25,6 @@ jest.mock('expo-audio', () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
-// expo-file-system/legacy: in-memory fake supporting a cacheDirectory + per-path
-// existence map so tests can simulate cache-hit and cache-write paths.
 const fsState: { exists: Record<string, boolean>; written: Record<string, string> } = {
   exists: {},
   written: {},
@@ -60,8 +56,6 @@ jest.mock('expo-file-system/legacy', () => ({
 
 import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const makeFakeAudioBuffer = (): ArrayBuffer => {
   const encoder = new TextEncoder();
   return encoder.encode('fake-mp3-data').buffer;
@@ -71,7 +65,6 @@ const setPlatform = (os: 'ios' | 'android' | 'web') => {
   Object.defineProperty(Platform, 'OS', { value: os, writable: true });
 };
 
-// Minimal HTMLAudioElement-like stub.
 interface AudioStub {
   play: jest.Mock;
   pause: jest.Mock;
@@ -91,12 +84,9 @@ const installWindowAudio = () => {
     created.push(inst);
     return inst;
   });
-  // @ts-expect-error -- override for test environment
-  global.window = { Audio: ctor };
+  global.window = { Audio: ctor } as unknown as Window & typeof globalThis;
   return { ctor, created };
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useTextToSpeech — web platform branch', () => {
   const originalPlatformOS = Platform.OS;
@@ -233,7 +223,6 @@ describe('useTextToSpeech — native FS cache', () => {
   });
 
   it('cache hit: skips chatApi.synthesizeSpeech and plays from cached path', async () => {
-    // Pre-seed cache: file already on disk for this messageId.
     fsState.exists['file:///cache/tts/msg-cached.mp3'] = true;
 
     const { result } = renderHook(() => useTextToSpeech());
@@ -259,7 +248,6 @@ describe('useTextToSpeech — native FS cache', () => {
     });
 
     expect(mockSynthesizeSpeech).toHaveBeenCalledWith('msg-fresh');
-    // Directory created (intermediates) since no prior dirInfo entry.
     expect(mockMakeDirectoryAsync).toHaveBeenCalledWith('file:///cache/tts/');
     expect(mockWriteAsStringAsync).toHaveBeenCalledTimes(1);
     expect(mockWriteAsStringAsync.mock.calls[0]?.[0]).toBe('file:///cache/tts/msg-fresh.mp3');
@@ -308,13 +296,11 @@ describe('useTextToSpeech — native FS cache', () => {
 
     const { result } = renderHook(() => useTextToSpeech());
 
-    // First play
     await act(async () => {
       await result.current.togglePlayback('msg-replay');
     });
     expect(result.current.activeMessageId).toBe('msg-replay');
 
-    // Finish naturally → activeMessageId resets to null
     act(() => {
       statusCallback?.({ didJustFinish: true });
     });
@@ -322,8 +308,6 @@ describe('useTextToSpeech — native FS cache', () => {
       expect(result.current.activeMessageId).toBeNull();
     });
 
-    // Re-toggle the same id — must NOT be treated as "stop" (since active is null)
-    // and must trigger a fresh play.
     await act(async () => {
       await result.current.togglePlayback('msg-replay');
     });

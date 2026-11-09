@@ -1,26 +1,4 @@
-/**
- * Tests for the zustand-persist config of {@link useOfflinePackChoiceStore}
- * (TD-ZUS-02). The store currently lacks a `partialize` option, so when the
- * persist middleware serializes the store envelope it forwards the FULL
- * state object (`{ choices, acceptOfflinePack, declineOfflinePack, getChoice,
- * clearChoice }`) to its merge / hydrate logic. JSON.stringify happens to
- * drop function refs, so the on-disk shape is JSON-identical to the
- * `partialize`d form — but the EXPECTED persisted state input (pre-JSON)
- * still contains the actions. Spec R10 + design D5 mandate
- * `partialize: (s) => ({ choices: s.choices })` so the persisted slice is
- * explicitly narrowed; this protects the disk payload from future
- * non-serializable additions to the store shape.
- *
- * lib-docs cite: lib-docs/zustand/PATTERNS.md:119,206 ; lib-docs/zustand/LESSONS.md F2.
- *
- * RED contract: this test asserts on `useOfflinePackChoiceStore.persist.getOptions().partialize`
- * which is `undefined` against the current source (no partialize set). Once
- * GREEN adds the option, the function exists and produces `{ choices }`-only
- * output.
- */
 import '@/__tests__/helpers/test-utils';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockStorage = new Map<string, string>();
 
@@ -46,8 +24,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 import { useOfflinePackChoiceStore } from '@/features/museum/infrastructure/offlinePackChoiceStore';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const STORAGE_KEY = 'musaium-offline-pack-choice';
 
 const flushPersist = async (): Promise<void> => {
@@ -55,8 +31,6 @@ const flushPersist = async (): Promise<void> => {
     await Promise.resolve();
   }
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('offlinePackChoiceStore — persist config (TD-ZUS-02)', () => {
   beforeEach(() => {
@@ -67,13 +41,8 @@ describe('offlinePackChoiceStore — persist config (TD-ZUS-02)', () => {
   it('declares a partialize option that narrows persisted state to { choices } only', () => {
     const options = useOfflinePackChoiceStore.persist.getOptions();
 
-    // Partialize MUST be set (spec R10, design D5). Without it, the persisted
-    // payload includes the full store shape (action functions only stripped
-    // implicitly by JSON.stringify — fragile and undocumented).
     expect(typeof options.partialize).toBe('function');
 
-    // Apply partialize to a representative state snapshot and assert the
-    // produced slice contains exactly `choices` (no actions).
     const fullState = useOfflinePackChoiceStore.getState();
     const partialize = options.partialize as (state: typeof fullState) => Record<string, unknown>;
     const slice = partialize(fullState);

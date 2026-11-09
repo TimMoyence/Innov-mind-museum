@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import i18n from 'i18next';
 
 import { chatApi, mapSessionsToDashboardCards } from '@/features/chat';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
-import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { getErrorMessage } from '@/shared/lib/errors';
 
-/** Manages dashboard data fetching, pagination, and legacy migration. */
 export function useConversationsData() {
   const setItems = useConversationsStore((s) => s.setItems);
   const appendItems = useConversationsStore((s) => s.appendItems);
@@ -20,7 +19,6 @@ export function useConversationsData() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // One-time migration of legacy savedSessions from raw AsyncStorage
   useEffect(() => {
     void migrateLegacy();
   }, [migrateLegacy]);
@@ -35,7 +33,7 @@ export function useConversationsData() {
       setError(null);
 
       try {
-        const locale = useRuntimeSettingsStore.getState().defaultLocale;
+        const locale = i18n.language;
         const response = await chatApi.listSessions({ limit: 20 });
         const mapped = mapSessionsToDashboardCards(response.sessions, locale);
         setItems(mapped);
@@ -57,14 +55,13 @@ export function useConversationsData() {
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
     try {
-      const locale = useRuntimeSettingsStore.getState().defaultLocale;
+      const locale = i18n.language;
       const response = await chatApi.listSessions({ limit: 20, cursor: nextCursor });
       const mapped = mapSessionsToDashboardCards(response.sessions, locale);
       appendItems(mapped);
       setNextCursor(response.page.nextCursor);
       setHasMore(response.page.hasMore);
     } catch {
-      // Silently fail — user can scroll again
     } finally {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);

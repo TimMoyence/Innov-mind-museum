@@ -1,18 +1,3 @@
-/**
- * C9.7 (2026-05-18) — Detached LLM-judge tests.
- *
- * Assert that `judgeWithLlm` calls `model.withStructuredOutput(...).invoke(...)`
- * DIRECTLY without going through the full chat orchestrator. The previous F4
- * implementation (`orchestrator.generate({ history: [], text, museumMode: false })`)
- * paid ~50–100 ms of pipeline overhead per call (sections, semaphore, breaker,
- * Langfuse, Sentry, recordSectionCost). The detached path bypasses all of it.
- *
- * Invariants preserved from `llm-judge-guardrail.test.ts`:
- *  - Fail-OPEN on timeout / error / schema-violation / budget exhausted.
- *  - Budget guard called BEFORE model invocation (anti-spam).
- *  - JUDGE_SYSTEM_PROMPT not mutated.
- *  - `[END OF SYSTEM INSTRUCTIONS]` boundary marker present in system message.
- */
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 
@@ -22,13 +7,9 @@ import { JUDGE_SYSTEM_PROMPT, judgeWithLlm } from '@modules/chat/useCase/llm/llm
 import type { ChatModel } from '@modules/chat/adapters/secondary/llm/langchain-orchestrator-support';
 
 interface FakeModelBehaviour {
-  /** Object the structured invoke will resolve with (must satisfy schema). */
   resolveWith?: { decision: string; confidence: number };
-  /** Resolve after this delay (ms). Use w/ a short `timeoutMs` to trigger AbortSignal.timeout. */
   delayMs?: number;
-  /** Throw on invoke. */
   shouldThrow?: boolean;
-  /** Omit `withStructuredOutput` entirely (legacy / test fake / older provider). */
   noStructuredOutput?: boolean;
 }
 
@@ -103,8 +84,6 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
       await judgeWithLlm(SAFE_USER_TEXT, { model });
 
       const [schemaArg, optsArg] = model.withStructuredOutputSpy!.mock.calls[0];
-      // Zod schema is identified by `_def` (Zod v3) / `_zod` (Zod v4 internals).
-      // We accept either: the schema must have a `parse` callable AND a `safeParse` callable.
       expect(schemaArg).toBeDefined();
       expect(typeof (schemaArg as z.ZodTypeAny).parse).toBe('function');
       expect(typeof (schemaArg as z.ZodTypeAny).safeParse).toBe('function');
@@ -124,7 +103,6 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
       const system = messages[0] as SystemMessage;
       const human = messages[1] as HumanMessage;
       expect(String(system.content)).toBe(JUDGE_SYSTEM_PROMPT);
-      // SEC — boundary marker preserved.
       expect(String(system.content)).toContain('[END OF SYSTEM INSTRUCTIONS]');
       expect(String(human.content)).toBe(SAFE_USER_TEXT);
     });
@@ -159,9 +137,7 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
       expect(decision).toBeNull();
       expect(model.invokeSpy).toHaveBeenCalledTimes(1);
       const opts = model.invokeSpy.mock.calls[0][1] as { signal?: AbortSignal };
-      // SEC — invocation MUST be cancellable via the signal.
       expect(opts?.signal).toBeDefined();
-      // After timeout fires the signal is aborted.
       expect(opts?.signal?.aborted).toBe(true);
     });
   });
@@ -179,7 +155,7 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
 
   describe('R5/R7 — budget guard preserved', () => {
     it('returns null and does not call the model when budget already exhausted', async () => {
-      await recordJudgeCost(10_000); // far above default 500-cent cap
+      await recordJudgeCost(10_000);
       const model = buildModel();
 
       const decision = await judgeWithLlm(SAFE_USER_TEXT, { model });
@@ -191,7 +167,6 @@ describe('judgeWithLlm — detached path (C9.7)', () => {
 
     it('charges budget on every non-exhausted call (anti-spam)', async () => {
       const model = buildModel({ resolveWith: { decision: 'allow', confidence: 0.9 } });
-      // 1 cent / call, 500-cent default cap → ≥ 500 calls exhaust budget.
       for (let i = 0; i < 600; i++) {
         await judgeWithLlm(SAFE_USER_TEXT, { model });
       }

@@ -18,15 +18,6 @@ const shouldRefreshSoon = (accessToken: string | null): boolean => {
   return isAccessTokenExpired(accessToken, REFRESH_EARLY_WINDOW_MS);
 };
 
-/**
- * Listens for `background → active` transitions and silently refreshes the
- * access token when it is expired or nearly so. Throttled to one refresh per
- * 60 s to avoid thrashing on rapid focus cycles.
- *
- * The refresh never blocks the UI: it is fire-and-forget. If it fails the
- * existing credentials stay in place and the next authenticated request will
- * retry via the Axios refresh interceptor.
- */
 export const useAuthAppStateSync = (
   refresh: BackgroundRefreshFn,
   opts?: { onForeground?: (durationMs: number) => void },
@@ -60,9 +51,7 @@ export const useAuthAppStateSync = (
           message: 'foreground',
           data: { background_duration_ms: backgroundDurationMs },
         });
-      } catch {
-        /* Sentry may not be initialised in tests */
-      }
+      } catch {}
 
       onForegroundRef.current?.(backgroundDurationMs);
 
@@ -73,12 +62,12 @@ export const useAuthAppStateSync = (
       if (!shouldRefreshSoon(accessToken)) return;
 
       lastRefreshAtRef.current = now();
-      void refreshRef.current().catch(() => {
-        /* transient — next authed request or next foreground will retry */
-      });
+      void refreshRef.current().catch(() => undefined);
     };
 
     const subscription = AppState.addEventListener('change', handler);
-    return () => { subscription.remove(); };
+    return () => {
+      subscription.remove();
+    };
   }, []);
 };

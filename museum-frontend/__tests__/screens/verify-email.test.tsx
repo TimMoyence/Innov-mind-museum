@@ -1,18 +1,3 @@
-/**
- * RED — TD-RNAV-01 cycle 2, T1.3 (R4, R6, R10, R13).
- *
- * The screen `app/(stack)/verify-email.tsx` does NOT exist yet — the suite
- * MUST fail on import (absence of feature), then turn green once the screen
- * is implemented in the GREEN phase.
- *
- * Behaviour mirrored from web `EmailTokenFlow.tsx`:
- *  - mount with a non-empty token -> call verifyEmail(token) exactly once,
- *    loading -> success on resolve.
- *  - 400 (AppError status 400) -> invalidToken state (NOT error).
- *  - other rejection -> error state.
- *  - missing/empty token -> NO API call, invalidToken state, login CTA.
- *  - token NEVER passed to console.* / logger / Sentry (R13).
- */
 import '../helpers/test-utils';
 import { render, screen, waitFor } from '@testing-library/react-native';
 
@@ -28,11 +13,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
 const mockParams: { token?: string } = {};
-// test-utils already installs the shared jest.mock('expo-router') with
-// useLocalSearchParams: () => ({}). Re-declaring jest.mock here would be
-// overwritten by the imported helper's factory (hoist order), so instead we
-// MUTATE the shared mock — same pattern as
-// __tests__/screens/chat-session-deep.test.tsx:57-61.
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => mockParams;
 mockExpoRouter.router = {
@@ -41,7 +21,6 @@ mockExpoRouter.router = {
   back: jest.fn(),
 };
 
-// R13 — guard against the one-time token leaking to the error reporter (Sentry).
 const mockReportError = jest.fn();
 jest.mock('@/shared/observability/errorReporting', () => ({
   reportError: (...args: unknown[]) => mockReportError(...args),

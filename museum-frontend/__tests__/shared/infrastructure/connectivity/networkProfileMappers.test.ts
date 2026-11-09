@@ -1,20 +1,3 @@
-/**
- * B-R3 (RED) — the three pure mappers, re-ratified at 10 profiles + un-forced
- * L1 shape (run `undefined-network-detection-reliability`, spec §10 #5).
- *
- * Contract evolution (documented, NOT a frozen-test breach):
- *   - `FetchMockShape.forcedDataModePreference` is REMOVED (US-11.6 / design
- *     P-08 — dead-code burial UFR-016): the old mapper forced the preference
- *     for EVERY profile, so the L1 harness never exercised the real `auto`
- *     resolution (the doc said "un-forced", the code forced). No consumer
- *     exists outside the registry + this test (verified P-08).
- *   - the 4 new profiles (`4g` / `5g` / `wifi-metered` / `cellular-degraded`)
- *     flow through all three mappers; kbps→KB/s stays in EXACTLY ONE place
- *     (toToxics, EARS R4).
- *
- * lib-docs: none (pure mappers). toNetInfoSnapshot reused from the registry.
- * No inline test entities — profiles sourced from the registry.
- */
 import {
   NETWORK_PROFILES,
   toFetchMockShape,
@@ -60,8 +43,6 @@ describe('toFetchMockShape (B-R3 — un-forced L1 shape, US-11.6)', () => {
     expect(shape.msPerKbitUp).toBeCloseTo(1000 / edge.bwUpKbps, 6);
   });
 
-  // US-11.6 / P-08 — the field is REMOVED, not just un-forced: the L1 harness
-  // must exercise the REAL auto resolution for every profile.
   it.each(allProfiles.map((p) => [p.name, p] as const))(
     'no longer emits forcedDataModePreference for "%s" (US-11.6 — L1 exercises real auto resolution)',
     (_name, profile) => {
@@ -116,7 +97,6 @@ describe('toMiddlewareDescriptor (B-R3 — L2 values incl. the 4 new profiles)',
 
     expect(slow.sseChunkDelayMs).toBeGreaterThan(0);
     expect(slow.sseChunkDelayMs).toBeGreaterThan(fast.sseChunkDelayMs);
-    // cellular-degraded (75 kbps down) is even slower than 2g (100 kbps down).
     expect(degraded.sseChunkDelayMs).toBeGreaterThan(slow.sseChunkDelayMs);
   });
 
@@ -136,17 +116,13 @@ describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profi
     expect(up).toBeDefined();
     expect(down).toBeDefined();
 
-    // kbps → KB/s is performed ONCE per direction, here only, rounded to a whole
-    // KB/s because Toxiproxy's `rate` is a Go int64 (a fractional 11.25 → HTTP 400).
     expect(rateOf(up)).toBe(Math.round(edge.bwUpKbps / 8));
     expect(rateOf(up)).toBe(11);
     expect(rateOf(down)).toBe(Math.round(edge.bwDownKbps / 8));
     expect(rateOf(down)).toBe(25);
-    // Every emitted rate MUST be an integer or Toxiproxy rejects the toxic (regression guard).
     expect(Number.isInteger(rateOf(up))).toBe(true);
     expect(Number.isInteger(rateOf(down))).toBe(true);
 
-    // Exactly the two bandwidth streams (no extras, none dropped).
     const bandwidthStreams = toxics
       .filter((t: ToxiproxyToxic) => t.type === 'bandwidth')
       .map((t: ToxiproxyToxic) => t.stream)
@@ -164,7 +140,6 @@ describe('toToxics (B-R3 — the single kbps→KB/s site, both streams, 10 profi
     (_name, profile, expectedUpKBs, expectedDownKBs) => {
       const toxics = toToxics(profile);
 
-      // Toxiproxy `rate` is a Go int64 → the mapper rounds kbps/8 to a whole KB/s.
       expect(rateOf(bandwidthToxic(toxics, 'upstream'))).toBe(Math.round(expectedUpKBs));
       expect(rateOf(bandwidthToxic(toxics, 'downstream'))).toBe(Math.round(expectedDownKBs));
       expect(Number.isInteger(rateOf(bandwidthToxic(toxics, 'upstream')))).toBe(true);

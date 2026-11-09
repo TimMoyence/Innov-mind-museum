@@ -59,7 +59,6 @@ describe('EmailSupportContactNotifier', () => {
     expect(html).toContain(
       'Test &amp; verify &lt;b&gt;bold&lt;/b&gt; &quot;quotes&quot; &#39;single&#39;',
     );
-    // Verify no raw HTML special characters leaked through
     expect(html).not.toContain('<script>');
     expect(html).not.toContain('<b>bold</b>');
   });
@@ -96,11 +95,7 @@ describe('EmailSupportContactNotifier', () => {
     expect(html).toContain('IP');
     expect(html).toContain('User-Agent');
     expect(html).toContain('Message');
-    // Kills support-contact.template L50:16 StringLiteral → `` (empty preheader):
-    // the hidden preheader span must carry the exact `"<name> via the public contact form"` text.
     expect(html).toContain('>Jane Doe via the public contact form</span>');
-    // Kills support-contact.template L52:17 StringLiteral → "" (footer note):
-    // the footer-note row must render the exact internal-notification string.
     expect(html).toContain('Internal notification — do not forward outside the support team.');
   });
 
@@ -114,8 +109,8 @@ describe('EmailSupportContactNotifier', () => {
     await notifier.notify(payload);
 
     const html = sendEmail.mock.calls[0][2] as string;
-    expect(html).toContain('unknown'); // ip and userAgent default
-    expect(html).toContain('n/a'); // requestId default
+    expect(html).toContain('unknown');
+    expect(html).toContain('n/a');
   });
 
   it('uses provided optional fields when present', async () => {

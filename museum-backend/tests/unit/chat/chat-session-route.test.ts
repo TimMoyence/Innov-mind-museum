@@ -5,13 +5,6 @@ import { makeToken } from 'tests/helpers/auth/token.helpers';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-/**
- * Unit tests for chat-session.route.ts — targeting uncovered branches:
- * - Session list when currentUser?.id is falsy -> 401
- * - Image URL null when baseUrl resolves to null
- * - Messages with imageRef where buildImageReadUrl returns null
- */
-
 const mockCreateSession = jest.fn();
 const mockListSessions = jest.fn();
 const mockGetSession = jest.fn();
@@ -49,15 +42,12 @@ describe('chat-session.route — uncovered branches', () => {
 
   describe('GET /api/chat/sessions — falsy currentUser.id', () => {
     it('returns 401 when token has no sub (user id is undefined)', async () => {
-      // Token with sub: undefined — simulates a JWT where user ID extraction fails
       const tokenWithNoSub = makeToken({ sub: undefined });
 
       const res = await request(app)
         .get('/api/chat/sessions')
         .set('Authorization', `Bearer ${tokenWithNoSub}`);
 
-      // The isAuthenticated middleware might reject this, or the route handler checks currentUser?.id
-      // Either way, the response should indicate unauthorized
       expect([401, 400]).toContain(res.status);
     });
   });
@@ -86,15 +76,11 @@ describe('chat-session.route — uncovered branches', () => {
 
       const token = makeToken();
 
-      // supertest doesn't set a host header that resolveRequestBaseUrl can use in tests,
-      // but the host header IS set by supertest to 127.0.0.1:PORT so baseUrl will resolve.
-      // The local signed URL builder should produce a URL.
       const res = await request(app)
         .get('/api/chat/sessions/session-1')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      // Message with imageRef should have an image property (either object or null)
       const msg = res.body.messages[0];
       expect(msg).toHaveProperty('image');
     });
@@ -125,7 +111,6 @@ describe('chat-session.route — uncovered branches', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      // Message without imageRef should be passed through unmodified (no image key)
       const msg = res.body.messages[0];
       expect(msg).not.toHaveProperty('image');
     });
@@ -149,11 +134,7 @@ describe('chat-session.route — uncovered branches', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect(mockGetSession).toHaveBeenCalledWith(
-        'session-3',
-        { cursor: 'abc', limit: 10 },
-        1, // userId from token
-      );
+      expect(mockGetSession).toHaveBeenCalledWith('session-3', { cursor: 'abc', limit: 10 }, 1);
     });
 
     it('passes undefined cursor/limit when query params are not strings', async () => {
@@ -209,7 +190,6 @@ describe('chat-session.route — uncovered branches', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      // image should either be a signed URL object or null depending on S3 config
       const msg = res.body.messages[0];
       expect(msg).toHaveProperty('image');
     });

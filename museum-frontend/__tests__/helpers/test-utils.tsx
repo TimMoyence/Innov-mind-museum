@@ -1,14 +1,5 @@
-/**
- * Shared mocks and render utilities for component tests.
- *
- * Import this file at the top of every component test to get common
- * module mocks (i18n, theme, router, safe-area, icons, etc.) applied
- * automatically via jest.mock() hoisting.
- */
-
 import type React from 'react';
 
-// ── react-i18next ────────────────────────────────────────────────────────────
 jest.mock('react-i18next', () => {
   const { Text } = require('react-native');
   return {
@@ -18,7 +9,6 @@ jest.mock('react-i18next', () => {
   };
 });
 
-// ── Theme — light theme values from shared/ui/themes.ts ─────────────────────
 jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
@@ -62,14 +52,12 @@ jest.mock('@/shared/ui/ThemeContext', () => ({
   }),
 }));
 
-// ── expo-router ──────────────────────────────────────────────────────────────
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
   useLocalSearchParams: () => ({}),
   useSegments: () => [],
 }));
 
-// ── safe-area ────────────────────────────────────────────────────────────────
 jest.mock('react-native-safe-area-context', () => {
   const { View } = require('react-native');
   return {
@@ -79,15 +67,10 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-// ── @react-navigation/bottom-tabs ────────────────────────────────────────────
-// Tab screens call useBottomTabBarHeight() at render time. Outside a tab
-// navigator the real hook throws — mock returns 0 (the resolved layout value
-// tests should assume; they do not assert on the padding itself).
 jest.mock('@react-navigation/bottom-tabs', () => ({
   useBottomTabBarHeight: () => 0,
 }));
 
-// ── Ionicons — render icon name as text ──────────────────────────────────────
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
   return {
@@ -97,7 +80,6 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
-// ── expo-blur ────────────────────────────────────────────────────────────────
 jest.mock('expo-blur', () => {
   const { View } = require('react-native');
   return {
@@ -107,7 +89,6 @@ jest.mock('expo-blur', () => {
   };
 });
 
-// ── expo-haptics ─────────────────────────────────────────────────────────────
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
@@ -116,7 +97,6 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
-// ── expo-linear-gradient ─────────────────────────────────────────────────────
 jest.mock('expo-linear-gradient', () => {
   const { View } = require('react-native');
   return {
@@ -130,24 +110,16 @@ jest.mock('expo-linear-gradient', () => {
   };
 });
 
-// ── @sentry/react-native ─────────────────────────────────────────────────────
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
   wrap: (component: unknown) => component,
-  // R1 C6 (2026-05-15) — `addBreadcrumb` is called by the paywall provider +
-  // modal for `paywall_modal_shown` / `paywall_cta_clicked` / `paywall_email_captured`
-  // telemetry. Mock returns void so tests using `safeAddBreadcrumb` shim detect
-  // the method as present and call through (allowing per-file `addBreadcrumb`
-  // spy via `jest.requireMock('@sentry/react-native').addBreadcrumb`).
   addBreadcrumb: jest.fn(),
 }));
 
-// ── expo-updates ─────────────────────────────────────────────────────────────
 jest.mock('expo-updates', () => ({
   reloadAsync: jest.fn(),
 }));
 
-// ── GlassCard — simple passthrough ───────────────────────────────────────────
 jest.mock('@/shared/ui/GlassCard', () => {
   const { View } = require('react-native');
   return {
@@ -157,7 +129,6 @@ jest.mock('@/shared/ui/GlassCard', () => {
   };
 });
 
-// ── LiquidScreen — simple passthrough ────────────────────────────────────────
 jest.mock('@/shared/ui/LiquidScreen', () => {
   const { View } = require('react-native');
   return {
@@ -165,12 +136,10 @@ jest.mock('@/shared/ui/LiquidScreen', () => {
   };
 });
 
-// ── liquidTheme ──────────────────────────────────────────────────────────────
 jest.mock('@/shared/ui/liquidTheme', () => ({
   pickMuseumBackground: () => 0,
 }));
 
-// ── BrandMark ────────────────────────────────────────────────────────────────
 jest.mock('@/shared/ui/BrandMark', () => {
   const { View } = require('react-native');
   return {
@@ -178,7 +147,6 @@ jest.mock('@/shared/ui/BrandMark', () => {
   };
 });
 
-// ── FloatingContextMenu ──────────────────────────────────────────────────────
 jest.mock('@/shared/ui/FloatingContextMenu', () => {
   const { View } = require('react-native');
   return {
@@ -186,7 +154,6 @@ jest.mock('@/shared/ui/FloatingContextMenu', () => {
   };
 });
 
-// ── SkeletonConversationCard ─────────────────────────────────────────────────
 jest.mock('@/shared/ui/SkeletonConversationCard', () => {
   const { View } = require('react-native');
   return {
@@ -194,7 +161,6 @@ jest.mock('@/shared/ui/SkeletonConversationCard', () => {
   };
 });
 
-// ── ErrorState ───────────────────────────────────────────────────────────────
 jest.mock('@/shared/ui/ErrorState', () => {
   const { Pressable, Text, View } = require('react-native');
   return {
@@ -236,11 +202,6 @@ jest.mock('@/shared/ui/ErrorState', () => {
   };
 });
 
-// ── @/shared/lib/errors ─────────────────────────────────────────────────────
-// Mirrors the production getErrorMessage() contract in a minimal way:
-// an AppError's .message (carried by the Error instance) is returned.
-// The real hook walks the i18n table; tests assert on the raw message,
-// so returning `err.message` keeps tests aligned with production semantics.
 jest.mock('@/shared/lib/errors', () => ({
   getErrorMessage: (err: unknown) =>
     err instanceof Error ? err.message : typeof err === 'string' ? err : String(err),
@@ -253,7 +214,6 @@ jest.mock('@/shared/lib/errors', () => ({
     (err as { kind: unknown }).kind === 'DailyLimitReached',
 }));
 
-// ── FlashList → FlatList (native RecyclerView not available in tests) ────────
 jest.mock('@shopify/flash-list', () => {
   const { FlatList } = require('react-native');
   return {

@@ -6,6 +6,7 @@ jest.mock('@/features/museum/infrastructure/offlinePackManager', () => ({
   },
 }));
 
+import { nonNull } from '@/__tests__/helpers/nonNull';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { useOfflinePacks } from '@/features/museum/application/useOfflinePacks';
@@ -16,8 +17,7 @@ const mockedList = offlinePackManager.listPacks as jest.Mock;
 const mockedDownload = offlinePackManager.downloadPack as jest.Mock;
 const mockedDelete = offlinePackManager.deletePackByCity as jest.Mock;
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const parisCity = findCity('paris')!;
+const parisCity = nonNull(findCity('paris'));
 
 beforeEach(() => {
   mockedList.mockReset();
@@ -167,7 +167,6 @@ describe('useOfflinePacks', () => {
       await result.current.remove('paris').catch(() => {});
     });
 
-    // refresh() was called to re-sync — city is back in state.
     expect(result.current.packsByCity.paris).toEqual({ status: 'complete', bytesOnDisk: 12345 });
   });
 });

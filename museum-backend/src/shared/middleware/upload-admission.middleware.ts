@@ -1,12 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
 
-/**
- * Limits the number of concurrent multipart uploads to prevent memory exhaustion.
- * Returns 503 if the limit is exceeded.
- *
- * Only `res.on('close')` is used for decrement — it fires for both normal
- * completion and aborted connections, avoiding double-decrement bugs.
- */
 export function createUploadAdmissionMiddleware(maxConcurrent = 50) {
   let inFlight = 0;
 

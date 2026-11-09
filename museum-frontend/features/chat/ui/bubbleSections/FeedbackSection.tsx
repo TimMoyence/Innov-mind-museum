@@ -15,11 +15,6 @@ interface FeedbackSectionProps {
   onRetry?: (message: ChatUiMessage) => void;
 }
 
-/**
- * Below-bubble user feedback: send-failed retry prompt and the "cached response"
- * badge. Rendered outside the bubble frame because both act as callouts that
- * shouldn't inherit bubble padding / max-width.
- */
 export const FeedbackSection = memo(function FeedbackSection({
   message,
   isAssistant,

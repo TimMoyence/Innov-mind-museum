@@ -1,4 +1,5 @@
 import { assertPagination } from '@shared/types/pagination';
+import { nonEmpty } from '@shared/utils/defaults';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO, ListUsersFilters } from '@modules/admin/domain/admin/admin.types';
@@ -10,8 +11,7 @@ export class ListUsersUseCase {
   async execute(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
     const { page, limit } = assertPagination(filters.pagination);
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    const sanitizedSearch = filters.search?.trim().slice(0, 200) || undefined;
+    const sanitizedSearch = nonEmpty(filters.search?.trim().slice(0, 200));
 
     return await this.repository.listUsers({
       search: sanitizedSearch,

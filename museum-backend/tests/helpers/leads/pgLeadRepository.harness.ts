@@ -1,17 +1,3 @@
-/**
- * Cycle B — test-infra real-PG `ILeadRepository` for the persist-then-notify
- * use-case integration tests (T3.1/T3.2).
- *
- * Why this exists separately from the production adapter
- * (`adapters/secondary/pg/lead.repository.pg.ts`): the production adapter is
- * GREEN code (does not exist during the red phase). The use-case red tests must
- * still inject a REAL Postgres-backed repository so the failures are behavioural
- * (the stateless use-case never writes a row), not a module-not-found. This
- * harness is therefore test infrastructure, never imported by `src/**`.
- *
- * The T2.1 integration suite separately pins the PRODUCTION adapter contract
- * (and fails red until it exists) — this harness does NOT substitute for it.
- */
 import { Lead } from '@modules/leads/domain/lead/lead.entity';
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
@@ -34,11 +20,6 @@ function toDTO(entity: Lead): LeadDTO {
   };
 }
 
-/**
- * Minimal real-PG `ILeadRepository` used ONLY by the use-case red tests to
- * observe persistence behaviour. Mirrors the contract the production adapter
- * will satisfy (atomic attempts++, lastError slice ≤800, DELETE rowCount).
- */
 export class PgLeadRepositoryHarness implements ILeadRepository {
   private readonly repo: Repository<Lead>;
 

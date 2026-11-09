@@ -1,15 +1,3 @@
-/**
- * RED (T1.10 sibling) — chat-repository reads for the DSAR export (B3, R12):
- *   - `listMessageFeedbackForUser(repo, userId)` → rows where userId matches,
- *     projected to `{ messageId, value, createdAt }`.
- *   - `listMessageReportsForUser(repo, userId)` → rows where userId matches,
- *     projected to `{ messageId, reason, comment, status, createdAt }`.
- *     `reviewedBy` / `reviewerNotes` / `reviewedAt` are third-party moderator
- *     data and MUST be excluded (design D7).
- *
- * FAILS at red baseline: neither read is implemented (the accessors return
- * `undefined`), so the first assertion in each block fails.
- */
 import {
   getListMessageFeedbackForUser,
   getListMessageReportsForUser,
@@ -30,11 +18,6 @@ interface RepoMockQb {
   getRawMany: jest.Mock;
 }
 
-/**
- * Builds an entity-agnostic repo mock whose query builder + `find` both honour
- * the userId filter. Returned as `unknown` so callers cast to the concrete
- * `Repository<Entity>` the accessor expects.
- */
 function buildRepoMock(rowsForUser: (userId: number) => unknown[]): unknown {
   let captured: number | undefined;
   const getMany = jest.fn(
@@ -132,7 +115,6 @@ describe('listMessageReportsForUser (B3 / R12 / D7)', () => {
         status: 'pending',
       }),
     );
-    // Third-party moderator data MUST NOT be in the subject's export DTO.
     expect(dto).not.toHaveProperty('reviewedBy');
     expect(dto).not.toHaveProperty('reviewerNotes');
     expect(dto).not.toHaveProperty('reviewedAt');

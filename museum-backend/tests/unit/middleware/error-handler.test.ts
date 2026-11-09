@@ -3,7 +3,6 @@ import { errorHandler } from '@shared/middleware/error.middleware';
 import { AppError } from '@shared/errors/app.error';
 import { MulterError } from 'multer';
 
-// Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -65,7 +64,6 @@ describe('errorHandler middleware', () => {
     expect(body.error.code).toBe('INTERNAL_ERROR');
     expect(body.error.message).toBe('Internal server error');
     expect(body.error.requestId).toBe('req-456');
-    // Must NOT leak internal error message
     expect(body.error.message).not.toContain('database');
   });
 
@@ -131,7 +129,7 @@ describe('errorHandler middleware', () => {
 
   it('handles requestId being undefined', () => {
     const err = new AppError({ message: 'Bad', statusCode: 400, code: 'BAD_REQUEST' });
-    const req = mockReq(); // no requestId
+    const req = mockReq();
     const res = mockRes();
 
     errorHandler(err, req, res, noop);
@@ -151,7 +149,6 @@ describe('errorHandler middleware', () => {
     const body = (res.json as jest.Mock).mock.calls[0][0];
     expect(body.error.code).toBe('INTERNAL_ERROR');
     expect(body.error.message).toBe('Internal server error');
-    // Logger should log the stringified version
     expect(logger.error).toHaveBeenCalledWith(
       'request_failed',
       expect.objectContaining({
@@ -190,8 +187,6 @@ describe('errorHandler middleware', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  // TD-MUL-01 — DoS bounds (`fields`, `parts`, field-name/value size) are
-  // payload-too-large, not generic 400. Mirrors the file-size mapping above.
   it.each([
     ['LIMIT_FIELD_COUNT', 'Too many fields'],
     ['LIMIT_PART_COUNT', 'Too many parts'],
@@ -216,9 +211,6 @@ describe('errorHandler middleware', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  // TD-MUL-02 boundary — semantic request-shape errors stay 400 (NOT 413).
-  // Locks the contract so a future "everything multer → 413" regression is
-  // caught.
   it.each(['LIMIT_FILE_COUNT', 'LIMIT_UNEXPECTED_FILE'] as const)(
     'keeps multer %s on 400 (semantic, not size)',
     (code) => {

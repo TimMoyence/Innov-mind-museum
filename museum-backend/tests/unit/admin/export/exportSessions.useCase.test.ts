@@ -1,24 +1,3 @@
-/**
- * R2 RED tests — ExportChatSessionsUseCase.
- *
- * Pins R2 §1 R6 / R7 / R8 / R11 / R12 / R17 + §3 D4 / D5 / D6 + AC4 / AC10
- * down BEFORE implementation :
- *  - Returns an `AsyncIterable<ExportRowSessions>` (R13 streaming).
- *  - super_admin scope → repo receives `scopeMuseumId: null` (R7).
- *  - museum_manager scope → repo receives `scopeMuseumId = user.museumId` (R6).
- *  - admin scope → same as museum_manager (R8, default per Q2).
- *  - moderator role → throws forbidden BEFORE any repo call (R4 / Q3).
- *  - visitor role → throws forbidden BEFORE any repo call (R4).
- *  - museum_manager w/ museumId=null → throws forbidden NO_MUSEUM_ASSIGNED (R9).
- *  - Audit log emitted EXACTLY ONCE with action AUDIT_ADMIN_EXPORT_SESSIONS
- *    BEFORE the first row is iterated (D5 / N6 / AC10).
- *  - user_id is pseudonymised for museum_manager + admin ; raw for super_admin (R17 / D6).
- *
- * Production location (R2 §0.3) :
- *   museum-backend/src/modules/admin/useCase/export/exportChatSessions.useCase.ts
- *
- * MUST FAIL at baseline `a77e48aa` — module + dependencies do not exist yet.
- */
 import { ExportChatSessionsUseCase } from '@modules/admin/useCase/export/exportChatSessions.useCase';
 import { AUDIT_ADMIN_EXPORT_SESSIONS } from '@shared/audit/audit.types';
 import {
@@ -35,7 +14,6 @@ interface AuditSpy {
   logActorAction: jest.Mock;
 }
 
-/** Spec-shaped contract pin — green-code-agent ships the production type. */
 interface ExportInput {
   actorId: number;
   actorRole: 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
@@ -59,10 +37,6 @@ function makeAsyncIter(rows: ExportRowSessions[]): AsyncIterable<ExportRowSessio
   };
 }
 
-// I-SEC5 (2026-05-21) — corrective loop : ctor now takes `salt: string` as 3rd
-// arg (mirror AdminExportRepositoryPg). Fixed 48-char test salt — deterministic
-// digest for the /^[0-9a-f]{16}$/ assertion below ; identity of the salt itself
-// is irrelevant to the RBAC / streaming / audit invariants this file pins.
 const TEST_PSEUDONYM_SALT = 't'.repeat(48);
 
 describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
@@ -84,8 +58,6 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
       salt: string,
     ) => ExportUseCase)(repo, audit, TEST_PSEUDONYM_SALT);
   });
-
-  // ── RBAC scope (R6 / R7 / R8 / D4) ──────────────────────────────────────
 
   it('super_admin → repo called with scopeMuseumId=null (R7)', async () => {
     const iter = await useCase.execute({
@@ -123,8 +95,6 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
     );
   });
 
-  // ── RBAC denial (R4 / R9 / Q3) ──────────────────────────────────────────
-
   it('moderator → throws Forbidden BEFORE any repo call (R4 / Q3)', async () => {
     await expect(
       useCase.execute({ actorId: 4, actorRole: 'moderator', museumScope: null }),
@@ -145,8 +115,6 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
     ).rejects.toMatchObject({ statusCode: 403 });
     expect(repo.streamChatSessions).not.toHaveBeenCalled();
   });
-
-  // ── Audit emission (R12 / N6 / AC10) ────────────────────────────────────
 
   it('emits audit log exactly once with action AUDIT_ADMIN_EXPORT_SESSIONS (R12)', async () => {
     const iter = await useCase.execute({
@@ -201,8 +169,6 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
     expect(serialised).not.toContain('Loved the visit');
   });
 
-  // ── Pseudonymisation (R17 / D6) ─────────────────────────────────────────
-
   it('super_admin sees raw user_id in stream rows (R17 / D6)', async () => {
     repo.streamChatSessions.mockImplementation(() =>
       makeAsyncIter([makeExportSessionRow({ user_id: '42' })]),
@@ -226,7 +192,6 @@ describe('ExportChatSessionsUseCase (R2 R6/R7/R8/R12/R17)', () => {
       museumScope: 42,
     });
     const rows = await collect(iter);
-    // 16-char hex digest, never the raw integer.
     expect(rows[0].user_id).not.toBe('42');
     expect(rows[0].user_id).toMatch(/^[0-9a-f]{16}$/);
   });

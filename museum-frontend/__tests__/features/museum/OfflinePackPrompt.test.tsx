@@ -1,19 +1,9 @@
-/**
- * OfflinePackPrompt component tests.
- * Standalone mocks (no test-utils import) so we can provide an interpolating
- * i18n stub — the global test-utils mock would override a local jest.mock call
- * because its side-effects run after babel-hoisted local mocks.
- */
-
-// ── react-i18next: stub that appends interpolation values so tests can assert
-//    on dynamic values (e.g. cityName) without loading real translation files.
 jest.mock('react-i18next', () => {
   const { Text } = require('react-native');
   return {
     useTranslation: () => ({
       t: (key: string, opts?: Record<string, unknown>) => {
         if (!opts || Object.keys(opts).length === 0) return key;
-        // Append interpolated values so assertions like getByText(/Paris/) pass
         const values = Object.values(opts)
           .filter((v) => typeof v === 'string' || typeof v === 'number')
           .join(' ');
@@ -25,7 +15,6 @@ jest.mock('react-i18next', () => {
   };
 });
 
-// ── ThemeContext ──────────────────────────────────────────────────────────────
 jest.mock('@/shared/ui/ThemeContext', () => ({
   useTheme: () => ({
     theme: {
@@ -43,7 +32,6 @@ jest.mock('@/shared/ui/ThemeContext', () => ({
   }),
 }));
 
-// ── Ionicons ──────────────────────────────────────────────────────────────────
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
   return {
@@ -53,7 +41,6 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
-// ── expo-haptics ──────────────────────────────────────────────────────────────
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),
@@ -62,7 +49,6 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
-// ── shared/ui/tokens (used by LiquidButton) ───────────────────────────────────
 jest.mock('@/shared/ui/tokens', () => ({
   buttonTokens: {
     variants: {
@@ -145,7 +131,6 @@ describe('OfflinePackPrompt', () => {
     const progress = screen.getByTestId('opp-progress');
     expect(progress.props.accessibilityRole).toBe('progressbar');
     expect(progress.props.accessibilityValue.now).toBe(42);
-    // idle buttons are gone while active
     expect(screen.queryByTestId('opp-accept')).toBeNull();
     expect(screen.queryByTestId('opp-decline')).toBeNull();
   });

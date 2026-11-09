@@ -6,11 +6,6 @@ import type {
   UserMemoryUpdates,
 } from '@modules/chat/domain/memory/userMemory.repository.interface';
 
-/**
- * Creates a UserMemory entity with sensible defaults.
- * Override any field via the `overrides` parameter.
- * @param overrides
- */
 export function makeMemory(overrides: Partial<UserMemory> = {}): UserMemory {
   return Object.assign(new UserMemory(), {
     id: 'mem-uuid',
@@ -35,19 +30,9 @@ export function makeMemory(overrides: Partial<UserMemory> = {}): UserMemory {
   });
 }
 
-/**
- * In-memory implementation of {@link UserMemoryRepository} for unit tests.
- *
- * Holds a `Map<userId, UserMemory>` plus an injectable `recentSessions`
- * fixture for {@link UserMemoryRepository.getRecentSessionsForUser}. Tests
- * that need recent-session data can pre-populate via the optional
- * constructor argument (see Spec C T1.5+ mergers).
- * @param recentSessions
- */
 export function makeInMemoryUserMemoryRepository(
   recentSessions = new Map<number, RecentSessionAggregate[]>(),
 ): UserMemoryRepository & {
-  /** Test-only hook — seed recent-session aggregates for a user. */
   __setRecentSessions(userId: number, rows: RecentSessionAggregate[]): void;
 } {
   const store = new Map<number, UserMemory>();
@@ -84,25 +69,8 @@ export function makeInMemoryUserMemoryRepository(
   };
 }
 
-/**
- * Capture-style stub of {@link UserMemoryRepository} used by the merger unit
- * tests (Spec C T1.5/T1.6/T1.7). Unlike {@link makeInMemoryUserMemoryRepository}
- * (which keeps a Map-backed store), this stub:
- * - returns a single fixed `UserMemory` from {@link makeMemory} on `getByUserId`,
- *   shaped by the optional `initial` overrides;
- * - records every `upsert` call as `[userId, UserMemoryUpdates]` tuples on
- *   `upsertCalls` so tests can assert against the *exact* updates payload
- *   rather than the round-tripped entity;
- * - exposes a settable `recentSessions` property to seed
- *   {@link UserMemoryRepository.getRecentSessionsForUser} for the locale-mode
- *   and session-duration-p90 mergers.
- * @param initial - Partial UserMemory shape returned by `getByUserId`.
- *   When omitted, returns `null` (no memory yet).
- */
 export function makeUserMemoryRepoStub(initial?: Partial<UserMemory>): UserMemoryRepository & {
-  /** Captured `[userId, updates]` pairs from every `upsert` call, in order. */
   upsertCalls: [number, UserMemoryUpdates][];
-  /** Mutable seed for `getRecentSessionsForUser` (defaults to empty array). */
   recentSessions: RecentSessionAggregate[];
 } {
   const upsertCalls: [number, UserMemoryUpdates][] = [];
@@ -120,9 +88,7 @@ export function makeUserMemoryRepoStub(initial?: Partial<UserMemory>): UserMemor
       return makeMemory({ ...(memory ?? {}), userId, ...updates });
     },
 
-    async deleteByUserId(_userId: number): Promise<void> {
-      /* no-op for stub */
-    },
+    async deleteByUserId(_userId: number): Promise<void> {},
 
     async getRecentSessionsForUser(
       _userId: number,

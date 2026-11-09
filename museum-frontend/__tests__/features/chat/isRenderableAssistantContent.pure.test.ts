@@ -3,16 +3,6 @@ import type { ChatUiMessageMetadata } from '@/features/chat/application/chatSess
 import { makeEnrichedImage } from '@/__tests__/helpers/factories/chat.factories';
 import { makeCompareResult } from '@/__tests__/helpers/factories/compare.factories';
 
-// Cycle 5 (UFR-022 RED) — AC-8 / EARS-11.
-//
-// `isRenderableAssistantContent` is the single pure source of truth for "should
-// this assistant response produce a bubble?". Its criterion MUST mirror the
-// render condition in `ChatMessageBubble.tsx:97` (`hasImages =
-// (metadata?.images?.length ?? 0) > 0`) and `:276` (`metadata?.compareResults`)
-// so that logic and pixel never diverge (Décision D7).
-//
-// The helper does NOT exist yet — every case below fails to import/resolve
-// today (absence-of-feature RED, not a frozen-behaviour lock).
 describe('isRenderableAssistantContent (helper pur — AC-8)', () => {
   it('returns false for an empty string with no media', () => {
     expect(isRenderableAssistantContent('', null)).toBe(false);

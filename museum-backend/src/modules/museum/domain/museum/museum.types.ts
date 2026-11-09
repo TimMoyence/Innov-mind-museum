@@ -38,7 +38,6 @@ export interface MuseumDTO {
   updatedAt: string;
 }
 
-/** Public — no internal config or admin fields. */
 export interface MuseumDirectoryDTO {
   id: number;
   name: string;

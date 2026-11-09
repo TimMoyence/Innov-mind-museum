@@ -1,20 +1,3 @@
-/**
- * R2 RED tests — ExportReviewsUseCase + ExportSupportTicketsUseCase.
- *
- * Pins R2 §1 R2 / R3 / R4 + §3.4 D4 + Q1 BLOCKER + R18 / R19 down BEFORE
- * implementation :
- *  - Reviews/tickets entities have NO `museum_id` (Appendix A). Q1 default (b)
- *    → museum_manager + admin → 403 ; only super_admin can export those two.
- *  - super_admin happy path → emits AUDIT_ADMIN_EXPORT_REVIEWS / _TICKETS.
- *  - Row pseudonymisation (R18 user_id_pseudonym for reviews, R19
- *    user_email_pseudonym for tickets — ALWAYS, even for super_admin).
- *
- * Production location (R2 §0.3) :
- *   museum-backend/src/modules/admin/useCase/export/exportReviews.useCase.ts
- *   museum-backend/src/modules/admin/useCase/export/exportSupportTickets.useCase.ts
- *
- * MUST FAIL at baseline `a77e48aa` — modules + audit constants do not exist yet.
- */
 import { ExportReviewsUseCase } from '@modules/admin/useCase/export/exportReviews.useCase';
 import { ExportSupportTicketsUseCase } from '@modules/admin/useCase/export/exportSupportTickets.useCase';
 import { AUDIT_ADMIN_EXPORT_REVIEWS, AUDIT_ADMIN_EXPORT_TICKETS } from '@shared/audit/audit.types';
@@ -38,7 +21,6 @@ interface AuditSpy {
   logActorAction: jest.Mock;
 }
 
-/** Spec-shaped contract pin — green-code-agent ships the production type. */
 interface ExportInput {
   actorId: number;
   actorRole: 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
@@ -64,10 +46,6 @@ function makeIter<T>(rows: T[]): AsyncIterable<T> {
     },
   };
 }
-
-// ============================================================================
-// Reviews
-// ============================================================================
 
 describe('ExportReviewsUseCase (R2 R2 / R4 / R18 / Q1 BLOCKER)', () => {
   let repo: ReviewsRepoSpy;
@@ -139,16 +117,11 @@ describe('ExportReviewsUseCase (R2 R2 / R4 / R18 / Q1 BLOCKER)', () => {
     });
     const rows = await collect(iter);
     expect(rows[0].user_id_pseudonym).toMatch(/^[0-9a-f]{16}$/);
-    // Ensure no raw `userId` integer field is present in the row shape.
     const row0 = rows[0] as unknown as Record<string, unknown>;
     expect(row0.userId).toBeUndefined();
     expect(row0.user_id).toBeUndefined();
   });
 });
-
-// ============================================================================
-// Tickets
-// ============================================================================
 
 describe('ExportSupportTicketsUseCase (R2 R3 / R4 / R19 / Q1 BLOCKER)', () => {
   let repo: TicketsRepoSpy;
@@ -223,8 +196,6 @@ describe('ExportSupportTicketsUseCase (R2 R3 / R4 / R19 / Q1 BLOCKER)', () => {
       makeIter([
         makeExportTicketRow({
           subject: 'My-Secret-Subject',
-          // Description not in fixture row shape; this is to ensure
-          // metadata is row-payload-free regardless.
         }),
       ]),
     );

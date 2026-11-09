@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-# scripts/dev-migration-check.sh
-#
-# Compares museum-backend/src/data/db/migrations/*.ts (source of truth)
-# vs the applied migrations recorded in the local Docker Postgres
-# `migrations` table. Flags pending migrations BEFORE the developer
-# wastes 30 min wondering why /api/auth/login returns "column User.tier
-# does not exist" 500s.
-#
-# Exit codes:
-#   0 = DB in sync
-#   1 = pending migrations exist (printable list + suggested command)
-#   2 = setup failure (Docker down, container missing, DB unreachable)
-#
-# Generated 2026-05-17 after a real incident where AddUserTier1778900000000
-# was missing on the local DB while the codebase relied on the column.
 
 set -euo pipefail
 
@@ -47,8 +32,6 @@ if [ ! -d "$MIG_DIR" ]; then
   exit 2
 fi
 
-# Source migration class names — derived from filenames stripped of .ts extension.
-# Pattern: <timestamp>-<ClassName>.ts → ClassName<timestamp>
 LOCAL_NAMES=$(
   for f in "$MIG_DIR"/*.ts; do
     base=$(basename "$f" .ts)
@@ -58,7 +41,6 @@ LOCAL_NAMES=$(
   done | sort
 )
 
-# Applied migrations from DB.
 APPLIED_NAMES=$(
   docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -A -t \
     -c "SELECT name FROM migrations ORDER BY name" 2>/dev/null | sort

@@ -1,15 +1,11 @@
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 
-// ── Mock global fetch ─────────────────────────────────────────────────
-
 const mockFetch = jest.fn<Promise<Response>, [string | URL, RequestInit?]>();
 
 beforeEach(() => {
   jest.clearAllMocks();
   globalThis.fetch = mockFetch as typeof globalThis.fetch;
 });
-
-// ── Helpers ───────────────────────────────────────────────────────────
 
 function makeOkResponse(): Response {
   return {
@@ -30,8 +26,6 @@ function makeErrorResponse(status: number, body: string | { reject: Error }): Re
     text,
   } as unknown as Response;
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────
 
 describe('BrevoEmailService', () => {
   const API_KEY = 'xkeysib-test-api-key';
@@ -131,7 +125,6 @@ describe('BrevoEmailService', () => {
       expect(body.htmlContent).toBe(html);
     });
 
-    // Mutation kills — Stryker survivors in brevo-email.service.ts
     it('produces an error message ending exactly with the status colon-space when text() rejects (catch fallback must be empty string)', async () => {
       mockFetch.mockResolvedValueOnce(
         makeErrorResponse(503, { reject: new Error('stream error') }),
@@ -145,7 +138,6 @@ describe('BrevoEmailService', () => {
     });
 
     it('truncates the response body to 800 chars in the thrown error message', async () => {
-      // Build a 1000-char body: 800 "a"s then 200 "b"s — only the "a"s must survive.
       const longBody = 'a'.repeat(800) + 'b'.repeat(200);
       mockFetch.mockResolvedValueOnce(makeErrorResponse(502, longBody));
 

@@ -24,16 +24,13 @@ import { AuthProvider } from '@/features/auth/application/AuthContext';
 import { BiometricGate } from '@/features/auth/ui/BiometricGate';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 import { useArtKeywordsSync } from '@/features/art-keywords/application/useArtKeywordsSync';
-import { saveDefaultLocale } from '@/features/settings/runtimeSettings';
 import i18n from '@/shared/i18n/i18n';
-import { I18nProvider, setOnLanguageChange } from '@/shared/i18n/I18nContext';
+import { I18nProvider } from '@/shared/i18n/I18nContext';
 import { PaywallProvider, usePaywall } from '@/features/paywall/application/PaywallProvider';
 import { QuotaUpsellModal } from '@/features/paywall/ui/QuotaUpsellModal';
 import { ConsentBanner } from '@/shared/analytics/ConsentBanner';
 import { setErrorTranslate } from '@/shared/lib/errors';
 
-// Wire i18n into error message formatting so getErrorMessage() returns localised strings.
-// The key is always a valid `error.*` path defined in our translation files.
 setErrorTranslate((key, opts) => i18n.t(key as 'error.network', opts));
 import { DataModeProvider } from '@/features/chat/application/DataModeProvider';
 import { OfflineQueueProvider } from '@/features/chat/application/useOfflineQueue';
@@ -53,19 +50,8 @@ const sentryDsn: string | undefined =
 initSentry(sentryDsn);
 logInitPhase('sentry.initialized', { platform: Platform.OS, hasDsn: Boolean(sentryDsn) });
 
-// Install a global JS error handler ASAP so any subsequent uncaught
-// exception (route-module evaluation, missing native module, async
-// rejection that bubbles to ErrorUtils) is captured by Sentry and
-// downgraded from fatal to non-fatal in release — preventing the
-// SIGABRT path observed on TestFlight 1.2.2 (87) when the ExpoWebBrowser
-// pod was unlinked. Detail: shared/observability/global-error-handler.ts.
 installGlobalErrorHandler();
 
-// Cert pinning init runs PRE-axios so the first network request is pinned
-// when the env flag and kill-switch agree. The env defaults to false, so
-// V1 launches ship un-pinned; flip `EXPO_PUBLIC_CERT_PINNING_ENABLED=true`
-// only after capturing real SPKI hashes (see ADR-031, CERT_ROTATION runbook).
-// Fire-and-forget: a slow kill-switch fetch must not block the React tree.
 void initCertPinning({ apiBaseUrl: resolveInitialApiBaseUrl() })
   .then((outcome) => {
     logInitPhase('certPinning.resolved', outcome);
@@ -87,40 +73,21 @@ function ThemedStatusBar() {
   return <StatusBar style={isDark ? 'light' : 'dark'} />;
 }
 
-/**
- * R1 (C6) — Bridge between `<PaywallProvider>` context state and the
- * RN-native `<Modal>`. Lives at the layout root so the modal renders ABOVE
- * any screen without importing anything from `features/chat/`.
- */
 function PaywallModalHost() {
   const { isOpen, reason, close } = usePaywall();
   return <QuotaUpsellModal visible={isOpen} reason={reason} onClose={close} />;
 }
 
-/** Renders the root navigation layout with startup configuration validation, runtime settings bootstrap, and auth guard. */
 function RootLayout() {
   const ref = useNavigationContainerRef();
 
   useEffect(() => {
     logInitPhase('rootLayout.mounted');
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ref guard
-    if (ref) {
-      reactNavigationIntegration.registerNavigationContainer(ref);
-      logInitPhase('navigationContainer.registered');
-    }
+    reactNavigationIntegration.registerNavigationContainer(ref);
+    logInitPhase('navigationContainer.registered');
   }, [ref]);
 
-  useEffect(() => {
-    setOnLanguageChange((lang) => void saveDefaultLocale(lang));
-  }, []);
-
   return (
-    // TD-RNGH-01 — root <GestureHandlerRootView> wrapper required by
-    // react-native-gesture-handler v2 on Android (mandatory for Fabric / New
-    // Arch). Without it, every Gesture.* / Swipeable / ReanimatedSwipeable
-    // child silently no-ops on Android — pinch-zoom on ArtworkHeroModal +
-    // SwipeableConversationCard swipe both depend on this.
-    // lib-docs/react-native-gesture-handler/PATTERNS.md §1.
     <GestureHandlerRootView style={layoutStyles.gestureRoot}>
       <ErrorBoundary>
         <PersistQueryClientProvider
@@ -177,14 +144,6 @@ function RootLayout() {
                             <ThemedStatusBar />
                             <GlobalOfflineBannerHost />
                             <PaywallModalHost />
-                            {/*
-                             * TD-C5-MOBILE-CONSENT-01 — Analytics consent banner
-                             * mounted at the root so it floats above every screen
-                             * while `useAnalyticsConsent().status === 'unset'`.
-                             * Returns null once the user accepts or declines —
-                             * the decision persists in AsyncStorage so the banner
-                             * does not re-appear on subsequent launches.
-                             */}
                             <ConsentBanner />
                           </AuthenticationGuard>
                         </BiometricGate>

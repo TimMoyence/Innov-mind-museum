@@ -1,16 +1,3 @@
-/**
- * COMP-04 — DeepSeek data-residency production guard (RGPD Art.44-49 / Schrems II).
- *
- * DeepSeek (api.deepseek.com, China) has no EU adequacy decision. Selecting it
- * in production must fail fast unless the controller has consciously accepted
- * the cross-border transfer risk via DEEPSEEK_EU_TRANSFER_APPROVED. The default
- * provider (openai) and google must be unaffected — that negative case proves
- * the guard does not brick boot for the normal config.
- *
- * Drives `validateProductionEnv` directly with a synthesized AppEnv object,
- * matching env-production-validation-redis.test.ts.
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import {
@@ -25,7 +12,12 @@ const makeEnv = (llmOverrides: Partial<AppEnv['llm']> = {}): AppEnv =>
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'deepseek', deepseekApiKey: 'sk-deepseek', ...llmOverrides },
+    llm: {
+      costGuard: { userDailyCapUsd: 0 },
+      provider: 'deepseek',
+      deepseekApiKey: 'sk-deepseek',
+      ...llmOverrides,
+    },
     storage: { driver: 'local', s3: {} },
     exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     auth: {

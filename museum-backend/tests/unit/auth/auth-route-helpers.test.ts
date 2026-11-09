@@ -2,12 +2,6 @@ import { pickEmailLocale } from '@modules/auth/adapters/primary/http/helpers/aut
 
 import type { Request } from 'express';
 
-/**
- * Minimal Express Request mock for {@link pickEmailLocale}: the helper only reads
- * `req.body.locale` and `req.headers['accept-language']`. We follow the shared
- * `makeReq` convention used in login-handler-helpers.test.ts (Partial<Request>
- * cast through unknown) rather than inlining a full entity.
- */
 const makeReq = (overrides: {
   body?: Record<string, unknown>;
   acceptLanguage?: string;
@@ -24,11 +18,6 @@ const makeReq = (overrides: {
 };
 
 describe('pickEmailLocale — body.locale priority then Accept-Language', () => {
-  // i18n region-tag bug: a regionalised English user submits `body.locale='en-US'`
-  // and has NO English Accept-Language header (or a French one). The strict guard
-  // `bodyLocale === 'fr' || bodyLocale === 'en'` never matches 'en-US', so the
-  // request falls through to Accept-Language and defaults to 'fr'. The user receives
-  // the email in French. pickEmailLocale must normalise body.locale via extractLangCode.
   describe('region-tag normalisation of body.locale', () => {
     it('returns "en" for body.locale "en-US" with no Accept-Language header', () => {
       const req = makeReq({ body: { locale: 'en-US' } });
@@ -51,8 +40,6 @@ describe('pickEmailLocale — body.locale priority then Accept-Language', () => 
     });
   });
 
-  // Non-regression: exact 'fr'/'en' body locales, and the documented fallthrough for
-  // any non-fr/en locale (e.g. 'es') down to Accept-Language then default.
   describe('non-regression', () => {
     it('returns "en" for exact body.locale "en"', () => {
       const req = makeReq({ body: { locale: 'en' } });

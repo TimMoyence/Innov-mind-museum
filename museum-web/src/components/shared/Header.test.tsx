@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Header from './Header';
 import type { Dictionary } from '@/lib/i18n';
 
-// Mock Next.js modules
 vi.mock('next/navigation', () => ({
   usePathname: () => '/fr',
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -27,7 +26,6 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/image', () => ({
   default: ({ alt, ...props }: { alt: string; [key: string]: unknown }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));
@@ -122,14 +120,11 @@ describe('Header', () => {
     render(<Header dict={mockDict} locale="fr" />);
     const hamburger = screen.getByLabelText('Toggle menu');
 
-    // Menu should not be visible initially (mobile nav has aria-label "Mobile")
     expect(screen.queryByLabelText('Mobile')).not.toBeInTheDocument();
 
-    // Click hamburger
     fireEvent.click(hamburger);
     expect(screen.getByLabelText('Mobile')).toBeInTheDocument();
 
-    // Click again to close
     fireEvent.click(hamburger);
     expect(screen.queryByLabelText('Mobile')).not.toBeInTheDocument();
   });

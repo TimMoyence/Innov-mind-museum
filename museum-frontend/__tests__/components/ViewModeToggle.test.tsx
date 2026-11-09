@@ -55,7 +55,6 @@ describe('ViewModeToggle', () => {
     const { toJSON } = render(<ViewModeToggle mode="list" onToggle={onToggle} />);
     const tree = toJSON();
     expect(tree).not.toBeNull();
-    // The root View has accessibilityRole="radiogroup"
     if (tree && !Array.isArray(tree)) {
       expect(tree.props.accessibilityRole).toBe('radiogroup');
     }

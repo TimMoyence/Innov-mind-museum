@@ -5,8 +5,6 @@ import { useSessionLoader } from '@/features/chat/application/useSessionLoader';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import { makeGetSessionResponse } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockGetSession = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -27,8 +25,6 @@ jest.mock('@/shared/lib/errors', () => ({
 }));
 
 const mockSetSession = jest.fn();
-// Mutable sessions map — mutate in tests, reset in beforeEach.
-// Declared with `let` so we can replace the whole map; the mock factory captures it lazily.
 let mockStoreSessions: Record<
   string,
   { messages: ChatUiMessage[]; title: string | null; museumName: string | null; updatedAt: number }
@@ -51,11 +47,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn().mockResolvedValue(undefined),
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const SESSION_ID = 'loader-session-1';
 
-/** Renders the hook wired to a real useState for messages. */
 const renderLoader = (sessionId = SESSION_ID) => {
   const { result } = renderHook(() => {
     const [messages, setMessages] = useState<ChatUiMessage[]>([]);
@@ -64,8 +57,6 @@ const renderLoader = (sessionId = SESSION_ID) => {
   });
   return result;
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useSessionLoader', () => {
   beforeEach(() => {
@@ -134,7 +125,6 @@ describe('useSessionLoader', () => {
     });
 
     expect(result.current.messages).toHaveLength(2);
-    // Messages should be sorted by createdAt ascending
     expect(result.current.messages[0]?.id).toBe('msg-1');
     expect(result.current.messages[1]?.id).toBe('msg-2');
   });
@@ -323,17 +313,14 @@ describe('useSessionLoader', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Messages hydrated from cache
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0]?.id).toBe('cached-msg-1');
     expect(result.current.sessionTitle).toBe('Cached Title');
     expect(result.current.museumName).toBe('Cached Museum');
-    // Error is still set so the user knows the API is down
     expect(result.current.error).toBe('Network failure');
   });
 
   it('leaves messages empty when API fails and no cache entry exists', async () => {
-    // mockStoreSessions is empty (reset in beforeEach)
     mockGetSession.mockRejectedValue(new Error('API down'));
 
     const result = renderLoader();
@@ -346,7 +333,6 @@ describe('useSessionLoader', () => {
     expect(result.current.error).toBe('API down');
   });
 
-  // ── TD-REACT-01 cancellation guard (closure-cell + cleanup) ───────────────
   describe('cancellation', () => {
     interface Deferred<T> {
       promise: Promise<T>;
@@ -370,7 +356,6 @@ describe('useSessionLoader', () => {
 
       const { unmount } = renderHook(() => useSessionLoader(SESSION_ID, setMessagesSpy));
 
-      // Component unmounts before the request resolves.
       unmount();
 
       await act(async () => {
@@ -388,14 +373,11 @@ describe('useSessionLoader', () => {
             },
           }),
         );
-        // Flush microtasks so the awaited continuation runs.
         await Promise.resolve();
         await Promise.resolve();
       });
 
-      // R7 — no setState on the consumer's messages after unmount.
       expect(setMessagesSpy).not.toHaveBeenCalled();
-      // R10 — Zustand cache hydration still fires (observability is independent of UI).
       expect(mockSetSession).toHaveBeenCalledWith(
         SESSION_ID,
         expect.any(Array),
@@ -416,10 +398,8 @@ describe('useSessionLoader', () => {
         { initialProps: { sessionId: 'session-A' } },
       );
 
-      // session A is in-flight; user navigates to session B.
       rerender({ sessionId: 'session-B' });
 
-      // Stale A response arrives AFTER nav — its setMessages / setSessionTitle must be cancelled.
       await act(async () => {
         deferA.resolve(
           makeGetSessionResponse({
@@ -439,11 +419,9 @@ describe('useSessionLoader', () => {
         await Promise.resolve();
       });
 
-      // Cancellation guard: A's state must NOT have leaked into the live B view.
       expect(result.current.sessionTitle).not.toBe('A-stale-title');
       expect(result.current.museumName).not.toBe('A-museum');
 
-      // Now B resolves correctly.
       await act(async () => {
         deferB.resolve(
           makeGetSessionResponse({
@@ -490,8 +468,6 @@ describe('useSessionLoader', () => {
       expect(Sentry.captureException).toHaveBeenCalledWith(lateError, {
         tags: { flow: 'chat.loadSession' },
       });
-      // setError on the consumer is gated by cancellation, so no setState on unmounted hook.
-      // Observability via setMessagesSpy: cache-hydration branch is skipped post-cancellation too.
       expect(setMessagesSpy).not.toHaveBeenCalled();
     });
   });

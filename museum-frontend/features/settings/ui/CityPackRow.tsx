@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { City } from '@/features/museum/infrastructure/cityCatalog';
 import type { CityPackState } from '@/features/museum/application/useOfflinePacks';
+import { formatBytes } from '@/shared/lib/formatBytes';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -14,19 +15,6 @@ interface CityPackRowProps {
   onDelete: (city: City) => void;
 }
 
-const ONE_MB = 1024 * 1024;
-const formatBytes = (bytes: number): string =>
-  bytes < ONE_MB
-    ? `${Math.round(bytes / 1024).toString()} KB`
-    : `${(bytes / ONE_MB).toFixed(1)} MB`;
-
-/**
- * Single-city row for the Offline Maps settings screen. Renders the city
- * name, current download state (absent, downloading with percentage, or
- * ready with bytes on disk), and the primary action (Download or Delete)
- * wrapped in a GlassCard so it sits within the visual system used elsewhere
- * in the app.
- */
 export const CityPackRow = ({ city, state, onDownload, onDelete }: CityPackRowProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

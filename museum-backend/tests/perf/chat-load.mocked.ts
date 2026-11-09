@@ -91,7 +91,6 @@ const run = async (): Promise<void> => {
     passed: p95(timings) <= budgetMs,
   };
 
-  // eslint-disable-next-line no-console
   console.log(JSON.stringify(result, null, 2));
 
   if (!result.passed) {

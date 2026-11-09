@@ -1,38 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-/**
- * Phase 4 Stryker hot-files gate.
- *
- * Reads:
- *   museum-backend/.stryker-hot-files.json — registry of hot files + thresholds
- *   museum-backend/reports/mutation/mutation.json — Stryker output
- *
- * For each registered hot file, computes kill ratio using Stryker's official
- * mutationScore formula:
- *   (killed + timeout) / (killed + survived + noCoverage + timeout)
- *
- * Rationale (audit P1-10, 2026-05-13):
- *   The earlier formula excluded Timeout from the numerator. Stryker's
- *   official position (and what `parse-mutation-survivors.mjs` in this repo
- *   already uses) is that a Timeout IS a kind of kill — the mutant caused
- *   a hang/infinite loop that exceeded the per-mutant budget, which is
- *   detection. Empirically, the 2026-05-11 incremental report shows several
- *   hot files (audit-chain, refresh-token.repository, authSession.service,
- *   session-issuer.service) with 0 Survivors but high Timeout counts:
- *   under the old formula they reported 0%-37% (FAIL) despite 0 escaped
- *   mutants. The official formula reports 93%-100% (PASS) for the same
- *   files, faithfully reflecting test strength.
- *
- * NoCoverage is kept in the denominator on purpose: hot files MUST be
- *   exercised by unit tests; an uncovered mutant is a gap, not a kill.
- *
- * Exit codes:
- *   0 — every hot file >= killRatioMin
- *   1 — at least one hot file below threshold
- *   2 — registry references a file absent from mutation.json
- *
- * Env: STRYKER_GATE_ROOT overrides the root directory (used in tests).
- */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -53,8 +19,6 @@ function readJson(path) {
 function killRatio(file) {
   const mutants = file.mutants ?? [];
   if (mutants.length === 0) return null;
-  // Official Stryker mutationScore convention: Timeout counts as a kill.
-  // See top-of-file doc block for rationale (audit P1-10).
   const kills = mutants.filter((m) => m.status === 'Killed' || m.status === 'Timeout').length;
   const counted = mutants.filter(
     (m) =>

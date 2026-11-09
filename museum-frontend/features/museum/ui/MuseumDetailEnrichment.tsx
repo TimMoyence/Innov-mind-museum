@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { GlassCard } from '@/shared/ui/GlassCard';
+import { TextLines } from '@/shared/ui/TextLines';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import type { OpeningHoursDisplay } from '@/features/museum/application/opening-hours.formatter';
 import type { useMuseumEnrichment } from '@/features/museum/application/useMuseumEnrichment';
@@ -55,12 +56,6 @@ const openExternalUrl = (url: string): void => {
   void Linking.openURL(url).catch(() => undefined);
 };
 
-/**
- * Turns a camelCase / snake_case record key into a human-readable label
- * (e.g. `wheelchairAccess` -> `Wheelchair access`). Pure presentational —
- * the keys are free-form backend data with no guaranteed vocabulary, so they
- * are not run through i18n.
- */
 const humanizeKey = (key: string): string => {
   const spaced = key
     .replace(/[_-]+/g, ' ')
@@ -74,11 +69,6 @@ const humanizeKey = (key: string): string => {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
-/**
- * Flattens a free-form rich JSONB record into readable `key : value` lines.
- * Recurses into nested objects, joins arrays with commas, and stringifies
- * primitives — guaranteeing the raw `[object Object]` string is never rendered.
- */
 const flattenRecordToLines = (record: Record<string, unknown>): string[] => {
   const renderValue = (value: unknown): string | null => {
     if (value === null || value === undefined) {
@@ -117,22 +107,12 @@ const flattenRecordToLines = (record: Record<string, unknown>): string[] => {
   return lines;
 };
 
-/** A non-null record carrying at least one entry — the precondition to render a rich section. */
 const isPopulatedRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
   typeof value === 'object' &&
   !Array.isArray(value) &&
   Object.keys(value as Record<string, unknown>).length > 0;
 
-/**
- * Renders the enrichment cards under the museum-detail hero: optional
- * Wikipedia-sourced image + summary, opening hours, contact buttons, the four
- * rich JSONB sections (admission / collections / exhibitions / accessibility),
- * and loading-skeleton / graceful-empty placeholders. Pulled out of
- * `app/(stack)/museum-detail.tsx` so the route file stays under the
- * 300 LOC sprint budget. Style tokens are passed in as a typed prop
- * to keep this component purely presentational.
- */
 export const MuseumDetailEnrichment = ({
   museumName,
   enriched,
@@ -152,7 +132,6 @@ export const MuseumDetailEnrichment = ({
         ? theme.warningText
         : theme.textSecondary;
 
-  /** The four rich sections, in display order. Hidden when the field is null/empty. */
   const richSections: { key: string; title: string; record: Record<string, unknown> }[] = [];
   if (isPopulatedRecord(enriched?.admissionFees)) {
     richSections.push({
@@ -218,22 +197,20 @@ export const MuseumDetailEnrichment = ({
             <Ionicons name="time-outline" size={16} color={hoursToneColor} />
             <Text style={[styles.hoursLabel, { color: hoursToneColor }]}>{hoursDisplay.label}</Text>
           </View>
-          {hoursDisplay.weeklyLines.map((line) => (
-            <Text key={line} style={[styles.weeklyLine, { color: theme.textSecondary }]}>
-              {line}
-            </Text>
-          ))}
+          <TextLines
+            lines={hoursDisplay.weeklyLines}
+            style={[styles.weeklyLine, { color: theme.textSecondary }]}
+          />
         </GlassCard>
       ) : null}
 
       {richSections.map((section) => (
         <GlassCard key={section.key} style={styles.descCard} intensity={52}>
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{section.title}</Text>
-          {flattenRecordToLines(section.record).map((line) => (
-            <Text key={line} style={[styles.description, { color: theme.textSecondary }]}>
-              {line}
-            </Text>
-          ))}
+          <TextLines
+            lines={flattenRecordToLines(section.record)}
+            style={[styles.description, { color: theme.textSecondary }]}
+          />
         </GlassCard>
       ))}
 
@@ -300,11 +277,6 @@ export const MuseumDetailEnrichment = ({
   );
 };
 
-/**
- * Skeleton placeholder bars shown while enrichment loads. Backgrounds are
- * applied inline from the theme (`theme.surface`) since the colour is
- * runtime-themed; the static geometry lives here to keep the JSX clean.
- */
 const skeletonStyles = StyleSheet.create({
   titleBar: { height: 18, width: '40%', borderRadius: 6, marginBottom: 12 },
   lineFull: { height: 12, width: '100%', borderRadius: 6, marginBottom: 8 },

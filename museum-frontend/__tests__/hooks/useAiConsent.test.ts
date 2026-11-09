@@ -2,13 +2,6 @@ import '@/__tests__/helpers/test-utils';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAiConsent, clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
 
-// ── Mocks (C1 hexagonal 2026-05-23) ──────────────────────────────────────────
-//
-// The hook used to import `AsyncStorage` + `thirdPartyAiConsent.grantConsentScope`
-// directly ; both moved behind infra services. We mock the services here ; the
-// per-userId key namespacing contract is now owned + tested by
-// `__tests__/features/chat/infrastructure/consentStorageService.test.ts`.
-
 const mockReadAccepted = jest.fn<Promise<string | null>, []>();
 const mockSetAccepted = jest.fn<Promise<void>, []>();
 const mockClearAccepted = jest.fn<Promise<void>, []>();
@@ -31,11 +24,7 @@ jest.mock('@/features/chat/infrastructure/consentApi', () => ({
   },
 }));
 
-// `@sentry/react-native` is mocked globally in `__tests__/helpers/test-utils.tsx`
-// (loaded above) ; grab the SAME shared mock to assert the captureException call.
 const mockSentryCapture: jest.Mock = require('@sentry/react-native').captureException;
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useAiConsent', () => {
   beforeEach(() => {
@@ -86,9 +75,6 @@ describe('useAiConsent', () => {
   });
 
   it('still hides modal even when persistence fails', async () => {
-    // consentStorageService.setAccepted swallows errors internally ; the hook
-    // sees a resolved promise either way. We simulate that by resolving the
-    // mock — the assertion is that `showAiConsent` still flips.
     mockSetAccepted.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useAiConsent());
@@ -115,7 +101,6 @@ describe('useAiConsent', () => {
 
     expect(result.current.showAiConsent).toBe(false);
 
-    // Simulate consent being cleared externally
     mockReadAccepted.mockResolvedValue(null);
 
     await act(async () => {
@@ -142,7 +127,6 @@ describe('useAiConsent', () => {
       await Promise.resolve();
     });
 
-    // Wait for the async operation to settle
     await waitFor(() => {
       expect(mockReadAccepted).toHaveBeenCalledTimes(2);
     });
@@ -151,8 +135,6 @@ describe('useAiConsent', () => {
   });
 
   it('shows consent modal when storage read fails', async () => {
-    // consentStorageService.readAccepted captures+re-throws on failure ;
-    // the hook's .catch flips the modal on.
     mockReadAccepted.mockRejectedValue(new Error('Storage read failed'));
 
     const { result } = renderHook(() => useAiConsent());
@@ -164,9 +146,6 @@ describe('useAiConsent', () => {
     expect(result.current.showAiConsent).toBe(true);
   });
 
-  // S4-P0-02 — scoped acceptance path : `acceptAiConsent(scopes)` MUST call
-  // `consentApi.grant` once per scope (one audit row per scope) before
-  // flipping the storage flag.
   it('POSTs each granted scope to BE on scoped acceptance', async () => {
     const { result } = renderHook(() => useAiConsent());
 
@@ -216,7 +195,6 @@ describe('useAiConsent', () => {
         }),
       }),
     );
-    // Storage flag still flips so the user is not re-prompted.
     expect(mockSetAccepted).toHaveBeenCalled();
     expect(result.current.showAiConsent).toBe(false);
   });

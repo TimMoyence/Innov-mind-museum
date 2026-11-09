@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { router } from 'expo-router';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
+jest.mock('i18next', () => ({ __esModule: true, default: { language: 'en' } }));
+
 const mockCreateSession = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -15,7 +17,6 @@ describe('DiscoverScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'en',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       _hydrated: true,
@@ -100,11 +101,6 @@ describe('DiscoverScreen', () => {
 
   it('starts default conversation (no intent suffix)', async () => {
     render(<DiscoverScreen />);
-    // The photo card triggers 'camera' intent, we need to test 'default'
-    // The FloatingContextMenu is mocked in test-utils so we can't press its items directly
-    // But the photo card press tests the intent=camera path
-    // For default intent - it would be triggered by menu, which is mocked.
-    // Let's verify the camera path produces correct URL
     fireEvent.press(screen.getByLabelText('a11y.discover.photo_card'));
 
     await waitFor(() => {

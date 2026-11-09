@@ -18,7 +18,6 @@ describe('findNearbyMuseums', () => {
 
     expect(result[0].name).toBe('Closest Museum');
     expect(result).toHaveLength(3);
-    // Verify sorted ascending
     for (let i = 1; i < result.length; i++) {
       expect(result[i].distance).toBeGreaterThanOrEqual(result[i - 1].distance);
     }

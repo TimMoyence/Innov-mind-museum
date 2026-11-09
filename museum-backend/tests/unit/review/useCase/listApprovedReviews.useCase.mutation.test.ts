@@ -1,17 +1,3 @@
-/**
- * Mutation-coverage tests for ListApprovedReviewsUseCase.
- *
- * Targets 3 Stryker survivors in `src/modules/review/useCase/public/listApprovedReviews.useCase.ts`:
- *  - L22 ConditionalExpression on full limit check → `false`
- *  - L22 LogicalOperator `!Number.isInteger(input.limit) || input.limit < 1` → `&&`
- *  - L22 ConditionalExpression on `input.limit < 1` → `false`
- *
- * Strategy: assert that BOTH a non-integer limit AND a limit<1 each independently
- * trigger badRequest (killing the `||→&&` mutant), assert boundaries (limit=1
- * accepted, limit=0/101 rejected), and assert the full filters payload sent to
- * the repo so the status='approved' literal is locked too.
- */
-
 import { ListApprovedReviewsUseCase } from '@modules/review/useCase/public/listApprovedReviews.useCase';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
@@ -54,8 +40,6 @@ function makeRepo(): jest.Mocked<IReviewRepository> {
 describe('ListApprovedReviewsUseCase — mutation coverage', () => {
   describe('limit validation (L22 ConditionalExpression / LogicalOperator)', () => {
     it('rejects a NON-INTEGER limit that is otherwise in [1, 100] — kills `||→&&` mutant', async () => {
-      // limit = 1.5 satisfies `limit < 1` → false but `!Number.isInteger` → true.
-      // Under the `&&` mutant both must be true, so 1.5 would slip through.
       const repo = makeRepo();
       const uc = new ListApprovedReviewsUseCase(repo);
       await expect(uc.execute({ page: 1, limit: 1.5 })).rejects.toThrow(
@@ -65,8 +49,6 @@ describe('ListApprovedReviewsUseCase — mutation coverage', () => {
     });
 
     it('rejects limit === 0 (integer, < 1) — kills `&&` mutant from the other side', async () => {
-      // limit = 0 satisfies `limit < 1` → true but `!Number.isInteger` → false.
-      // Under the `&&` mutant the guard becomes false → no badRequest → mutant survives.
       const repo = makeRepo();
       const uc = new ListApprovedReviewsUseCase(repo);
       await expect(uc.execute({ page: 1, limit: 0 })).rejects.toThrow(

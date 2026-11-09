@@ -1,8 +1,6 @@
-import { getDictionary, type Locale } from '@/lib/i18n';
 import { LegalSections } from '@/components/shared/LegalSections';
-import { getAlternates, getOpenGraph } from '@/lib/seo';
+import { footerPageMetadata } from '@/lib/seo';
 import termsCanonical from '@/lib/legal/terms-content.canonical.json';
-import type { Metadata } from 'next';
 
 interface TermsPageProps {
   params: Promise<{ locale: string }>;
@@ -33,15 +31,7 @@ function pickLocale(locale: string): LegalLocale {
   return locale === 'fr' ? 'fr' : 'en';
 }
 
-export async function generateMetadata({ params }: TermsPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const dict = await getDictionary(locale as Locale);
-  return {
-    title: dict.footer.links.terms,
-    alternates: getAlternates(locale, '/terms'),
-    openGraph: getOpenGraph(locale),
-  };
-}
+export const generateMetadata = footerPageMetadata('terms', '/terms');
 
 export default async function TermsPage({ params }: TermsPageProps) {
   const { locale } = await params;

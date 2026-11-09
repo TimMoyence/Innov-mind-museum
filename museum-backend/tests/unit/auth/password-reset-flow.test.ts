@@ -1,20 +1,3 @@
-/**
- * P2 — Password reset full happy-path + edge cases.
- *
- * Existing coverage is split: `forgotPassword.useCase.test.ts` and
- * `resetPassword.useCase.test.ts` cover each leg with mocked repos, and
- * `auth.route.test.ts` checks Zod rejection on the routes. The actual
- * end-to-end transition `forgot → consume token → re-login` was never
- * exercised — this suite closes that gap.
- *
- * Strategy:
- *   - Real ForgotPasswordUseCase + ResetPasswordUseCase
- *   - Stateful in-memory user repo so `setResetToken` is observable by
- *     `consumeResetTokenAndUpdatePassword`
- *   - Real RefreshTokenRepository mock that records `revokeAllForUser` calls
- *   - Real bcrypt + crypto round trip (no SUT mocking — UFR-006)
- */
-
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 
@@ -39,7 +22,6 @@ const buildStatefulUserRepo = (initial: User): IUserRepository => {
   let user: User = { ...initial };
   let resetSlot: ResetTokenSlot | null = null;
 
-  // Start from the shared mock and override only the methods this flow exercises.
   const repo = makeUserRepo(user, {
     getUserByEmail: jest.fn().mockImplementation(async (email: string) => {
       return email.toLowerCase() === user.email.toLowerCase() ? user : null;
@@ -56,7 +38,7 @@ const buildStatefulUserRepo = (initial: User): IUserRepository => {
         if (resetSlot.hashedToken !== hashedToken) return null;
         if (resetSlot.expires.getTime() < Date.now()) return null;
         user = { ...user, password: hashedPassword };
-        resetSlot = null; // single-use
+        resetSlot = null;
         return user;
       }),
     getUserById: jest.fn().mockImplementation(async (id: number) => (id === user.id ? user : null)),
@@ -89,14 +71,11 @@ describe('password reset flow (P2 user-flow)', () => {
     const issuedToken = await forgot.execute('Visitor@Musaium.com');
     expect(issuedToken).toBeTruthy();
     expect(typeof issuedToken).toBe('string');
-    expect(issuedToken!.length).toBeGreaterThanOrEqual(64); // 32 bytes hex
+    expect(issuedToken!.length).toBeGreaterThanOrEqual(64);
 
-    // Email normalisation: the use case must lookup by lowercased email,
-    // mirroring the real PG repo (`SELECT … WHERE LOWER(email) = $1`).
     const getByEmailMock = userRepo.getUserByEmail as jest.Mock;
     expect(getByEmailMock).toHaveBeenCalledWith('visitor@musaium.com');
 
-    // Stored hash must NOT equal the raw token (bug guard).
     const setResetMock = userRepo.setResetToken as jest.Mock;
     expect(setResetMock).toHaveBeenCalledTimes(1);
     const [, storedHashedToken] = setResetMock.mock.calls[0];
@@ -167,9 +146,6 @@ describe('password reset flow (P2 user-flow)', () => {
     const issuedToken = await forgot.execute('visitor@musaium.com');
     expect(issuedToken).toBeTruthy();
 
-    // Force the slot to expire. `mockClear()` only resets the call log;
-    // the closure-backed `resetSlot` keeps state, and the manual call
-    // below overwrites it with a past-dated expiry.
     const setResetMock = userRepo.setResetToken as jest.Mock;
     setResetMock.mockClear();
     await userRepo.setResetToken(
@@ -197,14 +173,9 @@ describe('password reset flow (P2 user-flow)', () => {
       expect.objectContaining({ statusCode: 400 }),
     );
 
-    // The token slot must NOT be consumed by the rejected weak attempt.
-    // `validatePassword` runs before `consumeResetTokenAndUpdatePassword`
-    // in the use case — pin that ordering invariant explicitly so a
-    // future refactor that swaps the order can't ship.
     const consumeMock = userRepo.consumeResetTokenAndUpdatePassword as jest.Mock;
     expect(consumeMock).not.toHaveBeenCalled();
 
-    // Token should still be redeemable for the legitimate user.
     const second = await reset.execute(issuedToken!, NEW_PASSWORD);
     expect(second).toBeTruthy();
     expect(consumeMock).toHaveBeenCalledTimes(1);
@@ -225,7 +196,6 @@ describe('password reset flow (P2 user-flow)', () => {
     const first = await reset.execute(issuedToken!, NEW_PASSWORD);
     expect(first).toBeTruthy();
 
-    // Same token replayed must be rejected.
     await expect(reset.execute(issuedToken!, 'AnotherStr0ng!Pwd')).rejects.toThrow(
       expect.objectContaining({ statusCode: 400 }),
     );

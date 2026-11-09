@@ -21,7 +21,6 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/image', () => ({
   default: ({ alt, ...props }: { alt: string; [key: string]: unknown }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));
@@ -73,7 +72,6 @@ const mockDict: Dictionary = {
       support: 'Help',
       accessibility: 'Accessibility',
       security: 'Security',
-      // R4 R18 / AC11 — B2B pitch page must be reachable from marketing chrome.
       b2b: 'For museums',
     },
   } as Dictionary['footer'],
@@ -118,7 +116,6 @@ describe('Footer', () => {
     expect(screen.getByLabelText('Footer')).toBeInTheDocument();
   });
 
-  // R4 R18 / AC11 — Footer must surface a B2B link adjacent to existing public links.
   it('renders the B2B pitch link pointing to /<locale>/b2b (R4 R18 / AC11)', () => {
     render(<Footer dict={mockDict} locale="fr" />);
     const b2bLink = screen.getByText('For museums');

@@ -1,20 +1,3 @@
-/**
- * T7.1 — POST `/sessions/:id/messages` v2 enrichment integration test.
- *
- * Drives the full chat HTTP pipeline against a real Postgres testcontainer
- * (via `createE2EHarness`) with the four C2 image-source clients mocked.
- * The second turn's `metadata.images` MUST carry entries from Wikidata,
- * Unsplash, Wikimedia Commons, and the Musaium catalogue, with
- * `caption` + `rationale` propagated from the prior assistant turn's
- * `suggestedImages[]` array (R1, R5, R8 of spec §3).
- *
- * Gated on `RUN_E2E=true` OR `RUN_INTEGRATION=true` (the `RUN_INTEGRATION` arm
- * is what makes this suite run in the CI integration job). Local dev opts in via:
- *
- *   RUN_INTEGRATION=true pnpm jest --runInBand \
- *     tests/integration/chat/post-message-c2-enrichment.integration.test.ts
- */
-
 import type { Express } from 'express';
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
@@ -40,17 +23,6 @@ import type { E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
-/* ────────────────────────── shared mock helpers ────────────────────────── */
-
-/**
- * Builds a minimal {@link ImageSourceClient} jest mock that resolves to a
- * query-specific photo, so the v2 fan-out (one call per `suggestedImages[].query`)
- * produces distinct URLs across terms — preventing dedup-by-URL from
- * collapsing the result set under-cap.
- *
- * The factory takes a per-source URL/caption template and the mock derives a
- * unique URL per (source, query) pair using the query as a hash.
- */
 function makeQueryAwareImageSourceClient(
   basePhoto: ImageSourcePhoto,
 ): jest.Mocked<ImageSourceClient> {
@@ -72,7 +44,6 @@ function makeQueryAwareImageSourceClient(
   };
 }
 
-/** Builds a minimal {@link KnowledgeBaseProvider} jest mock. */
 function makeKnowledgeBaseProviderMock(
   facts: ArtworkFacts | null,
 ): jest.Mocked<KnowledgeBaseProvider> {
@@ -81,15 +52,9 @@ function makeKnowledgeBaseProviderMock(
   };
 }
 
-/**
- * Stub orchestrator that returns a deterministic response with v2
- * `suggestedImages[]` metadata (caption + rationale REQUIRED). Subsequent
- * turns will read this from history and trigger the v2 fan-out.
- */
 class V2SuggestingOrchestrator implements ChatOrchestrator {
   private callCount = 0;
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- port signature is async
   async generate(): Promise<OrchestratorOutput> {
     this.callCount += 1;
     return this.buildOutput();
@@ -104,7 +69,6 @@ class V2SuggestingOrchestrator implements ChatOrchestrator {
     return result;
   }
 
-  /** Mirrors the LLM JSON contract from `assistant-response.toSuggestedImages`. */
   private buildOutput(): OrchestratorOutput {
     return {
       text: `Synthetic comparison answer #${this.callCount} discussing two artworks.`,
@@ -136,13 +100,6 @@ class V2SuggestingOrchestrator implements ChatOrchestrator {
   }
 }
 
-/* ───────────────────────────── helpers ─────────────────────────────────── */
-
-/**
- * Boots an E2E harness inside the active jest.isolateModules scope and swaps
- * the harness's chatService for one wired with the supplied source-client
- * mocks. Returns the harness handle plus a tear-down hook.
- */
 interface BootArgs {
   unsplashClient: ImageSourceClient | undefined;
   commonsClient: ImageSourceClient | undefined;
@@ -158,14 +115,9 @@ interface BootedHarness {
 }
 
 async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHarness> {
-  // Start the Postgres testcontainer FIRST so we can pin the DB env vars
-  // before any dynamic import touches `@src/config/env` (which captures
-  // process.env at module-load time).
   const { startPostgresTestContainer } = await import('tests/helpers/e2e/postgres-testcontainer');
   const postgresContainer = await startPostgresTestContainer();
 
-  // Force-override every env var we care about (`=`, not `??=`) so a value
-  // leaking from an earlier suite cannot poison this isolate.
   process.env.NODE_ENV = 'test';
   process.env.PORT = '0';
   process.env.TRUST_PROXY = 'false';
@@ -189,8 +141,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   process.env.EXTRACTION_WORKER_ENABLED = 'false';
   process.env.AUTH_EMAIL_SERVICE_KIND = 'test';
   process.env.FRONTEND_URL = 'http://localhost:8081';
-  // F10 — disable HIBP breach check so the canonical `Password123!` fixture
-  // (which appears in the public breach corpus) is accepted by /register.
   process.env.PASSWORD_BREACH_CHECK_ENABLED = 'false';
   process.env.APPLE_OIDC_JWKS_URL = 'https://appleid.apple.com/auth/keys';
   process.env.GOOGLE_OIDC_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
@@ -198,7 +148,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   process.env.APPLE_CLIENT_ID = 'com.musaium.mobile.test';
   process.env.GOOGLE_OAUTH_CLIENT_ID = 'phase5-test-audience.apps.googleusercontent.com';
 
-  // Now perform the dynamic imports — env.ts will capture the values above.
   const { ImageEnrichmentService } =
     await import('@modules/chat/useCase/image/image-enrichment.service');
   const { KnowledgeBaseService } =
@@ -212,8 +161,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   const { AppDataSource } = await import('@src/data/db/data-source');
   const { clearRateLimitBuckets } = await import('@shared/middleware/rate-limit.middleware');
 
-  // Discover migrations the same way e2e-app-harness does — read from disk
-  // so a brand-new schema migration is auto-picked-up by this test.
   const { readdirSync } = await import('node:fs');
   const { join } = await import('node:path');
   const migrationsDir = join(__dirname, '..', '..', '..', 'src', 'data', 'db', 'migrations');
@@ -249,7 +196,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   }
   await AppDataSource.initialize();
 
-  // Suppress stale-connection errors from the underlying pg driver.
   (AppDataSource.driver as { master?: { on?: (e: string, fn: () => void) => void } }).master?.on?.(
     'error',
     () => undefined,
@@ -258,13 +204,9 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
   await AppDataSource.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
   await AppDataSource.runMigrations({ transaction: 'each' });
 
-  // Build the chat module singleton so transitively-loaded helpers
-  // (e.g. GDPR DSAR proxy in @modules/auth/useCase) can resolve.
   const { buildChatService } = await import('@modules/chat');
   buildChatService(AppDataSource);
 
-  // Build a custom ImageEnrichmentService wired with the mocked source
-  // clients. Config mirrors `chat-module.ts:buildImageEnrichment` defaults.
   const imageEnrichment = new ImageEnrichmentService(
     args.unsplashClient,
     {
@@ -290,7 +232,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
     orchestrator: args.orchestrator,
     imageStorage: new LocalImageStorage(),
     audioTranscriber: {
-      // eslint-disable-next-line @typescript-eslint/require-await -- port signature
       async transcribe() {
         return { text: 'transcribed', model: 'test', provider: 'openai' as const };
       },
@@ -331,9 +272,6 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
     return { status: response.status, body };
   };
 
-  // Mark email_verified directly so login succeeds without SMTP. Re-uses the
-  // raw `dataSource` so we don't need to bring in the auth helpers (which
-  // depend on the harness shape we replaced).
   const markEmailVerified = async (email: string): Promise<void> => {
     await AppDataSource.query(`UPDATE users SET email_verified = true WHERE email = $1`, [email]);
   };
@@ -350,13 +288,10 @@ async function bootHarnessWithMockedEnrichment(args: BootArgs): Promise<BootedHa
     await postgresContainer.stop();
   };
 
-  // Stash markEmailVerified on the request fn for test access.
   (request as unknown as Record<string, unknown>).__markEmailVerified = markEmailVerified;
 
   return { baseUrl, request, stop };
 }
-
-/* ─────────────────────────── auth helpers ──────────────────────────────── */
 
 interface RegisteredVisitor {
   email: string;
@@ -381,7 +316,6 @@ async function registerAndLoginVisitor(harness: BootedHarness): Promise<Register
     throw new Error(`register failed: status=${reg.status} body=${JSON.stringify(reg.body)}`);
   }
 
-  // Mark verified directly via the function we stashed on the request.
   const markEmailVerified = (
     harness.request as unknown as { __markEmailVerified: (email: string) => Promise<void> }
   ).__markEmailVerified;
@@ -451,9 +385,6 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
       await jest.isolateModulesAsync(async () => {
         const orchestrator = new V2SuggestingOrchestrator();
 
-        // Wire 4 mocks, each returning ONE photo per query (URL is query-
-        // dependent so the dedup pass keeps distinct entries across the v2
-        // fan-out's two `suggestedImages[]` queries).
         const unsplashClient = makeQueryAwareImageSourceClient(
           makeUnsplashPhoto({
             url: 'https://unsplash.test/source-unsplash',
@@ -504,8 +435,6 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
       const visitor = await registerAndLoginVisitor(booted);
       const sessionId = await createSession(booted, visitor.token);
 
-      // Turn 1 — primes the session: orchestrator answers with
-      // `suggestedImages` in metadata, persisted to the assistant message.
       const t1 = await postUserMessage(
         booted,
         sessionId,
@@ -516,8 +445,6 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
       expect(t1.body.metadata.suggestedImages).toBeDefined();
       expect(t1.body.metadata.suggestedImages?.length).toBeGreaterThanOrEqual(2);
 
-      // Turn 2 — history now contains turn-1's `suggestedImages`, which the
-      // enrichment-fetcher reads to fan out to all wired source clients.
       const t2 = await postUserMessage(
         booted,
         sessionId,
@@ -543,13 +470,6 @@ describeE2E('POST /sessions/:id/messages — C2 v2 enrichment (PG testcontainer)
         expect(typeof img.rationale).toBe('string');
       }
 
-      // R5 — the v2 fan-out path propagates the LLM-authored caption +
-      // rationale from `suggestedImages[]` annotations to every image fetched
-      // through `ImageSourceClient` (commons / unsplash / musaium). The
-      // wikidata image is added via `mergeWikidataImage` AFTER the fan-out,
-      // which does not currently propagate annotations — so a non-empty
-      // rationale on that source is not asserted here. The fan-out sources
-      // MUST carry rationale, otherwise v2 metadata enrichment is broken.
       const fanOutImages = images!.filter((img) => img.source !== 'wikidata');
       expect(fanOutImages.length).toBeGreaterThanOrEqual(1);
       for (const img of fanOutImages) {

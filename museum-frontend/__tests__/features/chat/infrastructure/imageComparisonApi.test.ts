@@ -1,24 +1,3 @@
-/**
- * C1 Red — imageComparisonApi infra service.
- *
- * Cluster C1 (hexagonal violations, 2026-05-23-frontend-dry-audit) — the
- * `features/chat/application/useCompareImage` hook currently imports
- * `httpClient` directly and builds its own multipart payload inline. Plan T2.5
- * extracts the multipart construction + POST to
- * `features/chat/infrastructure/imageComparisonApi.ts` exposed as
- * `imageComparisonApi.compare(input)`.
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL because
- * `@/features/chat/infrastructure/imageComparisonApi` does not yet exist.
- *
- * Contract:
- *  - POST `/api/chat/compare` with multipart `Content-Type` header.
- *  - FormData fields: `image` (RN file), `sessionId`, optional `topK`, optional `locale`.
- *  - Returns `response.data` (unwrapped). The hook continues to read
- *    `error.response.{status,data.error.code}` so axios errors MUST be
- *    propagated untouched (no `mapAxiosError` envelope).
- */
-
 const mockHttpPost = jest.fn();
 jest.mock('@/shared/infrastructure/httpClient', () => ({
   httpClient: {
@@ -26,7 +5,6 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
   },
 }));
 
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import { imageComparisonApi } from '@/features/chat/infrastructure/imageComparisonApi';
 
 const sampleInput = {
@@ -61,8 +39,6 @@ describe('imageComparisonApi (C1 hexagonal façade)', () => {
     await imageComparisonApi.compare(sampleInput);
 
     const [, payload] = mockHttpPost.mock.calls[0] as [string, unknown, unknown];
-    // FormData is the canonical RN multipart container; we don't assert append
-    // order (RN polyfill quirks) but assert it's a FormData-shaped object.
     expect(payload).toBeDefined();
     expect(typeof (payload as { append?: unknown }).append).toBe('function');
   });
@@ -109,6 +85,5 @@ describe('imageComparisonApi (C1 hexagonal façade)', () => {
     });
 
     expect(mockHttpPost).toHaveBeenCalledTimes(1);
-    // Minimal-shape smoke: call still went through with the bare input.
   });
 });

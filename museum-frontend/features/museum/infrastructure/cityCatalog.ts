@@ -1,24 +1,12 @@
-/** Opaque string alias for city identifiers used across the offline pack system. */
 export type CityId = string;
 
 export interface City {
   id: CityId;
   name: string;
-  /** WGS84 [west, south, east, north] bounding box used for OfflineManager. */
   bounds: [number, number, number, number];
-  /** Geographic centroid, [longitude, latitude]. */
   center: [number, number];
 }
 
-/**
- * Gate cities for the S1 offline pack rollout (Paris, Lyon, Bordeaux,
- * Lisbonne, Rome). The bounding boxes are tight enough to produce packs
- * well under 100 MB at zoom 10-16 while still covering the historical
- * cores where most museums in our directory sit.
- *
- * Keep this list ordered by how likely a user is to enter the city — the
- * UI renders packs in catalog order.
- */
 export const CITY_CATALOG: readonly City[] = [
   {
     id: 'paris',

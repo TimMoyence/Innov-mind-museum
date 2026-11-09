@@ -1,27 +1,8 @@
-/**
- * R4 RED tests — B2bContactForm (client component).
- *
- * Pins R4 §1 R6-R11 + §1 R17 (a11y for live region) + AC3(a-i)
- * down BEFORE implementation.
- *
- * - 6 visible labelled inputs : email / name / museum / role(select) / message / consent
- * - 1 hidden honeypot input `website` (NOT visible / not in tab order)
- * - empty submit → 5 validation errors visible (one per required field)
- * - happy path : POST `/api/leads/b2b` w/ correct JSON, then success screen
- * - 5xx response : error message displayed, form values preserved (not cleared)
- * - honeypot filled → value sent, the server decides (TIM-2026-11-08-DEUX-SIGNAUX)
- *
- * R19 Sentry breadcrumb deferred V1.1 (not covered by tests at this layer).
- *
- * MUST FAIL at baseline `bc49afee` — `B2bContactForm.tsx` does not exist yet.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import B2bContactForm from '../B2bContactForm';
 import { acceptedResponse, serverErrorResponse } from '@/__tests__/helpers/http-responses.fixture';
-
-// ── i18n fixture (mirrors R4.md §3.5) ────────────────────────────────────────
 
 const dictEN = {
   title: 'Get in touch',
@@ -47,7 +28,6 @@ const dictEN = {
   errorEmail: 'Invalid email address.',
 };
 
-// Helper — fill all visible required fields with valid values.
 function fillAllRequired() {
   fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'sales@museum.fr' } });
   fireEvent.change(screen.getByLabelText(/Your name/i), { target: { value: 'Alice Curator' } });
@@ -68,8 +48,6 @@ function submitForm() {
   fireEvent.submit(form);
 }
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('B2bContactForm (R4 §1 R6-R11)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -78,7 +56,6 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
   it('renders the 6 visible required inputs + the hidden honeypot (R6)', () => {
     render(<B2bContactForm dict={dictEN} locale="en" />);
 
-    // visible inputs
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Your name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Museum name/i)).toBeInTheDocument();
@@ -86,7 +63,6 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
     expect(screen.getByLabelText(/Message/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/I agree to be contacted/i)).toBeInTheDocument();
 
-    // honeypot exists, but is aria-hidden + tabIndex=-1 + not focusable
     const honeypot = document.querySelector('input[name="website"]');
     expect(honeypot).not.toBeNull();
     expect(honeypot?.getAttribute('aria-hidden')).toBe('true');
@@ -100,8 +76,6 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
     render(<B2bContactForm dict={dictEN} locale="en" />);
     submitForm();
 
-    // expect 5 visible per-field error messages (email/name/museum/role/message).
-    // Spec leaves the exact copy to T2 but they must all be visible.
     await waitFor(() => {
       const errors = screen.getAllByRole('alert');
       expect(errors.length).toBeGreaterThanOrEqual(5);
@@ -147,19 +121,13 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
     await waitFor(() => {
       expect(screen.getByText(dictEN.success)).toBeInTheDocument();
     });
-    // Submit button is replaced by the success state
     expect(screen.queryByRole('button', { name: dictEN.submit })).toBeNull();
   });
 
   it('shows the sending label while pending (R9)', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(
-        () =>
-          new Promise(() => {
-            /* never resolves */
-          }),
-      ),
+      vi.fn().mockImplementation(() => new Promise(() => {})),
     );
 
     render(<B2bContactForm dict={dictEN} locale="en" />);
@@ -182,7 +150,6 @@ describe('B2bContactForm (R4 §1 R6-R11)', () => {
       expect(screen.getByText(dictEN.error)).toBeInTheDocument();
     });
 
-    // Form remains so the user can retry; the value the user typed is still there.
     expect(screen.getByLabelText(/Email/i)).toHaveValue('sales@museum.fr');
     expect(screen.getByLabelText(/Museum name/i)).toHaveValue('Louvre Lens');
     expect(screen.getByRole('button', { name: dictEN.submit })).toBeInTheDocument();

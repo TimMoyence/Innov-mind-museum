@@ -1,22 +1,12 @@
-import { getDictionary, type Locale } from '@/lib/i18n';
 import { LegalSections } from '@/components/shared/LegalSections';
-import { getAlternates, getOpenGraph } from '@/lib/seo';
+import { footerPageMetadata } from '@/lib/seo';
 import { getAccessibilityContent } from '@/lib/accessibility-content';
-import type { Metadata } from 'next';
 
 interface AccessibilityPageProps {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: AccessibilityPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const dict = await getDictionary(locale as Locale);
-  return {
-    title: dict.footer.links.accessibility,
-    alternates: getAlternates(locale, '/accessibility'),
-    openGraph: getOpenGraph(locale),
-  };
-}
+export const generateMetadata = footerPageMetadata('accessibility', '/accessibility');
 
 export default async function AccessibilityPage({ params }: AccessibilityPageProps) {
   const { locale } = await params;

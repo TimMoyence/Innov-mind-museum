@@ -1,15 +1,3 @@
-/**
- * F3 — `SocialLoginUseCase` nonce orchestration.
- *
- * Asserts the use case:
- *   1. Consumes the stored nonce *before* the verifier is invoked.
- *   2. Threads the same nonce through to `verifier.verify()` so the JWT-claim
- *      check (defence-in-depth) sees the same value.
- *   3. Rejects replays — a nonce returned by `consume() === false` MUST throw
- *      `INVALID_NONCE` without calling the verifier.
- *   4. When `env.auth.oidcNonceEnforce` is `true`, an absent nonce is rejected
- *      at the use-case boundary *before* hitting the verifier.
- */
 import { SocialLoginUseCase } from '@modules/auth/useCase/social/socialLogin.useCase';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import {
@@ -84,7 +72,6 @@ describe('SocialLoginUseCase — F3 nonce', () => {
     expect(nonceStore.consume).toHaveBeenCalledWith('client-nonce');
     expect(nonceStore.consume).toHaveBeenCalledTimes(1);
     expect(verifier.verify).toHaveBeenCalledWith('google', 'id-token', 'client-nonce');
-    // Nonce store consumed BEFORE verifier was invoked
     const consumeOrder = nonceStore.consume.mock.invocationCallOrder[0];
     const verifyOrder = verifier.verify.mock.invocationCallOrder[0];
     expect(consumeOrder).toBeLessThan(verifyOrder);

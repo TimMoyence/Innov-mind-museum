@@ -1,3 +1,4 @@
+import { randomSource } from '@shared/utils/random';
 import { withOptimisticLockRetry } from '@shared/db/optimistic-lock-retry';
 import { logger } from '@shared/logger/logger';
 
@@ -77,8 +78,6 @@ describe('withOptimisticLockRetry', () => {
     expect(refetch).not.toHaveBeenCalled();
   });
 
-  // Logger event name + payload (kills L51 StringLiteral + ObjectLiteral
-  // mutants on logger.warn(...)).
   it('logs optimistic_lock_retry with attempt + maxAttempts + context meta on each retry', async () => {
     const mutation = jest
       .fn()
@@ -98,10 +97,6 @@ describe('withOptimisticLockRetry', () => {
     });
   });
 
-  // Backoff delay formula uses Math.random() * Math.max(1, baseDelayMs) for
-  // jitter and base * 2^(attempt-1) + jitter for the total delay.
-  // Mocking Math.random + setTimeout lets us assert the exact delay value
-  // and kill the L58/L59 ArithmeticOperator + MethodExpression mutants.
   describe('backoff delay formula', () => {
     let setTimeoutSpy: jest.SpyInstance;
     let mathRandomSpy: jest.SpyInstance;
@@ -113,7 +108,7 @@ describe('withOptimisticLockRetry', () => {
         cb();
         return 0 as unknown as NodeJS.Timeout;
       }) as unknown as typeof setTimeout);
-      mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      mathRandomSpy = jest.spyOn(randomSource, 'unit').mockReturnValue(0.5);
     });
 
     afterEach(() => {
@@ -134,8 +129,6 @@ describe('withOptimisticLockRetry', () => {
         baseDelayMs: 10,
       });
 
-      // attempt 1 retry: 10 * 2^0 + floor(0.5 * max(1, 10)) = 10 + 5 = 15
-      // attempt 2 retry: 10 * 2^1 + floor(0.5 * max(1, 10)) = 20 + 5 = 25
       const delayCalls = setTimeoutSpy.mock.calls.map(([, delay]) => delay as number);
       expect(delayCalls).toEqual([15, 25]);
     });
@@ -149,11 +142,8 @@ describe('withOptimisticLockRetry', () => {
         mutation,
         refetch: jest.fn().mockResolvedValue(undefined),
         maxAttempts: 2,
-        // baseDelayMs intentionally omitted to exercise the `?? 50` default
       });
 
-      // attempt 1 retry: 50 * 2^0 + floor(0.5 * max(1, 50)) = 50 + 25 = 75
-      // (with `&&` mutant the delay would be NaN since undefined && 50 = undefined)
       const delayCall = setTimeoutSpy.mock.calls[0]?.[1] as number;
       expect(delayCall).toBe(75);
     });

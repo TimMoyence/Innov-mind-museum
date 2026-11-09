@@ -1,16 +1,3 @@
-/**
- * Test harness extension for the backdrop-dismiss / pointer-events red phase
- * (UFR-022 run `2026-05-23-chat-composer-buttons-modal-dismiss`).
- *
- * Adds mock content + route definitions for the non-blocking + blocking C4
- * routes the original `test-harness.tsx` does NOT register
- * (`attachment-picker`, `browser`, `summary`, `voice-intro`, `daily-limit`).
- *
- * This file is additive and does NOT mutate the existing `test-harness.tsx`
- * — it imports & re-exports `installMockRoutes` / `RouterTestHost` so the
- * existing tests stay byte-stable.
- */
-
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -128,11 +115,6 @@ const MockDailyLimitContent: React.FC<{ close: () => void }> = ({ close }) => (
   </View>
 );
 
-/**
- * Install mock routes for every C4 route id (9 routes). Mutates the imported
- * `ROUTES` map. Tests call this in `beforeEach` so each test runs against a
- * clean registry of test-stable mocks.
- */
 export function installAllMockRoutes(): void {
   const routesModule = require('@/features/chat/ui/bottom-sheet-router/routes') as {
     ROUTES: Record<BottomSheetRouteId, BottomSheetRouteDefinition<BottomSheetRouteId>>;
@@ -212,7 +194,6 @@ export function installAllMockRoutes(): void {
   } as BottomSheetRouteDefinition<BottomSheetRouteId>;
 }
 
-/** Imperative handle exposed by `DismissRouterTestHost`. */
 export interface DismissRouterHandle {
   open: (
     route: BottomSheetRouteId,

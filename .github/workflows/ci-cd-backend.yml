@@ -2,25 +2,13 @@ name: backend
 
 on:
   workflow_dispatch:
-  # Path filtering moved from workflow-level `on.*.paths` to a job-level `if:`
-  # gated by `dorny/paths-filter` (see `changes` job + `quality.if` below).
-  # Workflow-level path filters left required-status-checks in "Pending"
-  # forever for Renovate PRs that bumped only unrelated workflows; with the
-  # current pattern the workflow always starts and skipped jobs report
-  # `success`, so the required check is satisfied either way.
   pull_request: {}
   push:
     branches: ['main']
   schedule:
-    # Nightly full-quality regression (existing).
     - cron: '17 3 * * *'
-    # C4.3 / T4.4 — Monday 04:00 UTC real-mode halluc-eval against OPENAI provider.
-    # The `halluc-eval` job branches on `github.event.schedule` to switch mock→real
-    # only on this slot; the 03:17 nightly cron above triggers the same job in
-    # mock mode (no OPENAI tokens burned).
     - cron: '0 4 * * 1'
 
-# Top-level least-privilege default. Deploy jobs override with packages: write.
 permissions:
   contents: read
 
@@ -29,9 +17,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # ─── 0. Change detection — gates downstream jobs so Renovate PRs that touch
-  #        only unrelated paths skip the heavy work (skipped = success, so
-  #        the required check is satisfied without running tsc/tests).
   changes:
     name: detect changes
     runs-on: ubuntu-latest
@@ -67,7 +52,6 @@ jobs:
               - '.github/actions/scan-prod-image/**'
               - '.github/workflows/ci-cd-backend.yml'
 
-  # ─── 1. Quality gate (runs when backend paths change OR on schedule/dispatch) ─
   quality:
     needs: changes
     if: |
@@ -95,8 +79,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        # pnpm audit uses retired npm endpoints (both /audits and /audits/quick return 410).
-        # Trivy fs scan reads pnpm-lock.yaml directly — consistent with image scanning below.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           scan-type: fs
@@ -109,9 +91,6 @@ jobs:
           trivyignores: .trivyignore
 
       - name: Generate SBOM
-        # Enforced (no continue-on-error) — EU CRA compliance + supply chain audit trail.
-        # --ignore-npm-errors: pnpm hoisted node_modules trips npm-ls on missing peer
-        # devDependencies; the SBOM still captures the full transitive graph.
         run: npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --output-file sbom.json --spec-version 1.5 --output-reproducible
 
       - name: Upload SBOM artifact
@@ -128,17 +107,7 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
-      # I-OPS8 (R12): lint the workflow YAML we touch in this run so a syntax /
-      # expression error in the new ai-tests gating, the migration-drift job, or
-      # the deploy migration legs fails the quality gate locally (2 min) instead
-      # of surfacing as a broken CI run.
       - name: Actionlint workflows
-        # Run actionlint via its pinned Docker image rather than the
-        # raven-actions/actionlint action: that action shells through
-        # actions/github-script + @actions/tool-cache, which fails in this repo
-        # with ERR_PACKAGE_PATH_NOT_EXPORTED (the runner resolves the repo's own
-        # node_modules/@actions/tool-cache, which has no "exports" main). The image
-        # is version-pinned and needs no Node resolution.
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo rhysd/actionlint:1.7.12 \
             .github/workflows/ci-cd-backend.yml .github/workflows/ci-cd-mobile.yml
@@ -165,20 +134,10 @@ jobs:
             echo "::warning::DB_SSL_REJECT_UNAUTHORIZED=false found in env files — verify this is intentional (local self-signed database only). In prod this disables TLS cert verification (MITM-susceptible)."
           fi
 
-      # W3-O2: run the scripts-esm harness (ops-infra-ci-gates etc.) in CI. The
-      # `test:scripts` script wraps `jest --selectProjects scripts-esm --runInBand`
-      # (package.json). cwd = museum-backend (job default — DO NOT override): the
-      # harness resolves repo-root files via resolve(process.cwd(), '..'), which
-      # requires cwd === <repo>/museum-backend. NO continue-on-error (real gate).
       - name: Run scripts harness (test:scripts)
         run: pnpm run test:scripts
 
-      # NOTE: test:coverage moved to dedicated sharded job + coverage-merge
-      # below (2026-05-15) — 4-shard matrix divides wall-clock by ~4x while
-      # keeping the same threshold gate (88/74/86/89). The merge step
-      # validates the threshold against the union of all shards.
 
-  # ─── 1b. Test coverage — sharded matrix (4 shards, parallel) ───────────
   test-coverage:
     needs: [changes, quality]
     if: |
@@ -187,13 +146,6 @@ jobs:
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Redis service required — unit-integration tests boot BullMQ at module
-    # load time via composition root imports (audit-cron, chat-purge-cron,
-    # museum-enrichment-queue). Without redis, BullMQ retries `ECONNREFUSED
-    # 127.0.0.1:6379` in the background ; the old monolithic test:coverage
-    # tolerated the noise + exit 0, but Jest's --shard mode propagates the
-    # unhandled rejection to process exit 1 (verified 2026-05-15 run 25910999091).
-    # CLAUDE.md § Pièges connus documents this dependency.
     services:
       redis:
         image: redis:7-alpine@sha256:c5d34a98396a4775e223c74e929162c35c5a2182901ba26b50ade939941ce14b
@@ -226,11 +178,6 @@ jobs:
 
       - name: Tests with coverage (shard ${{ matrix.shard }}/4)
         env:
-          # Tell jest.config.ts to skip the per-run coverageThreshold check —
-          # each shard only exercises ~1/4 of tests so its aggregate is ~25%
-          # of full coverage and would always fail the global 88/74/86/89 gate.
-          # The downstream `coverage-merge` job validates the same thresholds
-          # against the union of all 4 shards via `nyc check-coverage`.
           SHARDED_COVERAGE: '1'
         run: |
           pnpm exec jest --watchman=false --runInBand \
@@ -247,7 +194,6 @@ jobs:
           path: museum-backend/coverage-shard-${{ matrix.shard }}/coverage-final.json
           retention-days: 7
 
-  # ─── 1c. Coverage merge + threshold gate ───────────────────────────────
   coverage-merge:
     needs: [changes, test-coverage]
     if: |
@@ -282,15 +228,10 @@ jobs:
           ls -la .nyc_output
 
       - name: Merge coverage + emit summary
-        # `nyc report` auto-merges all JSON files in .nyc_output into a single
-        # report. `json-summary` emits coverage/coverage-summary.json which the
-        # threshold-check step below reads.
         run: |
           npx --yes nyc@15 report --reporter=json-summary --reporter=text-summary --temp-dir=.nyc_output --report-dir=coverage
 
       - name: Validate threshold (BE — Phase 8 / Phase 11 Sprint 11.2)
-        # Thresholds MUST match museum-backend/jest.config.ts:117-120.
-        # Update both if you tune coverage policy.
         run: |
           npx --yes nyc@15 check-coverage \
             --statements 88 --branches 74 --functions 86 --lines 89 \
@@ -304,18 +245,10 @@ jobs:
           path: museum-backend/coverage/
           retention-days: 30
 
-  # ─── 2. Integration tests (real PG via Docker testcontainer) ─────────
   integration:
     needs: [quality, coverage-merge]
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    # Redis is required because BullMQ queue adapters (museum-enrichment,
-    # chat-purge-cron, audit-cron) connect at composition-root load time;
-    # without it, `tests/integration/museum/bullmq-enrichment-scheduler.integration.test.ts`
-    # fails with `ECONNREFUSED ::1:6379` and trips the whole job. Mirror of
-    # the `quality` job services block — kept identical on purpose so any
-    # future quality-level service tweak applies to integration too.
-    # CLAUDE.md § Pièges connus documents this dependency.
     services:
       redis:
         image: redis:7-alpine@sha256:c5d34a98396a4775e223c74e929162c35c5a2182901ba26b50ade939941ce14b
@@ -346,7 +279,6 @@ jobs:
         env:
           RUN_INTEGRATION: 'true'
 
-  # ─── 4. E2E tests (PR + nightly only) ────────────────────────────────
   e2e:
     needs: [quality, coverage-merge]
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
@@ -373,33 +305,15 @@ jobs:
       - name: Docker availability
         run: docker version
 
-      # `--coverage=false`: `jest.config.ts` pins `collectCoverage: true`
-      # plus global thresholds (87/77/81/87) for the unit job. The e2e suite
-      # alone exercises ~50% of the codebase, so leaving coverage on makes
-      # the job fail with a threshold error AFTER every test passes — coverage
-      # is already enforced in the `quality` job above; we just need a
-      # green/red signal here.
       - name: E2E Postgres (Testcontainers)
         run: RUN_E2E=true pnpm exec jest --watchman=false --runInBand --coverage=false --testPathPattern='tests/e2e/'
 
-  # ─── 5. AI integration tests (PR when chat/guardrail changes, + dispatch) ──
-  # I-OPS8 (R9): was dispatch-only theatre (never ran on PR). Now runs on PR
-  # when chat/guardrail paths change (paths-filter `ai`, spec Q4 (ii)) to catch
-  # the regressions this job exists for while bounding OpenAI token cost.
   ai-tests:
     needs: [changes, quality, coverage-merge]
     if: |
       needs.changes.outputs.ai == 'true' ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # 10 tests/ai/*.ai.test.ts suites run serially (--runInBand), each hitting the
-    # live OpenAI provider (~20-90s/suite). The old 5-min ceiling cancelled a
-    # *progressing* run mid-suite (PR #310: geo-matrix + text-generation passed,
-    # then cancelled) — and continue-on-error masks a step *failure*, NOT a timeout
-    # cancellation, so the advisory job went red and blocked merge. Widen to let it
-    # complete; 25min matches the other live-provider backend jobs. (Deeper fix
-    # tracked: ai-tests is advisory-by-design and should not sit in the required
-    # check list.)
     timeout-minutes: 25
     defaults:
       run:
@@ -408,10 +322,6 @@ jobs:
       RUN_AI_TESTS: 'true'
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       LLM_MODEL: gpt-4o-mini
-      # Make the live V2 suite REQUIRED (hard-fail, reported — not a silent skip)
-      # now that this job provides a real sidecar. The test URL resolver
-      # (tests/ai/setup/ai-test-helpers.ts) honours this var FIRST, and
-      # sidecarIsRequired() treats its presence as "a sidecar was promised".
       GUARDRAIL_V2_TEST_SIDECAR_URL: http://127.0.0.1:8081
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -428,26 +338,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # workflow_dispatch-only — they were invisible before. They are ADVISORY
-      # (continue-on-error), NOT a hard merge gate, because they hit the live OpenAI
-      # provider and assert exact facts in free-form output (e.g. /leonardo|da vinci/
-      # for "who painted the Mona Lisa"). Musaium is a proactive companion: the model
-      # legitimately answers some turns by offering reading angles instead of a bare
-      # fact, so these assertions are non-deterministic by design. Like the promptfoo
-      # gate (95 % pass-rate tolerance), live-LLM checks must absorb variance; a
-      # blocking gate needs the assertions de-flaked / a pass-rate threshold first
-      # (tracked follow-up). The step result stays visible in the PR checks.
       - name: AI Integration Tests
         continue-on-error: true
         run: pnpm run test:ai
 
-  # ─── 5.4. Migration schema-drift gate (I-OPS8 R11) ────────────────────
-  # Applies ALL migrations to a clean DB, then attempts `migration:generate`.
-  # If TypeORM would emit a new migration, an entity changed without a matching
-  # migration (schema drift) — the gate FAILS. Modelled on the MIGRATION
-  # GOVERNANCE rule that previously was prescribed but never enforced.
-  # CLAUDE.md gotcha: the clean DB MUST use the pgvector image, NOT postgres:16
-  # — the AddArtworkEmbeddings `halfvec(768)` DDL reverts on plain postgres:16.
   migration-drift:
     needs: [changes, quality]
     if: |
@@ -460,8 +354,6 @@ jobs:
         working-directory: museum-backend
     services:
       postgres:
-        # Pinned by the multi-arch INDEX digest (must match deploy/docker-compose.prod.yml
-        # so the clean-DB drift check tests the exact image prod runs). :pg16 tag kept for readability.
         image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
         env:
           POSTGRES_USER: museum_dev
@@ -493,41 +385,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # The real, achievable gate: every committed migration applies cleanly,
-      # in order, on a pristine pgvector/pgvector:pg16 database. This is what
-      # catches a broken migration, a missing pgvector ≥0.7.0 / halfvec, a
-      # SAVEPOINT-in-non-txn footgun, or an ordering bug — exactly the I-OPS3/
-      # I-OPS6 failure classes. `migration:run` exits non-zero on any failure,
-      # which fails this job (no continue-on-error).
       - name: Apply all migrations to a clean pgvector DB
         run: pnpm run migration:run
 
-      # NOTE — a "generate-a-drift-migration must be empty" gate is deliberately
-      # NOT used: it is structurally infeasible on this schema. On a pristine DB
-      # the TypeORM schema-diff generator still emits ~40 lines of irreducible diff
-      # it cannot round-trip — halfvec(768) columns (read back as `text`), jsonb
-      # `'[]'::jsonb` defaults, partial/expression indexes (e.g. `WHERE deleted_at
-      # IS NOT NULL`), CHECK constraints, and the deliberate relation-less
-      # `museum_id` FKs (flat-int columns with SQL FKs, no @ManyToOne — see
-      # artwork_embeddings/.._knowledge). None are real drift; the generator just
-      # can't model them, so that gate would never pass (verified 2026-05-25). The
-      # MIGRATION_GOVERNANCE "regenerate → empty" rule is aspirational for this
-      # codebase (tracked as doc tech-debt); the clean-apply gate above is the
-      # enforceable part.
 
-  # ─── 5.5. Halluc regression (C4.3 / T4.4) ─────────────────────────────
-  # PR + nightly mock mode: corpus syntax + assertion harness validated against
-  # the deterministic `echo` provider. No OPENAI tokens consumed; catches schema
-  # drift in the corpus partials or `halluc-assertions.ts` regressions.
-  #
-  # Monday 04:00 UTC real mode: same corpus against the real OpenAI provider
-  # (`OPENAI_API_KEY` secret). Computes the weighted score and diffs against
-  # `team-promptfoo/halluc-baseline.json`. CI FAILs when drift exceeds 5
-  # points (NFR3 / spec G3 gate).
   halluc-eval:
     name: halluc regression (C4.3)
     needs: [changes, quality, coverage-merge]
-    # Run when backend code changes (PR / push) or on the dedicated cron slots.
     if: |
       needs.changes.outputs.backend == 'true' ||
       github.event_name == 'schedule' ||
@@ -538,12 +402,9 @@ jobs:
       run:
         working-directory: museum-backend
     env:
-      # Branch on the cron slot: only the Monday 04:00 UTC slot consumes real OpenAI tokens.
-      # PR / push / 03:17 nightly stays mock-mode so we never bill the org for routine CI.
       HALLUC_MODE: ${{ github.event.schedule == '0 4 * * 1' && 'real' || 'mock' }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       PROMPTFOO_DISABLE_TELEMETRY: '1'
-      # Baseline drift gate (spec G3 / NFR3). 5 points absolute drift fails CI.
       HALLUC_DRIFT_TOLERANCE_PTS: '5'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -561,32 +422,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify corpus partials merge cleanly (T4.2d)
-        # Regenerates halluc-corpus.json from partials; FAILs on duplicate IDs,
-        # category-count drift, or > 30 % llm-rubric assertions (cost cap).
         run: node security/promptfoo/scripts/merge-halluc-corpus.mjs
 
       - name: Run halluc-assertions unit tests (T4.3)
-        # Scoped Jest run — verifies quoteInFacts + citeRealUrl + extractSources
-        # before promptfoo touches the corpus. Invoked via `pnpm exec jest` so
-        # the `--` separator that `pnpm test --` injects (which makes jest treat
-        # the remaining flags as positional file-path patterns and emits
-        # "No tests found, exiting with code 1") is avoided.
         run: pnpm exec jest --watchman=false --runInBand --selectProjects unit-integration --testPathPattern=halluc-assertions --coverage=false --silent
 
       - name: Install promptfoo
         run: npm install -g promptfoo@latest
 
       - name: Run promptfoo halluc eval (${{ env.HALLUC_MODE }} mode)
-        # promptfoo exits 100 when any test case fails. In mock mode that is the
-        # *expected* steady-state (the deterministic echo provider cannot satisfy
-        # semantic `icontains-any` assertions designed for a real LLM answer), so
-        # the eval step's exit code is NOT the gate. The next step ("Compute
-        # weighted score") parses `reports/halluc-eval.json` and applies the real
-        # gates per mode. A hard crash (missing report) is still caught there.
         continue-on-error: true
         run: |
           mkdir -p reports
-          # Mock mode = deterministic echo provider (no OPENAI). Real mode = openai provider.
           if [ "$HALLUC_MODE" = "real" ]; then
             if [ -z "${OPENAI_API_KEY:-}" ]; then
               echo "ERROR: real mode requested but OPENAI_API_KEY secret missing"; exit 1
@@ -736,13 +583,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── 6. Deploy to production (push to main) ──────────────────────────
   deploy-prod:
-    # integration added 2026-05-31 (audit 360 §dim.8 / §7 P0#3): prod deploy now
-    # gates on the real-PG integration suite, not just coverage-merge. e2e is
-    # intentionally NOT a need here — it is skipped on push-to-main (if: pull_request
-    # || schedule), so needs:[e2e] would skip deploy-prod entirely. integration runs
-    # on push whenever coverage-merge runs, so the gating stays consistent.
     needs: [quality, coverage-merge, integration]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -785,8 +626,6 @@ jobs:
         id: push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
-          # Context = repo root so the `file:../tools/eslint-plugin-musaium-test-discipline`
-          # workspace dep in museum-backend/package.json resolves inside the build (E4 fix).
           context: .
           file: ./museum-backend/deploy/Dockerfile.prod
           push: true
@@ -854,8 +693,6 @@ jobs:
           key: ${{ secrets.SERVER_KEY }}
           source: 'museum-backend/deploy/docker-compose.prod.yml'
           target: /tmp/musaium-deploy-staging
-          # strip_components=2 drops `museum-backend/deploy/` so the file lands
-          # at /tmp/musaium-deploy-staging/docker-compose.prod.yml.
           strip_components: 2
 
       - name: Install compose on VPS
@@ -867,12 +704,6 @@ jobs:
           script: |
             set -e
 
-            # 1. Validate the new compose BEFORE touching the live one —
-            #    syntax error or missing env var → abort, leave prod
-            #    running on the existing compose. A literal `$` in a .env value
-            #    makes compose warn "variable is not set" on stderr, exit 0 and
-            #    hand the service a truncated secret: that warning fails the
-            #    deploy, reported as a count only (never the secret fragment).
             cd /srv/museum
             sudo cp /tmp/musaium-deploy-staging/docker-compose.prod.yml \
               /tmp/musaium-deploy-staging/docker-compose.yml.candidate
@@ -888,7 +719,6 @@ jobs:
               exit 1
             fi
 
-            # 2. Backup current compose, install candidate as the live one.
             BACKUP_TS="$(date -u +%Y%m%dT%H%M%SZ)"
             if [ -f /srv/museum/docker-compose.yml ]; then
               sudo cp /srv/museum/docker-compose.yml \
@@ -917,15 +747,6 @@ jobs:
             STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
-            # Capture the rollback TARGET = the IMAGE_TAG currently deployed.
-            # The prod compose pins `image: ...museum-backend:${IMAGE_TAG}` from
-            # /srv/museum/.env (SHA-pinned, NEVER :latest — see the 2026-05-13
-            # crash-loop note in the deploy step). So the rollback target is the
-            # specific SHA in .env right now, captured BEFORE the deploy step
-            # overwrites it. The old :latest→:previous retag scheme never worked
-            # under SHA-pinning (:latest is never present locally), which is why
-            # auto-rollback FATAL-ed on 2026-06-05 — rollback.sh now restores this
-            # tag into .env instead. Defensive: must not trip `set -e`.
             PREV_TAG="$(sudo grep -E '^IMAGE_TAG=' /srv/museum/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '[:space:]' || true)"
             if [ -n "${PREV_TAG}" ]; then
               echo "${PREV_TAG}" > "${STATE_DIR}/previous-image-tag.txt"
@@ -935,8 +756,6 @@ jobs:
               echo "[pre-deploy] WARN — no IMAGE_TAG in /srv/museum/.env; rollback target unavailable (first deploy?)"
             fi
 
-            # Capture pre-run migration count for the rollback delta.
-            # Use the currently-running container (old code) — safe SELECT only.
             PRE_COUNT="$(docker compose exec -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
             echo "${PRE_COUNT}" > "${STATE_DIR}/pre-count.txt"
             echo "[pre-deploy] pre-migration count: ${PRE_COUNT}"
@@ -959,22 +778,9 @@ jobs:
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin || true
 
-            # Export IMAGE_TAG so docker-compose.yml can interpolate ${IMAGE_TAG}.
             export IMAGE_TAG
             echo "[deploy] using IMAGE_TAG=${IMAGE_TAG}"
 
-            # Persist IMAGE_TAG to /srv/museum/.env so out-of-band container
-            # restarts (daemon reload, OOM kill, reboot, watchtower, manual
-            # `docker compose up`) reuse the right tag instead of falling back
-            # to `:latest`. Root cause of the 2026-05-13 16:55 prod crash-loop:
-            # the `:latest` local image was stuck at the 2026-05-09 pre-OTel-
-            # hotfix build because every CI pull resolved to `:<sha>`, never
-            # `:latest`, so the daemon's local `:latest` never refreshed — and
-            # any restart without IMAGE_TAG set rolled back 4 days of code.
-            # /srv/museum/.env is root-owned (same chmod as the rollback.sh
-            # mv'd in the prior workflow step) — must go through sudo. Backups
-            # land in ~/.museum-env-backups/ (user-owned) to avoid the
-            # docker-compose.yml.bak.* accumulation pattern in /srv/museum/.
             ENV_FILE=/srv/museum/.env
             BACKUP_DIR="${HOME}/.museum-env-backups"
             mkdir -p "${BACKUP_DIR}"
@@ -988,24 +794,11 @@ jobs:
             STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
-            # 1. Pull the new image
             docker compose pull backend
 
-            # 2. Run migrations in an ephemeral container BEFORE restarting
-            #    Uses the same env as the running service but in a throwaway container.
-            #    Migrations must run against the old container's schema BEFORE
-            #    the new container boots (zero-downtime pattern).
-            #    I-OPS3: this is the SINGLE migration path per deploy — the
-            #    Dockerfile boot CMD no longer migrates. We invoke the guarded
-            #    run-migrations.js (NOT the raw typeorm CLI) so the pgvector
-            #    preflight guard (run-migrations.ts:17) runs before any DDL, and
-            #    a migration failure exits non-zero → `set -e` aborts BEFORE the
-            #    `up -d` below (fail-fast, no opaque restart loop).
             docker compose run --rm --no-deps -T backend \
               node dist/src/data/db/run-migrations.js
 
-            # 2b. Compute how many migrations were actually applied — this is the
-            #     exact number of migration:revert calls the rollback flow needs.
             POST_COUNT="$(docker compose run --rm --no-deps -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
             PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt" 2>/dev/null || echo 0)"
             APPLIED="$(( POST_COUNT - PRE_COUNT ))"
@@ -1013,14 +806,8 @@ jobs:
             echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
             echo "[deploy] migrations applied this deploy: ${APPLIED}"
 
-            # 3. Restart with 30s grace period for in-flight requests to drain.
-            # `--no-deps` isole le restart à backend seul. Sans ça, mise à jour
-            # de .env (BACKEND_IMAGE_TAG patch) cascade vers museum-web via
-            # depends_on → race "container name already in use" (vu côté web
-            # workflow ci-cd-web.yml run 25987976752 — même fix appliqué là-bas).
             docker compose up -d --no-deps --remove-orphans --timeout 30 backend
 
-            # 4. Wait for the new container to pass its healthcheck
             echo "Waiting for backend healthcheck..."
             TRIES=0
             MAX_TRIES=20
@@ -1035,36 +822,19 @@ jobs:
             done
             echo "Backend is healthy."
 
-            # 5. Seed museum data (idempotent — ON CONFLICT DO NOTHING)
-            #    Runs AFTER the new container is up + healthy so the seed
-            #    script sees the new code and a ready DB connection.
             docker compose exec -T backend node dist/scripts/seed-museums.js
 
-            # 6. Seed knowledge extraction data (idempotent — ON CONFLICT DO NOTHING)
             docker compose exec -T backend node dist/scripts/seed-knowledge.js
 
-            # 7. (smoke account) — NO permanent seed here anymore. The smoke
-            #    account is now EPHEMERAL: a dedicated `create` step (below)
-            #    inserts a fresh account with a per-run random password right
-            #    before the smoke test, and a `cleanup` step (if: always())
-            #    hard-deletes it right after, so no connectable account survives
-            #    a deploy. Cycle C, run 2026-05-26-auth-mfa-rgpd-zerodefect.
 
       - name: Validate prod smoke secrets
         env:
           PROD_SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
           PROD_SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
         run: |
-          # The smoke PASSWORD is no longer a secret: it is generated per-run by
-          # the ephemeral `create` step below. Only EMAIL + base URL stay secrets.
           test -n "$PROD_SMOKE_API_BASE_URL"
           test -n "$PROD_SMOKE_TEST_EMAIL"
 
-      # Ephemeral smoke account — STEP 1/3 (create). Inserts a fresh account with
-      # a per-run RANDOM password on the VPS (inside the live backend container),
-      # right before the smoke test. The script prints the password on a single
-      # `SMOKE_TEST_PASSWORD=<value>` stdout line (ops logs go to stderr), which
-      # `capture_stdout` hands back as `steps.smoke_create_prod.outputs.stdout`.
       - name: Create ephemeral smoke account (prod)
         id: smoke_create_prod
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
@@ -1083,9 +853,6 @@ jobs:
               -e SMOKE_TEST_EMAIL="$SMOKE_TEST_EMAIL" \
               backend node dist/scripts/seed-smoke-account.js create
 
-      # STEP 2/3 — mask + expose the generated password as a step output. The
-      # value is `::add-mask::`ed BEFORE anything else uses it, so it never
-      # appears in clear in the logs; it is then consumed only by the smoke step.
       - name: Extract + mask smoke password (prod)
         id: smoke_pwd_prod
         env:
@@ -1106,22 +873,12 @@ jobs:
           SMOKE_API_BASE_URL: ${{ secrets.PROD_SMOKE_API_BASE_URL }}
           SMOKE_TEST_EMAIL: ${{ secrets.PROD_SMOKE_TEST_EMAIL }}
           SMOKE_TEST_PASSWORD: ${{ steps.smoke_pwd_prod.outputs.password }}
-          # A failed `create` MUST fail the smoke loudly (login 401 → rollback),
-          # NOT let smoke-api.cjs auto-register a resident account (D5).
           SMOKE_ALLOW_REGISTER: 'false'
           SMOKE_TIMEOUT_MS: '20000'
           SMOKE_HEALTH_RETRIES: '24'
           SMOKE_HEALTH_RETRY_DELAY_MS: '5000'
         run: node ./scripts/smoke-api.cjs
 
-      # OBSERVABILITY (2026-06-14) — on smoke failure, dump the backend container
-      # logs BEFORE the auto-rollback swaps the image away. The error middleware
-      # already logs the real exception (`request_failed` + stack) and calls
-      # captureExceptionWithContext, but the rollback kills the container before
-      # Sentry's async flush completes, so all the smoke sees is the masked
-      # INTERNAL_ERROR. This surfaces the real server-side cause of a failed
-      # smoke (e.g. the /chat/compare 500) directly in the CI log. Permanent —
-      # every future smoke failure is now diagnosable without VPS access.
       - name: Capture backend logs on smoke failure (prod)
         if: ${{ failure() && steps.smoke.outcome == 'failure' }}
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
@@ -1139,8 +896,6 @@ jobs:
               | tail -80 || true
             echo "===== end backend logs ====="
 
-      # STEP 3/3 — cleanup runs UNCONDITIONALLY (if: always()) so NO smoke
-      # account survives, even when create / smoke fails midway.
       - name: Cleanup ephemeral smoke account (prod)
         if: ${{ always() }}
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5

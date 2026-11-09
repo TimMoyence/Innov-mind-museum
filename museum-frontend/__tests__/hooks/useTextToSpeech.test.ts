@@ -3,8 +3,6 @@ import { Platform } from 'react-native';
 
 import { useTextToSpeech } from '@/features/chat/application/useTextToSpeech';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockSynthesizeSpeech = jest.fn<Promise<ArrayBuffer | null>, [string]>();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -34,15 +32,10 @@ jest.mock('expo-audio', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Creates a minimal ArrayBuffer to simulate audio data. */
 const makeFakeAudioBuffer = (): ArrayBuffer => {
   const encoder = new TextEncoder();
   return encoder.encode('fake-mp3-data').buffer;
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useTextToSpeech', () => {
   const originalPlatformOS = Platform.OS;
@@ -70,10 +63,6 @@ describe('useTextToSpeech', () => {
     expect(result.current.failedMessageId).toBeNull();
   });
 
-  // P0 #7 — UIBackgroundModes=audio capability is only legitimate if the JS
-  // runtime keeps the AVAudioSession alive when the device backgrounds. If a
-  // future refactor drops the mount effect or omits the flag, App Store would
-  // reject (Apple Forum #95216). This assertion locks the contract.
   it('configures expo-audio for background playback on mount (native)', async () => {
     renderHook(() => useTextToSpeech());
 
@@ -116,14 +105,12 @@ describe('useTextToSpeech', () => {
 
     const { result } = renderHook(() => useTextToSpeech());
 
-    // Start playback
     await act(async () => {
       await result.current.togglePlayback('msg-1');
     });
 
     expect(result.current.isPlaying).toBe(true);
 
-    // Toggle same message — should stop
     await act(async () => {
       await result.current.togglePlayback('msg-1');
     });
@@ -137,14 +124,12 @@ describe('useTextToSpeech', () => {
 
     const { result } = renderHook(() => useTextToSpeech());
 
-    // Start first message
     await act(async () => {
       await result.current.togglePlayback('msg-1');
     });
 
     expect(result.current.activeMessageId).toBe('msg-1');
 
-    // Start different message — should remove old player, play new
     await act(async () => {
       await result.current.togglePlayback('msg-2');
     });
@@ -234,7 +219,6 @@ describe('useTextToSpeech', () => {
       await result.current.togglePlayback('msg-1');
     });
 
-    // Simulate playback finishing
     act(() => {
       statusCallback?.({ didJustFinish: true });
     });
@@ -255,7 +239,6 @@ describe('useTextToSpeech', () => {
       await result.current.togglePlayback('msg-1');
     });
 
-    // Unmount should not throw
     unmount();
 
     expect(mockPlayerRemove).toHaveBeenCalled();

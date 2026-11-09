@@ -1,17 +1,3 @@
-/**
- * Mutation-coverage tests for ListAllReviewsUseCase.
- *
- * Targets 5 Stryker survivors in `src/modules/review/useCase/admin/listAllReviews.useCase.ts`:
- *  - L28 ConditionalExpression `input.limit < 1` → `false`
- *  - L28 EqualityOperator `input.limit < 1` → `<= 1`
- *  - L28 ConditionalExpression `input.limit > 100` → `false`
- *  - L28 EqualityOperator `input.limit > 100` → `>= 100`
- *  - L33 StringLiteral `', '` → `""` (REVIEW_STATUSES.join separator)
- *
- * Strategy: boundary tests for limit=1, limit=100, limit=0, limit=101, and an
- * exact string assertion on the join-separator in the bad-status error message.
- */
-
 import { ListAllReviewsUseCase } from '@modules/review/useCase/admin/listAllReviews.useCase';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';

@@ -3,14 +3,11 @@ import { env } from '@src/config/env';
 
 import type { PostAudioMessageInput } from '@modules/chat/domain/chat.types';
 
-/** @throws {AppError} 400 on size / mime / format violation. */
 export function validateAudioInput(audio: PostAudioMessageInput['audio']): void {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: audio fields may be undefined from external API input
-  if (!audio?.base64?.trim()) {
+  if (!audio.base64.trim()) {
     throw invalidInput('Audio payload is required');
   }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: mimeType may be undefined from external API input
-  if (!audio.mimeType?.trim()) {
+  if (!audio.mimeType.trim()) {
     throw invalidInput('Audio mime type is required');
   }
   if (

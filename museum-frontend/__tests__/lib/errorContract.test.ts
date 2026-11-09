@@ -1,9 +1,5 @@
 type Dict = Record<string, unknown>;
 
-// Bundles are required (not imported) to avoid babel ESM-interop quirks on
-// JSON modules. Names are suffixed with `Bundle` to avoid shadowing Jest's
-// `it` global when the Italian locale loads.
-
 const arBundle = require('@/shared/locales/ar/translation.json') as Dict;
 const deBundle = require('@/shared/locales/de/translation.json') as Dict;
 const enBundle = require('@/shared/locales/en/translation.json') as Dict;
@@ -34,7 +30,6 @@ const LOCALES: Record<string, Dict> = {
 };
 
 const REQUIRED_KEYS = [
-  // Base error kinds
   'error.network',
   'error.timeout',
   'error.unauthorized',
@@ -44,7 +39,6 @@ const REQUIRED_KEYS = [
   'error.rateLimited',
   'error.dailyLimitReached',
   'error.unknown',
-  // Social auth
   'error.socialAuth.generic',
   'error.socialAuth.google_cancelled',
   'error.socialAuth.google_no_id_token',
@@ -53,17 +47,13 @@ const REQUIRED_KEYS = [
   'error.socialAuth.google_developer_error',
   'error.socialAuth.apple_no_identity_token',
   'error.socialAuth.ios_unavailable',
-  // Chat / streaming
   'error.chat.contract_invalid',
   'error.chat.audio_missing',
   'error.chat.streaming_unavailable',
-  // Location
   'error.location.generic',
   'error.location.timeout',
   'error.location.permission_denied',
-  // Offline pack
   'error.offlinePack.download_failed',
-  // Review
   'error.review.generic',
   'error.review.load_failed',
   'error.review.load_more_failed',

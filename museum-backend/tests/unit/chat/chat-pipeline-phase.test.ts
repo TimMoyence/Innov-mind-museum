@@ -1,26 +1,3 @@
-/**
- * Red tests for A5 — Status typés (5 strings contextuels).
- *
- * These tests assert the BE contract documented in
- * `docs/chat-ux-refonte/specs/A5.md` §1.1 (R1-R9) and §4 (AC1-AC4) :
- *
- *   1. A `ChatPipelinePhase` type is exported from the chat domain module
- *      with EXACTLY the 5 values
- *      `'analyzing-image' | 'searching-collection' | 'composing' | 'synthesizing-voice' | 'done'`.
- *   2. `ChatAssistantMetadata.phase?: ChatPipelinePhase` is part of the
- *      domain shape and is optional (NFR8 backward-compat).
- *   3. `ChatMessageService.postMessage(...)` returns
- *      `result.metadata.phase === 'done'` on the success path.
- *
- * At baseline (A5 not yet implemented) this file MUST fail TS compile
- * because `ChatPipelinePhase` does not exist yet in `chat.types.ts`
- * (verified : `grep -n "ChatPipelinePhase" museum-backend/src/modules/chat/domain/chat.types.ts` → 0 result).
- *
- * Green-code-agent : when adding the type, KEEP the order in
- * `EXPECTED_PHASES` below — drift between BE and FE phase order will
- * break the FE drift catcher (`__tests__/components/StatusIndicator.test.tsx`).
- */
-
 import { ChatMessageService } from '@modules/chat/useCase/message/chat-message.service';
 import type { ChatMessageServiceDeps } from '@modules/chat/useCase/message/chat-message.service';
 import type {
@@ -34,9 +11,6 @@ import type {
   OrchestratorOutput,
 } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { ImageStorage } from '@modules/chat/domain/ports/image-storage.port';
-// RED ASSERTION 1 : these imports must resolve. At baseline `ChatPipelinePhase`
-// does not exist in `chat.types.ts` so TS2305 ("Module has no exported member
-// 'ChatPipelinePhase'") fires at compile time.
 import type { ChatAssistantMetadata, ChatPipelinePhase } from '@modules/chat/domain/chat.types';
 
 import { makeSession, makeMessage, makeSessionUser } from '../../helpers/chat/message.fixtures';
@@ -47,7 +21,6 @@ import { makeArtOutput } from '../../helpers/chat/orchestratorOutput.fixtures';
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const USER_ID = 42;
 
-/** Canonical phase order — see spec A5 §1.1 R7. FE imports the same union shape. */
 const EXPECTED_PHASES: readonly ChatPipelinePhase[] = [
   'analyzing-image',
   'searching-collection',
@@ -55,7 +28,6 @@ const EXPECTED_PHASES: readonly ChatPipelinePhase[] = [
   'synthesizing-voice',
   'done',
 ];
-
 
 const makeRepo = (
   session: ChatSession | null = makeSession({
@@ -126,8 +98,6 @@ describe('A5 — Chat pipeline phase exposure', () => {
 
   describe('type contract (compile-time)', () => {
     it('ChatPipelinePhase contains exactly the 5 canonical phases', () => {
-      // Exhaustiveness check : if a value is added/removed from the union,
-      // TS reports an unused-key / missing-key error on this map.
       const exhaustive: Record<ChatPipelinePhase, true> = {
         'analyzing-image': true,
         'searching-collection': true,
@@ -139,7 +109,6 @@ describe('A5 — Chat pipeline phase exposure', () => {
     });
 
     it('ChatAssistantMetadata.phase is optional ChatPipelinePhase (NFR8 backward-compat)', () => {
-      // Both shapes must typecheck — empty (legacy) AND with phase set.
       const legacy: ChatAssistantMetadata = {};
       const fresh: ChatAssistantMetadata = { phase: 'done' };
       expect(legacy).toBeDefined();
@@ -158,9 +127,6 @@ describe('A5 — Chat pipeline phase exposure', () => {
         USER_ID,
       );
 
-      // RED ASSERTION : at baseline, `metadata.phase` is undefined (no field on
-      // ChatAssistantMetadata + no commit-side write in `message-commit.ts`).
-      // Test fails on this line.
       expect(result.metadata.phase).toBe('done');
     });
 
@@ -174,7 +140,6 @@ describe('A5 — Chat pipeline phase exposure', () => {
         USER_ID,
       );
 
-      // RED ASSERTION : at baseline, `metadata.phase` is undefined — fails.
       expect(result.metadata.phase).toBe('done');
     });
   });

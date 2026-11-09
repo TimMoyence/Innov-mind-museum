@@ -1,15 +1,3 @@
-/**
- * Tests for the global JS error handler installed at app boot.
- *
- * Regression cover for TestFlight 1.2.2 (87): when Metro's guarded module
- * loader hit a missing native module it called `ErrorUtils.reportFatalError`,
- * the default RN handler dispatched `isFatal=true` to `RCTExceptionsManager`,
- * and `RCTFatal` `@throw`-ed an NSException → SIGABRT. The wrapper installed
- * here must (a) capture to Sentry, (b) downgrade fatal → non-fatal in
- * release so RN does not abort, (c) chain back to the original handler so
- * the dev red-box still surfaces with `__DEV__=true`.
- */
-
 const mockCaptureException = jest.fn();
 const mockAddBreadcrumb = jest.fn();
 
@@ -59,8 +47,6 @@ const withErrorUtils = (errorUtils: RNErrorUtils | undefined, body: () => void):
 describe('installGlobalErrorHandler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Force production-bundle codepath by default. Each test overrides
-    // __DEV__ explicitly when it asserts dev behaviour.
     (globalThis as unknown as { __DEV__: boolean }).__DEV__ = false;
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
@@ -164,7 +150,6 @@ describe('installGlobalErrorHandler', () => {
       expect(() => {
         wrapped(new Error('boom'), true);
       }).not.toThrow();
-      // Original handler still ran even though Sentry blew up.
       expect(original).toHaveBeenCalledTimes(1);
     });
   });
@@ -192,11 +177,6 @@ describe('installGlobalErrorHandler', () => {
 
     withErrorUtils(errorUtils, () => {
       installGlobalErrorHandler();
-      // A subsequent install must not double-wrap (otherwise each call would
-      // multiply Sentry events). The wrapper reads the current handler
-      // pre-install — so the SECOND install chains to the FIRST wrapper.
-      // We only assert the original is reached at least once and that the
-      // captured event count stays linear.
       installGlobalErrorHandler();
       const wrapped = errorUtils.getGlobalHandler();
 

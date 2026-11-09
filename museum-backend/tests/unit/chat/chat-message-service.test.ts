@@ -22,11 +22,8 @@ import {
   makeMockUserMemory,
 } from '../../helpers/chat/service-mocks.fixtures';
 
-// ── Factories ──────────────────────────────────────────────────────────
-
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const USER_ID = 42;
-
 
 const makeRepo = (
   session: ChatSession | null = makeSession({
@@ -94,12 +91,8 @@ const buildService = (
   return { service, repo, orchestrator, imageStorage, cache };
 };
 
-// ── Tests ──────────────────────────────────────────────────────────────
-
 describe('ChatMessageService', () => {
   beforeEach(() => jest.clearAllMocks());
-
-  // ── postMessage (non-streaming) ───────────────────────────────────
 
   describe('postMessage', () => {
     it('validates session ownership and calls orchestrator with correct params', async () => {
@@ -177,7 +170,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // First persistMessage call = user message, second = assistant message
       expect(repo.persistMessage).toHaveBeenCalledTimes(2);
       expect(repo.persistMessage).toHaveBeenNthCalledWith(
         1,
@@ -234,8 +226,6 @@ describe('ChatMessageService', () => {
         expertiseSignals: 1,
         lastUpdated: new Date().toISOString(),
       };
-      // Session must be owned by USER_ID — SEC-19 (orphan adoption fix) rejects
-      // an authenticated request reaching a session with no/mismatched ownerId.
       const session = makeSession({
         museumMode: true,
         visitContext,
@@ -260,7 +250,6 @@ describe('ChatMessageService', () => {
     });
 
     it('uses context.museumMode override when provided in input', async () => {
-      // Session ownership required — see SEC-19 note above.
       const session = makeSession({
         museumMode: false,
         user: makeSessionUser(USER_ID),
@@ -294,37 +283,14 @@ describe('ChatMessageService', () => {
       expect(cache.delByPrefix).toHaveBeenCalledWith(`sessions:user:${String(USER_ID)}:`);
     });
 
-    // ── PR-A T1.12 + PR-B — kill-switch (R10) static regression guard ────
-    //
-    // Runtime exercise of `LLM_CACHE_ENABLED=false` requires either a top-
-    // level `jest.mock('@src/config/env', ...)` covering every env section
-    // touched by the service (heavy) or a process-level Docker compose smoke
-    // (out of unit-test scope). This guard asserts the bypass branch is
-    // physically wired so a future refactor that drops it trips this test.
-    // R10 end-to-end coverage lives in the manual smoke (see ADR-036
-    // §Status timeline, PR-B precondition: `LLM_CACHE_ENABLED=false` smoke
-    // verified locally).
     it('R10 — kill-switch bypass is structural (no cache adapter when env disables it)', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- static source read for regression guard, no module load
       const { readFileSync } = require('fs') as typeof import('fs');
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- ditto
       const { resolve } = require('path') as typeof import('path');
 
-      // Post-refactor (C.10 chat-module reunification): the kill-switch is no
-      // longer a runtime `!env.llm.cacheEnabled` branch inside the service —
-      // the composition root simply doesn't construct an `LlmCacheServiceImpl`
-      // when `deps.cache` is undefined (env disabled cache). The service then
-      // short-circuits via `if (!llmCache)` in `tryLlmCacheLookup`.
       const composition = readFileSync(
         resolve(__dirname, '../../../src/modules/chat/useCase/orchestration/chat.service.ts'),
         'utf8',
       );
-      // Skip when running under Stryker — instrumentation prepends
-      // `// @ts-nocheck` + `stryNS_…()` wrappers that break the regex-on-source
-      // technique used here. The structural guard is for the canonical
-      // (unmodified) tree; Stryker mutates the file under test which is the
-      // wrong target for this guard.
-      if (composition.startsWith('// @ts-nocheck')) return;
 
       expect(composition).toMatch(/llmCache:\s*deps\.cache\s*\?\s*new\s+LlmCacheServiceImpl/);
 
@@ -332,15 +298,12 @@ describe('ChatMessageService', () => {
         resolve(__dirname, '../../../src/modules/chat/useCase/message/chat-message.service.ts'),
         'utf8',
       );
-      // Both code paths (lookup + store) must guard on `!llmCache` so a
-      // missing adapter never silently bypasses the kill-switch contract.
       expect(service).toMatch(/tryLlmCacheLookup[\s\S]+?if\s*\(\s*!llmCache/);
       expect(service).toMatch(/tryLlmCacheStore[\s\S]+?if\s*\(\s*!llmCache/);
     });
 
     it('handles optimistic lock error as 409 conflict', async () => {
       const repo = makeRepo();
-      // First persistMessage (user) succeeds, second (assistant) throws
       repo.persistMessage
         .mockResolvedValueOnce(makeMessage({ role: 'user' as const }))
         .mockRejectedValueOnce(
@@ -368,10 +331,6 @@ describe('ChatMessageService', () => {
     });
 
     it('maps unknown orchestrator errors to 503 SERVICE_UNAVAILABLE', async () => {
-      // Banking-grade contract: a downstream LLM provider failure surfaces as
-      // 503 LLM_UNAVAILABLE so callers see a degraded-dependency state instead
-      // of a generic 500. Existing AppError instances are passed through
-      // verbatim — see `mapOrchestratorError` in chat-message.service.
       const orchestrator = makeOrchestrator();
       orchestrator.generate.mockRejectedValue(new Error('LLM exploded'));
       const { service } = buildService({ orchestrator });
@@ -385,10 +344,6 @@ describe('ChatMessageService', () => {
     });
 
     it('passes through AppError instances thrown by the orchestrator verbatim', async () => {
-      // mapOrchestratorError must NOT re-wrap real AppError instances
-      // (CircuitOpenError 503, NotFound 404 from a deeper guardrail, etc.) —
-      // doing so would erase the original code/statusCode and degrade the
-      // banking-grade error contract.
       const orchestrator = makeOrchestrator();
       const { AppError } =
         require('@shared/errors/app.error') as typeof import('@shared/errors/app.error');
@@ -406,9 +361,6 @@ describe('ChatMessageService', () => {
     });
 
     it('passes through duck-typed AppError-shaped errors verbatim', async () => {
-      // Cross-module AppError check: a thrown `Error` carrying numeric
-      // `statusCode` + string `code` (the post-resetModules e2e shape)
-      // must keep its existing fields rather than being rewrapped as 503.
       const orchestrator = makeOrchestrator();
       const customError = Object.assign(new Error('rate limit'), {
         statusCode: 429,
@@ -423,8 +375,6 @@ describe('ChatMessageService', () => {
     });
   });
 
-  // ── Input guardrail ───────────────────────────────────────────────
-
   describe('input guardrail', () => {
     it('blocks insults and returns refusal without calling orchestrator', async () => {
       const { service, orchestrator } = buildService();
@@ -438,7 +388,6 @@ describe('ChatMessageService', () => {
 
       expect(orchestrator.generate).not.toHaveBeenCalled();
       expect(result.message.role).toBe('assistant');
-      // Refusal should not contain orchestrator output
       expect(result.message.text).not.toContain('Monet');
     });
 
@@ -482,8 +431,6 @@ describe('ChatMessageService', () => {
 
       await service.postMessage(SESSION_ID, { text: 'You are a stupid moron' }, 'req-1', USER_ID);
 
-      // The attempted user message MUST still reach the database for audit/moderation —
-      // now delivered atomically alongside the refusal via persistBlockedExchange.
       expect(repo.persistBlockedExchange).toHaveBeenCalledWith(
         expect.objectContaining({
           userMessage: expect.objectContaining({
@@ -493,8 +440,6 @@ describe('ChatMessageService', () => {
           refusal: expect.objectContaining({ role: 'assistant' }),
         }),
       );
-      // Standalone persistMessage MUST NOT be used on the block path (previously an
-      // un-atomic second call persisted the refusal — regression guard).
       expect(repo.persistMessage).not.toHaveBeenCalled();
     });
 
@@ -503,7 +448,6 @@ describe('ChatMessageService', () => {
 
       await service.postMessage(SESSION_ID, { text: 'You are an idiot' }, 'req-1', USER_ID);
 
-      // Exactly one atomic call — both user attempt and refusal committed together.
       expect(repo.persistBlockedExchange).toHaveBeenCalledTimes(1);
       expect(repo.persistBlockedExchange).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -522,13 +466,10 @@ describe('ChatMessageService', () => {
         service.postMessage(SESSION_ID, { text: 'You are stupid' }, 'req-1', USER_ID),
       ).rejects.toThrow('simulated DB failure');
 
-      // Neither a standalone user persist nor a fallback write should have occurred.
       expect(repo.persistMessage).not.toHaveBeenCalled();
       expect(repo.persistBlockedExchange).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── Output guardrail ──────────────────────────────────────────────
 
   describe('output guardrail', () => {
     it('blocks unsafe LLM output and returns policy-cited refusal', async () => {
@@ -547,7 +488,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // Output should be replaced by guardrail refusal
       expect(result.message.text).not.toContain('stupid');
       expect(result.metadata.citations).toContain('policy:unsafe_output');
     });
@@ -565,8 +505,6 @@ describe('ChatMessageService', () => {
       expect(result.message.text).toContain('Monet');
     });
   });
-
-  // ── Image handling ────────────────────────────────────────────────
 
   describe('image handling', () => {
     it('saves image to storage and passes to orchestrator', async () => {
@@ -635,7 +573,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // URL images are not saved to local storage
       expect(imageStorage.save).not.toHaveBeenCalled();
       expect(orchestrator.generate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -666,8 +603,6 @@ describe('ChatMessageService', () => {
       ).rejects.toThrow();
     });
   });
-
-  // ── Audio message ─────────────────────────────────────────────────
 
   describe('postAudioMessage', () => {
     it('rejects when audio payload is missing', async () => {
@@ -764,8 +699,6 @@ describe('ChatMessageService', () => {
     });
   });
 
-  // ── Session locale ────────────────────────────────────────────────
-
   describe('locale handling', () => {
     it('uses input locale when provided', async () => {
       const { service, orchestrator } = buildService();
@@ -781,7 +714,6 @@ describe('ChatMessageService', () => {
     });
 
     it('falls back to session locale when input locale is empty', async () => {
-      // Session ownership required — see SEC-19 note above.
       const session = makeSession({
         locale: 'de',
         user: makeSessionUser(USER_ID),
@@ -800,13 +732,10 @@ describe('ChatMessageService', () => {
     });
   });
 
-  // ── extractSearchTerm (via knowledge base integration) ────────────
-
   describe('knowledge base integration', () => {
     it('calls knowledge base with detected artwork title from history', async () => {
       const mockKB = makeMockKnowledgeBase();
       const repo = makeRepo();
-      // After user message is persisted, history returns a message with artwork metadata
       repo.listSessionHistory.mockResolvedValue([
         makeMessage({
           role: 'assistant',
@@ -847,7 +776,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // Input has >= 3 words, so it should be used as search term
       expect(mockKB.lookup).toHaveBeenCalledWith(
         'What is the history of impressionism in painting',
       );
@@ -885,7 +813,6 @@ describe('ChatMessageService', () => {
         enrichment: { knowledgeBase: mockKB },
       });
 
-      // Should not throw even though KB failed
       await service.postMessage(
         SESSION_ID,
         { text: 'Tell me about this painting' },
@@ -896,8 +823,6 @@ describe('ChatMessageService', () => {
       expect(orchestrator.generate).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── User memory integration ───────────────────────────────────────
 
   describe('user memory integration', () => {
     it('fetches user memory for prompt when user is authenticated', async () => {
@@ -942,8 +867,6 @@ describe('ChatMessageService', () => {
     });
   });
 
-  // ── Artwork match persistence ─────────────────────────────────────
-
   describe('artwork match persistence', () => {
     it('persists artwork match in assistant message when detected', async () => {
       const { service, repo } = buildService();
@@ -955,7 +878,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // The second persistMessage call (assistant) should contain artworkMatch
       expect(repo.persistMessage).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
@@ -988,13 +910,10 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // When output guardrail blocks, artworkMatch should not be persisted
       const assistantCall = repo.persistMessage.mock.calls[1];
       expect(assistantCall[0].artworkMatch).toBeUndefined();
     });
   });
-
-  // ── Session updates ───────────────────────────────────────────────
 
   describe('session updates (visitContext, locale)', () => {
     it('includes session updates with visit context when output is allowed', async () => {
@@ -1020,7 +939,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // The assistant message persistence should include sessionUpdates
       const assistantCall = repo.persistMessage.mock.calls[1];
       expect(typeof assistantCall[0].sessionUpdates).toBe('object');
       expect(assistantCall[0].sessionUpdates).not.toBeNull();
@@ -1046,8 +964,6 @@ describe('ChatMessageService', () => {
       expect(assistantCall[0].sessionUpdates).toBeUndefined();
     });
   });
-
-  // ── Anonymous sessions ────────────────────────────────────────────
 
   describe('anonymous sessions', () => {
     it('works for anonymous sessions (no userId)', async () => {
@@ -1078,13 +994,10 @@ describe('ChatMessageService', () => {
         undefined,
       );
 
-      // Should invalidate session cache but NOT user cache
       expect(cache.delByPrefix).toHaveBeenCalledWith(`session:${SESSION_ID}:`);
       expect(cache.delByPrefix).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── PII sanitization ─────────────────────────────────────────────
 
   describe('PII sanitization', () => {
     it('passes sanitized text to orchestrator in postMessage', async () => {
@@ -1112,7 +1025,6 @@ describe('ChatMessageService', () => {
         USER_ID,
       );
 
-      // First persistMessage call is the user message — must contain original text
       expect(repo.persistMessage).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
@@ -1123,24 +1035,9 @@ describe('ChatMessageService', () => {
     });
   });
 
-  // ── F1 (W2 follow-up) — buildLlmCacheInput propagates voiceMode ────────
-  //
-  // Spec F1.3 — `buildLlmCacheInput(prep, sanitizedText, input)` MUST forward
-  // `input.context.voiceMode` + `input.context.audioDescriptionMode` into the
-  // returned `LlmCacheKeyInput`. Today the helper drops them on the floor, so
-  // (voice, no-voice) cohorts share the same cache key and cross-serve.
-  //
-  // The helper is private — we test it indirectly via the injected `llmCache`
-  // mock: `tryLlmCacheStore` calls `llmCache.store(cacheInput, ...)` after a
-  // miss, and we assert on the captured `cacheInput`.
   describe('F1 — LLM cache input propagates voiceMode (C9.10)', () => {
     const makeLlmCacheMock = (): jest.Mocked<LlmCacheService> => ({
       classify: jest.fn().mockReturnValue('generic'),
-      // PR-P0-1 (2026-05-23) — `computeKey` is invoked by tryLlmCacheStore /
-      // tryLlmCacheLookup to stash the byte-string key on the LlmCacheCtx
-      // (later stamped on the assistant ChatMessage row for targeted
-      // feedback-driven invalidation). Default to a deterministic
-      // `llm:v4:*`-shaped stub.
       computeKey: jest.fn().mockReturnValue('llm:v4:generic:none:anon:deadbeef'),
       lookup: jest.fn().mockResolvedValue({ hit: false, value: null, contextClass: 'generic' }),
       store: jest.fn().mockResolvedValue(undefined),
@@ -1168,15 +1065,6 @@ describe('ChatMessageService', () => {
       expect(cacheInput.voiceMode).toBe(true);
     });
 
-    // ── US-12.2 / INV-21 (2026-06-12, run undefined-network-detection-reliability)
-    //
-    // ADDITIVE case on the voiceMode pattern above (design.md P-07): the route
-    // already threads `lowDataMode: req.dataMode === 'low'` into
-    // `PostMessageInput.context` (chat-message.route.ts:50, chat.types.ts) and
-    // `llm-prompt-builder.ts:152-156` shortens the answer to 100-150 words —
-    // but `buildLlmCacheInput` drops `lowDataMode` on the floor, so (low,
-    // normal) cohorts share a cache line and cross-serve wrong-length
-    // responses. Same bug class as voiceMode F1 (`d54552beb`).
     it('threads input.context.lowDataMode=true into LlmCacheKeyInput (INV-21)', async () => {
       const llmCache = makeLlmCacheMock();
       const { service } = buildService({ llmCache });
@@ -1203,7 +1091,12 @@ describe('ChatMessageService', () => {
       const orchestrator = makeOrchestrator(makeArtOutput({ degraded: true }));
       const { service } = buildService({ llmCache, orchestrator });
 
-      await service.postMessage(SESSION_ID, { text: 'Tell me about this painting' }, 'req-1', USER_ID);
+      await service.postMessage(
+        SESSION_ID,
+        { text: 'Tell me about this painting' },
+        'req-1',
+        USER_ID,
+      );
 
       expect(orchestrator.generate).toHaveBeenCalledTimes(1);
       expect(llmCache.store).not.toHaveBeenCalled();

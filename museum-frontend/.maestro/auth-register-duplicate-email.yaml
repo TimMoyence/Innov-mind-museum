@@ -1,102 +1,71 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth — Register with duplicate email
-#
-# Submit a registration with an email that already has an account.
-# Expect backend CONFLICT (409 / 400 code:"CONFLICT") → FE renders
-# error.auth.email_already_taken.
-#
-# Pre-seeded account (guaranteed by the e2e seed step):
-#   - Email: e2e-test-login@test.musaium.dev  (always seeded for the suite)
-#   - We register against it to provoke the duplicate-email path.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 0: Cold start + switch to register
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
 - tapOn:
-    text: "Passer à l'inscription|Switch to registration"  # accessibilityLabel (collapses visible "Pas de compte ? S'inscrire")
+    text: "Passer à l'inscription|Switch to registration"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "Create your account|Créez votre compte"
-
-# ──────────────────────────────────────────────
-# Phase 2: Fill form with a known-existing email
-# ──────────────────────────────────────────────
-- tapOn:
-    id: "firstname-input"
-- inputText: "Maestro"
+    text: 'Create your account|Créez votre compte'
 
 - tapOn:
-    id: "lastname-input"
-- inputText: "Tester"
+    id: 'firstname-input'
+- inputText: 'Maestro'
 
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
-
-# Strong, NOT breached — so the rejection is duplicate-email, not breach
-- tapOn:
-    id: "password-input"
-- inputText: "Mx7$kq2Lp9vRt4Wz"
+    id: 'lastname-input'
+- inputText: 'Tester'
 
 - tapOn:
-    id: "date-of-birth-input"
-- inputText: "10/08/1994"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 
-# Dismiss keyboard via a static-text tap — hideKeyboard hard-FAILS on the custom
-# DOB editor (no standard dismiss).
 - tapOn:
-    text: "Create your account|Créez votre compte"
+    id: 'password-input'
+- inputText: 'Mx7$kq2Lp9vRt4Wz'
 
-# Accept GDPR by tapping the checkbox SQUARE (row left edge). Tapping the row
-# center hits the inline Terms/Privacy links (own onPress → navigate away).
 - tapOn:
-    id: "gdpr-consent-checkbox"
+    id: 'date-of-birth-input'
+- inputText: '10/08/1994'
 
-# Submit (button already on screen; a hard scrollUntilVisible@100% fails when no
-# scroll is needed). Wait + tap by testID.
+- tapOn:
+    text: 'Create your account|Créez votre compte'
+
+- tapOn:
+    id: 'gdpr-consent-checkbox'
+
 - extendedWaitUntil:
     visible:
-      id: "auth-submit"
+      id: 'auth-submit'
     timeout: 10000
 - tapOn:
-    id: "auth-submit"
-# iOS native "Save Password?" dialog can still surface
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 3: Expect duplicate-email error, no navigation
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "auth-error-state"
+      id: 'auth-error-state'
     timeout: 10000
 
-# EN: "An account already exists with this email."
-# FR: "Un compte existe déjà avec cette adresse email."
 - extendedWaitUntil:
     visible:
-      text: ".*(already exists with this email|existe déjà avec cette adresse).*"
+      text: '.*(already exists with this email|existe déjà avec cette adresse).*'
     timeout: 10000
 
-# Sanity: still on register screen
 - assertVisible:
-    text: "Create your account|Créez votre compte"
+    text: 'Create your account|Créez votre compte'
 - assertNotVisible:
-    text: "Your museum companion|Votre compagnon de musée"
+    text: 'Your museum companion|Votre compagnon de musée'

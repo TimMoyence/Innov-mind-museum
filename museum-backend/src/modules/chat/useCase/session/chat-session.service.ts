@@ -1,9 +1,11 @@
 import { findNearbyMuseums } from '@modules/chat/useCase/enrichment/nearby-museums.provider';
 import { isValidSessionListCursor } from '@modules/chat/useCase/image/chat-image.helpers';
 import { invalidInput } from '@shared/errors/app.error';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import { ensureSessionAccess } from './session-access';
+import { toPageLimit, toSessionDTO, toSessionMessageView, withHttpsImages } from './session.view';
 
 import type {
   CreateSessionInput,
@@ -25,15 +27,6 @@ import type {
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * Returns the title of the most recently discussed artwork for a session, or
- * `null` when no visit context is recorded or the `artworksDiscussed` array is
- * empty/missing. Surfaced via `ListSessionsResult.sessions[].lastArtworkTitle`
- * for B2 (conversation resumption banner).
- *
- * Pure helper, no I/O — reads `visitContext.artworksDiscussed[length-1].title`
- * already loaded from the entity row's jsonb column.
- */
 export const deriveLastArtworkTitle = (
   visitContext: VisitContext | null | undefined,
 ): string | null => {
@@ -42,25 +35,9 @@ export const deriveLastArtworkTitle = (
     return null;
   }
   const last = artworks[artworks.length - 1];
-  // `title` is typed required on VisitedArtwork, but `visit_context` is a
-  // nullable jsonb column with no DB-level shape validation. Guard against
-  // missing / null / non-string drift (would otherwise throw TypeError from
-  // inside `listSessions().sessions.map(...)` and 500 the whole carnet) and
-  // coerce empty/whitespace titles to null for downstream B2 banner gating.
   const title = typeof last.title === 'string' ? last.title.trim() : '';
   return title.length > 0 ? title : null;
 };
-
-const toSessionDTO = (session: ChatSession): CreateSessionResult => ({
-  id: session.id,
-  locale: session.locale,
-  museumMode: session.museumMode,
-  title: session.title ?? null,
-  museumName: session.museumName ?? null,
-  createdAt: session.createdAt.toISOString(),
-  updatedAt: session.updatedAt.toISOString(),
-  intent: session.intent,
-});
 
 interface ChatSessionServiceDeps {
   repository: ChatRepository;
@@ -79,12 +56,6 @@ export class ChatSessionService {
     this.museumRepository = deps.museumRepository;
   }
 
-  /**
-   * Note: when museumId is provided, a DB lookup is always performed to fetch the
-   * museum description (seeded into visitContext.museumDescription for the first-message
-   * intro), even if the caller already supplies museumName. Caller-provided museumName
-   * still takes precedence over the DB name via the `??=` operator.
-   */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     if (input.userId !== undefined && (!Number.isInteger(input.userId) || input.userId <= 0)) {
       throw invalidInput('userId must be a positive integer');
@@ -118,9 +89,6 @@ export class ChatSessionService {
     let museumAddress = input.museumAddress;
     let museumDescription: string | undefined;
 
-    // Fetch the museum entity when museumId is provided, even if the caller
-    // already passed museumName. We need the description for the first-message
-    // intro — it lives only on the Museum DB entity.
     if (input.museumId && this.museumRepository) {
       const museum = await this.museumRepository.findById(input.museumId);
       if (museum) {
@@ -174,32 +142,30 @@ export class ChatSessionService {
   ): Promise<SessionResult> {
     const session = await ensureSessionAccess(sessionId, this.repository, currentUserId);
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
-    const limit = Math.max(1, Math.min(page.limit || 20, 50));
+    const limit = toPageLimit(page.limit);
     const cacheKey = `session:${sessionId}:${page.cursor ?? 'first'}:${String(limit)}`;
 
-    if (this.cache) {
-      const cached = await this.cache.get<SessionResult>(cacheKey);
-      if (cached) return cached;
-    }
+    const cached = this.cache ? await this.cache.get<SessionResult>(cacheKey) : null;
+    return withHttpsImages(
+      cached ?? (await this.loadSessionPage(session, page.cursor, limit, cacheKey)),
+    );
+  }
 
+  private async loadSessionPage(
+    session: ChatSession,
+    cursor: string | undefined,
+    limit: number,
+    cacheKey: string,
+  ): Promise<SessionResult> {
     const rows: SessionMessagesPage = await this.repository.listSessionMessages({
-      sessionId,
+      sessionId: session.id,
       limit,
-      cursor: page.cursor,
+      cursor,
     });
 
     const result: SessionResult = {
       session: toSessionDTO(session),
-      messages: rows.messages.map((message) => ({
-        id: message.id,
-        role: message.role,
-        text: message.text,
-        imageRef: message.imageRef,
-        image: null,
-        createdAt: message.createdAt.toISOString(),
-        metadata: message.metadata,
-      })),
+      messages: rows.messages.map(toSessionMessageView),
       page: {
         nextCursor: rows.nextCursor,
         hasMore: rows.hasMore,
@@ -224,8 +190,7 @@ export class ChatSessionService {
       throw invalidInput('Invalid cursor format');
     }
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero fallback
-    const limit = Math.max(1, Math.min(page.limit || 20, 50));
+    const limit = toPageLimit(page.limit);
     const cacheKey = `sessions:user:${String(userId)}:${page.cursor ?? 'first'}:${String(limit)}`;
 
     if (this.cache) {
@@ -253,8 +218,7 @@ export class ChatSessionService {
         intent: row.session.intent,
         preview: row.preview
           ? {
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-              text: row.preview.text || '[Image message]',
+              text: nonEmpty(row.preview.text) ?? '[Image message]',
               createdAt: row.preview.createdAt.toISOString(),
               role: row.preview.role,
             }

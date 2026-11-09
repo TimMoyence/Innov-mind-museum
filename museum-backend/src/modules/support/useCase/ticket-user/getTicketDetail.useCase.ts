@@ -18,7 +18,6 @@ export class GetTicketDetailUseCase {
       throw notFound('Ticket not found');
     }
 
-    // SEC: ownership check — non-admins can only read their own tickets.
     const isAdminOrMod = input.userRole === 'admin' || input.userRole === 'moderator';
     if (!isAdminOrMod && ticket.userId !== input.userId) {
       throw forbidden('You do not have access to this ticket');

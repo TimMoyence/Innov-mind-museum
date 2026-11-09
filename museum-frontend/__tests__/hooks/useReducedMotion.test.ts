@@ -4,8 +4,6 @@ import { AccessibilityInfo } from 'react-native';
 
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 type ReduceMotionListener = (value: boolean) => void;
 
 const subscriptionRemove = jest.fn();
@@ -33,8 +31,6 @@ afterAll(() => {
   isReduceMotionEnabledMock.mockRestore();
   addEventListenerMock.mockRestore();
 });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useReducedMotion', () => {
   it('returns false until the platform resolves', async () => {
@@ -115,9 +111,6 @@ describe('useReducedMotion', () => {
     expect(result.current).toBe(false);
   });
 
-  // Covers the `if (mounted)` false branch inside the `.then()` callback —
-  // i.e. the platform resolves AFTER unmount. Without this branch covered,
-  // the file sits at 50% branch coverage.
   it('does not touch state when the platform resolves after unmount', async () => {
     let resolveEnabled: (value: boolean) => void = () => undefined;
     isReduceMotionEnabledMock.mockReturnValue(
@@ -129,21 +122,15 @@ describe('useReducedMotion', () => {
     const { result, unmount } = renderHook(() => useReducedMotion());
     expect(result.current).toBe(false);
 
-    // Unmount BEFORE the platform promise resolves — `mounted` flips to false.
     unmount();
     await act(async () => {
       resolveEnabled(true);
       await Promise.resolve();
     });
 
-    // Reading `result.current` after unmount is allowed by @testing-library/
-    // react-native; the value remains what it was at the last render, proving
-    // the post-unmount setReduced was guarded.
     expect(result.current).toBe(false);
   });
 
-  // Covers the `if (mounted)` false branch on the event listener callback —
-  // mirrors the unmount-then-event-fires path.
   it('does not touch state when the reduceMotionChanged event fires after unmount', async () => {
     isReduceMotionEnabledMock.mockResolvedValue(false);
 
@@ -154,7 +141,6 @@ describe('useReducedMotion', () => {
 
     const listener = capturedListener;
     unmount();
-    // Fire the platform-side event after unmount. The hook should ignore it.
     act(() => {
       listener?.(true);
     });

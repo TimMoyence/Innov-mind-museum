@@ -1,22 +1,4 @@
 #!/usr/bin/env bash
-#
-# gen-prod-secrets.sh — generate the museum-backend production app secrets.
-#
-# Emits the 7 app secrets + REDIS_PASSWORD that `validateProductionEnv`
-# (src/config/env.production-validation.ts) hard-gates at boot. Each is
-# `openssl rand -hex 32` (64 hex chars, >= the 32-char minimum) and every
-# value is produced by an independent draw, so they satisfy the mutual
-# distinctness matrix (collision probability ~ 2^-256).
-#
-# UFR-013 — these are REAL secrets. Run it in YOUR terminal, pipe the output
-# straight into your CI/CD secret store (GitHub Actions → OVH VPS). NEVER
-# commit the output, never paste it into a chat. The repo only stores this
-# generator, never its product.
-#
-# Usage:
-#   bash scripts/gen-prod-secrets.sh                 # print to stdout
-#   bash scripts/gen-prod-secrets.sh >> .env.secrets # append to a gitignored file
-#
 set -euo pipefail
 
 if ! command -v openssl >/dev/null 2>&1; then

@@ -3,7 +3,6 @@ export interface DuckDuckGoRelatedTopic {
   Text: string;
 }
 
-/** A nested RelatedTopics group (category) — has no FirstURL/Text of its own. */
 export interface DuckDuckGoRelatedGroup {
   Name: string;
   Topics: DuckDuckGoRelatedTopic[];

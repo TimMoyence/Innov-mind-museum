@@ -1,123 +1,116 @@
-/**
- * Musaium Design System — Semantic Tokens (Layer 3)
- *
- * Component-level tokens referencing primitives.
- * These tokens define the design intent for each component category.
- */
-import { spacing, radii } from './spacing';
-import { typography } from './typography';
+import { spacing, radii } from './spacing.ts';
+import { typography } from './typography.ts';
 
 export const semantic = {
   screen: {
-    padding: spacing['4'].px,           // 16px
-    paddingLarge: spacing['6'].px,      // 24px
-    paddingXL: spacing['7'].px,         // 28px
-    gap: spacing['4'].px,               // 16px
-    gapSmall: spacing['3'].px,          // 12px
+    padding: spacing['4'].px,
+    paddingLarge: spacing['6'].px,
+    paddingXL: spacing['7'].px,
+    gap: spacing['4'].px,
+    gapSmall: spacing['3'].px,
   },
 
   card: {
-    padding: spacing['4'].px,           // 16px
-    paddingCompact: spacing['3'].px,    // 12px
-    paddingLarge: spacing['4.5'].px,    // 18px
-    gap: spacing['3'].px,               // 12px
-    gapSmall: spacing['2'].px,          // 8px
-    gapTiny: spacing['1'].px,           // 4px
-    radius: radii['3xl'].px,            // 20px
-    radiusCompact: radii.lg.px,         // 12px
-    titleSize: typography.fontSize.lg.px,   // 18px
-    bodySize: typography.fontSize.sm.px,    // 14px
-    captionSize: typography.fontSize.xs.px, // 12px
+    padding: spacing['4'].px,
+    paddingCompact: spacing['3'].px,
+    paddingLarge: spacing['4.5'].px,
+    gap: spacing['3'].px,
+    gapSmall: spacing['2'].px,
+    gapTiny: spacing['1'].px,
+    radius: radii['3xl'].px,
+    radiusCompact: radii.lg.px,
+    titleSize: typography.fontSize.lg.px,
+    bodySize: typography.fontSize.sm.px,
+    captionSize: typography.fontSize.xs.px,
   },
 
   input: {
-    height: spacing['12'].px,           // 48px
-    padding: spacing['4'].px,           // 16px
-    paddingCompact: spacing['3'].px,    // 12px
-    radius: radii.xl.px,                // 14px
-    radiusSmall: radii.lg.px,           // 12px
-    fontSize: typography.fontSize.base.px,  // 16px
+    height: spacing['12'].px,
+    padding: spacing['4'].px,
+    paddingCompact: spacing['3'].px,
+    radius: radii.xl.px,
+    radiusSmall: radii.lg.px,
+    fontSize: typography.fontSize.base.px,
     borderWidth: 1,
   },
 
   button: {
-    height: spacing['12'].px,           // 48px
-    heightApple: spacing['12.5'].px,    // 50px
-    paddingX: spacing['6'].px,          // 24px
-    paddingY: spacing['3'].px,          // 12px
-    paddingYCompact: spacing['3.5'].px, // 14px
-    radius: radii.xl.px,               // 14px
-    radiusSmall: radii.lg.px,           // 12px
-    fontSize: typography.fontSize.sm.px,    // 14px
-    fontSizeLarge: typography.fontSize.base.px, // 16px
+    height: spacing['12'].px,
+    heightApple: spacing['12.5'].px,
+    paddingX: spacing['6'].px,
+    paddingY: spacing['3'].px,
+    paddingYCompact: spacing['3.5'].px,
+    radius: radii.xl.px,
+    radiusSmall: radii.lg.px,
+    fontSize: typography.fontSize.sm.px,
+    fontSizeLarge: typography.fontSize.base.px,
   },
 
   badge: {
-    paddingX: spacing['2'].px,          // 8px
-    paddingXCompact: spacing['1.5'].px, // 6px
-    paddingY: spacing['1'].px,          // 4px
-    paddingYTight: 3,                   // 3px — tight pill
-    radius: radii.md.px,               // 8px
-    radiusFull: radii.full.px,          // 999px
-    fontSize: typography.fontSize.xs.px,   // 12px
-    fontSizeSmall: 11,                  // 11px — compact badge
+    paddingX: spacing['2'].px,
+    paddingXCompact: spacing['1.5'].px,
+    paddingY: spacing['1'].px,
+    paddingYTight: 3,
+    radius: radii.md.px,
+    radiusFull: radii.full.px,
+    fontSize: typography.fontSize.xs.px,
+    fontSizeSmall: 11,
   },
 
   modal: {
-    padding: spacing['5'].px,           // 20px
-    paddingLarge: spacing['6'].px,      // 24px
-    radius: radii['2xl'].px,            // 16px
+    padding: spacing['5'].px,
+    paddingLarge: spacing['6'].px,
+    radius: radii['2xl'].px,
     maxHeight: '85%' as const,
   },
 
   nav: {
-    height: spacing['14'].px,           // 56px
-    paddingX: spacing['4'].px,          // 16px
+    height: spacing['14'].px,
+    paddingX: spacing['4'].px,
   },
 
   chat: {
-    bubblePadding: spacing['3'].px,     // 12px
-    bubblePaddingX: spacing['3.5'].px,  // 14px
-    bubbleRadius: radii['2xl'].px,      // 16px
-    gap: spacing['2'].px,               // 8px
-    gapSmall: spacing['1.5'].px,        // 6px
-    fontSize: typography.fontSize.base.px,  // 16px
-    fontSizeSmall: typography.fontSize.sm.px, // 14px
-    timestampSize: typography.fontSize.xs.px, // 12px
-    thumbnailSize: spacing['12'].px,    // 48px
-    iconSize: spacing['5.5'].px,        // 22px
+    bubblePadding: spacing['3'].px,
+    bubblePaddingX: spacing['3.5'].px,
+    bubbleRadius: radii['2xl'].px,
+    gap: spacing['2'].px,
+    gapSmall: spacing['1.5'].px,
+    fontSize: typography.fontSize.base.px,
+    fontSizeSmall: typography.fontSize.sm.px,
+    timestampSize: typography.fontSize.xs.px,
+    thumbnailSize: spacing['12'].px,
+    iconSize: spacing['5.5'].px,
   },
 
   list: {
-    itemPaddingX: spacing['4'].px,      // 16px
-    itemPaddingY: spacing['3'].px,      // 12px
-    itemPaddingYCompact: spacing['2.5'].px, // 10px
-    itemGap: spacing['2'].px,           // 8px
-    itemGapSmall: spacing['1.5'].px,    // 6px
+    itemPaddingX: spacing['4'].px,
+    itemPaddingY: spacing['3'].px,
+    itemPaddingYCompact: spacing['2.5'].px,
+    itemGap: spacing['2'].px,
+    itemGapSmall: spacing['1.5'].px,
     separatorWidth: 1,
   },
 
   section: {
-    titleSizeHero: 28,                  // 28px — hero headings
-    titleSizeLarge: typography.fontSize['2xl'].px, // 24px
-    titleSize: typography.fontSize.xl.px, // 20px
-    subtitleSize: typography.fontSize.base.px, // 16px
-    bodySize: typography.fontSize.sm.px,   // 14px
-    captionSize: typography.fontSize.xs.px, // 12px (was 13, rounded)
-    labelSize: 11,                      // 11px — small labels
-    gap: spacing['3'].px,               // 12px
-    gapSmall: spacing['2'].px,          // 8px
-    gapTight: spacing['1.5'].px,        // 6px
-    marginBottom: spacing['6'].px,      // 24px
+    titleSizeHero: 28,
+    titleSizeLarge: typography.fontSize['2xl'].px,
+    titleSize: typography.fontSize.xl.px,
+    subtitleSize: typography.fontSize.base.px,
+    bodySize: typography.fontSize.sm.px,
+    captionSize: typography.fontSize.xs.px,
+    labelSize: 11,
+    gap: spacing['3'].px,
+    gapSmall: spacing['2'].px,
+    gapTight: spacing['1.5'].px,
+    marginBottom: spacing['6'].px,
   },
 
   form: {
-    gap: spacing['2.5'].px,             // 10px
-    gapLarge: spacing['3.5'].px,        // 14px
-    labelSize: 13,                      // 13px — form labels
+    gap: spacing['2.5'].px,
+    gapLarge: spacing['3.5'].px,
+    labelSize: 13,
   },
 
-  /** Startup error screen (custom dark palette) */
   errorScreen: {
     background: '#130f0d',
     cardBackground: '#1b1411',
@@ -131,17 +124,6 @@ export const semantic = {
     textValue: '#f6ebe4',
   },
 
-  /** Expertise badge level colors. Light values darkened for WCAG 1.4.3 (A11Y-03):
-   *  level-colored text on its own 8% tint must reach ≥ 4.5:1. Mirror:
-   *  museum-frontend/shared/ui/tokens.semantic.ts (kept in sync by hand). */
-  expertiseLevels: {
-    beginner: { light: '#047857', dark: '#34D399' },
-    intermediate: { light: '#92400E', dark: '#FBBF24' },
-    expert: { light: '#7C3AED', dark: '#A78BFA' },
-  },
-
-  /** Ticket/priority status badge colors. Lifted to the -700 ramp for WCAG 1.4.3
-   *  (A11Y-01): white text needs ≥ 4.5:1 (was 2.15–3.76:1). gray already passed. */
   statusBadge: {
     textColor: '#FFFFFF',
     open: '#1D4ED8',
@@ -153,7 +135,6 @@ export const semantic = {
     priorityHigh: '#B91C1C',
   },
 
-  /** Device chrome colors (hardware simulation for mockup components) */
   deviceChrome: {
     bezel: '#000000',
     bezelAlt: '#0a0a0a',
@@ -164,7 +145,6 @@ export const semantic = {
     speaker: '#000000',
   },
 
-  /** Section dark backgrounds (landing page dark sections) */
   sectionDark: {
     background: '#0a0a1a',
     backgroundAlt: '#080820',
@@ -173,7 +153,6 @@ export const semantic = {
     backgroundAccent: '#111118',
   },
 
-  /** Map marker colors (Leaflet) */
   mapMarker: {
     museum: '#7C3AED',
     restaurant: '#DC2626',
@@ -187,7 +166,6 @@ export const semantic = {
     error: '#FF3B30',
   },
 
-  /** Chart colors (Recharts analytics dashboard) */
   chart: {
     primary: '#2563eb',
     secondary: '#16a34a',
@@ -195,26 +173,23 @@ export const semantic = {
     quaternary: '#6366f1',
   },
 
-  /** Image/media component sizes */
   media: {
-    imagePreview: 220,           // chat image preview
-    artworkHeight: 180,          // daily art card image
-    sendButtonSize: 44,          // chat send button
-    avatarSmall: 28,             // chat avatar
-    avatarMedium: 34,            // chat input avatar
-    tabBarHeight: 84,            // bottom tab bar
-    safeAreaTop: 60,             // safe area offset
-    homeBottomPad: 110,          // home screen bottom padding
+    imagePreview: 220,
+    artworkHeight: 180,
+    sendButtonSize: 44,
+    avatarSmall: 28,
+    avatarMedium: 34,
+    tabBarHeight: 84,
+    safeAreaTop: 60,
+    homeBottomPad: 110,
   },
 
-  /** Fullscreen modal overlay */
   fullscreenModal: {
     background: '#FFFFFF',
     captionColor: '#AAAAAA',
     counterColor: '#FFFFFF',
   },
 
-  /** Web auth form gradient endpoint */
   webAuthGradient: '#D5F0FF',
 } as const;
 

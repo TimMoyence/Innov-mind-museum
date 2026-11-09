@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,11 +13,11 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
-import { saveDefaultMuseumMode, saveGuideLevel } from '@/features/settings/runtimeSettings';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 import { ContentPreferencesCard } from '@/features/settings/ui/ContentPreferencesCard';
-import { getErrorMessage } from '@/shared/lib/errors';
+import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
 import { LANGUAGE_OPTIONS } from '@/shared/config/supportedLocales';
 import { useI18n } from '@/shared/i18n/I18nContext';
 import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
@@ -37,40 +37,24 @@ export default function PreferencesScreen() {
   const storeMuseumMode = useRuntimeSettingsStore((s) => s.defaultMuseumMode);
   const storeGuideLevel = useRuntimeSettingsStore((s) => s.guideLevel);
   const storeHydrated = useRuntimeSettingsStore((s) => s._hydrated);
-  const [museumMode, setMuseumMode] = useState(storeMuseumMode);
-  const [guideLevel, setGuideLevel] = useState<GuideLevel>(storeGuideLevel);
+  const [draftMuseumMode, setMuseumMode] = useState<boolean | null>(null);
+  const [draftGuideLevel, setGuideLevel] = useState<GuideLevel | null>(null);
+  const museumMode = draftMuseumMode ?? storeMuseumMode;
+  const guideLevel = draftGuideLevel ?? storeGuideLevel;
   const isLoading = !storeHydrated;
-  const [isSaving, setIsSaving] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (storeHydrated) {
-      setMuseumMode(storeMuseumMode);
-      setGuideLevel(storeGuideLevel);
-    }
-  }, [storeHydrated, storeMuseumMode, storeGuideLevel]);
+  const { refusal, saved, track } = useLatestSaveOutcome();
 
   const storeSetMuseumMode = useRuntimeSettingsStore((s) => s.setDefaultMuseumMode);
   const storeSetGuideLevel = useRuntimeSettingsStore((s) => s.setGuideLevel);
 
   const onSave = async () => {
-    if (isSaving) {
-      return;
-    }
-
-    setIsSaving(true);
-    setStatus(null);
-
-    try {
-      await Promise.all([saveDefaultMuseumMode(museumMode), saveGuideLevel(guideLevel)]);
-      storeSetMuseumMode(museumMode);
-      storeSetGuideLevel(guideLevel);
-      setStatus(t('preferences.saved'));
+    const outcome = await track(
+      Promise.all([storeSetMuseumMode(museumMode), storeSetGuideLevel(guideLevel)]).then(
+        (refusals) => refusals.find((r) => r !== null) ?? null,
+      ),
+    );
+    if (outcome === null) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      setStatus(t('preferences.save_failed', { error: getErrorMessage(error) }));
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -196,7 +180,7 @@ export default function PreferencesScreen() {
               <Text style={[styles.hint, { color: theme.textSecondary }]}>
                 {t('preferences.guide_level_hint')}
               </Text>
-              <View style={styles.levelRow}>
+              <View style={styles.levelRow} testID="preferences-guide-levels">
                 {GUIDE_LEVELS.map((level) => (
                   <Pressable
                     key={level}
@@ -212,7 +196,9 @@ export default function PreferencesScreen() {
                       setGuideLevel(level);
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={t('a11y.preferences.guide_level_button', { level })}
+                    accessibilityLabel={t('a11y.preferences.guide_level_button', {
+                      level: t(`guideLevel.${level}`),
+                    })}
                     accessibilityState={{ selected: guideLevel === level }}
                   >
                     <Text
@@ -222,7 +208,7 @@ export default function PreferencesScreen() {
                         guideLevel === level && { color: theme.primaryContrast },
                       ]}
                     >
-                      {level}
+                      {t(`guideLevel.${level}`)}
                     </Text>
                   </Pressable>
                 ))}
@@ -230,23 +216,20 @@ export default function PreferencesScreen() {
             </>
           )}
 
-          {status ? <Text style={[styles.status, { color: theme.success }]}>{status}</Text> : null}
+          {saved ? (
+            <Text style={[styles.status, { color: theme.success }]}>{t('preferences.saved')}</Text>
+          ) : null}
+          <SaveRefusalNotice refusal={refusal} />
 
           <Pressable
             style={[styles.primaryButton, { backgroundColor: theme.primary }]}
             onPress={() => void onSave()}
-            disabled={isSaving}
             accessibilityRole="button"
             accessibilityLabel={t('a11y.preferences.save')}
-            accessibilityState={{ disabled: isSaving }}
           >
-            {isSaving ? (
-              <ActivityIndicator color={theme.primaryContrast} />
-            ) : (
-              <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
-                {t('preferences.save_button')}
-              </Text>
-            )}
+            <Text style={[styles.primaryButtonText, { color: theme.primaryContrast }]}>
+              {t('preferences.save_button')}
+            </Text>
           </Pressable>
 
           <Pressable

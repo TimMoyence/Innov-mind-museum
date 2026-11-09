@@ -1,32 +1,11 @@
-/**
- * T-WEB-2 (RED) — C2 / S-WEB — admin NPS dashboard page.
- *
- * Pins R24/R25/R27 BEFORE implementation:
- *  - the page renders the NPS score + promoters/passives/detractors + count
- *    from a mocked `NpsResponse` (R24, R27 — no client re-aggregation, it just
- *    consumes the endpoint payload);
- *  - the museum `<select>` is PRESENT for an `admin` and ABSENT for a
- *    `museum_manager` (R25 — UI defense-in-depth atop the BE scoping);
- *  - `count === 0` routes to the accessible empty placeholder (no recharts
- *    blank axes).
- *
- * MUST FAIL at baseline: `@/app/[locale]/admin/nps/page` does not exist, so the
- * static import below cannot resolve and the suite errors out (red success).
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-// Resolves to the mocked `@/lib/api` below, which re-exports the real
-// `ApiError` constructor (so `instanceof` matches in the page under test).
 import { ApiError } from '@/lib/api';
 import type * as ApiModule from '@/lib/api';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
-// RED: this module does not exist yet — import resolution fails, proving the
-// dashboard route is absent (R24).
 import NpsPage from '@/app/[locale]/admin/nps/page';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import type { UserRole } from '@/lib/admin-types';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/nps',
@@ -49,9 +28,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── Recharts mock (client-only; JSDOM has no ResizeObserver — recharts
-//    PATTERNS.md §10 "mock every component"). ────────────────────────────────
-
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="chart-container">{children}</div>
@@ -67,8 +43,6 @@ vi.mock('recharts', () => ({
   Legend: () => null,
 }));
 
-// ── Auth mock — lets each test pick the active role (R25). ───────────────────
-
 let mockRole: UserRole = 'admin';
 
 vi.mock('@/lib/auth', () => ({
@@ -82,13 +56,9 @@ vi.mock('@/lib/auth', () => ({
   }),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 
 vi.mock('@/lib/api', async () => {
-  // Keep the real `ApiError` class so the page's `instanceof ApiError` +
-  // `.status` discrimination runs against the same constructor the tests use.
   const actual = await vi.importActual<typeof ApiModule>('@/lib/api');
   return {
     ApiError: actual.ApiError,
@@ -98,8 +68,6 @@ vi.mock('@/lib/api', async () => {
   };
 });
 
-// ── Providers ─────────────────────────────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -107,8 +75,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 const mockNps = {
   nps: 47,
@@ -126,8 +92,6 @@ const emptyNps = {
   count: 0,
 };
 
-// ============================================================================
-
 describe('AdminNpsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -143,11 +107,9 @@ describe('AdminNpsPage', () => {
       </Providers>,
     );
 
-    // NPS headline score (R24).
     await waitFor(() => {
       expect(screen.getByText('47')).toBeInTheDocument();
     });
-    // The three buckets + total count, all sourced from the payload (R27).
     expect(screen.getByText('60')).toBeInTheDocument();
     expect(screen.getByText('27')).toBeInTheDocument();
     expect(screen.getByText('13')).toBeInTheDocument();
@@ -203,10 +165,6 @@ describe('AdminNpsPage', () => {
   });
 
   it('shows the actionable no-museum-assigned message on a 403 scope error (F6)', async () => {
-    // A museum_manager whose JWT carries a NULL museumId reaches this page (the
-    // nav link is shown) but the backend 403s the read with
-    // `forbidden('No museum assigned')`. The page must surface a clear,
-    // actionable message — NOT the raw technical 403 text.
     mockRole = 'museum_manager';
     mockApiGet.mockRejectedValue(new ApiError(403, 'Forbidden', 'No museum assigned'));
 
@@ -219,7 +177,6 @@ describe('AdminNpsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(mockAdminDict.npsPage.noMuseumAssigned)).toBeInTheDocument();
     });
-    // The raw backend message must NOT be rendered to the user.
     expect(screen.queryByText('No museum assigned')).not.toBeInTheDocument();
   });
 
@@ -235,7 +192,6 @@ describe('AdminNpsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Boom')).toBeInTheDocument();
     });
-    // A generic 500 is unrelated to the museum scope — don't hijack it.
     expect(screen.queryByText(mockAdminDict.npsPage.noMuseumAssigned)).not.toBeInTheDocument();
   });
 
@@ -252,7 +208,6 @@ describe('AdminNpsPage', () => {
       const placeholders = screen.getAllByRole('status', { name: 'No data' });
       expect(placeholders.length).toBeGreaterThanOrEqual(1);
     });
-    // The recharts bucket chart is NOT rendered for an all-zero scope.
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 });

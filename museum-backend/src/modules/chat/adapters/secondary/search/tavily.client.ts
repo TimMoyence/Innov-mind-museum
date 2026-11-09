@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -19,7 +20,6 @@ interface TavilyApiResponse {
   results?: TavilyApiResult[];
 }
 
-/** Never throws — any error returns empty array so caller can fail-open. */
 export class TavilyClient implements WebSearchProvider {
   readonly name = 'tavily';
 
@@ -62,7 +62,7 @@ export class TavilyClient implements WebSearchProvider {
       }));
     } catch (err) {
       logger.warn('tavily_search_exception', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
         query: query.query,
       });
       return [];

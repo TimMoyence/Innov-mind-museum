@@ -1,14 +1,3 @@
-/**
- * RED tests for `ImageCompareCarousel` (T8.4, Phase 8 — C3 Image Comparative).
- *
- * SUT: `museum-frontend/features/chat/ui/ImageCompareCarousel.tsx` —
- * a horizontal FlatList of `ImageCompareCard`s, with a localized header,
- * an explicit empty state, and propagation of the per-card press handler.
- *
- * Distinct file from `ImageCarousel.tsx` (D7 design — see design.md §D7).
- *
- * Component does not exist yet — these tests must FAIL on import.
- */
 import '../../../helpers/test-utils';
 import fs from 'fs';
 import path from 'path';
@@ -24,14 +13,11 @@ type CompareMatch = components['schemas']['CompareMatch'];
 
 interface ImageCompareCarouselProps {
   matches: CompareMatch[];
-  locale: 'fr' | 'en';
   onMatchPress: (qid: string) => void;
 }
 
 type ImageCompareCarouselComponent = ComponentType<ImageCompareCarouselProps>;
 
-// Mock the inner card so we can isolate carousel behaviour and assert the
-// import-target indirectly (D7 — distinct from `ImageCarousel`).
 jest.mock('@/features/chat/ui/ImageCompareCard', () => {
   const { Pressable, Text, View } = require('react-native');
   return {
@@ -58,8 +44,6 @@ jest.mock('@/features/chat/ui/ImageCompareCard', () => {
 });
 
 const loadComponent = (): ImageCompareCarouselComponent => {
-  // Lazy require so a missing-SUT failure mode surfaces as a clean per-test
-  // "Cannot find module" rather than a top-level import crash.
   const mod = require('@/features/chat/ui/ImageCompareCarousel') as {
     ImageCompareCarousel: ImageCompareCarouselComponent;
   };
@@ -71,21 +55,17 @@ describe('ImageCompareCarousel (T8.4)', () => {
     const ImageCompareCarousel = loadComponent();
     const matches = [makeCompareMatch()];
 
-    render(<ImageCompareCarousel matches={matches} locale="fr" onMatchPress={jest.fn()} />);
+    render(<ImageCompareCarousel matches={matches} onMatchPress={jest.fn()} />);
 
-    // test-utils mocks useTranslation to return key as-is; the actual header
-    // must be rendered via the i18n key `chat.compare.title` (T8.6).
     expect(screen.queryByText('chat.compare.title')).toBeTruthy();
   });
 
   it('renders the localized empty state when matches is empty', () => {
     const ImageCompareCarousel = loadComponent();
 
-    render(<ImageCompareCarousel matches={[]} locale="fr" onMatchPress={jest.fn()} />);
+    render(<ImageCompareCarousel matches={[]} onMatchPress={jest.fn()} />);
 
-    // Explicit empty card per spec.md Q7 default = (b).
     expect(screen.queryByText('chat.compare.empty')).toBeTruthy();
-    // No cards in the empty state.
     expect(screen.queryAllByLabelText(/mock-card-/)).toHaveLength(0);
   });
 
@@ -95,7 +75,7 @@ describe('ImageCompareCarousel (T8.4)', () => {
       makeCompareMatch({ qid: 'Q1', facts: makeArtworkFacts({ qid: 'Q1', title: 'Solo' }) }),
     ];
 
-    render(<ImageCompareCarousel matches={matches} locale="fr" onMatchPress={jest.fn()} />);
+    render(<ImageCompareCarousel matches={matches} onMatchPress={jest.fn()} />);
 
     expect(screen.queryAllByLabelText(/^mock-card-/)).toHaveLength(1);
     expect(screen.queryByLabelText('mock-card-Q1')).toBeTruthy();
@@ -110,7 +90,7 @@ describe('ImageCompareCarousel (T8.4)', () => {
       }),
     );
 
-    render(<ImageCompareCarousel matches={matches} locale="fr" onMatchPress={jest.fn()} />);
+    render(<ImageCompareCarousel matches={matches} onMatchPress={jest.fn()} />);
 
     expect(screen.queryAllByLabelText(/^mock-card-/)).toHaveLength(5);
   });
@@ -119,15 +99,11 @@ describe('ImageCompareCarousel (T8.4)', () => {
     const ImageCompareCarousel = loadComponent();
     const matches = [makeCompareMatch({ qid: 'Q1' })];
 
-    const tree = render(
-      <ImageCompareCarousel matches={matches} locale="fr" onMatchPress={jest.fn()} />,
-    );
+    const tree = render(<ImageCompareCarousel matches={matches} onMatchPress={jest.fn()} />);
 
     const lists = tree.UNSAFE_getAllByType(FlatList);
     expect(lists.length).toBeGreaterThanOrEqual(1);
-    const horizontal = lists.find(
-      (l) => (l.props as { horizontal?: boolean }).horizontal === true,
-    );
+    const horizontal = lists.find((l) => (l.props as { horizontal?: boolean }).horizontal === true);
     expect(horizontal).toBeTruthy();
   });
 
@@ -141,7 +117,7 @@ describe('ImageCompareCarousel (T8.4)', () => {
       }),
     ];
 
-    render(<ImageCompareCarousel matches={matches} locale="fr" onMatchPress={onMatchPress} />);
+    render(<ImageCompareCarousel matches={matches} onMatchPress={onMatchPress} />);
 
     fireEvent.press(screen.getByLabelText('mock-card-Q42'));
 
@@ -157,7 +133,6 @@ describe('ImageCompareCarousel (T8.4)', () => {
     expect(fs.existsSync(sutPath)).toBe(true);
     const source = fs.readFileSync(sutPath, 'utf8');
 
-    // D7 contract: must use the dedicated card, NEVER the C2 ImageCarousel.
     expect(source).toMatch(/from\s+['"]\.\/ImageCompareCard['"]/);
     expect(source).not.toMatch(/from\s+['"]\.\/ImageCarousel['"]/);
   });
@@ -175,9 +150,7 @@ describe('ImageCompareCarousel (T8.4)', () => {
       }),
     ];
 
-    const { toJSON } = render(
-      <ImageCompareCarousel matches={matches} locale="fr" onMatchPress={jest.fn()} />,
-    );
+    const { toJSON } = render(<ImageCompareCarousel matches={matches} onMatchPress={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
 });

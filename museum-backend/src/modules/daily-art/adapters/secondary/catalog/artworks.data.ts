@@ -1,11 +1,3 @@
-/* eslint-disable max-lines -- Justification: pure static data catalog (30 artworks × 8 localized funFact strings = inherently >600 lines after QA-08 localization). No logic, no false-positive alternative. Mirrors the project's max-lines:'off' policy for data/config files. Approved-by: QA-08 */
-/**
- * Curated list of 30 famous public-domain artworks for the Daily Art feature.
- * Images sourced from Wikimedia Commons.
- *
- * `funFact` is localized for every supported locale (QA-08). `en` is the
- * canonical source; the other 7 are human-quality translations.
- */
 import type { Artwork } from '@modules/daily-art/domain/artwork.types';
 
 const artworks: readonly Artwork[] = [

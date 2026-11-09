@@ -1,30 +1,5 @@
-/**
- * RED test — T2.6 (run 2026-05-21-connectivity-offline-first).
- *
- * Proves `dataModeStore` lacks the `_hydrated` hydration gate that its sibling
- * `userProfileStore` has (userProfileStore.ts:29,53,91-95). Without it,
- * consumers cannot distinguish "store not yet hydrated from device storage"
- * from a persisted `auto` preference (TD-14 race per zustand store map).
- *
- * Spec R9, design §D9. Target (shape-identical to userProfileStore):
- *  - `_hydrated: boolean` in the state, initial `false`;
- *  - `onRehydrateStorage: () => (state) => { if (state) state._hydrated = true }`
- *    flips it to `true` after rehydrate;
- *  - `_hydrated` is EXCLUDED from `partialize` (never persisted).
- *
- * lib-docs cited: zustand PATTERNS.md:91 (boot-time hydration gate pattern,
- * `_hydrated` + onRehydrateStorage), PATTERNS.md:89 (partialize to data subset
- * only), PATTERNS.md:132 (anti-pattern: persisted read at boot WITHOUT a gate
- * = TD-14 race). In-repo parity reference: userProfileStore.ts:87-95.
- *
- * RED contract: all three assertions FAIL before T2.6 — `_hydrated` is
- * `undefined` on the state, and the current `partialize` does not include the
- * field (so the "excluded" assertion is vacuously about a non-existent field;
- * the existence + flip assertions fail outright).
- */
 import '@/__tests__/helpers/test-utils';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
 const mockStorage = new Map<string, string>();
 
 jest.mock('@/shared/infrastructure/storage', () => ({
@@ -55,12 +30,6 @@ const flushPersist = async (): Promise<void> => {
   }
 };
 
-/**
- * Reads the runtime `_hydrated` flag without coupling to the store's static
- * type. RED-phase: the field does not exist on `DataModePreferenceStore` yet,
- * so a typed `getState()._hydrated` access would not compile. We read it as a
- * plain runtime property so this file typechecks against the current source.
- */
 const readHydrated = (): unknown => {
   const state = useDataModePreferenceStore.getState() as unknown as Record<string, unknown>;
   return state._hydrated;
@@ -73,7 +42,6 @@ describe('dataModeStore — _hydrated gate (parity with userProfileStore) — T2
   });
 
   it('initial _hydrated === false (store not yet hydrated from device storage)', () => {
-    // A fresh store (no persisted blob, no rehydrate yet) must report _hydrated false.
     expect(readHydrated()).toBe(false);
   });
 

@@ -19,11 +19,6 @@ const toCitations = (value: unknown): string[] | undefined => {
   return filtered.length ? filtered : undefined;
 };
 
-/**
- * R2/NFR8 — non-array → undefined; per-entry Zod safeParse drops invalid;
- * empty after filter → undefined (FE convention: absent = no sources).
- * Backward-compat: legacy `citations: string[]` parsed by toCitations above.
- */
 const toSources = (value: unknown): CitationSource[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
@@ -51,28 +46,6 @@ const toRecommendations = (value: unknown): string[] | undefined => {
   return filtered.length ? filtered : undefined;
 };
 
-/**
- * Strict-drop oversize (no silent slice) so prompt drift surfaces at boundary.
- * Mirrors `mainAssistantOutputSchema.suggestedFollowUp.max(80)` (B3 R5).
- */
-const MAX_SUGGESTED_FOLLOWUP_CHARS = 80;
-
-/**
- * B3 — singularity invariant: arrays rejected outright (even if LLM drifts
- * from schema). Doctrine "JAMAIS 3 boutons" enforced at 4 layers; this is
- * the parser-boundary runtime defence.
- */
-export const toSuggestedFollowUp = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (trimmed.length === 0) return undefined;
-  if (trimmed.length > MAX_SUGGESTED_FOLLOWUP_CHARS) return undefined;
-  return trimmed;
-};
-
-/** Empty-string sentinel; FE truthiness check → i18n fallback. */
 const RATIONALE_FALLBACK_MARKER = '';
 
 const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
@@ -86,7 +59,6 @@ const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
       if (!query || !description) return null;
       const rationaleRaw = typeof item.rationale === 'string' ? item.rationale.trim() : '';
       const captionRaw = typeof item.caption === 'string' ? item.caption.trim() : '';
-      // R7 — caption defaults to description; rationale → marker (FE resolves).
       return {
         query,
         description,
@@ -95,7 +67,6 @@ const toSuggestedImages = (value: unknown): SuggestedImage[] | undefined => {
       };
     })
     .filter((item): item is SuggestedImage => item !== null)
-    // R15 — defence-in-depth cap (LLM prompt also instructs ≤4).
     .slice(0, 4);
 
   return normalised.length > 0 ? normalised : undefined;
@@ -155,7 +126,6 @@ export const extractMetadata = (parsed: Record<string, unknown>): ChatAssistantM
   metadata.sources = toSources(parsed.sources);
   metadata.deeperContext = toOptionalString(parsed.deeperContext);
   metadata.openQuestion = toOptionalString(parsed.openQuestion);
-  metadata.suggestedFollowUp = toSuggestedFollowUp(parsed.suggestedFollowUp);
   metadata.imageDescription = toOptionalString(parsed.imageDescription);
   metadata.suggestedImages = toSuggestedImages(parsed.suggestedImages);
 

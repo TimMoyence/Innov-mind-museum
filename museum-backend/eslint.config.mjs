@@ -19,9 +19,6 @@ const _require = createRequire(import.meta.url);
 const musaiumTestDiscipline = _require('eslint-plugin-musaium-test-discipline');
 
 export default tseslint.config(
-  // ═══════════════════════════════════════════════════════════════════
-  //  GLOBAL IGNORES
-  // ═══════════════════════════════════════════════════════════════════
   {
     ignores: [
       'dist/',
@@ -36,9 +33,6 @@ export default tseslint.config(
     ],
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  BASE CONFIGS
-  // ═══════════════════════════════════════════════════════════════════
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
@@ -46,9 +40,6 @@ export default tseslint.config(
   sonarjs.configs.recommended,
   security.configs.recommended,
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  PARSER — type-aware linting
-  // ═══════════════════════════════════════════════════════════════════
   {
     languageOptions: {
       parserOptions: {
@@ -58,27 +49,21 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  1. ARCHITECTURE — Hexagonal boundaries enforcement
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { boundaries },
     settings: {
       'boundaries/elements': [
-        // ── Shared layer (cross-cutting) ──
         { type: 'shared', pattern: ['src/shared/**'], mode: 'full' },
         { type: 'config', pattern: ['src/config/**'], mode: 'full' },
         { type: 'data', pattern: ['src/data/**'], mode: 'full' },
 
-        // ── Domain layer (pure business logic, zero external deps) ──
         {
           type: 'domain',
           pattern: ['src/modules/*/domain/**', 'src/modules/*/core/domain/**'],
           mode: 'full',
         },
 
-        // ── Application layer (use cases, orchestration) ──
         {
           type: 'application',
           pattern: [
@@ -89,50 +74,34 @@ export default tseslint.config(
           mode: 'full',
         },
 
-        // ── Infrastructure layer (DB adapters, external services) ──
         {
           type: 'infrastructure',
           pattern: ['src/modules/*/infrastructure/**', 'src/modules/*/adapters/secondary/**'],
           mode: 'full',
         },
 
-        // ── Primary adapters (HTTP routes, controllers) ──
         {
           type: 'primary',
           pattern: ['src/modules/*/adapters/primary/**'],
           mode: 'full',
         },
 
-        // ── Module composition roots ──
         { type: 'module-root', pattern: ['src/modules/*/index.ts'], mode: 'full' },
 
-        // ── App entrypoints ──
         { type: 'entrypoint', pattern: ['src/app.ts', 'src/index.ts'], mode: 'full' },
       ],
       'boundaries/dependency-nodes': ['import', 'dynamic-import'],
-      // REQUIRED for the boundaries rule to fire. Without an `import/resolver`,
-      // the v6 plugin resolves every `@modules/*`/`@shared/*`/`@data/*` alias as
-      // `external` (path `null`), classifies no file into an element type, and
-      // EVERY `from/to` rule silently no-ops (0 errors — a proven months-long
-      // disarmament; run 2026-06-04-hexagonal-boundaries-enforcement, spec R1).
-      // Mirrors the working `import-x/resolver` block below; uses the installed
-      // `eslint-import-resolver-typescript` so the TS path aliases resolve.
       'import/resolver': {
         typescript: { alwaysTryTypes: true },
         node: true,
       },
     },
     rules: {
-      // v6 syntax — `boundaries/dependencies` replaces deprecated `boundaries/element-types`.
-      // v5 inline arrays (e.g. `disallow: ['application']`) emit deprecation warnings and
-      // silently route to legacy matchers in v6, which broke enforcement on this repo
-      // before this migration. Object selectors below are the supported form.
       'boundaries/dependencies': [
         'error',
         {
           default: 'allow',
           rules: [
-            // Domain CANNOT import application, infrastructure, primary, data
             {
               from: { type: 'domain' },
               disallow: {
@@ -148,39 +117,12 @@ export default tseslint.config(
                 },
               },
             },
-            // W2 — armed when its code is clean (RUN 2026-06-04-hexagonal-boundaries-enforcement).
-            // Application CANNOT import infrastructure, primary, data. Sequenced per Q1(a):
-            // the 34 B1 composition-root + 2 residual B2 couplings move `useCase/index.ts`
-            // DI → module-root in W2; arming this arm before that lands would make `pnpm lint`
-            // RED (not an allow-rule, not a ratchet — the arm goes live the moment its code
-            // is clean). The domain arm above ships fully strict at launch.
-            // {
-            //   from: { type: 'application' },
-            //   disallow: {
-            //     to: {
-            //       type: ['infrastructure', 'primary', 'data', 'module-root', 'entrypoint'],
-            //     },
-            //   },
-            // },
-            // W3 — armed when its code is clean (RUN 2026-06-04-hexagonal-boundaries-enforcement).
-            // Infrastructure CANNOT import primary, application (except via domain ports).
-            // The ~16 C1/C2 chat-adapter→useCase edges + the orchestrator bidirectional
-            // untangle relocate port-types/pure helpers → domain in W3; armed then.
-            // {
-            //   from: { type: 'infrastructure' },
-            //   disallow: {
-            //     to: { type: ['primary', 'application', 'module-root', 'entrypoint'] },
-            //   },
-            // },
           ],
         },
       ],
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  2. IMPORTS — order, no-cycle, no-duplicates
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { 'import-x': importX },
@@ -206,16 +148,6 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  3. JSDOC — quality-when-present (cleanup/comment-purge 2026-05-17)
-  //
-  //  Doctrine : "default to writing no comments" (CLAUDE.md global).
-  //  Types TS + nommage portent la sémantique. JSDoc ajouté UNIQUEMENT
-  //  quand le WHY est non-obvious (gotcha, SEC, ADR ref, contrat async).
-  //  Donc require-jsdoc + require-description désactivés ; on garde la
-  //  qualité formelle (tag-lines, check-param-names) pour les JSDoc
-  //  effectivement écrites.
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { jsdoc },
@@ -233,46 +165,35 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  4. COMPLEXITY — fichiers courts, fonctions simples, KISS
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     rules: {
-      // ── Taille ──
       'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['error', { max: 60, skipBlankLines: true, skipComments: true }],
       'max-params': ['error', { max: 5 }],
       'max-depth': ['error', { max: 4 }],
       'max-nested-callbacks': ['error', { max: 3 }],
 
-      // ── Complexite ──
       complexity: ['error', { max: 12 }],
       'sonarjs/cognitive-complexity': ['error', 15],
 
-      // ── DRY ──
       'sonarjs/no-duplicate-string': ['warn', { threshold: 4 }],
       'sonarjs/no-identical-functions': 'error',
 
-      // ── SonarJS pragmatic ──
-      'sonarjs/no-hardcoded-passwords': 'off', // false positives on audit action enums
-      'sonarjs/slow-regex': 'warn', // validation patterns need review, not block
+      'sonarjs/no-hardcoded-passwords': 'off',
+      'sonarjs/slow-regex': 'warn',
       'sonarjs/void-use': 'warn',
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  5. UNICORN — strict best practices
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { unicorn },
     rules: {
-      // ── Actives ──
       'unicorn/prefer-node-protocol': 'error',
       'unicorn/no-nested-ternary': 'error',
       'unicorn/no-lonely-if': 'error',
-      'unicorn/no-useless-undefined': 'error',
+      'unicorn/no-useless-undefined': ['error', { checkArrowFunctionBody: false }],
       'unicorn/prefer-ternary': 'warn',
       'unicorn/no-array-for-each': 'warn',
       'unicorn/consistent-function-scoping': 'warn',
@@ -293,27 +214,19 @@ export default tseslint.config(
         'error',
         {
           cases: { kebabCase: true, camelCase: true },
-          ignore: [
-            '^index\\.ts$',
-            '^index\\.d\\.ts$',
-            '^\\d+-.*\\.ts$', // TypeORM migrations: 1771427010387-InitDatabase.ts
-          ],
+          ignore: ['^index\\.ts$', '^index\\.d\\.ts$', '^\\d+-.*\\.ts$'],
         },
       ],
 
-      // ── Off (trop invasif ou non pertinent pour Express/TypeORM) ──
       'unicorn/prevent-abbreviations': 'off',
-      'unicorn/no-process-exit': 'off', // handled by n/no-process-exit
-      'unicorn/prefer-module': 'off', // CJS project
+      'unicorn/no-process-exit': 'off',
+      'unicorn/prefer-module': 'off',
       'unicorn/prefer-top-level-await': 'off',
-      'unicorn/no-null': 'off', // DB returns null
-      'unicorn/no-static-only-class': 'off', // use case pattern
+      'unicorn/no-null': 'off',
+      'unicorn/no-static-only-class': 'off',
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  6. FILE NAMING — kebab-case, enforce suffixes
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { 'check-file': checkFile },
@@ -321,14 +234,10 @@ export default tseslint.config(
       'check-file/folder-naming-convention': [
         'error',
         { 'src/**/': '+([a-zA-Z0-9])*(-+([a-zA-Z0-9]))' },
-        // allows: kebab-case, camelCase, single-word (covers useCase, feature-flags, db, etc.)
       ],
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  7. NODE.JS — best practices
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     plugins: { n },
@@ -338,32 +247,26 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  8. SECURITY — hardened
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     rules: {
       'no-eval': 'error',
       'no-new-func': 'error',
+      'no-empty': ['error', { allowEmptyCatch: true }],
       'no-implied-eval': 'off',
       '@typescript-eslint/no-implied-eval': 'error',
       'security/detect-eval-with-expression': 'error',
       'security/detect-non-literal-regexp': 'warn',
       'security/detect-unsafe-regex': 'error',
       'security/detect-possible-timing-attacks': 'warn',
-      'security/detect-object-injection': 'off', // trop de faux positifs en TS
-      'security/detect-non-literal-fs-filename': 'off', // false positives with path.join
+      'security/detect-object-injection': 'off',
+      'security/detect-non-literal-fs-filename': 'off',
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  9. TYPESCRIPT — strict rules (source files)
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.ts'],
     rules: {
-      // ── Erreurs critiques ──
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-return-await': 'off',
       '@typescript-eslint/return-await': ['error', 'always'],
@@ -385,7 +288,6 @@ export default tseslint.config(
       '@typescript-eslint/no-import-type-side-effects': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
 
-      // ── Warn (pragmatique pour Express/TypeORM) ──
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
       '@typescript-eslint/no-unsafe-call': 'warn',
@@ -398,11 +300,6 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  OVERRIDES — infrastructure, adapters, routes (external boundary)
-  //  These files interface with untyped externals (DB results, HTTP
-  //  request bodies, S3 responses) — unsafe-* noise is structural.
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: [
       'src/modules/*/adapters/primary/http/**/*.route.ts',
@@ -412,13 +309,11 @@ export default tseslint.config(
       'src/shared/audit/**/*.ts',
     ],
     rules: {
-      // ── Complexity ──
       'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['error', { max: 80, skipBlankLines: true, skipComments: true }],
       complexity: ['error', { max: 15 }],
       'sonarjs/cognitive-complexity': ['error', 20],
 
-      // ── Type safety relaxed at external boundary ──
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
@@ -429,7 +324,6 @@ export default tseslint.config(
     },
   },
 
-  // ── Application layer: naturally higher complexity (orchestration, business logic) ──
   {
     files: [
       'src/modules/*/application/**/*.ts',
@@ -443,34 +337,24 @@ export default tseslint.config(
     },
   },
 
-  // ── Logger: must use console ──
   {
     files: ['src/shared/logger/**/*.ts'],
     rules: { 'no-console': 'off' },
   },
 
-  // ── Config/env files: process.env || 'default' is intentional (empty string fallback) ──
   {
     files: ['src/config/**/*.ts'],
     rules: {
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
-      // env.ts is a single-responsibility config file that grows with each
-      // new env var block; splitting it would break the single-source-of-truth
-      // pattern. max-lines-per-function still applies per function.
       'max-lines': 'off',
     },
   },
 
-  // ── Boot composition root: single-source-of-truth wiring that grows with
-  //    each new background job / shutdown resource. Splitting it would scatter
-  //    boot ordering invariants (DB → cache → crons → server). Same rationale
-  //    as src/config above. max-lines-per-function still applies per function.
   {
     files: ['src/index.ts'],
     rules: { 'max-lines': 'off' },
   },
 
-  // ── OpenTelemetry: CJS requires needed, dynamic instrumentation ──
   {
     files: ['src/shared/observability/**/*.ts'],
     rules: {
@@ -480,13 +364,9 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  TESTS — relax pour les fichiers de test
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['tests/**/*.ts'],
     rules: {
-      // ── TypeScript relax ──
       'no-console': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -502,7 +382,6 @@ export default tseslint.config(
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/prefer-readonly': 'off',
 
-      // ── Complexity relax ──
       'max-lines': 'off',
       'max-lines-per-function': 'off',
       'max-nested-callbacks': 'off',
@@ -511,19 +390,14 @@ export default tseslint.config(
       'sonarjs/no-duplicate-string': 'off',
       'sonarjs/no-identical-functions': 'off',
 
-      // ── JSDoc relax ──
       'jsdoc/require-jsdoc': 'off',
       'jsdoc/require-description': 'off',
 
-      // ── Security relax ──
       'security/detect-non-literal-regexp': 'off',
       'security/detect-possible-timing-attacks': 'off',
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  MUSAIUM TEST DISCIPLINE
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['tests/**/*.test.ts'],
     plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
@@ -533,14 +407,6 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  MUSAIUM REPOSITORY DISCIPLINE
-  //  TypeORM `.set({ x: undefined })` is silently skipped — surface the
-  //  gotcha as a lint error on repository adapter files. See audit
-  //  docs/audit-2026-05-12-raw/05-gaps/F8-typeorm-set-undefined-audit.md
-  //  and the verifyEmail/consumeReset*/consumeEmailChange* methods in
-  //  user.repository.pg.ts for the `() => 'NULL'` workaround.
-  // ═══════════════════════════════════════════════════════════════════
   {
     files: ['src/**/*.repository*.ts', 'src/**/*.repo.ts'],
     plugins: { 'musaium-test-discipline': musaiumTestDiscipline },
@@ -549,11 +415,6 @@ export default tseslint.config(
     },
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  GRANDFATHER — baseline files exempt from no-inline-test-entities
-  //  Phase 7 will migrate these. Until then, rule is 'off' for baselined
-  //  paths so 'error' only fires on new code.
-  // ═══════════════════════════════════════════════════════════════════
   ...(() => {
     const baselinePath = resolve(
       __dirname,
@@ -573,8 +434,37 @@ export default tseslint.config(
     ];
   })(),
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  PRETTIER — must be last to disable conflicting formatting rules
-  // ═══════════════════════════════════════════════════════════════════
+  {
+    files: [
+      'src/shared/validation/password-breach-check.ts',
+      'src/modules/chat/adapters/secondary/storage/s3-operations.ts',
+      'src/modules/auth/useCase/session/login-rate-limiter.ts',
+    ],
+    rules: { 'sonarjs/hashing': 'off' },
+  },
+
+  {
+    files: [
+      'src/modules/daily-art/adapters/secondary/catalog/artworks.data.ts',
+      'src/shared/i18n/explanation-reasons.ts',
+    ],
+    rules: { 'max-lines': 'off', 'sonarjs/no-duplicate-string': 'off' },
+  },
+
+  {
+    files: ['src/modules/chat/chat-module.ts'],
+    rules: { 'max-lines': 'off', 'max-lines-per-function': 'off' },
+  },
+
+  {
+    files: ['src/shared/observability/opentelemetry.ts'],
+    rules: {
+      '@typescript-eslint/no-require-imports': [
+        'error',
+        { allow: ['^@opentelemetry/', '^@shared/logger/logger$'] },
+      ],
+    },
+  },
+
   prettierConfig,
 );

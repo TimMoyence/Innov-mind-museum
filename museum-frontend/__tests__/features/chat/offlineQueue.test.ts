@@ -1,23 +1,9 @@
-/**
- * RED (W1-L1-10) — M3 OfflineQueue full / FIFO / maxAge / prune / corrupt-JSON /
- * getAll-after-hydrate snapshot-init gap (spec R4).
- *
- * Exercises the REAL `OfflineQueue` against a fake `QueueStorage`, building queued
- * entries via the DRY `makeQueuedMessage` factory. Pins the regression where
- * `getAll()` returns `this.snapshot` (mutated only by `notify()`, NOT by
- * `hydrate()` when storage is empty) → `[]` after a hydrate that never notified
- * (`offlineQueue.ts:30/162`). Both constructor forms (legacy `QueueStorage`,
- * options object) are covered.
- *
- * Fails RED because the `makeQueuedMessage` factory does not exist yet.
- */
 import { OfflineQueue, type QueuedMessage } from '@/features/chat/application/offlineQueue';
 import { makeQueuedMessage } from '@/__tests__/helpers/factories';
 import { nonNull } from '@/__tests__/helpers/nonNull';
 
 const STORAGE_KEY = 'musaium.offline.queue';
 
-/** In-memory fake of the `QueueStorage` port (single backing key). */
 class FakeQueueStorage {
   private store = new Map<string, string>();
   getItem = jest.fn(async (key: string): Promise<string | null> => this.store.get(key) ?? null);
@@ -81,7 +67,6 @@ describe('M3 — OfflineQueue', () => {
       const aged = queue.enqueue({ sessionId: 's', text: 'will-age' });
       expect(aged).not.toBeNull();
 
-      // Advance the system clock beyond maxAge so the entry is now stale.
       jest.setSystemTime(5000);
       const recent = queue.enqueue({ sessionId: 's', text: 'recent' });
       expect(recent).not.toBeNull();
@@ -109,8 +94,6 @@ describe('M3 — OfflineQueue', () => {
   });
 
   it('getAll() returns [] after a hydrate that never notified (snapshot-init regression)', async () => {
-    // Empty storage → hydrate returns early WITHOUT calling notify(), so the
-    // snapshot remains its initial []. getAll() reads the snapshot, not the queue.
     const storage = new FakeQueueStorage();
 
     const queue = new OfflineQueue({ storage });

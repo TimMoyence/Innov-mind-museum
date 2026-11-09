@@ -3,8 +3,6 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { makeReview } from '../helpers/factories/review.factories';
 import { useChatSessionStore } from '@/features/chat/infrastructure/chatSessionStore';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
 const mockUseReviews = jest.fn();
 jest.mock('@/features/review/application/useReviews', () => ({
   useReviews: () => mockUseReviews(),
@@ -19,10 +17,6 @@ jest.mock('@/features/review/ui/ReviewCard', () => {
   };
 });
 
-// C2-FE / UFR-022 RED. The input form now uses `NpsScale` (testID "nps-scale"),
-// NOT `StarRating`. We mock `NpsScale` as a tappable surface that emits a fixed
-// value via onChange so the submit path is exercised. StarRating is no longer
-// imported by reviews.tsx after green; mocking both is harmless until then.
 jest.mock('@/features/review/ui/NpsScale', () => {
   const { Pressable, Text } = require('react-native');
   return {
@@ -37,8 +31,6 @@ jest.mock('@/features/review/ui/NpsScale', () => {
         >
           <Text>nps-scale-mock</Text>
         </Pressable>
-        {/* A second tappable surface that emits the lowest detractor (0).
-            0 is a valid NPS score, NOT a "nothing selected" sentinel. */}
         <Pressable
           testID="nps-scale-zero"
           accessibilityRole="button"
@@ -72,7 +64,6 @@ describe('ReviewsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseReviews.mockReturnValue({ ...defaultHookReturn });
-    // Reset the in-memory chat-session store between tests (sessionId source).
     useChatSessionStore.setState({ sessions: {} });
   });
 
@@ -130,18 +121,12 @@ describe('ReviewsScreen', () => {
     expect(screen.getByLabelText('reviews.writeReview')).toBeTruthy();
   });
 
-  // C2-FE / UFR-022 RED (R20/R23). The form opens onto an NpsScale 0-10 input
-  // (testID "nps-scale") instead of the 5-star StarRating, and the free-text
-  // name field (a11y.reviews.name_input) is removed — userName is derived
-  // server-side. FAILS at baseline (reviews.tsx still renders StarRating + the
-  // name TextInput).
   it('opens the NPS form (NpsScale, comment, submit) on write review press — no name field', () => {
     render(<ReviewsScreen />);
     fireEvent.press(screen.getByLabelText('reviews.writeReview'));
     expect(screen.getByTestId('nps-scale')).toBeTruthy();
     expect(screen.getByLabelText('a11y.reviews.comment_input')).toBeTruthy();
     expect(screen.getByLabelText('reviews.submit')).toBeTruthy();
-    // The name input must be gone (userName is server-derived, R18/R23).
     expect(screen.queryByLabelText('a11y.reviews.name_input')).toBeNull();
   });
 
@@ -194,7 +179,7 @@ describe('ReviewsScreen', () => {
 
     render(<ReviewsScreen />);
     fireEvent.press(screen.getByLabelText('reviews.writeReview'));
-    fireEvent.press(screen.getByTestId('nps-scale')); // NpsScale mock emits onChange(9)
+    fireEvent.press(screen.getByTestId('nps-scale'));
     fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'Loved the visit');
     fireEvent.press(screen.getByLabelText('reviews.submit'));
 
@@ -202,9 +187,7 @@ describe('ReviewsScreen', () => {
     const args = submitReview.mock.calls[0] as unknown[];
     expect(args[0]).toBe(9);
     expect(args[1]).toBe('Loved the visit');
-    // Most-recent session is attributed (R1 best-effort, design D-C2-5).
     expect(args[2]).toBe(recentId);
-    // No legacy userName argument anywhere in the call.
     expect(args).not.toContain('');
   });
 
@@ -215,10 +198,9 @@ describe('ReviewsScreen', () => {
 
     render(<ReviewsScreen />);
     fireEvent.press(screen.getByLabelText('reviews.writeReview'));
-    fireEvent.press(screen.getByTestId('nps-scale-zero')); // emits onChange(0)
+    fireEvent.press(screen.getByTestId('nps-scale-zero'));
     fireEvent.changeText(screen.getByLabelText('a11y.reviews.comment_input'), 'Worst visit ever');
 
-    // The submit button must be enabled once a score (even 0) + comment are set.
     expect(screen.getByLabelText('reviews.submit').props.accessibilityState?.disabled).toBeFalsy();
 
     fireEvent.press(screen.getByLabelText('reviews.submit'));
@@ -253,10 +235,7 @@ describe('ReviewsScreen', () => {
       stats: { average: 8.4, count: 12 },
     });
     render(<ReviewsScreen />);
-    // The un-capped numerator is shown verbatim.
     expect(screen.getByText('8.4')).toBeTruthy();
-    // A "/10" indicator is present (inline "8.4 / 10" or via the dict key),
-    // and the StarRating clamp is gone from the stats header.
     const out10 =
       screen.queryByText(/8\.4\s*\/\s*10/) ?? screen.queryByText('reviews.averageOutOf10');
     expect(out10).toBeTruthy();

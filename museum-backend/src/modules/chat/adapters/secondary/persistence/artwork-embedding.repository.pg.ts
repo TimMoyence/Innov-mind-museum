@@ -1,21 +1,5 @@
-/**
- * C3 Phase 4 — `ArtworkEmbeddingRepositoryPg` (ADR-037).
- *
- * Backs migration `1778406339944-AddArtworkEmbeddings`.
- *
- * Schema/gotchas:
- *  - `embedding` column is `halfvec(768)` (FP16, pgvector ≥ 0.7.0). TypeORM
- *    has no native halfvec type → all I/O is raw SQL with `::halfvec` casts.
- *    Vectors serialise to pgvector text literal `"[v1,v2,…]"`.
- *  - kNN uses inner-product op `<#>` (returns NEGATIVE IP). Vectors are
- *    L2-unit at encode time, so `<#>` ∈ [-1, 1]; we rescale to [0, 1] via
- *    `(1 - (e <#> q)) / 2` (1=identical, 0.5=orthogonal). `ORDER BY <#> ASC`
- *    puts closest first.
- *  - upsertBatch is idempotent: rows with identical `(vector, model_version)`
- *    are `skipped` (not UPDATEd) so `updated_at` is preserved across re-runs
- *    of the catalog ingest CLI. Classification + write share one transaction.
- */
 import { logger } from '@shared/logger/logger';
+import { wikimediaHttps } from '@shared/media/wikimedia-https';
 
 import type { ArtworkEmbedding } from '@modules/chat/domain/visual-similarity/artworkEmbedding.entity';
 import type {
@@ -46,11 +30,9 @@ interface ArtworkEmbeddingSqlRow {
 }
 
 interface ArtworkEmbeddingNearestSqlRow extends ArtworkEmbeddingSqlRow {
-  /** `(1 - (embedding <#> query)) / 2` — node-postgres may yield string for numeric. */
   similarity: number | string;
 }
 
-/** Serialises a vector to pgvector text literal `[v1,v2,…]` (consumed by ::halfvec). */
 const serialiseVector = (vector: Float32Array): string => `[${Array.from(vector).join(',')}]`;
 
 const ROW_CASTS = {
@@ -98,7 +80,7 @@ const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   museumId: row.museum_id,
   title: row.title,
   artist: row.artist,
-  imageUrl: row.image_url,
+  imageUrl: wikimediaHttps(row.image_url),
   license: row.license,
   imageSource: row.image_source,
   embedding: row.embedding,
@@ -107,11 +89,10 @@ const toEntity = (row: ArtworkEmbeddingSqlRow): ArtworkEmbedding => ({
   updatedAt: row.updated_at,
 });
 
-/** Catalog stores card-render subset; full Wikidata facts hydrated downstream (T4.6). */
 const toNearestMetadata = (row: ArtworkEmbeddingSqlRow): ArtworkMetadata => {
   const metadata: ArtworkMetadata = {
     title: row.title,
-    imageUrl: row.image_url,
+    imageUrl: wikimediaHttps(row.image_url),
   };
   if (row.museum_qid !== null) {
     metadata.museumQid = row.museum_qid;
@@ -122,23 +103,9 @@ const toNearestMetadata = (row: ArtworkEmbeddingSqlRow): ArtworkMetadata => {
   return metadata;
 };
 
-/**
- * Concurrent-safe; relies exclusively on Postgres transactional semantics
- * (no in-process locks).
- */
 export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  /**
-   * Two orthogonal filters:
-   *  - `museumQids` (Wikidata external axis) → `museum_qid = ANY($2)`
-   *  - `museumId` (OWASP LLM08 internal tenant axis) →
-   *    `museum_id IS NULL OR museum_id = $4`. NULL branch = global public
-   *    catalog. **`museumId === undefined`** → predicate omitted (legacy
-   *    global read) + warn logged so B2B onboarding can grep + fix before
-   *    first tenant. V1 single-tenant has no non-NULL museum_id rows so
-   *    unscoped path is leakage-free by construction (silence warn before B2B).
-   */
   async findNearest(
     query: Float32Array,
     topN: number,
@@ -146,10 +113,8 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
   ): Promise<NearestResult[]> {
     const queryLiteral = serialiseVector(query);
     const museumQids = opts.museumQids ?? null;
-    // Only a positive integer activates tenant scope; null/undefined both = legacy global read.
     const museumId = typeof opts.museumId === 'number' ? opts.museumId : null;
     if (museumId === null) {
-      // OWASP LLM08 — grep this line to fix unscoped callers before B2B.
       logger.warn('artwork_embeddings_find_nearest_unscoped', {
         reason: 'museumId not provided — global read (cross-tenant scope disabled)',
         topN,
@@ -196,7 +161,6 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     });
   }
 
-  /** `skipMask[i]=true` → drop row i from the INSERT batch (already up-to-date). */
   private async classifyRows(
     manager: EntityManager,
     rows: ArtworkEmbeddingRow[],
@@ -238,7 +202,6 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
     for (const [idx, row] of rows.entries()) {
       const verdict = byQid.get(row.qid);
       if (!verdict) {
-        // Defensive — SQL/input shape divergence; treat as insert, let DB raise on conflict.
         inserted += 1;
         continue;
       }
@@ -288,13 +251,5 @@ export class ArtworkEmbeddingRepositoryPg implements ArtworkEmbeddingRepository 
       return null;
     }
     return toEntity(rows[0]);
-  }
-
-  /** Backs `artwork_embeddings_count` Grafana gauge (design §10). */
-  async count(): Promise<number> {
-    const rows: { count: string }[] = await this.dataSource.query(
-      `SELECT COUNT(*)::text AS count FROM artwork_embeddings`,
-    );
-    return Number(rows[0].count);
   }
 }

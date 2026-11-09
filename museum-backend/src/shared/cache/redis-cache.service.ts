@@ -4,7 +4,6 @@ import type { CacheService, CacheValueSchema } from './cache.port';
 
 interface RedisCacheOptions {
   url: string;
-  /** Overrides URL-embedded password. */
   password?: string;
   defaultTtlSeconds?: number;
 }
@@ -18,7 +17,6 @@ export class RedisCacheService implements CacheService {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
       enableReadyCheck: false,
-      // TD-IO-01 / TD-IO-02 — bounded backoff + READONLY recovery (PATTERNS.md ioredis §3).
       retryStrategy: (times) => Math.min(times * 50, 2000),
       reconnectOnError: (err) => (err.message.includes('READONLY') ? 2 : false),
       ...(options.password ? { password: options.password } : {}),
@@ -34,7 +32,6 @@ export class RedisCacheService implements CacheService {
     await this.redis.quit();
   }
 
-  /** Alias of disconnect() — CacheService.destroy contract. */
   async destroy(): Promise<void> {
     await this.disconnect();
   }
@@ -42,9 +39,6 @@ export class RedisCacheService implements CacheService {
   async get<T>(key: string, schema?: CacheValueSchema<T>): Promise<T | null> {
     try {
       const raw = await this.redis.get(key);
-      // Stryker equivalent: removing guard still returns null because
-      // JSON.parse(null) -> JSON.parse('null') -> null -> null as T.
-      // Stryker disable next-line ConditionalExpression
       if (raw === null) return null;
       const parsed = JSON.parse(raw) as unknown;
       if (schema) {
@@ -57,22 +51,17 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const ttl = ttlSeconds ?? this.defaultTtl;
     try {
       await this.redis.set(key, JSON.stringify(value), 'EX', ttl);
-    } catch {
-      // Cache write failure is non-fatal
-    }
+    } catch {}
   }
 
   async del(key: string): Promise<void> {
     try {
       await this.redis.del(key);
-    } catch {
-      // non-fatal
-    }
+    } catch {}
   }
 
   async delByPrefix(prefix: string): Promise<void> {
@@ -91,13 +80,10 @@ export class RedisCacheService implements CacheService {
           await this.redis.del(...keys);
         }
       } while (cursor !== '0');
-    } catch {
-      // Cache prefix delete failure is non-fatal
-    }
+    } catch {}
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- matches CacheService interface signature
-  async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
+  async setNx(key: string, value: unknown, ttlSeconds: number): Promise<boolean> {
     try {
       const result = await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds, 'NX');
       return result === 'OK';
@@ -106,13 +92,6 @@ export class RedisCacheService implements CacheService {
     }
   }
 
-  /**
-   * Atomic INCRBY + (re-)apply TTL via Lua script — increment and expiry
-   * commit together. Returns new value or null on Redis failure (fail-soft).
-   * Lua instead of pipelined INCRBY+EXPIRE because pipelines aren't atomic
-   * across replicas; failure between commands would leave key without TTL
-   * (memory leak).
-   */
   async incrBy(key: string, amount: number, ttlSeconds: number): Promise<number | null> {
     if (!Number.isFinite(amount) || amount === 0) return null;
     if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) return null;
@@ -127,7 +106,6 @@ export class RedisCacheService implements CacheService {
         String(Math.trunc(amount)),
         String(Math.trunc(ttlSeconds)),
       );
-      // Stryker disable next-line ConditionalExpression,StringLiteral: both mutants collapse to always-Number(result) — equivalent because Number.isFinite filter below rejects NaN/non-numeric to null. Verified 2026-05-13.
       const numeric = typeof result === 'number' ? result : Number(result);
       return Number.isFinite(numeric) ? numeric : null;
     } catch {
@@ -147,9 +125,7 @@ export class RedisCacheService implements CacheService {
   async zadd(key: string, member: string, increment: number): Promise<void> {
     try {
       await this.redis.zincrby(key, increment, member);
-    } catch {
-      // non-fatal
-    }
+    } catch {}
   }
 
   async ztop(key: string, n: number): Promise<{ member: string; score: number }[]> {

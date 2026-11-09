@@ -39,7 +39,6 @@ describe('chat api smoke (service integration)', () => {
       userId: 202,
     });
 
-    // SEC-19: pass currentUserId so the session-ownership check sees a matching auth.
     await chatService.postMessage(userSession.id, { text: 'My museum note' }, undefined, 101);
 
     const list = await chatService.listSessions({ limit: 20 }, 101);

@@ -1,11 +1,3 @@
-/**
- * Phase 8 — pin the contracts of the local-filesystem audio storage stub.
- *
- * Used in dev + tests; a regression here makes TTS replay silently break
- * locally without surfacing in CI (S3 path differs). Each test pins one
- * specific named contract from JSDoc.
- */
-
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -28,8 +20,6 @@ describe('resolveLocalAudioFilePath', () => {
   });
 
   it('returns null when the filename contains path-traversal chars', () => {
-    // The regex restricts to [a-zA-Z0-9._-] — `..` and `/` are rejected so a
-    // crafted ref can't escape the audios dir.
     expect(resolveLocalAudioFilePath('local-audio://../etc/passwd')).toBeNull();
     expect(resolveLocalAudioFilePath('local-audio://a/b.mp3')).toBeNull();
   });
@@ -69,7 +59,6 @@ describe('LocalAudioStorage', () => {
   it('save() generates a UUID-based filename when objectKey is empty (extension fallback to mp3)', async () => {
     const ref = await storage.save({
       buffer: Buffer.from('audio'),
-      // Unknown content type → falls back to .mp3 per extensionByContentType.
       contentType: 'audio/unknown',
       objectKey: '',
     });

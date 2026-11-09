@@ -62,7 +62,6 @@ describe('isGenericQuery — Option C scoping classifier', () => {
         text: 'short',
         museumId: 'mus-1',
         locale: 'en',
-        // No hasHistory / hasAttachment / hasGeo at all.
       }),
     ).toBe(false);
   });

@@ -1,24 +1,3 @@
-/**
- * C9.5 — TDD red lock for stable-prefix message ordering.
- *
- * Asserts the byte-identity invariant of `buildSectionMessages` between two
- * simulated turns of the same chat session. The OpenAI prompt-cache keys on a
- * byte-identical PREFIX shared across calls — see
- * `.claude/skills/team/team-state/2026-05-18-w1-c9-5-stable-prefix-cache/spec.md`
- * §3 R1..R4 + design.md §3 (before/after ordering diagram).
- *
- * Expected RED state today (4bf040b7 HEAD, before T2.1 reorder):
- *
- *   - Test 1 (stable prefix)          FAIL — envelope at messages[1] breaks byte-identity.
- *   - Test 2 (no var block in prefix) FAIL — envelope leaks into messages[1].
- *   - Test 3 (boundary marker)        PASS — already correct on messages[0] tail.
- *   - Test 4 (envelope post-reorder)  FAIL — envelope sits at index 1 today, target is ≥2.
- *   - Test 5 (trailing reminder)      PASS — already correct (C9.11 sandwich).
- *
- * Once T2.1 reorders `buildSectionMessages` so `[SystemMessage(system),
- * SystemMessage(section)]` is the unconditional 2-message prefix, all 5 tests
- * flip green.
- */
 import { AIMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
 
 import {
@@ -33,11 +12,6 @@ const SECTION_PROMPT = '[SECTION:summary] Reply in English. Be concise.';
 
 const TRAILING_REMINDER_PREFIX = 'Remember: You are Musaium';
 
-/**
- * Two payloads that are intentionally maximally different on every per-turn
- * variable surface. If `buildSectionMessages` puts ANY of these into the first
- * two messages, R1 byte-identity fails.
- */
 const PAYLOAD_A = {
   history: [] as ChatModelMessage[],
   user: new HumanMessage('Who painted the Mona Lisa?'),
@@ -87,12 +61,9 @@ describe('buildSectionMessages — stable prefix for OpenAI prompt caching (C9.5
     const b0 = toContentString(b[0].content);
     const b1 = toContentString(b[1].content);
 
-    // Strict string identity.
     expect(a0).toBe(b0);
     expect(a1).toBe(b1);
 
-    // Byte-length identity (catches trailing-whitespace drift the === check
-    // would catch anyway, but with a more legible failure mode).
     expect(Buffer.byteLength(a0, 'utf8')).toBe(Buffer.byteLength(b0, 'utf8'));
     expect(Buffer.byteLength(a1, 'utf8')).toBe(Buffer.byteLength(b1, 'utf8'));
   });
@@ -119,12 +90,9 @@ describe('buildSectionMessages — stable prefix for OpenAI prompt caching (C9.5
     const m0 = toContentString(messages[0].content);
     const m1 = toContentString(messages[1].content);
 
-    // messages[0] = system prompt verbatim (boundary marker preserved).
     expect(m0).toBe(SYSTEM_PROMPT_WITH_BOUNDARY);
-    // messages[1] = section prompt verbatim — NO per-turn block leak.
     expect(m1).toBe(SECTION_PROMPT);
 
-    // None of the variable blocks should surface in messages[0] or [1].
     for (const variableMarker of [
       '[BEGIN UNTRUSTED EXTERNAL DATA',
       'memory-block-contents',
@@ -168,13 +136,11 @@ describe('buildSectionMessages — stable prefix for OpenAI prompt caching (C9.5
       },
     );
 
-    // Index 1 MUST be the section prompt — NOT the envelope.
     expect(messages[1]).toBeInstanceOf(SystemMessage);
     const m1 = toContentString(messages[1].content);
     expect(m1).toBe(SECTION_PROMPT);
     expect(m1).not.toContain('[BEGIN UNTRUSTED EXTERNAL DATA');
 
-    // Envelope MUST land at index 2 or later.
     let envelopeIdx = -1;
     for (let i = 0; i < messages.length; i++) {
       const content = toContentString(messages[i].content);
@@ -187,8 +153,6 @@ describe('buildSectionMessages — stable prefix for OpenAI prompt caching (C9.5
   });
 
   it('R4 — last message is the canonical trailing anti-injection reminder', () => {
-    // Exercise multiple optional-block combinations — last message must
-    // always be the trailing reminder (C9.11 sandwich defense).
     const scenarios = [
       undefined,
       { facts: ['A.'], source: 'wikidata' as const },

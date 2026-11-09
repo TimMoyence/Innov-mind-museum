@@ -1,22 +1,3 @@
-/**
- * Conformité email RGPD — RED phase (UFR-022, RUN_ID 2026-06-13-conformite-email-subprocessors).
- *
- * Materializes one failing assertion per use-case from the test-contract
- * (`.claude/skills/team/team-state/working/2026-06-13-conformite-email-subprocessors/test-contract.md`)
- * for every BE-owned surface + the cross-repo doc surfaces (docs/legal, docs/operations,
- * docs/privacy-policy.html) and the codegen template.
- *
- * OLD = `tim.moyence@gmail.com` (must be eliminated from the in-scope surfaces).
- * NEW = `contact@musaium.com` (target).
- *
- * Pre-impl state (RED): OLD is still present everywhere in scope → these tests FAIL.
- * They prove the absence of the conformity change. Tests only — no production fix here.
- *
- * Tiers:
- *  - unit        : read a static file (JSON / .ts / .md / .html) and assert on its bytes.
- *  - integration : execute a REAL binary against the REAL filesystem/git (never mocked) —
- *                  codegen-legal-content.mjs (UC-A19/A38) + privacy-content-drift.mjs (UC-A34).
- */
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -26,19 +7,10 @@ const REPO_ROOT = path.resolve(__dirname, '../../../../');
 const OLD = 'tim.moyence@gmail.com';
 const NEW = 'contact@musaium.com';
 
-// Case-insensitive OLD detector (UC-A35): email local+domain are case-insensitive,
-// so a mis-cased residue is still a leak.
 const OLD_CI = /tim\.moyence@gmail\.com/i;
 
-// Near-miss NEW detector (UC-A36): quasi-NEW addresses that are dead mailboxes.
-// NOTE: `contact@musaium.co` is intentionally NOT a substring entry here — it is
-// a substring of the valid `contact@musaium.com`, so `.toContain` on it can never
-// be false. The `.co`-without-trailing-`m` typo is checked separately below with a
-// word-boundary regex (NEAR_MISS_CO_RE) so the valid `.com` is not flagged.
 const NEAR_MISS_NEW = ['contact@mail.musaium.com', 'contact @musaium.com', 'contacts@musaium.com'];
 
-// `contact@musaium.co` that is NOT immediately followed by `m` is a dead-mailbox
-// typo; the valid `contact@musaium.com` is excluded by the negative lookahead.
 const NEAR_MISS_CO_RE = /contact@musaium\.co(?![m])/;
 
 const read = (rel: string): string => readFileSync(path.join(REPO_ROOT, rel), 'utf8');
@@ -73,7 +45,6 @@ const sectionParagraphs = (
   return s.paragraphs;
 };
 
-// ───────────────────────── A. Privacy canonical (BE) ─────────────────────────
 describe('UC-A01..A07 — BE privacy canonical', () => {
   const raw = read(BE_PRIVACY);
   const doc = JSON.parse(raw) as CanonicalPrivacy;
@@ -123,7 +94,6 @@ describe('UC-A01..A07 — BE privacy canonical', () => {
   });
 });
 
-// ───────────────── B. Privacy canonical (web) + INV-1 no-drift ────────────────
 describe('UC-A08..A10 — web privacy canonical + BE/web parity', () => {
   it('UC-A08 (regression): web privacy canonical has 0 OLD', () => {
     expect(read(WEB_PRIVACY)).not.toContain(OLD);
@@ -145,7 +115,6 @@ describe('UC-A08..A10 — web privacy canonical + BE/web parity', () => {
   });
 });
 
-// ───────────────────── C. Terms canonical (BE + web) + INV-1 ──────────────────
 describe('UC-A11..A15 — terms canonical', () => {
   it('UC-A11 (regression): BE terms canonical has 0 OLD', () => {
     expect(read(BE_TERMS)).not.toContain(OLD);
@@ -182,7 +151,6 @@ describe('UC-A11..A15 — terms canonical', () => {
   });
 });
 
-// ───────────── D. Codegen template (script) — anti-drift source ──────────────
 describe('UC-A18 / UC-A20 — codegen template hardcodes NEW (not OLD)', () => {
   const src = read(CODEGEN);
 
@@ -196,10 +164,6 @@ describe('UC-A18 / UC-A20 — codegen template hardcodes NEW (not OLD)', () => {
   });
 });
 
-// ────────── D'. FE generated file static surface (UC-A16/A17) ─────────────────
-// NOTE: read as text (not import) so the BE jest project does not depend on FE
-// module resolution. The byte-exact contactEmail import assertion lives in the
-// FE jest test (legalContent.test.ts, UC-A16/A17).
 describe('UC-A16 / UC-A17 — FE generated privacyPolicyContent.ts (static bytes)', () => {
   const src = read(FE_GENERATED);
 
@@ -212,7 +176,6 @@ describe('UC-A16 / UC-A17 — FE generated privacyPolicyContent.ts (static bytes
   });
 });
 
-// ─────────────── I. Scope guard rails — exclusions stay intact ────────────────
 describe('UC-A31 / UC-A33 — exclusions still contain OLD (account identity)', () => {
   it('UC-A31 (regression): played migration still has OLD (immutable identity key)', () => {
     const mig = read(
@@ -223,10 +186,7 @@ describe('UC-A31 / UC-A33 — exclusions still contain OLD (account identity)', 
   });
 });
 
-// ── Invariant + adversarial form: case-insensitive / near-miss / comment ──────
 describe('UC-A32 / UC-A35 / UC-A36 / UC-A37 — global invariant + adversarial forms', () => {
-  // The in-scope inclusion list (UC-A32 explicitly EXCLUDES .next/, migration,
-  // smoke-grafana-prod.sh, CI_CD_SECRETS.md, OPS_DEPLOYMENT.md).
   const INCLUDED = [
     BE_PRIVACY,
     WEB_PRIVACY,
@@ -264,28 +224,17 @@ describe('UC-A32 / UC-A35 / UC-A36 / UC-A37 — global invariant + adversarial f
       for (const nm of NEAR_MISS_NEW) {
         expect(content).not.toContain(nm);
       }
-      // Word-boundary `.co`-typo check: the valid `contact@musaium.com` must NOT
-      // trip this (negative lookahead on the trailing `m`), but a truncated
-      // `contact@musaium.co` (dead mailbox) must.
       expect(content).not.toMatch(NEAR_MISS_CO_RE);
     }
   });
 
   it('UC-A37 (edge): no OLD hidden inside comments either', () => {
-    // A dead email hidden in a // ... or <!-- ... --> or JSDoc comment is still
-    // a copy-paste risk and slips past comment-stripping sentinels. Plain
-    // substring search over the raw bytes catches it regardless of position.
     for (const rel of INCLUDED) {
       expect(read(rel)).not.toContain(OLD);
     }
   });
 });
 
-// ─────────────── J. Integration tier — REAL binaries, never mocked ───────────
-// HEAD-INDEPENDENT idempotence: we compare the generated bytes against THEMSELVES
-// across codegen runs, never against `git HEAD` (HEAD may still carry pre-commit
-// OLD state). Restore is an fs backup/restore of the exact pre-test bytes — NEVER
-// `git checkout` (that would revert uncommitted NEW work in the tree back to OLD).
 describe('UC-A19 / UC-A38 — codegen <-> FS (integration)', () => {
   const FE_GENERATED_ABS = path.join(REPO_ROOT, FE_GENERATED);
 
@@ -296,22 +245,17 @@ describe('UC-A19 / UC-A38 — codegen <-> FS (integration)', () => {
     });
 
   it('UC-A19 (regression): codegen is a no-op against the in-tree file and carries NEW', () => {
-    // Capture the exact pre-test bytes so finally can restore them verbatim.
     const before = readFileSync(FE_GENERATED_ABS, 'utf8');
     try {
       const gen = runCodegen();
       expect(gen.status).toBe(0);
 
-      // Re-running codegen over a file that already matches its output is a no-op:
-      // the freshly written bytes must be byte-identical to what was already there.
       const after = readFileSync(FE_GENERATED_ABS, 'utf8');
       expect(after).toBe(before);
 
-      // The generated content MUST carry NEW and no OLD (real FS bytes).
       expect(after).not.toContain(OLD);
       expect(after).toContain(`contactEmail: '${NEW}'`);
     } finally {
-      // Restore the exact pre-test bytes (fs, not git) — leave the tree untouched.
       writeFileSync(FE_GENERATED_ABS, before, 'utf8');
     }
   });
@@ -325,7 +269,6 @@ describe('UC-A19 / UC-A38 — codegen <-> FS (integration)', () => {
       expect(runCodegen().status).toBe(0);
       const secondOutput = readFileSync(FE_GENERATED_ABS, 'utf8');
 
-      // Two consecutive codegen runs produce byte-identical output (no drift).
       expect(secondOutput).toBe(firstOutput);
       expect(secondOutput).toContain(`contactEmail: '${NEW}'`);
     } finally {

@@ -1,9 +1,4 @@
-# Dockerfile.prod uses repo-root build context (E4 fix).
-# BuildKit picks up <dockerfile>.dockerignore co-located with the Dockerfile,
-# in preference to <context>/.dockerignore. Mirrors museum-backend/.dockerignore
-# but with paths re-rooted to the repo root + tools/ scoping.
 
-# Sibling apps + top-level dirs (irrelevant to BE build)
 museum-frontend/
 museum-web/
 design-system/
@@ -16,8 +11,6 @@ team-reports/
 .gitignore
 .DS_Store
 
-# museum-backend exclusions — paths re-rooted to repo root.
-# Mirrors museum-backend/.dockerignore exactly.
 museum-backend/node_modules
 museum-backend/dist
 museum-backend/coverage
@@ -38,10 +31,6 @@ museum-backend/scripts/*
 !museum-backend/scripts/seed-knowledge.ts
 !museum-backend/scripts/seed-smoke-account.ts
 !museum-backend/scripts/seed-kb-canon.ts
-# Audit chain nightly verification (cron job runs `dist/scripts/audit-chain-verify.js`
-# inside the deployed container, cf. .github/workflows/audit-chain-nightly.yml).
-# Source must reach the build stage so TS compiles it to dist/scripts/. Whitelisted
-# 2026-05-17 after CI run 25983633356 failed with "Cannot find module".
 !museum-backend/scripts/audit-chain-verify.ts
 museum-backend/docker-compose*.yml
 museum-backend/deploy/
@@ -49,11 +38,8 @@ museum-backend/.vscode/
 museum-backend/.claude/
 museum-backend/.github/
 
-# C3 — local ONNX bundle. The prod build gets it via `COPY --from` the pinned
-# GHCR base image (deploy/Dockerfile.prod); never copied from the host context.
 museum-backend/models/
 
-# tools/ — only the eslint-plugin is consumed; trim its noise
 tools/eslint-plugin-musaium-test-discipline/node_modules
 tools/eslint-plugin-musaium-test-discipline/coverage
 tools/eslint-plugin-musaium-test-discipline/tests

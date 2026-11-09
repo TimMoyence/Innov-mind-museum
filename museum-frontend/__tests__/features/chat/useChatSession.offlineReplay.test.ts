@@ -1,31 +1,5 @@
-/**
- * RED test — T2.4 (run 2026-05-21-connectivity-offline-first).
- *
- * Proves `useChatSession` feeds the RAW `isConnected` from `useConnectivity()`
- * into `useOfflineSync({ isConnected, ... })` (useChatSession.ts:54,77) instead
- * of the canonical `isOnline`. Behind a captive portal
- * (`{isConnected:true, isInternetReachable:false, isOnline:false}`) the chat
- * replay would drain the offline queue into a DEAD network because the raw
- * `isConnected:true` reads as "go".
- *
- * Spec R11 (replay on reconnect, idempotent — no double-send), design §D7.
- * Idempotency itself is guaranteed by `useOfflineSync`'s pop-on-success drain
- * (useOfflineSync.ts:54-79); this task only changes the INPUT SOURCE so the
- * drain is gated on the canonical predicate.
- *
- * Strategy: mock `useOfflineSync` to CAPTURE the `isConnected` arg it receives
- * (state-observable, no private introspection), and mock `useConnectivity` to
- * the tri-state shape. The captive-portal case asserts the captured value is
- * `false` (canonical isOnline) — currently `true` (raw isConnected) → RED.
- *
- * lib-docs cited: @tanstack/react-query PATTERNS.md:181-191 (onlineManager /
- * reconnect replay semantics); @react-native-community/netinfo PATTERNS.md:173.
- *
- * RED contract: the captive-portal case FAILS before T2.4.
- */
 import { renderHook, waitFor } from '@testing-library/react-native';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -60,7 +34,6 @@ jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   }),
 }));
 
-// Tri-state connectivity context (post-T2.1).
 let mockConnectivity: {
   isConnected: boolean | null;
   isInternetReachable: boolean | null;
@@ -80,7 +53,6 @@ jest.mock('@/features/chat/application/useOfflineQueue', () => ({
   }),
 }));
 
-// Capture what value useChatSession passes as `isConnected` to useOfflineSync.
 const mockUseOfflineSync = jest.fn();
 jest.mock('@/features/chat/application/useOfflineSync', () => ({
   useOfflineSync: (params: { isConnected: boolean }) => mockUseOfflineSync(params),
@@ -150,8 +122,6 @@ describe('useChatSession — feeds canonical isOnline to useOfflineSync — T2.4
     await waitFor(() => {
       expect(mockUseOfflineSync).toHaveBeenCalled();
     });
-    // The value fed to useOfflineSync must be the canonical isOnline (false),
-    // NOT the raw isConnected (true).
     expect(lastIsConnectedArg()).toBe(false);
   });
 

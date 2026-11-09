@@ -6,45 +6,15 @@ import type { ContentPreference } from '@/shared/types/content-preference';
 
 export const USER_PROFILE_STORAGE_KEY = 'musaium.userProfile';
 
-/**
- * User profile store — currently holds content preferences only.
- *
- * @remarks
- * This store follows the local-first pattern used across `runtimeSettingsStore`,
- * `dataModeStore`, and the audio description preference: Zustand persist is the
- * device source of truth, writes are optimistically saved locally and
- * eventually consistent with the backend via dedicated PATCH endpoints.
- *
- * **Cross-device hydration (TD-2 Option B 2026-05-15):** `mergeFromServer` is
- * called by `bootstrapProfile()` after login / session resume so devices see
- * their persisted server-side preferences instead of empty defaults. R3
- * server-wins-first applies on first hydration of the session.
- *
- * **Forward-looking naming:** the store is called `userProfile` (not
- * `contentPreferences`) because future profile fields (displayName, avatar,
- * notification settings) will live here.
- */
 interface UserProfileState {
-  /** Persisted content preferences (cached from the backend). */
   contentPreferences: ContentPreference[];
-  /** True once the store has been hydrated from device storage. */
   _hydrated: boolean;
-  /** True once the user has completed (or dismissed) the onboarding flow. */
   hasSeenOnboarding: boolean;
 
-  /** Replace the full preferences array (used after a successful PATCH). */
   setContentPreferences: (preferences: ContentPreference[]) => void;
-  /** Toggle a single preference on/off. Returns the new array. */
   toggleContentPreference: (preference: ContentPreference) => ContentPreference[];
-  /** Clear all preferences. */
   clearContentPreferences: () => void;
-  /** Mark onboarding as seen (or reset it for testing/re-onboarding). */
   setHasSeenOnboarding: (value: boolean) => void;
-  /**
-   * Merge the server-side preferences into the local store (server-wins-first
-   * per session — R3). No-op when the server payload omits the field or
-   * carries a non-array value (R5 schema tolerance).
-   */
   mergeFromServer: (server: { contentPreferences?: ContentPreference[] }) => void;
 }
 

@@ -8,22 +8,12 @@ import { chatApi } from '@/features/chat/infrastructure/chatApi';
 import { getCurrentDataMode } from '@/shared/infrastructure/dataMode/currentDataMode';
 
 interface UseTextToSpeech {
-  /** Whether audio is currently playing. */
   isPlaying: boolean;
-  /** Whether TTS audio is loading from the server. */
   isLoading: boolean;
-  /** The message ID whose audio is currently active (loading or playing). */
   activeMessageId: string | null;
-  /** The message ID whose TTS request failed (shown as error state on the button). */
   failedMessageId: string | null;
-  /**
-   * The message ID whose TTS synthesis was intentionally skipped due to the
-   * user's low-data mode. Consumers surface this as a tooltip on the button.
-   */
   skippedLowDataMessageId: string | null;
-  /** Toggle playback for a message: plays if idle, stops if already active. */
   togglePlayback: (messageId: string) => Promise<void>;
-  /** Stops any active playback and resets state. */
   stopPlayback: () => void;
 }
 
@@ -36,16 +26,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-/**
- * Local file-system cache for TTS audio (native only).
- *
- * Stores per-message MP3 under `<cacheDir>/tts/<messageId>.mp3`. Subsequent plays
- * read directly from disk — no network, no decoding from base64 — enabling offline
- * replay and saving roundtrip latency for repeat listens.
- *
- * Web platform is excluded: `expo-file-system` returns no `cacheDirectory` and the
- * browser's audio cache covers the same use case.
- */
 const TTS_CACHE_DIR_NAME = 'tts';
 
 function getTtsCacheDir(): string | null {
@@ -81,15 +61,10 @@ async function writeTtsCache(messageId: string, base64: string): Promise<string 
     });
     return filePath;
   } catch {
-    // best-effort: cache write failure must not affect playback
     return null;
   }
 }
 
-/**
- * Hook that manages TTS playback for assistant messages.
- * Calls `chatApi.synthesizeSpeech(messageId)` and plays the returned MP3 via expo-audio.
- */
 export function useTextToSpeech(): UseTextToSpeech {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -109,9 +84,7 @@ export function useTextToSpeech(): UseTextToSpeech {
     } else if (nativePlayerRef.current) {
       try {
         nativePlayerRef.current.remove();
-      } catch {
-        /* already removed */
-      }
+      } catch {}
       nativePlayerRef.current = null;
     }
     setIsPlaying(false);
@@ -125,13 +98,11 @@ export function useTextToSpeech(): UseTextToSpeech {
 
   const togglePlayback = useCallback(
     async (messageId: string) => {
-      // If same message is active, stop it
       if (activeMessageId === messageId) {
         stopPlayback();
         return;
       }
 
-      // Stop any existing playback first
       cleanup();
       setFailedMessageId(null);
       setSkippedLowDataMessageId(null);
@@ -140,15 +111,12 @@ export function useTextToSpeech(): UseTextToSpeech {
       setActiveMessageId(messageId);
 
       try {
-        // 1. Try local file-system cache (native) — instant playback, offline-capable
         const cachedUri = await getCachedTtsUri(messageId);
 
         let uri: string;
         if (cachedUri) {
           uri = cachedUri;
         } else {
-          // In low-data mode, never download fresh TTS audio. Replay from cache
-          // is still free and handled above; only the network fetch is gated.
           if (getCurrentDataMode() === 'low') {
             cleanup();
             setSkippedLowDataMessageId(messageId);
@@ -156,7 +124,6 @@ export function useTextToSpeech(): UseTextToSpeech {
           }
           const audioBuffer = await chatApi.synthesizeSpeech(messageId);
 
-          // 204 / empty response
           if (!audioBuffer) {
             cleanup();
             return;
@@ -164,7 +131,6 @@ export function useTextToSpeech(): UseTextToSpeech {
 
           const base64 = arrayBufferToBase64(audioBuffer);
 
-          // 2. Persist to local cache for next plays (best-effort, native only)
           const cachePath = await writeTtsCache(messageId, base64);
           uri = cachePath ?? `data:audio/mpeg;base64,${base64}`;
         }
@@ -190,7 +156,6 @@ export function useTextToSpeech(): UseTextToSpeech {
           return;
         }
 
-        // Native: use expo-audio createAudioPlayer
         const player = createAudioPlayer({ uri });
         nativePlayerRef.current = player;
 
@@ -216,9 +181,6 @@ export function useTextToSpeech(): UseTextToSpeech {
     [activeMessageId, stopPlayback, cleanup],
   );
 
-  // Configure the audio session once so TTS keeps playing when the device locks
-  // or the app backgrounds. Native-only — web uses HTMLAudioElement which is
-  // governed by the browser's autoplay/background policy.
   useEffect(() => {
     if (Platform.OS === 'web') return;
     void setAudioModeAsync({
@@ -227,7 +189,6 @@ export function useTextToSpeech(): UseTextToSpeech {
     });
   }, []);
 
-  // Cleanup on unmount: stop playback and release audio resources
   useEffect(() => {
     return () => {
       cleanup();

@@ -126,24 +126,16 @@ describe('S3ChatMediaPurger', () => {
 });
 
 describe('LocalChatMediaPurger', () => {
-  // We need files to exist at the *default* local paths because the
-  // resolveLocalImageFilePath / resolveLocalAudioFilePath helpers join the
-  // ref filename onto those defaults. Seed two real files there, exercise
-  // the purger, then confirm they're gone.
   let createdImage: string;
   let createdAudio: string;
 
   beforeAll(() => {
     const tmpToken = mkdtempSync(path.join(tmpdir(), 'chat-purge-'));
     void tmpToken;
-    // Default uploads / audios dirs come from process.cwd() — write test
-    // fixtures there. We use unique names so we don't collide with anything
-    // an unrelated test might have left behind.
     const uniq = `purge-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const imageName = `${uniq}.png`;
     const audioName = `${uniq}.mp3`;
 
-    // ensure dirs exist
     require('node:fs').mkdirSync(DEFAULT_LOCAL_UPLOADS_DIR, { recursive: true });
     require('node:fs').mkdirSync(DEFAULT_LOCAL_AUDIOS_DIR, { recursive: true });
 
@@ -152,7 +144,6 @@ describe('LocalChatMediaPurger', () => {
     writeFileSync(createdImage, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
     writeFileSync(createdAudio, Buffer.from([0x49, 0x44, 0x33, 0x03]));
 
-    // expose ref forms via closures
     (globalThis as Record<string, unknown>).__localImageRef =
       `local://${path.basename(createdImage)}`;
     (globalThis as Record<string, unknown>).__localAudioRef =

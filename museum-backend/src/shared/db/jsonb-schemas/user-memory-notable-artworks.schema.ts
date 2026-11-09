@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-/**
- * `user_memories.notableArtworks`. Shape matches NotableArtwork in
- * src/modules/chat/domain/userMemory.types.ts. Defaults `[]` on first insert.
- */
 export const NotableArtworkSchema = z.object({
   title: z.string().min(1),
   artist: z.string().optional(),

@@ -1,18 +1,3 @@
-/**
- * TD-2 — `PATCH /api/auth/me/preferences` round-trip + `GET /api/auth/me`
- * exposes the 5 new fields.
- *
- * Boots a real Postgres testcontainer via {@link createE2EHarness} and
- * exercises the full HTTP slice: register + login → PATCH (partial) → GET /me
- * echoes the updated state → PATCH (full) → GET /me echoes again. Also covers
- * the 400/401 failure modes.
- *
- * Gated on `RUN_E2E=true || RUN_INTEGRATION=true` per the existing convention
- * (matches sibling integration suites that boot a real Postgres testcontainer).
- *
- * Run with:
- *   RUN_E2E=true RUN_INTEGRATION=true pnpm test -- --testPathPattern=me-profile-preferences
- */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
@@ -21,7 +6,6 @@ const describeE2E = shouldRun ? describe : describe.skip;
 
 interface MePayload {
   user: {
-    defaultLocale: string;
     defaultMuseumMode: boolean;
     guideLevel: string;
     dataMode: string;
@@ -40,7 +24,6 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
     await harness?.stop();
   });
 
-  // Strong, non-breached password so the register useCase doesn't reject in HIBP check.
   const TEST_PASSWORD = 'TD2-Pp.Pref-9!QzPxLm';
 
   it('GET /auth/me returns server defaults for a freshly registered user', async () => {
@@ -50,7 +33,6 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
     expect(meResp.status).toBe(200);
     const meBody = meResp.body as MePayload;
     expect(meBody.user).toMatchObject({
-      defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       dataMode: 'auto',
@@ -63,12 +45,11 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
 
     const patchResp = await harness.request(
       '/api/auth/me/preferences',
-      { method: 'PATCH', body: JSON.stringify({ defaultLocale: 'fr-FR', guideLevel: 'expert' }) },
+      { method: 'PATCH', body: JSON.stringify({ guideLevel: 'expert' }) },
       token,
     );
     expect(patchResp.status).toBe(200);
     expect(patchResp.body).toMatchObject({
-      defaultLocale: 'fr-FR',
       guideLevel: 'expert',
       defaultMuseumMode: true,
       dataMode: 'auto',
@@ -79,7 +60,6 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
     expect(meResp.status).toBe(200);
     const meBody = meResp.body as MePayload;
     expect(meBody.user).toMatchObject({
-      defaultLocale: 'fr-FR',
       guideLevel: 'expert',
       defaultMuseumMode: true,
       dataMode: 'auto',
@@ -95,7 +75,6 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
       {
         method: 'PATCH',
         body: JSON.stringify({
-          defaultLocale: 'fr-FR',
           defaultMuseumMode: false,
           guideLevel: 'intermediate',
           dataMode: 'low',
@@ -109,7 +88,6 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
     const meResp = await harness.request('/api/auth/me', { method: 'GET' }, token);
     const meBody = meResp.body as MePayload;
     expect(meBody.user).toMatchObject({
-      defaultLocale: 'fr-FR',
       defaultMuseumMode: false,
       guideLevel: 'intermediate',
       dataMode: 'low',
@@ -142,7 +120,7 @@ describeE2E('PATCH /auth/me/preferences (TD-2)', () => {
   it('requires auth (401 without bearer token)', async () => {
     const resp = await harness.request('/api/auth/me/preferences', {
       method: 'PATCH',
-      body: JSON.stringify({ defaultLocale: 'fr-FR' }),
+      body: JSON.stringify({ guideLevel: 'expert' }),
     });
     expect(resp.status).toBe(401);
   });

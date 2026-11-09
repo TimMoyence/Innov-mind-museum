@@ -15,14 +15,12 @@ import { Spinner } from '@/components/ui/Spinner';
 import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
+import { adminListUrl } from '@/lib/admin-list-url';
 
-/** Derive a display name from AdminUserDTO (firstname + lastname, or email fallback). */
 function displayName(u: AdminUserDTO): string {
   const parts = [u.firstname, u.lastname].filter(Boolean);
   return parts.length > 0 ? parts.join(' ') : u.email;
 }
-
-// ── Role badge colors ──────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<UserRole, string> = {
   super_admin: 'bg-purple-100 text-purple-800',
@@ -32,16 +30,12 @@ const ROLE_COLORS: Record<UserRole, string> = {
   visitor: 'bg-gray-100 text-gray-700',
 };
 
-// `super_admin` is intentionally excluded from the admin-promotion UI —
-// platform-owner role assigned out-of-band, not grantable from the dashboard.
 const ALL_ROLES: Exclude<UserRole, 'super_admin'>[] = [
   'visitor',
   'moderator',
   'museum_manager',
   'admin',
 ];
-
-// ── Debounce hook ──────────────────────────────────────────────────────
 
 function useDebouncedValue(value: string, delay: number): string {
   const [debounced, setDebounced] = useState(value);
@@ -56,8 +50,6 @@ function useDebouncedValue(value: string, delay: number): string {
   return debounced;
 }
 
-// ── Page component ─────────────────────────────────────────────────────
-
 export default function UsersPage() {
   const adminDict = useAdminDict();
   const { user: currentUser } = useAuth();
@@ -68,30 +60,23 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | ''>('');
 
-  // Change role modal state
   const [editingUser, setEditingUser] = useState<AdminUserDTO | null>(null);
   const [newRole, setNewRole] = useState<UserRole>('visitor');
   const [changingRole, setChangingRole] = useState(false);
-  // Mutation-specific error (kept distinct from the read-only hook `error`).
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const dateLocale = useDateLocale();
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, roleFilter]);
 
-  const usersUrl = (() => {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '10');
-    if (debouncedSearch) params.set('search', debouncedSearch);
-    if (roleFilter) params.set('role', roleFilter);
-    return `/api/admin/users?${params.toString()}`;
-  })();
+  const usersUrl = adminListUrl('/api/admin/users', page, 10, {
+    search: debouncedSearch,
+    role: roleFilter,
+  });
 
   const {
     data: usersPayload,
@@ -108,8 +93,6 @@ export default function UsersPage() {
   const totalPages = pagination?.totalPages ?? 0;
   const total = pagination?.total ?? 0;
   const combinedError = error ?? mutationError;
-
-  // ── Change role handler ──────────────────────────────────────────────
 
   async function handleChangeRole() {
     if (!editingUser) return;
@@ -133,7 +116,6 @@ export default function UsersPage() {
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.users}</h1>
       <p className="mt-1 text-text-secondary">{adminDict.usersPage.subtitle}</p>
 
-      {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           type="text"
@@ -161,17 +143,14 @@ export default function UsersPage() {
         </select>
       </div>
 
-      {/* Error */}
       {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
           <div className="overflow-x-auto">
@@ -255,7 +234,6 @@ export default function UsersPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <AdminPagination
             page={page}
             totalPages={totalPages}
@@ -265,7 +243,6 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Change Role Modal */}
       {editingUser && (
         <BaseModal
           open

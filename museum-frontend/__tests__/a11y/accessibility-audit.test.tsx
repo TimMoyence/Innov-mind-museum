@@ -1,18 +1,7 @@
-/**
- * Accessibility audit tests for museum-frontend.
- *
- * Verifies that interactive components expose proper accessibilityRole,
- * accessibilityLabel, and accessibilityHint props for screen readers.
- *
- * Since React Native does not use a DOM, we rely on rendered tree inspection
- * rather than axe-core.
- */
 import '../helpers/test-utils';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from '../helpers/data/renderWithQueryClient';
-
-// ── AuthScreen mocks ────────────────────────────────────────────────────────
 
 jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ setIsAuthenticated: jest.fn() }),
@@ -53,8 +42,6 @@ jest.mock('expo-apple-authentication', () => {
   };
 });
 
-// ── SettingsScreen mocks ────────────────────────────────────────────────────
-
 jest.mock('@/features/auth/application/useBiometricAuth', () => ({
   useBiometricAuth: () => ({
     isAvailable: true,
@@ -81,15 +68,9 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
   clearAccessToken: jest.fn(),
 }));
 
-// ── Lazy imports (after mocks) ──────────────────────────────────────────────
-
 import AuthScreen from '@/app/auth';
 import SettingsScreen from '@/app/(stack)/settings';
 import { ChatInput } from '@/features/chat/ui/ChatInput';
-
-// ============================================================================
-// AuthScreen accessibility
-// ============================================================================
 
 describe('AuthScreen a11y', () => {
   beforeEach(() => {
@@ -161,10 +142,6 @@ describe('AuthScreen a11y', () => {
   });
 });
 
-// ============================================================================
-// SettingsScreen accessibility
-// ============================================================================
-
 describe('SettingsScreen a11y', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -172,7 +149,6 @@ describe('SettingsScreen a11y', () => {
 
   it('all theme buttons have accessibilityRole=button', () => {
     render(<SettingsScreen />);
-    // There are 3 theme buttons (system/light/dark), each with this a11y pattern
     const themeButtons = screen.getAllByLabelText('a11y.settings.theme_button');
     expect(themeButtons.length).toBe(3);
     for (const btn of themeButtons) {
@@ -212,10 +188,6 @@ describe('SettingsScreen a11y', () => {
     expect(supportLink.props.accessibilityRole).toBe('link');
   });
 });
-
-// ============================================================================
-// ChatInput accessibility
-// ============================================================================
 
 describe('ChatInput a11y', () => {
   const defaultProps = {

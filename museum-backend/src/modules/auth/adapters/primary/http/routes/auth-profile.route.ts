@@ -48,8 +48,6 @@ authProfileRouter.get('/me', isAuthenticated, async (req: Request, res: Response
       onboardingCompleted: profile.onboardingCompleted,
       contentPreferences: profile.contentPreferences,
       ttsVoice: profile.ttsVoice,
-      // TD-2 — hydrated to FE Zustand stores via `bootstrapProfile()` on login + resume.
-      defaultLocale: profile.defaultLocale,
       defaultMuseumMode: profile.defaultMuseumMode,
       guideLevel: profile.guideLevel,
       dataMode: profile.dataMode,
@@ -73,7 +71,6 @@ authProfileRouter.patch(
   },
 );
 
-// Spec C T2.4 — schema + catalog validation in updateTtsVoiceSchema. `null` resets to env default.
 authProfileRouter.patch(
   '/tts-voice',
   isAuthenticated,
@@ -89,9 +86,6 @@ authProfileRouter.patch(
   },
 );
 
-// TD-2 — Batch update of 5 prefs. FE writes field-by-field on toggle; BE
-// accepts partial so store actions each fire one PATCH without coordinating.
-// Zod `.refine(non-empty)` blocks empty bodies. Audit metadata carries raw patch (no PII).
 authProfileRouter.patch(
   '/me/preferences',
   isAuthenticated,
@@ -118,16 +112,10 @@ authProfileRouter.patch(
 
 authProfileRouter.delete('/account', isAuthenticated, async (req: Request, res: Response) => {
   const user = requireUser(req);
-  // R1 (Cycle D) — durable "deletion requested" trace BEFORE any erasure runs,
-  // so a failed `execute()` still leaves proof the request was received.
   await auditOwnAccount(req, user.id, AUDIT_ACCOUNT_DELETION_REQUESTED);
 
-  // If `execute()` throws (DB down, rollback), the rejection propagates to the
-  // global errorHandler (Express 5 async forwarding) → 5xx, and ACCOUNT_DELETED
-  // is NEVER emitted (R3). The journal never claims a deletion that did not run.
   await deleteAccountUseCase.execute(user.id);
 
-  // R2 — ACCOUNT_DELETED only AFTER a successful erasure.
   await auditOwnAccount(req, user.id, AUDIT_ACCOUNT_DELETED);
   res.status(200).json({ deleted: true });
 });

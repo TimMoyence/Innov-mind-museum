@@ -36,7 +36,6 @@ type ViewMode = 'list' | 'map';
 
 const FADE_DURATION_MS = 180;
 
-/** Renders the museum directory tab screen listing nearby museums with distance. */
 export default function MuseumsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -47,22 +46,17 @@ export default function MuseumsScreen() {
   const { latitude, longitude, status } = useLocation();
   useGeofencePreCache({ latitude, longitude });
 
-  // Last visible map bbox — set on every drag, consumed by the "search in this area" chip.
   const [mapBbox, setMapBbox] = useState<[number, number, number, number] | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedMuseum, setSelectedMuseum] = useState<MuseumWithDistance | null>(null);
   const reduceMotion = useReducedMotion();
   const { isCreating: isStartingChat, startConversation } = useStartConversation();
 
-  // Crossfade animation for view mode transitions.
-  // eslint-disable-next-line react-hooks/refs -- Animated.Value created once, persisted via useRef
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(1));
 
   const { museums, isLoading, searchQuery, setSearchQuery, refresh, searchInBounds } =
     useMuseumDirectory(latitude, longitude);
 
-  // Live region: announce result count changes via VoiceOver/TalkBack.
-  // Skips the initial loading phase to avoid empty announcements.
   const previousCountRef = useRef<number | null>(null);
   useEffect(() => {
     if (isLoading) return;
@@ -81,13 +75,11 @@ export default function MuseumsScreen() {
     (mode: ViewMode) => {
       if (mode === viewMode) return;
       if (reduceMotion) {
-        // WCAG 2.3.3: instant switch, no crossfade animation.
         fadeAnim.setValue(1);
         setViewMode(mode);
         if (mode === 'list') setMapBbox(null);
         return;
       }
-      // Crossfade: fade out → switch mode → fade in.
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: FADE_DURATION_MS,

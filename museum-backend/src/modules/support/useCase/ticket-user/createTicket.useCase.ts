@@ -2,6 +2,7 @@ import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
 
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
 import { invalidInput } from '@shared/errors/app.error';
+import { nonEmpty } from '@shared/utils/defaults';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type { CreateTicketInput, TicketDTO } from '@modules/support/domain/ticket/support.types';
@@ -12,12 +13,6 @@ interface CreateTicketUseCaseInput {
   description: string;
   priority?: string;
   category?: string;
-  /**
-   * B2B multi-tenant scope (Wave B C7 / R-C7c — TD-COR-WAVEB-02). Threaded
-   * from the authenticated user's JWT `museumId` claim in the route handler
-   * (`support.route.ts`). `null`/undefined for callers without a tenant
-   * attachment (pre-multi-tenant catalog-level tickets).
-   */
   museumId?: number | null;
   ip?: string;
   requestId?: string;
@@ -52,11 +47,7 @@ export class CreateTicketUseCase {
       subject,
       description,
       priority: (input.priority as CreateTicketInput['priority']) ?? undefined,
-      category: category === '' ? undefined : category,
-      // Wave B C7 / R-C7c — TD-COR-WAVEB-02. Thread tenant scope down to the
-      // repository so `support_tickets.museum_id` is populated from the JWT
-      // claim. `undefined` collapses to `null` in `SupportRepositoryPg.createTicket`
-      // (support.repository.pg.ts:64).
+      category: nonEmpty(category),
       museumId: input.museumId ?? null,
     };
 
