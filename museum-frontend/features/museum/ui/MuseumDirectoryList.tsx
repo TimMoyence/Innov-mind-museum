@@ -41,20 +41,6 @@ export const MuseumDirectoryList = ({
     [onMuseumPress],
   );
 
-  if (isLoading) {
-    return (
-      <View
-        style={styles.skeletonList}
-        accessibilityRole="progressbar"
-        accessibilityLabel={t('a11y.museum.skeleton_loading')}
-      >
-        {Array.from({ length: 5 }).map((_, i) => (
-          <SkeletonConversationCard key={i} />
-        ))}
-      </View>
-    );
-  }
-
   return (
     <>
       <View
@@ -76,32 +62,44 @@ export const MuseumDirectoryList = ({
         />
       </View>
 
-      <FlashList
-        data={museums}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        refreshing={isRefreshing}
-        onRefresh={onRefresh}
-        ListEmptyComponent={
-          <EmptyState
-            variant="museums"
-            title={t('empty.museums.title')}
-            description={t('empty.museums.description')}
-            primaryAction={
-              onRefreshAction !== undefined
-                ? {
-                    label: t('empty.museums.actionLabel'),
-                    onPress: onRefreshAction,
-                    iconName: 'refresh-outline',
-                  }
-                : undefined
-            }
-            testID="museums-empty-state"
-          />
-        }
-        ItemSeparatorComponent={ItemSeparator}
-      />
+      {isLoading ? (
+        <View
+          style={styles.skeletonList}
+          accessibilityRole="progressbar"
+          accessibilityLabel={t('a11y.museum.skeleton_loading')}
+        >
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonConversationCard key={i} />
+          ))}
+        </View>
+      ) : (
+        <FlashList
+          data={museums}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          ListEmptyComponent={
+            <EmptyState
+              variant="museums"
+              title={t('empty.museums.title')}
+              description={t('empty.museums.description')}
+              primaryAction={
+                onRefreshAction !== undefined
+                  ? {
+                      label: t('empty.museums.actionLabel'),
+                      onPress: onRefreshAction,
+                      iconName: 'refresh-outline',
+                    }
+                  : undefined
+              }
+              testID="museums-empty-state"
+            />
+          }
+          ItemSeparatorComponent={ItemSeparator}
+        />
+      )}
     </>
   );
 };
