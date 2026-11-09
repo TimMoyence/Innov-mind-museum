@@ -7,21 +7,6 @@ import { resolve } from 'node:path';
 import { AppDataSource } from '@data/db/data-source';
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
 
-/**
- * W3 (T5.5) — Seeds 12 placeholder `artwork_knowledge` rows for the
- * Bordeaux pilot (4 per pilot museum) and emits the matching strict-format
- * CSVs consumed by `generate-qr-cartels.cjs`.
- *
- * All rows ship with `needsReview = true` + a placeholder note in the
- * description — the visit partner replaces the curated catalog before the
- * 2026-05-23 event. The UUIDs are stable across re-runs so re-seeding +
- * re-printing the PDFs yields identical QR payloads (idempotent).
- *
- * Insertion uses `orIgnore` on the `(title, artist, locale)` unique index;
- * re-running upserts nothing, so titles MUST stay stable until the partner
- * curated list lands (then we switch to `orUpdate`).
- */
-
 type Slug = 'musee-d-aquitaine' | 'capc-musee-d-art-contemporain' | 'la-cite-du-vin';
 
 interface PilotArtwork {
@@ -42,7 +27,7 @@ interface PilotMuseum {
 
 const LOCALE = 'fr';
 const PLACEHOLDER_DESCRIPTION =
-  "Placeholder pilote Bordeaux 2026-05 — à remplacer par la fiche officielle " +
+  'Placeholder pilote Bordeaux 2026-05 — à remplacer par la fiche officielle ' +
   'fournie par le musée partenaire avant le go-live.';
 
 const PILOT: PilotMuseum[] = [
@@ -168,8 +153,6 @@ const PILOT: PilotMuseum[] = [
 function writePilotCsv(museum: PilotMuseum): string {
   const lines: string[] = ['artworkId,title,roomId'];
   for (const art of museum.artworks) {
-    // Title MUST NOT contain commas in pilot dataset (the QR script uses naive
-    // CSV split). Replace defensively (would-be a bug, not a sanitisation).
     const safeTitle = art.title.includes(',') ? art.title.replace(/,/g, ' ') : art.title;
     lines.push(`${art.id},${safeTitle},`);
   }
@@ -202,22 +185,13 @@ async function main(): Promise<void> {
     })),
   );
 
-  // `orIgnore()` always populates `result.identifiers` with the supplied IDs
-  // regardless of whether the row was actually inserted, so we measure
-  // before/after counts to report the real delta (idempotency check).
   const idsClause = rows.map((r) => `'${r.id}'`).join(',');
   const beforeRaw = await repo.query(
     `SELECT count(*)::int AS n FROM artwork_knowledge WHERE id IN (${idsClause})`,
   );
   const before = Number(beforeRaw[0].n);
 
-  await repo
-    .createQueryBuilder()
-    .insert()
-    .into(ArtworkKnowledge)
-    .values(rows)
-    .orIgnore()
-    .execute();
+  await repo.createQueryBuilder().insert().into(ArtworkKnowledge).values(rows).orIgnore().execute();
 
   const afterRaw = await repo.query(
     `SELECT count(*)::int AS n FROM artwork_knowledge WHERE id IN (${idsClause})`,

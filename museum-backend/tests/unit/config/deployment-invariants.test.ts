@@ -3,10 +3,6 @@ import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import type { DeploymentInvariantsDeps, InvariantsLogger } from '@src/config/deployment-invariants';
 import type { AppEnv } from '@src/config/env.types';
 
-/**
- * Builds the minimal env shape consumed by `assertDeploymentInvariants`.
- * Keeps tests focused on the fields under test.
- */
 type InvariantEnv = Pick<AppEnv, 'deploymentMode' | 'nodeEnv' | 'cache'>;
 
 function makeEnv(overrides: Partial<InvariantEnv> = {}): InvariantEnv {
@@ -38,8 +34,6 @@ describe('assertDeploymentInvariants', () => {
 
   beforeEach(() => {
     exit = jest.fn((_code: number) => {
-      // Do not actually exit. Returning `undefined` is fine because the
-      // function return type is `never` only for production use.
       return undefined as never;
     });
     logger = makeLogger();
@@ -187,17 +181,11 @@ describe('env.ts deployment mode resolution', () => {
     process.env = { ...originalEnv };
   });
 
-  /**
-   * Dynamically (re-)loads env.ts with controlled env vars. Mirrors the
-   * pattern used by `env.test.ts`.
-   * @param envOverrides
-   */
   function loadEnv(envOverrides: Record<string, string | undefined> = {}) {
     const baseEnv: Record<string, string | undefined> = {
       ...originalEnv,
       NODE_ENV: 'test',
     };
-    // Clear detection hints from the ambient shell unless overridden.
     for (const key of [
       'DEPLOYMENT_MODE',
       'NODE_APP_INSTANCE',
@@ -208,7 +196,6 @@ describe('env.ts deployment mode resolution', () => {
       delete baseEnv[key];
     }
     process.env = { ...baseEnv, ...envOverrides } as NodeJS.ProcessEnv;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import needed for singleton
     const mod = require('@src/config/env') as typeof import('@src/config/env');
     return mod.env;
   }
@@ -251,8 +238,6 @@ describe('env.ts deployment mode resolution', () => {
 
 describe('assertDeploymentInvariants — integration: auto-detect + cache disabled + prod', () => {
   it('NODE_APP_INSTANCE set + CACHE_ENABLED=false + prod: would exit', () => {
-    // Simulate the end state: deploymentMode resolved to 'multi' via
-    // auto-detect, cache disabled, production. We assert the guard exits.
     const env: InvariantEnv = {
       deploymentMode: 'multi',
       nodeEnv: 'production',

@@ -3,8 +3,6 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useLocation } from '@/features/museum/application/useLocation';
 import { locationCache } from '@/features/museum/infrastructure/locationCache';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockRequestForegroundPermissionsAsync = jest.fn();
 const mockGetCurrentPositionAsync = jest.fn();
 
@@ -12,9 +10,8 @@ jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: () => mockRequestForegroundPermissionsAsync(),
   getCurrentPositionAsync: (opts: unknown) => mockGetCurrentPositionAsync(opts),
   Accuracy: { Balanced: 3 },
+  PermissionStatus: { GRANTED: 'granted', DENIED: 'denied', UNDETERMINED: 'undetermined' },
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useLocation', () => {
   beforeEach(async () => {
@@ -27,12 +24,10 @@ describe('useLocation', () => {
   });
 
   it('starts with idle status and null coordinates', () => {
-    // Prevent auto-resolution
     mockRequestForegroundPermissionsAsync.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useLocation());
 
-    // Initially status transitions to 'requesting' immediately
     expect(result.current.latitude).toBeNull();
     expect(result.current.longitude).toBeNull();
     expect(result.current.error).toBeNull();
@@ -93,31 +88,23 @@ describe('useLocation', () => {
 
     const { result, unmount } = renderHook(() => useLocation());
 
-    // Unmount before permission resolves
     unmount();
 
-    // Resolve after unmount — should not throw
     if (!resolvePermission) throw new Error('Expected resolvePermission to be assigned');
     resolvePermission({ status: 'granted' });
-
-    // No assertion needed beyond no-throw — the cancelled flag prevents setState
   });
 
   it('transitions through requesting status', async () => {
     const { result } = renderHook(() => useLocation());
 
-    // The hook should immediately transition to 'requesting'
     await waitFor(() => {
       expect(result.current.status).not.toBe('idle');
     });
 
-    // Eventually settles on 'granted'
     await waitFor(() => {
       expect(result.current.status).toBe('granted');
     });
   });
-
-  // ── Permission request throws exception ──────────────────────────────────
 
   it('sets error when requestForegroundPermissionsAsync throws', async () => {
     mockRequestForegroundPermissionsAsync.mockRejectedValue(new Error('Permission API crashed'));
@@ -132,8 +119,6 @@ describe('useLocation', () => {
     expect(result.current.longitude).toBeNull();
   });
 
-  // ── Permission status is unexpected value (not 'granted') ────────────────
-
   it('sets status to denied for unexpected permission status value', async () => {
     mockRequestForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined' });
 
@@ -147,8 +132,6 @@ describe('useLocation', () => {
     expect(result.current.longitude).toBeNull();
     expect(result.current.error).toBeNull();
   });
-
-  // ── Position coords have NaN values ──────────────────────────────────────
 
   it('stores NaN coordinates when position returns NaN values', async () => {
     mockGetCurrentPositionAsync.mockResolvedValue({
@@ -165,8 +148,6 @@ describe('useLocation', () => {
     expect(result.current.longitude).toBeNaN();
   });
 
-  // ── precision field reflects fresh vs cached source ─────────────────────
-
   it('reports precision=fresh after a successful GPS fix', async () => {
     const { result } = renderHook(() => useLocation());
 
@@ -178,7 +159,6 @@ describe('useLocation', () => {
   it('hydrates from cache and reports precision=cached before GPS resolves', async () => {
     await locationCache.save({ latitude: 38.7223, longitude: -9.1393 });
 
-    // Keep GPS pending so the cached value is what's surfaced.
     mockGetCurrentPositionAsync.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useLocation());
@@ -190,18 +170,14 @@ describe('useLocation', () => {
     expect(result.current.longitude).toBe(-9.1393);
   });
 
-  // ── GPS timeout falls back to cache ──────────────────────────────────────
-
   it('falls back to cached position and sets error=timeout when GPS exceeds timeout', async () => {
     jest.useFakeTimers();
     await locationCache.save({ latitude: 38.7223, longitude: -9.1393 });
 
-    // GPS never resolves — must trigger the 8s timeout sentinel.
     mockGetCurrentPositionAsync.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useLocation());
 
-    // Advance past the 8s GPS timeout (wrapped in act to flush React state updates).
     await act(async () => {
       await jest.advanceTimersByTimeAsync(8_500);
     });
@@ -216,8 +192,6 @@ describe('useLocation', () => {
     jest.useRealTimers();
   });
 
-  // ── Rapid unmount during async permission request → cancelled flag ──────
-
   it('does not update state when unmounted during getCurrentPositionAsync', async () => {
     let resolvePosition:
       | ((val: { coords: { latitude: number; longitude: number } }) => void)
@@ -230,18 +204,13 @@ describe('useLocation', () => {
 
     const { result, unmount } = renderHook(() => useLocation());
 
-    // Wait for permission to be granted (position still pending)
     await waitFor(() => {
       expect(result.current.status).toBe('granted');
     });
 
-    // Unmount before position resolves
     unmount();
 
-    // Resolve position after unmount — cancelled flag prevents setState
     if (!resolvePosition) throw new Error('Expected resolvePosition to be assigned');
     resolvePosition({ coords: { latitude: 48.86, longitude: 2.34 } });
-
-    // No assertion beyond no-throw — the cancelled guard prevents state updates
   });
 });

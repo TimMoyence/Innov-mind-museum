@@ -59,7 +59,6 @@ describe('SupportRepositoryPg', () => {
     sut = new SupportRepositoryPg(dataSource);
   });
 
-  // ─── createTicket ───
   describe('createTicket', () => {
     it('creates ticket with default priority and returns DTO', async () => {
       const entity = makeTicket();
@@ -78,7 +77,6 @@ describe('SupportRepositoryPg', () => {
         description: 'I have a problem',
         priority: 'medium',
         category: null,
-        // Wave B C7 — tenant scope; null when not supplied (no JWT museumId claim).
         museumId: null,
       });
       expect(result).toEqual(
@@ -115,7 +113,6 @@ describe('SupportRepositoryPg', () => {
     });
   });
 
-  // ─── listTickets ───
   describe('listTickets', () => {
     it('returns paginated tickets without filters', async () => {
       const tickets = [makeTicket({ id: 't1' }), makeTicket({ id: 't2' })];
@@ -186,7 +183,6 @@ describe('SupportRepositoryPg', () => {
     });
   });
 
-  // ─── getTicketById ───
   describe('getTicketById', () => {
     it('returns ticket detail with messages', async () => {
       const ticket = makeTicket();
@@ -219,7 +215,6 @@ describe('SupportRepositoryPg', () => {
     });
   });
 
-  // ─── addMessage ───
   describe('addMessage', () => {
     it('creates message and bumps ticket updatedAt in transaction', async () => {
       const savedMsg = makeTicketMessage({ text: 'New message' });
@@ -253,7 +248,6 @@ describe('SupportRepositoryPg', () => {
     });
   });
 
-  // ─── updateTicket ───
   describe('updateTicket', () => {
     it('updates status and returns DTO', async () => {
       const updated = makeTicket({ status: 'in_progress' });
@@ -328,7 +322,6 @@ describe('SupportRepositoryPg', () => {
     });
   });
 
-  // ─── isTicketOwner ───
   describe('isTicketOwner', () => {
     it('returns true when user owns the ticket', async () => {
       ticketRepo.count.mockResolvedValue(1);

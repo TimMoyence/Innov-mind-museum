@@ -7,10 +7,6 @@ import {
   type ScrubbableEvent,
 } from '@shared/observability/sentry-scrubber';
 
-/**
- * Factory — minimal event with overridable sections.
- * @param overrides
- */
 const makeEvent = (overrides: Partial<ScrubbableEvent> = {}): ScrubbableEvent => ({
   request: { headers: {}, data: {}, url: 'https://api.example.com/' },
   user: undefined,
@@ -18,10 +14,6 @@ const makeEvent = (overrides: Partial<ScrubbableEvent> = {}): ScrubbableEvent =>
   ...overrides,
 });
 
-/**
- * Factory — minimal breadcrumb for category:http with overridable data.
- * @param overrides
- */
 const makeBreadcrumb = (overrides: Partial<ScrubbableBreadcrumb> = {}): ScrubbableBreadcrumb => ({
   category: 'http',
   data: { url: 'https://api.example.com/ping' },

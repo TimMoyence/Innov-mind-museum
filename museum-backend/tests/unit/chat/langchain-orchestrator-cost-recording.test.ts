@@ -1,8 +1,3 @@
-/**
- * Tests for C9.4 — orchestrator wires `LlmCostCircuitBreaker.recordCharge`
- * after each successful section invoke. Spec R1, R2, R3.
- */
-
 jest.mock('@src/config/env', () => ({
   env: {
     llm: {
@@ -61,7 +56,6 @@ function makeFakeModel(response: string) {
     text: response,
     deeperContext: null,
     openQuestion: null,
-    suggestedFollowUp: null,
     imageDescription: null,
     suggestedImages: null,
     detectedArtwork: null,
@@ -156,14 +150,8 @@ describe('LangChainChatOrchestrator cost recording (C9.4)', () => {
 
       try {
         await orchestrator.generate(makeInput());
-      } catch {
-        // Expected — model failure surfaces.
-      }
+      } catch {}
 
-      // Critical: NO charge recorded on the failed path. Some sections may have
-      // succeeded before the global failure, so we allow zero charges; what we
-      // ASSERT is that the entire path doesn't blow past a sane charge budget.
-      // For the all-fail case (single section, failed model), expect exactly 0.
       expect(recordCharge).not.toHaveBeenCalled();
     });
   });
@@ -172,7 +160,6 @@ describe('LangChainChatOrchestrator cost recording (C9.4)', () => {
     it('does not throw when costBreaker is undefined; section result still returned', async () => {
       const orchestrator = new LangChainChatOrchestrator({
         model: makeFakeModel('A second test response.'),
-        // costBreaker intentionally omitted
       });
 
       await expect(orchestrator.generate(makeInput())).resolves.toBeDefined();

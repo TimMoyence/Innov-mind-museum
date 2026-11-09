@@ -12,20 +12,8 @@ import { User } from '@modules/auth/domain/user/user.entity';
 
 import type { Relation } from 'typeorm';
 
-/**
- * GDPR consent scopes. Stored as free-form VARCHAR so adding a scope requires
- * no DB migration.
- *
- * `third_party_ai_<category>_<provider>` (S4-P0-02 — Apple Guideline 5.1.2(i))
- * captures per-category × per-provider consent for AI vendor flow. DeepSeek
- * scopes intentionally omitted — sentinel S4-P0-04 blocks `LLM_PROVIDER=deepseek`
- * in EU prod.
- */
 export const CONSENT_SCOPES = [
   'location_to_llm',
-  // Coarse geo consent (cycle 1.5): city + country only to the LLM, separate
-  // from the full `location_to_llm` (neighbourhood) grant. Free-form VARCHAR →
-  // no DB migration.
   'location_coarse_to_llm',
   'analytics',
   'marketing',
@@ -42,7 +30,6 @@ export const CONSENT_SCOPES = [
 
 export type ConsentScope = (typeof CONSENT_SCOPES)[number];
 
-/** `ui` = consent screen tap, `api` = 3rd-party integration, `registration` = onboarding bundle. */
 export const CONSENT_SOURCES = ['ui', 'api', 'registration'] as const;
 export type ConsentSource = (typeof CONSENT_SOURCES)[number];
 
@@ -52,10 +39,6 @@ export const isConsentScope = (value: string): value is ConsentScope =>
 export const isConsentSource = (value: string): value is ConsentSource =>
   (CONSENT_SOURCES as readonly string[]).includes(value);
 
-/**
- * Single grant (or past grant) of a scope. `revokedAt=null` = active.
- * New grants for the same (user, scope) insert new rows so history is preserved.
- */
 @Entity({ name: 'user_consents' })
 @Index('IDX_user_consents_user_scope', ['userId', 'scope'])
 export class UserConsent {
@@ -69,11 +52,9 @@ export class UserConsent {
   @Column({ name: 'user_id' })
   userId!: number;
 
-  /** Free-form VARCHAR for forward compat. */
   @Column({ type: 'varchar', length: 64 })
   scope!: string;
 
-  /** Policy version at grant time (e.g. '2026-04-24'). */
   @Column({ type: 'varchar', length: 32 })
   version!: string;
 
@@ -83,7 +64,6 @@ export class UserConsent {
   @Column({ type: 'timestamp', name: 'revoked_at', nullable: true })
   revokedAt!: Date | null;
 
-  /** Capture channel (ui / api / registration). */
   @Column({ type: 'varchar', length: 32 })
   source!: string;
 

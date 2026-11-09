@@ -27,7 +27,6 @@ describe('DiscoverScreen RTL audit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'ar',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       _hydrated: true,

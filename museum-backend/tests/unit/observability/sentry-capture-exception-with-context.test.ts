@@ -1,26 +1,7 @@
-/**
- * R3 — captureExceptionWithContext MUST scrub URL-like tag values BEFORE
- * scope.setTag is invoked. The only BE site that setTag dynamically today is
- * error.middleware.ts (`path: req.originalUrl`), which sends raw query-strings
- * to Sentry tags (indexed + persistent for 30 days). This test pins the
- * defense-in-depth source scrub upstream of scrubEvent's tag traversal.
- *
- * Pattern follows tests/unit/middleware/error-handler.test.ts (jest.mock the
- * Sentry module + spy on setTag inside withScope callback).
- *
- * RED: today the wrapper passes `req.originalUrl` straight to setTag — these
- * assertions FAIL. GREEN: scrubUrl runs on URL-like context values before
- * setTag.
- */
-
-// Silence logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-// Mock env so initSentry has a configured DSN — otherwise isSentryEnabled
-// stays false and captureExceptionWithContext returns early without calling
-// Sentry (the wrapper has an explicit `if (!initialized) return`).
 jest.mock('@src/config/env', () => ({
   env: {
     sentry: {
@@ -34,9 +15,6 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-// Mock @sentry/node — capture withScope callback + setTag invocations.
-// Factory uses inline functions (jest hoists jest.mock above imports — closure
-// variables are not in scope yet, so we expose mocks via the module itself).
 jest.mock('@sentry/node', () => {
   const setTag = jest.fn();
   const captureException = jest.fn();
@@ -50,7 +28,6 @@ jest.mock('@sentry/node', () => {
     setupExpressErrorHandler: jest.fn(),
     startSpan: jest.fn(),
     setUser: jest.fn(),
-    // expose for assertions
     __mocks__: { setTag, captureException },
   };
 });
@@ -63,7 +40,6 @@ import {
   isSentryEnabled,
 } from '@shared/observability/sentry';
 
-// Retrieve the spies exposed by the factory.
 const sentryMocks = (
   SentrySdk as unknown as {
     __mocks__: { setTag: jest.Mock; captureException: jest.Mock };
@@ -72,7 +48,6 @@ const sentryMocks = (
 
 describe('captureExceptionWithContext — R3 URL-like tag scrubbing', () => {
   beforeAll(() => {
-    // Initialise so the `if (!initialized) return` early-exit gate is open.
     initSentry();
     expect(isSentryEnabled()).toBe(true);
   });
@@ -104,7 +79,6 @@ describe('captureExceptionWithContext — R3 URL-like tag scrubbing', () => {
       statusCode: '500',
     });
 
-    // None of these look like URLs (no leading slash, no ?, no http).
     expect(sentryMocks.setTag).toHaveBeenCalledWith('method', 'POST');
     expect(sentryMocks.setTag).toHaveBeenCalledWith('requestId', 'plain-string-no-url');
     expect(sentryMocks.setTag).toHaveBeenCalledWith('statusCode', '500');
@@ -116,7 +90,6 @@ describe('captureExceptionWithContext — R3 URL-like tag scrubbing', () => {
       method: 'GET',
     });
 
-    // path = undefined → setTag NEVER called with key='path'.
     const pathCalls = sentryMocks.setTag.mock.calls.filter(([key]) => key === 'path');
     expect(pathCalls).toHaveLength(0);
 

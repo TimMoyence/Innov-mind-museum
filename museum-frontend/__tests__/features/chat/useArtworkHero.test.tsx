@@ -1,30 +1,9 @@
-/**
- * Red tests for A2 — `useArtworkHero` hook + `deriveHeroCollapsed` helper.
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/A2.md` §1.1
- * (R1-R7) + §1.4 (R23-R26) + §4 (AC2-AC9) :
- *
- *   1. Empty messages → null (R1).
- *   2. No user-message-with-image → null (R2).
- *   3. User-message-with-image alone → fallback "untitled" model (R3 + R5).
- *   4. User-image + matching assistant detectedArtwork → full model (R4).
- *   5. Assistant detectedArtwork BEFORE user image → ignored (R4 chronological).
- *   6. Multiple user images → first one wins (R3 chronological).
- *   7. System messages skipped (R7).
- *   8. `deriveHeroCollapsed` hysteresis at 80dp (collapse) / 40dp (re-expand).
- *
- * At baseline (A2 not yet implemented) :
- *   - `@/features/chat/application/useArtworkHero` does not exist.
- *     → Jest fails with "Cannot find module" at module load time.
- */
-
 import type React from 'react';
 import { render } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 import { makeChatUiMessage, makeAssistantMessage } from '../../helpers/factories/chat.factories';
 
-// RED ASSERTION 1 : module does not exist yet.
 import {
   useArtworkHero,
   deriveHeroCollapsed,
@@ -35,11 +14,6 @@ import {
 
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 
-/**
- * Tiny harness — wraps `useArtworkHero` in a render so we can read its return
- * value without exposing it as a global. Stores the latest return in a ref
- * passed in by the caller.
- */
 function HookProbe({
   messages,
   capture,

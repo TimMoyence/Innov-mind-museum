@@ -1,14 +1,3 @@
-/**
- * R2 RED — `<ExportCsvButton kind="tickets" />` on /admin/support.
- *
- * Pins R2 §1 R21 + Risk7 + Q1 BLOCKER down BEFORE implementation :
- *  - Button visible for super_admin only on the support page (museum_manager
- *    + admin + moderator hidden because reviews/tickets entities lack
- *    `museum_id` per Q1 default (b)).
- *  - Click → fetch /api/admin/export/tickets.csv with credentials.
- *
- * MUST FAIL at baseline `a77e48aa`.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';

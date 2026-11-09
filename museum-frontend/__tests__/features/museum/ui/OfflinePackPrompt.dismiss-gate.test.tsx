@@ -1,19 +1,3 @@
-/**
- * Red test for OfflinePackPrompt backdrop dismiss gating (audit #13, D4).
- *
- * UFR-022 run `2026-05-23-chat-composer-buttons-modal-dismiss`.
- *
- * Spec: tapping the backdrop during an active download must NOT abort the
- * download silently — the user might just be reviewing the prompt and have
- * tapped outside accidentally. During `absent` (initial) and `complete`
- * (post-download review) states, the backdrop MUST still call `onDismiss`.
- *
- * Current code at `OfflinePackPrompt.tsx:142` wires the backdrop Pressable
- * `onPress` directly to `onDismiss` regardless of `packState.status`. This
- * test's `active` case FAILS on current code; the green phase introduces a
- * status-aware gate.
- */
-
 import '../../../helpers/test-utils';
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
@@ -29,12 +13,6 @@ interface PressableLikeInstance {
   };
 }
 
-/**
- * Locate the backdrop Pressable. The OfflinePackPrompt declares it as
- * `<Pressable style={styles.backdrop} onPress={onDismiss} accessibilityElementsHidden />`
- * — it is the only `accessibilityElementsHidden` Pressable in the tree
- * carrying an `onPress` callback.
- */
 const findBackdropPressable = (view: ReturnType<typeof render>): PressableLikeInstance | null => {
   interface Searchable {
     UNSAFE_getAllByProps: (props: object) => PressableLikeInstance[];

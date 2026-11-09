@@ -6,12 +6,8 @@ import en from '@/dictionaries/en.json';
 import fr from '@/dictionaries/fr.json';
 import type { Dictionary } from '@/lib/i18n';
 
-// ── Fixtures ─────────────────────────────────────────────────────────────────
-
 const dictEN: Dictionary['support']['contact'] = en.support.contact;
 const dictFR: Dictionary['support']['contact'] = fr.support.contact;
-
-// ── Helper ────────────────────────────────────────────────────────────────────
 
 function fillAndSubmit(dict: Dictionary['support']['contact']) {
   fireEvent.change(screen.getByPlaceholderText(dict.namePlaceholder), {
@@ -26,8 +22,6 @@ function fillAndSubmit(dict: Dictionary['support']['contact']) {
   const btn = screen.getByRole('button', { name: dict.submit });
   fireEvent.submit(btn.closest('form') as HTMLFormElement);
 }
-
-// ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ContactForm', () => {
   beforeEach(() => {
@@ -100,12 +94,7 @@ describe('ContactForm', () => {
   it('shows sending label on button while submitting', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(
-        () =>
-          new Promise(() => {
-            /* pending */
-          }),
-      ),
+      vi.fn().mockImplementation(() => new Promise(() => {})),
     );
 
     render(<ContactForm dict={dictEN} />);
@@ -126,7 +115,6 @@ describe('ContactForm', () => {
       expect(screen.getByText(/Thank you! Your message has been sent/)).toBeInTheDocument();
     });
 
-    // Form fields should be gone (success state replaces form)
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
   });
 
@@ -140,7 +128,6 @@ describe('ContactForm', () => {
       expect(screen.getByText(/Unable to send your message right now/)).toBeInTheDocument();
     });
 
-    // Form remains visible so the user can retry
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 

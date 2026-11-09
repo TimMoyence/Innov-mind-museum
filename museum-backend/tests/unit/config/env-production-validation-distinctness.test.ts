@@ -1,13 +1,3 @@
-/**
- * Phase 8 — pin the distinctness + provider-key + S3-driver branches in
- * `validateProductionEnv` that no existing test exercised.
- *
- * Each `it` block targets a NAMED regression: the specific throw message that
- * fires when a pair of production secrets collides. A future refactor that
- * silently drops one of these checks would flip the matching test from
- * "throws specific message" to "passes" — which is the point of pinning.
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import {
   VALID_CSRF_SECRET,
@@ -27,7 +17,6 @@ const makeEnv = (overrides: Partial<AppEnv['auth']> = {}): AppEnv =>
     llm: { provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     cache: undefined,
-    // I-SEC5 — drift detection requires AppEnv stub to mirror process.env value.
     exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     auth: {
       accessTokenSecret: VALID_JWT_ACCESS_SECRET,
@@ -50,13 +39,6 @@ describe('validateProductionEnv — secret distinctness branches', () => {
     process.env = { ...originalEnv };
   });
 
-  // ── GAP-1 (#9): MEDIA_SIGNING_SECRET MUST be length-gated like every other
-  // signing secret. The validator runs required() + distinctness on it but NO
-  // assertSecretLength — so a too-short MEDIA_SIGNING_SECRET in an otherwise-valid
-  // prod env is wrongly accepted. A short value still differs from the JWT secrets
-  // (so the distinctness branches don't fire) → it reaches the end of the
-  // validator without a length check. This test FAILS today (no throw); it passes
-  // once the validator gains `assertSecretLength('MEDIA_SIGNING_SECRET', ...)`.
   it('GAP-1: MEDIA_SIGNING_SECRET shorter than 32 chars → throws length error', () => {
     const short = 'a'.repeat(8);
     process.env.MEDIA_SIGNING_SECRET = short;
@@ -67,16 +49,6 @@ describe('validateProductionEnv — secret distinctness branches', () => {
   });
 });
 
-// ── GAP-2 (#9): EXPORT_PSEUDONYM_SALT has required + assertSecretLength + drift
-// detection but ZERO distinctness checks vs the other production secrets. Reusing
-// any signing secret as the export salt collapses two trust domains (a leak of
-// the salt would also leak the signing key, and vice-versa). The drift check
-// (`env.exportPseudonymSalt !== salt`) fires BEFORE any distinctness logic would,
-// so each test sets BOTH the raw process.env value AND the stub's
-// `exportPseudonymSalt` to the colliding secret — that satisfies required +
-// length + drift, leaving the (currently absent) distinctness check as the only
-// thing that could throw. These tests FAIL today (no throw); they pass once the
-// validator rejects a salt equal to another production secret.
 describe('validateProductionEnv — EXPORT_PSEUDONYM_SALT distinctness (GAP-2, #9)', () => {
   const originalEnv = { ...process.env };
 
@@ -133,8 +105,6 @@ describe('validateProductionEnv — provider key branches', () => {
   });
 
   it('llm.provider=deepseek without DEEPSEEK_API_KEY → throws missing required', () => {
-    // COMP-04: the Schrems II residency guard now runs before the key check, so
-    // approve the EU transfer to reach (and assert) the missing-key branch.
     process.env.DEEPSEEK_EU_TRANSFER_APPROVED = 'true';
     const env = {
       ...makeEnv(),
@@ -158,8 +128,6 @@ describe('validateProductionEnv — provider key branches', () => {
   });
 
   it('storage.driver=s3 without S3 credentials → throws missing required', () => {
-    // COMP-02: the Public Access Block gate now runs before the credential
-    // checks, so attest it to reach (and assert) the missing-credential branch.
     process.env.S3_PUBLIC_ACCESS_BLOCK_VERIFIED = 'true';
     const env = {
       ...makeEnv(),

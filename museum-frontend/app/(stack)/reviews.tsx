@@ -28,7 +28,6 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/** Reviews screen: view stats, browse reviews, and submit a new review. */
 export default function ReviewsScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -69,9 +68,6 @@ export default function ReviewsScreen() {
 
   const onSubmit = useCallback(async () => {
     if (!canSubmit) return;
-    // Best-effort attribution (design D-C2-5): the most-recently-visited chat
-    // session's id, read at submit time from the in-memory store. Empty store
-    // → undefined → BE attributes the review to global (Q1, honest fallback).
     const { sessions } = useChatSessionStore.getState();
     const sessionId = Object.entries(sessions).sort(
       (a, b) => b[1].updatedAt - a[1].updatedAt,
@@ -94,7 +90,6 @@ export default function ReviewsScreen() {
 
   const renderHeader = () => (
     <View style={styles.headerSection}>
-      {/* Stats header */}
       <GlassCard style={styles.statsCard} intensity={60}>
         {stats ? (
           <View style={styles.statsRow}>
@@ -102,12 +97,6 @@ export default function ReviewsScreen() {
               <Text style={[styles.avgNumber, { color: theme.textPrimary }]}>
                 {stats.average.toFixed(1)}
               </Text>
-              {/* 0-10 NPS scale, un-capped (no 5-star clamp). R22.
-                  The average number and the "/ 10" suffix are two adjacent Text
-                  nodes; the suffix dict value is a bare "/ 10" (no {{avg}}
-                  interpolation) so the average renders exactly ONCE → "8.4 / 10"
-                  (C2FE-F2: the prior duplicated "{{avg}} / 10" produced
-                  "8.4 8.4 / 10"). */}
               <Text style={[styles.avgScale, { color: theme.textSecondary }]}>
                 {t('reviews.averageOutOf10')}
               </Text>
@@ -121,7 +110,6 @@ export default function ReviewsScreen() {
         ) : null}
       </GlassCard>
 
-      {/* Submit form or button */}
       {submitted ? (
         <GlassCard style={styles.successCard} intensity={52}>
           <Text style={[styles.successText, { color: theme.success }]}>{t('reviews.success')}</Text>
@@ -251,13 +239,6 @@ export default function ReviewsScreen() {
           data={reviews}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          // Pass the RENDERED element, not the function. `renderHeader` is
-          // re-created every render, so `ListHeaderComponent={renderHeader}`
-          // handed FlashList a new component *type* each render → it remounted
-          // the whole header subtree on every keystroke, so the comment
-          // TextInput lost focus after the first character (a user could only
-          // ever type one letter). Passing the element lets React reconcile the
-          // same tree in place and preserve focus. Ref: reviews-submit-flow.
           ListHeaderComponent={renderHeader()}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}

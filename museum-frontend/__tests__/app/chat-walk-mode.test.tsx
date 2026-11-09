@@ -1,22 +1,9 @@
-/**
- * Walk-mode UX integration tests for ChatSessionScreen.
- *
- * Covers:
- * 1. ?intent=walk → walk header banner rendered with chat.walk.headerLabel
- * 2. ?intent=walk + lastAssistantMessage.suggestions non-empty → WalkSuggestionChips visible
- * 3. ?intent=walk + suggestions empty → WalkSuggestionChips returns null (no chips)
- * 4. intent NOT walk → no banner, no chips
- */
-
 import '../helpers/test-utils';
 import { mockUseChatSession, defaultChatSession } from '../helpers/chat-screen.setup';
 import { render, screen } from '../helpers/render-chat-screen';
 
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 
-// Override WalkSuggestionChips with a testable stub that honours the suggestions prop.
-// Wrapped in jest.fn() so tests can read .mock.calls to capture the onSelect prop
-// and assert the screen-level wiring fires sendMessage with the chip text.
 jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
   const { View } = require('react-native');
   return {
@@ -28,7 +15,6 @@ jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
 
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 
-/** Helper: set useLocalSearchParams to return specific intent */
 function setParams(intent?: string) {
   mockExpoRouter.useLocalSearchParams = () => ({
     sessionId: 'test-session-123',
@@ -36,7 +22,6 @@ function setParams(intent?: string) {
   });
 }
 
-/** A chat session with a last assistant message carrying suggestions */
 function sessionWithSuggestions(suggestions: string[]) {
   return {
     ...defaultChatSession(),
@@ -64,7 +49,6 @@ describe('ChatSessionScreen — walk mode UX', () => {
     mockUseChatSession.mockReturnValue(defaultChatSession());
     render(<ChatSessionScreen />);
     expect(screen.getByTestId('walk-mode-banner')).toBeTruthy();
-    // t() mock returns the key itself
     expect(screen.getByText('chat.walk.headerLabel')).toBeTruthy();
   });
 
@@ -104,7 +88,6 @@ describe('ChatSessionScreen — walk mode UX', () => {
     mockUseChatSession.mockReturnValue({ ...session, sendMessage: mockSend });
     render(<ChatSessionScreen />);
 
-    // Capture the onSelect prop passed to the mocked WalkSuggestionChips.
     const stub = jest.requireMock<{ WalkSuggestionChips: jest.Mock }>(
       '@/features/chat/ui/WalkSuggestionChips',
     );

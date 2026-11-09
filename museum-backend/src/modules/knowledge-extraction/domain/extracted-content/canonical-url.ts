@@ -1,6 +1,3 @@
-/**
- * Canonical URL for dedup: strips trailing slash (except root), sorts query params.
- */
 export function canonicalizeUrl(raw: string): string {
   const url = new URL(raw);
 

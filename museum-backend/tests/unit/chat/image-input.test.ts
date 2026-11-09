@@ -60,8 +60,6 @@ describe('image-input', () => {
   });
 
   describe('SSRF protection', () => {
-    // --- Protocol enforcement ---
-
     it('rejects http:// (non-HTTPS)', () => {
       expect(isSafeImageUrl('http://example.com/image.jpg')).toBe(false);
     });
@@ -77,8 +75,6 @@ describe('image-input', () => {
     it('rejects invalid URL', () => {
       expect(isSafeImageUrl('not-a-url')).toBe(false);
     });
-
-    // --- IPv4 private ranges ---
 
     it('rejects IPv4 loopback 127.0.0.1', () => {
       expect(isSafeImageUrl('https://127.0.0.1/image.jpg')).toBe(false);
@@ -120,8 +116,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://192.168.255.255/image.jpg')).toBe(false);
     });
 
-    // --- Special addresses ---
-
     it('rejects unspecified address 0.0.0.0', () => {
       expect(isSafeImageUrl('https://0.0.0.0/image.jpg')).toBe(false);
     });
@@ -142,8 +136,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://169.254.0.1/image.jpg')).toBe(false);
     });
 
-    // --- Carrier-grade NAT (100.64.0.0/10) ---
-
     it('rejects CGNAT 100.64.0.1', () => {
       expect(isSafeImageUrl('https://100.64.0.1/image.jpg')).toBe(false);
     });
@@ -151,8 +143,6 @@ describe('image-input', () => {
     it('rejects CGNAT 100.127.255.255', () => {
       expect(isSafeImageUrl('https://100.127.255.255/image.jpg')).toBe(false);
     });
-
-    // --- IPv6 ---
 
     it('rejects IPv6 loopback [::1]', () => {
       expect(isSafeImageUrl('https://[::1]/image.jpg')).toBe(false);
@@ -170,8 +160,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://[fd12::1]/image.jpg')).toBe(false);
     });
 
-    // --- IPv4-mapped IPv6 ---
-
     it('rejects IPv4-mapped IPv6 [::ffff:127.0.0.1]', () => {
       expect(isSafeImageUrl('https://[::ffff:127.0.0.1]/image.jpg')).toBe(false);
     });
@@ -184,8 +172,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://[::ffff:192.168.1.1]/image.jpg')).toBe(false);
     });
 
-    // --- Hex-encoded IPs ---
-
     it('rejects hex-encoded IP 0x7f000001 (127.0.0.1)', () => {
       expect(isSafeImageUrl('https://0x7f000001/image.jpg')).toBe(false);
     });
@@ -194,8 +180,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://0x0a000001/image.jpg')).toBe(false);
     });
 
-    // --- Octal-encoded IPs ---
-
     it('rejects octal-encoded IP 0177.0.0.1 (127.0.0.1)', () => {
       expect(isSafeImageUrl('https://0177.0.0.1/image.jpg')).toBe(false);
     });
@@ -203,8 +187,6 @@ describe('image-input', () => {
     it('rejects octal-encoded IP 012.0.0.1 (10.0.0.1)', () => {
       expect(isSafeImageUrl('https://012.0.0.1/image.jpg')).toBe(false);
     });
-
-    // --- Port enforcement ---
 
     it('rejects non-443 port', () => {
       expect(isSafeImageUrl('https://example.com:8080/image.jpg')).toBe(false);
@@ -218,8 +200,6 @@ describe('image-input', () => {
       expect(isSafeImageUrl('https://example.com:443/image.jpg')).toBe(true);
     });
 
-    // --- Legitimate URLs ---
-
     it('allows legitimate HTTPS image URL', () => {
       expect(isSafeImageUrl('https://cdn.example.com/images/art.jpg')).toBe(true);
     });
@@ -231,7 +211,6 @@ describe('image-input', () => {
 });
 
 describe('magic bytes validation', () => {
-  // Real magic-byte prefixes encoded as base64
   const jpegBase64 = Buffer.from([
     0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]).toString('base64');
@@ -241,7 +220,6 @@ describe('magic bytes validation', () => {
   const gifBase64 = Buffer.from([
     0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]).toString('base64');
-  // RIFF header (bytes 0-3) + file size placeholder (bytes 4-7) + WEBP marker (bytes 8-11)
   const webpBase64 = Buffer.from([
     0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
   ]).toString('base64');

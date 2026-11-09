@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import { handleJobFailure } from '@shared/queue/job-failure.handler';
@@ -9,7 +10,6 @@ import { runAuditIpAnonymizer } from './audit-ip-anonymizer.job';
 import type { Job, Queue, ConnectionOptions } from 'bullmq';
 import type { DataSource } from 'typeorm';
 
-/** Stable BullMQ repeatable-job id — `upsertJobScheduler` makes reboot idempotent. */
 export const AUDIT_IP_ANONYMIZE_SCHEDULER_ID = 'audit-ip-anonymize';
 
 const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
@@ -31,32 +31,23 @@ const onAuditCronJobFailed = (job: Job | undefined, err: Error): void => {
     },
     {
       queueName: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
-      // Empty summary — cron has no per-job payload; avoids legacy KE `url` default.
       summarize: () => ({}),
-      // Cron has no retries — every failure must page Sentry.
       treatNoAttemptsAsFinal: true,
     },
   );
 };
 
-/** Daily at 03:00 UTC — off-peak, before other retention / enrichment sweeps. */
 export const DEFAULT_AUDIT_IP_CRON = '0 3 * * *';
 
 export interface AuditCronConfig {
   connection: ConnectionOptions;
-  /** Defaults to {@link DEFAULT_AUDIT_IP_CRON}. */
   cron?: string;
 }
 
 export interface AuditCronHandle {
-  /** Best-effort unregister + worker close on SIGTERM. */
   stop: () => Promise<void>;
 }
 
-/**
- * Registers daily audit-IP anonymization cron + dedicated worker.
- * Mirrors `BullmqEnrichmentSchedulerAdapter` for operator consistency.
- */
 export async function registerAuditCron(
   queue: Queue,
   dataSource: DataSource,
@@ -80,13 +71,12 @@ export async function registerAuditCron(
     });
   } catch (err) {
     logger.error('audit_cron_register_failed', {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     captureExceptionWithContext(err instanceof Error ? err : new Error(String(err)), {
       schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
     });
     return {
-      // no-op — scheduler never registered
       stop: () => Promise.resolve(),
     };
   }
@@ -101,8 +91,6 @@ export async function registerAuditCron(
   );
 
   worker.on('failed', onAuditCronJobFailed);
-  // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md
-  // §3 DO): without it an unhandled exception terminates the process.
   worker.on('error', (err) => {
     captureExceptionWithContext(err, {
       queue: queue.name,
@@ -117,14 +105,14 @@ export async function registerAuditCron(
         await queue.removeJobScheduler(AUDIT_IP_ANONYMIZE_SCHEDULER_ID);
       } catch (err) {
         logger.warn('audit_cron_remove_failed', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
       }
       try {
         await worker.close();
       } catch (err) {
         logger.warn('audit_cron_worker_close_failed', {
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
         });
       }
     },

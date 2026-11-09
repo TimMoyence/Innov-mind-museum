@@ -6,7 +6,6 @@ import * as Sentry from '@sentry/react-native';
 
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 
-// ErrorBoundary uses i18n.t() directly (not useTranslation hook)
 jest.mock('@/shared/i18n/i18n', () => ({
   __esModule: true,
   default: {
@@ -14,7 +13,6 @@ jest.mock('@/shared/i18n/i18n', () => ({
   },
 }));
 
-// Mock the themes import used by ErrorBoundary styles
 jest.mock('@/shared/ui/themes', () => ({
   darkTheme: {
     pageGradient: ['#0F172A', '#1E293B', '#0F172A'] as readonly [string, string, ...string[]],
@@ -24,7 +22,6 @@ jest.mock('@/shared/ui/themes', () => ({
   },
 }));
 
-/** A component that throws on render, used to trigger the error boundary. */
 const ThrowError = ({ message }: { message: string }) => {
   throw new Error(message);
 };
@@ -74,7 +71,6 @@ describe('ErrorBoundary', () => {
     expect(reloadButton).toBeTruthy();
     expect(reloadButton.props.accessibilityRole).toBe('button');
 
-    // Verify button text also shows
     expect(screen.getByText('Reload')).toBeTruthy();
 
     spy.mockRestore();
@@ -122,7 +118,6 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeTruthy();
 
-    // Simulate reload: stop throwing, then press the button
     shouldThrow = false;
     fireEvent.press(screen.getByLabelText('Reload'));
 

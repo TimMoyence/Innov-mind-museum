@@ -3,6 +3,7 @@ import {
   AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
 } from '@shared/audit/audit.types';
 import { AuditLog } from '@shared/audit/auditLog.entity';
+import { errorMessage } from '@shared/errors/error-message';
 import {
   getExplanationStrings,
   mapToExplanationCategory,
@@ -15,15 +16,9 @@ import { logger } from '@shared/logger/logger';
 import type { ChatRepository } from '@modules/chat/domain/session/chat.repository.interface';
 import type { DataSource } from 'typeorm';
 
-/**
- * GDPR Art 22 + AI Act Art 14/50 input. `userId` mandatory (no anon). Authz
- * failures → NotFoundError (privacy-by-design, never leak "exists but not yours";
- * see `docs/GDPR_ART22_SCOPE.md`).
- */
 export interface GetMessageExplanationInput {
   messageId: string;
   userId: number;
-  /** BCP47 or two-letter; falls back to EN. */
   locale?: string;
 }
 
@@ -35,13 +30,11 @@ export interface ExplanationRecourse {
   supportUrl: string | null;
 }
 
-/** Stamped by guardrail adapters per ADR-048. */
 export interface ExplanationProvidedBy {
   name: string;
   version: string;
 }
 
-/** Mirrors `ExplanationResponseSchema` in chat.contracts.ts. */
 export interface MessageExplanation {
   decision: ExplanationDecision;
   category: ExplanationCategory | null;
@@ -53,7 +46,6 @@ export interface MessageExplanation {
   policyVersion: string;
 }
 
-/** 404 — never differentiates "not found" from "not yours" (GDPR_ART22_SCOPE). */
 export class MessageNotFoundForExplanationError extends Error {
   constructor(messageId: string) {
     super(`Message ${messageId} not found or not owned by caller`);
@@ -69,7 +61,6 @@ export interface ExplanationChatRepository {
   getMessageById: ChatRepository['getMessageById'];
 }
 
-/** Returns most recent block row within `AUDIT_CORRELATION_WINDOW_MS`; null normal. */
 export interface ExplanationAuditCorrelator {
   findCorrelatedAuditRef(params: {
     userId: number;
@@ -81,15 +72,9 @@ export interface ExplanationAuditCorrelator {
 export interface GetMessageExplanationDeps {
   repository: ExplanationChatRepository;
   supportUrl?: string | null;
-  /** When absent, `auditRef` is always null. */
   auditCorrelator?: ExplanationAuditCorrelator;
 }
 
-/**
- * GDPR Art 22 right-to-explanation. Pure read; never mutates. Audit
- * correlation degrades to `auditRef: null` on failure (UFR-013 honest
- * "no correlation row" rather than 5xx).
- */
 export class GetMessageExplanationUseCase {
   private readonly repository: ExplanationChatRepository;
   private readonly supportUrl: string | null;
@@ -110,7 +95,6 @@ export class GetMessageExplanationUseCase {
 
     const ownerId = loaded.session.user?.id;
     if (ownerId !== input.userId) {
-      // Privacy-by-design: never differentiate "not found" from "not yours".
       throw new MessageNotFoundForExplanationError(input.messageId);
     }
 
@@ -118,7 +102,6 @@ export class GetMessageExplanationUseCase {
     const decisionAt = message.createdAt.toISOString();
 
     if (message.role === 'user') {
-      // User-authored → no automated decision; stub points to self-retry.
       const strings = getExplanationStrings(locale, 'allowed');
       return {
         decision: 'allowed',
@@ -167,7 +150,6 @@ export class GetMessageExplanationUseCase {
     return { type, description, supportUrl };
   }
 
-  /** Best-effort; never throws. */
   private async safeCorrelate(params: {
     userId: number;
     sessionId: string;
@@ -180,17 +162,14 @@ export class GetMessageExplanationUseCase {
       logger.warn('explanation_audit_correlation_failed', {
         userId: params.userId,
         sessionId: params.sessionId,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       return null;
     }
   }
 }
 
-/** Defaults to `allowed`. */
 function extractDecision(metadata: Record<string, unknown>): ExplanationDecision {
-  // Guardrail pipeline stamps `metadata.guardrailReason` on blocked assistant
-  // messages; we also accept explicit `metadata.blocked` for future-proofing.
   if (typeof metadata.blocked === 'boolean') {
     return metadata.blocked ? 'blocked' : 'allowed';
   }
@@ -225,7 +204,6 @@ function extractProvidedBy(metadata: Record<string, unknown>): ExplanationProvid
   return { name, version };
 }
 
-/** ADR-048 Phase 0 anchor. */
 function extractPolicyVersion(metadata: Record<string, unknown>): string {
   return extractStringField(metadata, 'policyVersion') ?? POLICY_VERSION_DEFAULT;
 }
@@ -235,12 +213,6 @@ function extractStringField(source: Record<string, unknown>, key: string): strin
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-/**
- * Looks up most recent block row within ±AUDIT_CORRELATION_WINDOW_MS where
- * `actor_id = userId` AND (`target_id = sessionId` OR `target_id IS NULL`
- * for breaker-open rows). Returns `null` on any error or no match — endpoint
- * MUST degrade gracefully.
- */
 export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
   private readonly dataSource: DataSource;
 
@@ -261,10 +233,7 @@ export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
         .createQueryBuilder('audit')
         .where('audit.actorId = :userId', { userId: params.userId })
         .andWhere('audit.action IN (:...actions)', {
-          actions: [
-            AUDIT_GUARDRAIL_BLOCKED_INPUT,
-            AUDIT_GUARDRAIL_BLOCKED_OUTPUT,
-          ],
+          actions: [AUDIT_GUARDRAIL_BLOCKED_INPUT, AUDIT_GUARDRAIL_BLOCKED_OUTPUT],
         })
         .andWhere('audit.createdAt BETWEEN :lower AND :upper', {
           lower: lowerBound,
@@ -281,7 +250,7 @@ export class TypeOrmAuditCorrelator implements ExplanationAuditCorrelator {
       logger.warn('explanation_audit_correlator_query_failed', {
         userId: params.userId,
         sessionId: params.sessionId,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       return null;
     }

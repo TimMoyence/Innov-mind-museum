@@ -1,23 +1,6 @@
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin, loginUser } from 'tests/helpers/e2e/e2e-auth.helpers';
 
-/**
- * IDOR security matrix — cross-user and admin access checks across every
- * resource endpoint that exposes a privileged identifier in its path.
- *
- * Ownership contract:
- *  - Chat session / message endpoints: cross-user returns 404 (not 403 — we
- *    deliberately avoid enumeration, see `session-access.ts`). There is NO
- *    admin bypass today; admin hits the same 404 (documented via test.todo).
- *  - Support tickets: cross-user returns 403, admin/moderator returns 200.
- *  - Consent: scoped by JWT `sub`, path `:scope` is non-enumerable per-user,
- *    so the IDOR surface is indirect — we still assert isolation.
- *
- * Runs under `RUN_E2E=true` OR `RUN_INTEGRATION=true` (the arm the CI
- * integration job sets) because it boots a real Postgres testcontainer + full
- * Express server. Enforced by scripts/sentinels/integration-gate-discipline.mjs.
- */
-
 const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
@@ -48,7 +31,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(created.status).toBe(201);
       const sessionId = (created.body as { session: { id: string } }).session.id;
 
-      // User B → 404 on GET
       const getCross = await harness.request(
         `/api/chat/sessions/${sessionId}?limit=20`,
         { method: 'GET' },
@@ -56,7 +38,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(getCross.status).toBe(404);
 
-      // User B → 404 on DELETE
       const deleteCross = await harness.request(
         `/api/chat/sessions/${sessionId}`,
         { method: 'DELETE' },
@@ -64,7 +45,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(deleteCross.status).toBe(404);
 
-      // Owner → 200
       const getOwn = await harness.request(
         `/api/chat/sessions/${sessionId}?limit=20`,
         { method: 'GET' },
@@ -73,22 +53,17 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(getOwn.status).toBe(200);
     });
 
-    // Admin moderation endpoint: a promoted admin can read ANY user's chat
-    // session via the dedicated admin-bypass read path (NOT ensureSessionOwnership),
-    // while a non-privileged user is rejected by RBAC (403) before any DB read.
     it('admin GET /api/admin/chat/sessions/:id returns 200 with owner content; non-admin gets 403', async () => {
       const password = 'Password123!';
       const userA = await registerAndLogin(harness, { password });
       const userB = await registerAndLogin(harness, { password });
       const admin = await registerAndLogin(harness, { password });
 
-      // Promote admin (same convention as the support-ticket IDOR test below).
       await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [
         admin.userId,
       ]);
       const adminLogin = await loginUser(harness.request, admin.email, password);
 
-      // User A creates a session owned by them.
       const created = await harness.request(
         '/api/chat/sessions',
         {
@@ -100,8 +75,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(created.status).toBe(201);
       const sessionId = (created.body as { session: { id: string } }).session.id;
 
-      // Admin → 200, body carries the session id + owner-content shape
-      // (mirrors the owner GetSessionResponse: { session, messages, page }).
       const getAdmin = await harness.request(
         `/api/admin/chat/sessions/${sessionId}`,
         { method: 'GET' },
@@ -115,7 +88,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(adminBody.session.id).toBe(sessionId);
       expect(Array.isArray(adminBody.messages)).toBe(true);
 
-      // Non-privileged user B → 403 (RBAC, before any DB read).
       const getNonAdmin = await harness.request(
         `/api/admin/chat/sessions/${sessionId}`,
         { method: 'GET' },
@@ -159,7 +131,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
         userAToken,
       );
       const body = posted.body as { message: { id: string; role: string } };
-      // The assistant response is what carries the id we report/feedback on.
       messageId = body.message.id;
     });
 
@@ -176,11 +147,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     });
 
     it('cross-user POST /messages/:messageId/feedback returns 404', async () => {
-      // Body must be a VALID feedback value ('positive'|'negative') so the
-      // request passes `parseFeedbackMessageRequest` validation and actually
-      // reaches the ownership boundary. With an invalid value (e.g. 'up') the
-      // route 400s on validation before the IDOR check ever runs, which would
-      // not genuinely exercise the cross-user 404.
       const res = await harness.request(
         `/api/chat/messages/${messageId}/feedback`,
         {
@@ -202,13 +168,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     });
 
     it('cross-user POST /messages/:messageId/tts returns 404', async () => {
-      // The TTS route checks third-party-AI AUDIO consent (GDPR Art.7) BEFORE
-      // the ownership check (chat-media.route.ts). Without consent user B would
-      // 403 on the consent gate and never reach the IDOR boundary, so the 404
-      // assertion would not genuinely exercise ownership isolation. Grant the
-      // audio consent first (real grant against the testcontainer) so the
-      // consent gate passes and the request reaches — and is rejected by — the
-      // cross-user ownership check.
       const grant = await harness.request(
         '/api/auth/consent',
         {
@@ -231,9 +190,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
     });
 
     it('GET /messages/:messageId/image (signed URL) rejects without a valid signature', async () => {
-      // This endpoint is open (no auth) but requires a signed token. Unsigned
-      // access returns 400 by contract — asserting we cannot hit the image via
-      // IDOR bypass by guessing ids.
       const res = await harness.request(`/api/chat/messages/${messageId}/image`, {
         method: 'GET',
       });
@@ -248,13 +204,11 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       const userB = await registerAndLogin(harness, { password });
       const admin = await registerAndLogin(harness, { password });
 
-      // Promote admin
       await harness.dataSource.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [
         admin.userId,
       ]);
       const adminLogin = await loginUser(harness.request, admin.email, password);
 
-      // User A creates ticket
       const created = await harness.request(
         '/api/support/tickets',
         {
@@ -269,7 +223,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       expect(created.status).toBe(201);
       const ticketId = (created.body as { ticket: { id: string } }).ticket.id;
 
-      // User B GET → 403
       const getCross = await harness.request(
         `/api/support/tickets/${ticketId}`,
         { method: 'GET' },
@@ -277,7 +230,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(getCross.status).toBe(403);
 
-      // User B add-message → 403
       const addCross = await harness.request(
         `/api/support/tickets/${ticketId}/messages`,
         {
@@ -288,7 +240,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(addCross.status).toBe(403);
 
-      // Admin GET → 200
       const getAdmin = await harness.request(
         `/api/support/tickets/${ticketId}`,
         { method: 'GET' },
@@ -296,7 +247,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(getAdmin.status).toBe(200);
 
-      // Admin add-message → 201
       const addAdmin = await harness.request(
         `/api/support/tickets/${ticketId}/messages`,
         {
@@ -314,7 +264,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       const userA = await registerAndLogin(harness);
       const userB = await registerAndLogin(harness);
 
-      // Both users grant the same scope
       await harness.request(
         '/api/auth/consent',
         {
@@ -332,8 +281,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
         userB.token,
       );
 
-      // User A revokes — only affects A (path scope is not an identifier,
-      // so IDOR via path substitution is structurally impossible).
       const revoke = await harness.request(
         '/api/auth/consent/location_to_llm',
         { method: 'DELETE' },
@@ -341,7 +288,6 @@ describeE2E('IDOR matrix — cross-user + admin access per resource', () => {
       );
       expect(revoke.status).toBe(200);
 
-      // User B listing still shows active consent.
       const listB = await harness.request('/api/auth/consent', { method: 'GET' }, userB.token);
       expect(listB.status).toBe(200);
       const consentsB = (listB.body as { consents: { scope: string; revokedAt: string | null }[] })

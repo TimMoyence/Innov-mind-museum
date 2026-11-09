@@ -1,20 +1,3 @@
-/**
- * R2 acceptance — `buildPinningOptions().[PINNED_HOST].expirationDate`.
- *
- * Cited:
- *   - lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md:48-52
- *     (PinningOptions option table — `expirationDate?: string`, yyyy-MM-dd)
- *   - lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md:154-156
- *     (§5.4 — `expirationDate` is a failsafe pinned at E8 NotAfter)
- *
- * Bounds (spec NFR R2):
- *   - >= 2027-03-12 (E8 intermediate NotAfter)
- *   - <= 2028-03-12 (E8 NotAfter + 12 months cap; bounds the silent-unpin window)
- *
- * Bounds are checked via `Date.parse(...)` against the literal boundary
- * dates rather than against the green-phase const value (R2 NFR: avoid
- * coupling tests to the green-phase const beyond the bounds).
- */
 import {
   buildPinningOptions,
   PINNED_HOST,
@@ -60,8 +43,6 @@ describe('buildPinningOptions — expirationDate failsafe (R2)', () => {
   });
 
   it('exports PINSET_EXPIRATION_DATE as a literal const matching the per-host expirationDate', () => {
-    // Sanity / single source of truth — PINSET_EXPIRATION_DATE is the
-    // canonical export the runbook references when rotating pins.
     expect(typeof PINSET_EXPIRATION_DATE).toBe('string');
     expect(PINSET_EXPIRATION_DATE).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const options = buildPinningOptions();
@@ -71,14 +52,11 @@ describe('buildPinningOptions — expirationDate failsafe (R2)', () => {
   });
 
   it('preserves publicKeyHashes when a custom hashes array is passed', () => {
-    // Defensive parity check — adding `expirationDate` must not regress
-    // the existing publicKeyHashes pass-through behavior of the factory.
     const custom = ['hash-a', 'hash-b'] as const;
     const options = buildPinningOptions(custom);
     const entry = options[PINNED_HOST];
     if (!entry) throw new Error('expected PinningOptions entry for PINNED_HOST');
     expect(entry.publicKeyHashes).toEqual(['hash-a', 'hash-b']);
-    // Default-arg path also intact.
     const defaults = buildPinningOptions();
     const defaultEntry = defaults[PINNED_HOST];
     if (!defaultEntry) throw new Error('expected default PinningOptions entry for PINNED_HOST');

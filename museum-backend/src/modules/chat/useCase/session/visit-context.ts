@@ -48,8 +48,6 @@ export const updateVisitContext = (
       if (ctx.museumName?.toLowerCase() === artwork.museum.toLowerCase()) {
         ctx.museumConfidence = Math.min(1, ctx.museumConfidence + 0.3);
       } else {
-        // Different museum detected — reset confidence AND clear stale description
-        // (description was seeded from the original museumId and no longer applies).
         ctx.museumName = artwork.museum;
         ctx.museumConfidence = 0.3;
         ctx.museumDescription = undefined;
@@ -68,7 +66,6 @@ export const updateVisitContext = (
   return ctx;
 };
 
-/** Returns null if the session already has a title or no suitable title can be derived. */
 export const deriveSessionTitle = (
   session: ChatSession,
   metadata: ChatAssistantMetadata,
@@ -78,12 +75,10 @@ export const deriveSessionTitle = (
     return null;
   }
 
-  // In museum mode: prioritize museum name as title
   if (session.museumMode && visitContext.museumName && visitContext.museumConfidence >= 0.5) {
     return visitContext.museumName.slice(0, 256);
   }
 
-  // Standard mode (or museum mode without confident museum name): prioritize artwork title
   const artwork = metadata.detectedArtwork;
   if (artwork?.title) {
     const parts = [artwork.title];
@@ -91,7 +86,6 @@ export const deriveSessionTitle = (
     return parts.join(' ').slice(0, 256);
   }
 
-  // Fallback: museum name even in standard mode
   if (visitContext.museumName && visitContext.museumConfidence >= 0.5) {
     return visitContext.museumName.slice(0, 256);
   }
@@ -99,13 +93,8 @@ export const deriveSessionTitle = (
   return null;
 };
 
-/** Max characters of museum description injected into the prompt (prevents prompt bloat). */
 const MAX_MUSEUM_DESCRIPTION_CHARS = 600;
 
-/**
- * Absolute cap on the whole visit context block (raised from 800 to accommodate description).
- * Budget: ~600 description + ~200 museum/address/expertise + ~500 artworks/rooms + ~300 nearby = ~1600.
- */
 const MAX_VISIT_CONTEXT_BLOCK_CHARS = 1600;
 
 export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefined): string => {
@@ -124,8 +113,6 @@ export const buildVisitContextPromptBlock = (ctx: VisitContext | null | undefine
   }
 
   if (ctx.museumDescription) {
-    // Pass maxLength explicitly — sanitizePromptInput defaults to 200 chars which would
-    // truncate the description before it reaches the LLM, defeating the 2-4 sentence intro.
     const truncated = sanitizePromptInput(ctx.museumDescription, MAX_MUSEUM_DESCRIPTION_CHARS);
     if (truncated) {
       lines.push(`Museum description: ${truncated}`);

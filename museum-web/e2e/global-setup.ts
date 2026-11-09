@@ -4,8 +4,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Client } from 'pg';
 
-// `__dirname` is undefined under ESM (`"type": "module"` in package.json).
-// `import.meta.dirname` is the Node-22 native equivalent.
 const __dirname = import.meta.dirname;
 const STORAGE_PATH = resolve(__dirname, 'playwright-storage', 'storageState.json');
 
@@ -16,15 +14,9 @@ async function seedAdminUser(email: string, password: string): Promise<void> {
       data: {
         email,
         password,
-        // Letters-only — backend validator rejects digits in given/family
-        // names with "firstname contains invalid characters" (zod schema in
-        // museum-backend/src/modules/auth/adapters/primary/http/schemas).
         firstname: 'PlaywrightTest',
         lastname: 'Admin',
         gdprConsent: true,
-        // `dateOfBirth` became required in commit 77c5e81b2 (P0.A2 DOB age-gate,
-        // CNIL Délibération 2021-018 ≥15y minor consent). Seed an adult DOB
-        // for the e2e admin so the gate passes deterministically.
         dateOfBirth: '1990-01-01',
       },
     });
@@ -44,11 +36,6 @@ async function seedAdminUser(email: string, password: string): Promise<void> {
   });
   await pg.connect();
   try {
-    // Seeded as `super_admin` (not plain `admin`) so a11y/flow specs can
-    // exercise super_admin-gated affordances (R1 tier toggle modal,
-    // admin-export, role-change). `super_admin` implicitly satisfies any
-    // `requireRole(...)` check (see require-role.middleware.ts:28), so this
-    // remains a superset of the prior `admin` seed for non-tier specs.
     await pg.query(
       "UPDATE users SET role = 'super_admin', email_verified = true WHERE email = $1",
       [email],
@@ -63,11 +50,6 @@ async function loginAndSaveStorage(
   password: string,
   baseURL: string,
 ): Promise<void> {
-  // API-driven login. The prior UI-form flow was timing-fragile in CI: the
-  // browser-side `setAdminAuthzCookie()` (src/lib/auth.tsx:31) had to land
-  // before `context.storageState()` ran, otherwise the persisted state was
-  // missing `admin-authz` and every spec hit the Edge middleware redirect
-  // (src/middleware.ts:108-115) — 307 to /admin/login → no admin heading.
   const browser = await chromium.launch();
   const context = await browser.newContext();
   try {
@@ -77,11 +59,6 @@ async function loginAndSaveStorage(
     if (!res.ok()) {
       throw new Error(`API login failed (${res.status()}): ${await res.text()}`);
     }
-    // The backend's setAuthCookies() emits access_token + refresh_token + csrf_token
-    // via Set-Cookie headers — context.request stores them in the shared cookie jar.
-    // We additionally set `admin-authz` here because in production it is set
-    // client-side by setAdminAuthzCookie() at src/lib/auth.tsx:31; keep this
-    // shape (name/value/path/sameSite/expires) in sync with that helper.
     const url = new URL(baseURL);
     await context.addCookies([
       {
@@ -99,18 +76,6 @@ async function loginAndSaveStorage(
     mkdirSync(resolve(__dirname, 'playwright-storage'), { recursive: true });
     const state = await context.storageState();
     if (url.protocol !== 'https:') {
-      // WebKit/Safari — unlike Chromium — does NOT treat http://localhost as a
-      // secure context, so it silently drops `Secure` cookies served over http,
-      // leaving WebKit unauthenticated: every admin spec then redirects to
-      // /admin/login and the authenticated AdminShell never renders (a11y scans
-      // pass vacuously on the login page; element-dependent specs fail).
-      // The backend only marks access/refresh/csrf `Secure` in production
-      // (museum-backend auth-cookies.ts: `secure: isProduction()`), so against a
-      // non-prod e2e backend (CI's `pnpm dev`) this strip is a harmless no-op;
-      // against a production-mode backend (e.g. the local docker-compose dev
-      // container) it is load-bearing. Defensive either way, scoped to the http
-      // origin only so production cookie attributes are never touched (mirrors
-      // the admin-authz cookie set with `secure: url.protocol === 'https:'`).
       state.cookies = state.cookies.map((cookie) => ({ ...cookie, secure: false }));
     }
     writeFileSync(STORAGE_PATH, JSON.stringify(state));
@@ -121,10 +86,6 @@ async function loginAndSaveStorage(
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
   const email = `e2e-admin-${Date.now()}@test.musaium.dev`;
-  // Random per-run password — defeats backend's HIBP breach check (the prior
-  // hard-coded `AdminTest123!` is in the HaveIBeenPwned corpus and registered
-  // with 400 PASSWORD_BREACHED). 32 random bytes → 64 hex chars, well above
-  // the password policy floor and impossible to be in any breach list.
   const password = `E2e!${randomBytes(32).toString('hex')}A`;
   const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3001';
 

@@ -1,7 +1,7 @@
 import { parseOpeningHours } from '@modules/museum/adapters/secondary/parsers/opening-hours-parser';
 
 describe('parseOpeningHours', () => {
-  const wednesdayNoon = new Date('2026-04-22T12:00:00Z'); // Wed — server local TZ assumed
+  const wednesdayNoon = new Date('2026-04-22T12:00:00Z');
 
   it('parses simple single-range Mo-Fr', () => {
     const result = parseOpeningHours('Mo-Fr 10:00-18:00', wednesdayNoon);
@@ -72,7 +72,7 @@ describe('parseOpeningHours', () => {
   });
 
   it('computes currently_closed before opening time', () => {
-    const before = new Date('2026-04-22T07:00:00Z'); // Wed 07:00
+    const before = new Date('2026-04-22T07:00:00Z');
     const result = parseOpeningHours('Mo-Fr 10:00-18:00', before);
     expect(result.statusReason).toBe('currently_closed');
   });

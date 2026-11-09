@@ -6,20 +6,12 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface NpsScaleProps {
-  /** Currently selected value (0..10), or null when nothing is selected yet. */
   value: number | null;
-  /** Emits the tapped value verbatim (0 is a valid lowest detractor — never floored). */
   onChange: (value: number) => void;
 }
 
-/** 0..10 NPS recommendation scale (11 tappable digit buttons). */
 const NPS_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
-/**
- * NPS input: 11 buttons labelled 0..10. Text digits only (no stars, no emoji);
- * RTL logical props; each button is an a11y `button` with the selected value
- * flagged via `accessibilityState.selected`. No fixed `accessibilityValue` cap.
- */
 export const NpsScale = ({ value, onChange }: NpsScaleProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();

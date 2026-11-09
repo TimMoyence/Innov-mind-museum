@@ -25,9 +25,6 @@ describe('fetchDailyArt', () => {
 
     const result = await fetchDailyArt('fr');
 
-    // openApiRequest now handles the query-string encoding, so the URL arrives
-    // at httpRequest already-formatted. The second arg is the openApiRequest
-    // options envelope (method/body/headers/requiresAuth).
     expect(mockHttpRequest).toHaveBeenCalledWith(
       '/api/daily-art?locale=fr',
       expect.objectContaining({ method: 'GET' }),

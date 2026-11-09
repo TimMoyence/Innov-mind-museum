@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, type SyntheticEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -10,13 +11,6 @@ import { isHexColor, isHttpsUrl, pickContrastingTextColor } from '@musaium/share
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
-
-// W4 W2.2 — Per-museum branding editor. Reads/writes museum.config.branding
-// via PUT /api/museums/:id (BE allows arbitrary config record; FE exposes the
-// typed branding sub-shape). Logo upload is stubbed to a URL input for V1 —
-// a true upload endpoint is a V1.1 follow-up (TD-50). Color picker uses the
-// native HTML <input type="color"> for KISS until brand-aware design tokens
-// are wired in V1.1.
 
 const STRINGS = {
   title: 'Branding',
@@ -60,7 +54,6 @@ export default function MuseumBrandingPage() {
 
   const [branding, setBranding] = useState<MuseumBranding>({});
   const [saving, setSaving] = useState(false);
-  // Mutation-specific error (kept distinct from the read-only hook `error`).
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof MuseumBranding, string>>>({});
@@ -79,13 +72,6 @@ export default function MuseumBrandingPage() {
   const previewColor =
     branding.primaryColor && isHexColor(branding.primaryColor) ? branding.primaryColor : '#ffffff';
 
-  // `branding` is locally-edited form state, but it must (re)sync from the
-  // server-loaded museum the FIRST render the museum becomes available AND
-  // every time the museum reference changes (e.g. after a refetch following
-  // a successful PUT). We use the React "adjusting state in render" pattern
-  // (https://react.dev/reference/react/useState#storing-information-from-previous-renders)
-  // so the freshly-synced branding is visible in the SAME render that first
-  // renders the form — avoiding a one-frame empty-input flash.
   const [syncedMuseum, setSyncedMuseum] = useState<MuseumDTO | null>(null);
   if (museum && museum !== syncedMuseum) {
     setSyncedMuseum(museum);
@@ -119,7 +105,6 @@ export default function MuseumBrandingPage() {
     setMutationError(null);
     setSuccess(null);
     try {
-      // Merge — preserve any other config keys the BE has.
       const nextConfig: Record<string, unknown> = {
         ...museum.config,
         branding: pruneEmpty(branding),
@@ -127,9 +112,6 @@ export default function MuseumBrandingPage() {
       await apiPut<GetMuseumResponse>(`/api/museums/${museum.id}`, {
         config: nextConfig,
       });
-      // Refetch the museum so the hook becomes the single source of truth
-      // for server state — the in-render sync above re-derives `branding`
-      // from the freshly-loaded `museum.config` (new reference → re-sync).
       void load();
       setSuccess(STRINGS.saved);
     } catch (err) {
@@ -233,18 +215,12 @@ export default function MuseumBrandingPage() {
               }}
             >
               {branding.logoUrl && (
-                /* eslint-disable-next-line @next/next/no-img-element --
-                   Justification: arbitrary external CDN URL the operator
-                   types into the branding form for live preview only. Next
-                   Image requires upfront-known domains in next.config; this
-                   admin-only preview accepts any HTTPS URL and discards
-                   load errors silently via onError handler. Production
-                   serving switches to next/image once a real upload
-                   pipeline + allowlist exists (TD-50).
-                   Approved-by: dispatcher (W4 audit-360 2026-05-17). */
-                <img
+                <Image
                   src={branding.logoUrl}
                   alt={`${museum.name} logo`}
+                  width={128}
+                  height={32}
+                  unoptimized
                   className="h-8 w-auto"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = 'none';

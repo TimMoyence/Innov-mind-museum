@@ -133,7 +133,6 @@ describe('ThemeContext', () => {
       </ThemeProvider>,
     );
 
-    // Should not crash — stays at default system mode
     await waitFor(() => {
       expect(screen.getByTestId('mode').props.children).toBe('system');
     });
@@ -150,7 +149,6 @@ describe('ThemeContext', () => {
 
     fireEvent.press(screen.getByTestId('set-dark'));
 
-    // Mode should still change in memory even if persistence fails
     await waitFor(() => {
       expect(screen.getByTestId('mode').props.children).toBe('dark');
     });
@@ -174,7 +172,6 @@ describe('ThemeContext', () => {
 
     render(<Orphan />);
     expect(screen.getByTestId('orphan-mode').props.children).toBe('system');
-    // Should not crash — noop
     fireEvent.press(screen.getByTestId('orphan-set'));
     expect(screen.getByTestId('orphan-mode').props.children).toBe('system');
   });

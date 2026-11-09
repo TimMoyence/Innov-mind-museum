@@ -66,7 +66,6 @@ export class AuthSessionService {
     }
 
     if (!user.password) {
-      /** Deliberately generic to avoid revealing whether an account exists or uses social sign-in. */
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
@@ -76,8 +75,6 @@ export class AuthSessionService {
       throw unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
-    // Suspension/soft-delete BEFORE email_verified so operator signal takes
-    // precedence over verification banner. ADR-052.
     if (user.deletedAt) {
       clearLoginAttempts(normalizedEmail);
       throw new AppError({
@@ -109,17 +106,10 @@ export class AuthSessionService {
     clearLoginAttempts(normalizedEmail);
 
     const session = await this.sessionIssuer.issueSession({ user: sanitizeUser(user) });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
-      /* noop */
-    });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => undefined);
     return session;
   }
 
-  /**
-   * Rotates token, revokes family on reuse detection.
-   *
-   * @throws {AppError} 400 missing, 401 invalid/expired/reused.
-   */
   async refresh(refreshToken: string): Promise<AuthSessionResponse> {
     const token = refreshToken.trim();
     if (!token) {
@@ -140,8 +130,6 @@ export class AuthSessionService {
       throw unauthorized('User not found', 'INVALID_REFRESH_TOKEN');
     }
 
-    // ADR-052 — family revoked on delete (no recovery path), kept on suspend
-    // so unsuspending restores the session pair without a full re-login.
     if (user.deletedAt) {
       await this.refreshTokenRepository.revokeFamily(stored.familyId);
       throw unauthorized('Account deleted', 'ACCOUNT_DELETED');
@@ -157,19 +145,6 @@ export class AuthSessionService {
     });
   }
 
-  /**
-   * Idempotent — silently ignores invalid tokens.
-   *
-   * R7 — accepts an optional `ctx` with the access-token `jti` + `exp` so the
-   * denylist gets the access side too (refresh revocation alone leaves the
-   * access JWT cryptographically valid up to its natural TTL ≤ 15 min). The
-   * route handler is responsible for extracting + verifying the bearer access
-   * token BEFORE passing it here ; this service trusts the ctx fields.
-   *
-   * `ttlSec <= 0` (access token already expired) is a no-op on the denylist
-   * side — the adapter skips the Redis write. Both effects are silent on
-   * invalid input (logout MUST stay idempotent for FE-side reliability).
-   */
   async logout(
     refreshToken: string | undefined,
     ctx?: { accessJti: string; accessExpSec: number },
@@ -179,9 +154,7 @@ export class AuthSessionService {
       try {
         const claims = this.tokenJwt.verifyRefreshToken(token);
         await this.refreshTokenRepository.revokeByJti(claims.jti);
-      } catch {
-        // Idempotent — must not leak token validation details.
-      }
+      } catch {}
     }
 
     if (ctx && this.accessTokenDenylist) {
@@ -189,10 +162,7 @@ export class AuthSessionService {
       if (ttlSec > 0) {
         try {
           await this.accessTokenDenylist.add(ctx.accessJti, ttlSec);
-        } catch {
-          // Adapter contract is fail-OPEN (R9) — should never throw here, but
-          // belt-and-braces : an unexpected throw must not break logout.
-        }
+        } catch {}
       }
     }
   }
@@ -201,25 +171,14 @@ export class AuthSessionService {
     const session = await this.sessionIssuer.issueSession({
       user: sanitizeUser(user),
     });
-    this.refreshTokenRepository.deleteExpiredTokens().catch(() => {
-      /* noop */
-    });
+    this.refreshTokenRepository.deleteExpiredTokens().catch(() => undefined);
     return session;
   }
 
-  /** @throws {AppError} 401 if token invalid or expired. */
   verifyAccessToken(token: string): { id: number; role: UserRole; museumId?: number | null } {
     return this.tokenJwt.verifyAccessToken(token);
   }
 
-  /**
-   * R8 — same as {@link verifyAccessToken} but exposes the `jti` + `exp` claims.
-   * Used by the denylist middleware (consults `denylist.has(jti)`) and the
-   * logout route handler (writes `denylist.add(jti, ttl)` after server-side
-   * verification of the bearer).
-   *
-   * @throws {AppError} 401 INVALID_ACCESS_TOKEN.
-   */
   verifyAccessTokenWithClaims(token: string): {
     id: number;
     role: UserRole;

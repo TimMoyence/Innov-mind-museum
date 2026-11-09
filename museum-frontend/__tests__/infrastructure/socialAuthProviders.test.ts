@@ -1,13 +1,3 @@
-/**
- * F11-mobile (2026-05) — socialAuthProviders tests.
- *
- * Apple keeps the direct ID-token POST flow (signInAsync nonce-binds via SHA-256
- * client-side). Google migrated off the broken @react-native-google-signin nonce
- * flow to the server-mediated /google/initiate redirect — the in-app browser
- * lands on `musaium://auth/google/callback?code=<otc>` and the OTC is redeemed
- * via POST /api/auth/social-redeem.
- */
-
 const mockSignInAsync = jest.fn();
 const mockIsAvailableAsync = jest.fn<Promise<boolean>, []>();
 const mockOpenAuthSessionAsync = jest.fn();
@@ -98,7 +88,6 @@ describe('isAppleSignInAvailable', () => {
   });
 });
 
-// ── F3 — OIDC nonce binding (Apple still binds client-side) ───────────────
 describe('signInWithApple — F3 nonce', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -124,7 +113,6 @@ describe('signInWithApple — F3 nonce', () => {
   });
 });
 
-// ── F11-mobile — Google server-mediated flow ─────────────────────────────
 describe('signInWithGoogle — F11-mobile web flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -192,14 +180,6 @@ describe('signInWithGoogle — F11-mobile web flow', () => {
     });
   });
 
-  // Regression — TestFlight 1.2.2/88 prod log 2026-05-12 13:52:49.094:
-  // backend rejected /social-redeem with `code Code must be base64url`. iOS
-  // ASWebAuthenticationSession appended a stray fragment to the redirect URL
-  // (`musaium://auth/google/callback?code=<otc>#...`), and the pre-fix parser
-  // sliced everything after `?` into URLSearchParams — `URLSearchParams` does
-  // not strip fragments, so the OTC value carried `#...` into the POST body
-  // and tripped the `^[A-Za-z0-9_-]+$` regex. The parser now slices the
-  // fragment off before constructing URLSearchParams.
   it('strips a trailing fragment so the OTC code stays base64url-clean', async () => {
     mockOpenAuthSessionAsync.mockResolvedValue({
       type: 'success',
@@ -213,30 +193,3 @@ describe('signInWithGoogle — F11-mobile web flow', () => {
     expect(mockRedeemSocialCode).toHaveBeenCalledWith('opaque-otc-22-chars-abc');
   });
 });
-
-// ── Defensive lazy load (TestFlight 1.2.2/87 — Pods missing ExpoWebBrowser) ──
-//
-// Build 87 crashed at launch because `expo-web-browser` was declared in
-// package.json + plugins but the iOS Pods/ checkout still lacked the
-// ExpoWebBrowser pod — the static `import * as WebBrowser from
-// 'expo-web-browser'` at module top of socialAuthProviders.ts evaluated
-// `requireNativeModule('ExpoWebBrowser')` which threw inside Metro's
-// `guardedLoadModule`, raising a fatal report → RCTFatal → SIGABRT.
-//
-// Mitigation lives in three layers:
-//   A. `pod install` regenerates Pods/ to actually link ExpoWebBrowser.
-//   B. The static import was replaced by a lazy `require()` inside
-//      `loadWebBrowser()` (this file). The 6 google_* tests above already
-//      exercise that lazy path: they pass only when the require runs
-//      inside `signInWithGoogle()` rather than at module load.
-//   C. `installGlobalErrorHandler()` (covered in
-//      `__tests__/shared/observability/global-error-handler.test.ts`)
-//      downgrades fatal → non-fatal in release so future unlinked
-//      modules surface as a JS error event instead of SIGABRT.
-//
-// An additional unit test of the "exports incomplete → browser_unavailable"
-// branch was prototyped but coupling jest.doMock with jest.isolateModules
-// turned out to fight the hoisted top-level `jest.mock('expo-web-browser',
-// …)` factory, leading to flaky precedence. The mitigation above is
-// validated end-to-end through the layered coverage rather than a fragile
-// per-branch assertion.

@@ -1,16 +1,18 @@
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
 import { useMemoryPreference } from '@/features/settings/application/useMemoryPreference';
+import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-/** Privacy card: AI memory (personalization) toggle. */
 export const SettingsPrivacyCard = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const { enabled, isLoading, toggle } = useMemoryPreference();
+  const { refusal, track } = useLatestSaveOutcome();
 
   return (
     <GlassCard style={styles.card} intensity={56}>
@@ -31,11 +33,12 @@ export const SettingsPrivacyCard = () => {
         ) : (
           <Switch
             value={enabled}
-            onValueChange={(v) => void toggle(v)}
+            onValueChange={(v) => void track(toggle(v))}
             trackColor={{ false: theme.cardBorder, true: theme.primary }}
           />
         )}
       </View>
+      <SaveRefusalNotice refusal={refusal} />
     </GlassCard>
   );
 };

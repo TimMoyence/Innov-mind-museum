@@ -16,9 +16,15 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-// Force web platform so SecureStore is not loaded (uses AsyncStorage fallback)
 jest.mock('react-native', () => ({
   Platform: { OS: 'web' },
+}));
+
+const mockSecureSetItem = jest.fn();
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: (...args: unknown[]) => mockSecureSetItem(...args),
+  deleteItemAsync: jest.fn(),
 }));
 
 import {
@@ -112,10 +118,6 @@ describe('authTokenStore', () => {
     });
   });
 
-  // R11 — web fallback (AsyncStorage) must NOT receive any keychainAccessible
-  // options arg, and SecureStore must never be touched on web. Regression guard
-  // for TD-SEC-01: the native hardening must not leak an options object into the
-  // unencrypted AsyncStorage write path.
   describe('web fallback carries no keychainAccessible option (R11)', () => {
     const asyncStorageMock = require('@react-native-async-storage/async-storage').default as {
       setItem: jest.Mock;
@@ -137,12 +139,8 @@ describe('authTokenStore', () => {
     });
 
     it('does not load expo-secure-store on web', () => {
-      // jest.requireMock would create a module instance; instead assert the
-      // real module was never registered as a mock target here — the web guard
-      // in loadSecureStore() returns null before requiring it. We assert
-      // indirectly: writing a token used AsyncStorage (covered above) and the
-      // store module exposes a setItemAsync sentinel only on native.
       expect(jest.isMockFunction(asyncStorageMock.setItem)).toBe(true);
+      expect(mockSecureSetItem).not.toHaveBeenCalled();
     });
   });
 });

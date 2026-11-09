@@ -31,7 +31,6 @@ export class EmailSupportContactNotifier implements SupportContactNotifier {
   }
 }
 
-/** No-op notifier used when email delivery is not configured (local/dev). */
 export class NoopSupportContactNotifier implements SupportContactNotifier {
   notify(payload: SupportContactPayload): Promise<void> {
     logger.warn('support_contact_notifier_noop', {

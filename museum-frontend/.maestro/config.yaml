@@ -1,5 +1,1 @@
-# Maestro E2E Test Configuration for Musaium
-# https://maestro.mobile.dev/reference/configuration
-
-# Development build bundle ID (preview variant)
 appId: com.musaium.mobile.preview

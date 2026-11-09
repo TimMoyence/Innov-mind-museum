@@ -7,7 +7,6 @@ import {
 import type { AppError } from '@/shared/types/AppError';
 
 describe('errors', () => {
-  // Reset translate function between tests
   afterEach(() => {
     setErrorTranslate(null as never);
   });

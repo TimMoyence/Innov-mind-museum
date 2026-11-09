@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { ticketApi } from '@/features/support/infrastructure/ticketApi';
+import { priorityColor, ticketPriorityLabel } from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 import { GlassCard } from '@/shared/ui/GlassCard';
@@ -20,18 +21,6 @@ type Priority = components['schemas']['TicketDTO']['priority'];
 const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
 const SHADOW_TRANSPARENT = 'transparent';
 
-const priorityColor = (priority: Priority): string => {
-  switch (priority) {
-    case 'low':
-      return semantic.statusBadge.closed;
-    case 'medium':
-      return semantic.statusBadge.inProgress;
-    case 'high':
-      return semantic.statusBadge.priorityHigh;
-  }
-};
-
-/** Renders the create ticket form with subject, description, and priority selection. */
 export default function CreateTicketScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -41,15 +30,6 @@ export default function CreateTicketScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const priorityLabel = (p: Priority): string => {
-    const map: Record<Priority, string> = {
-      low: t('tickets.priorityLow'),
-      medium: t('tickets.priorityMedium'),
-      high: t('tickets.priorityHigh'),
-    };
-    return map[p];
-  };
 
   const isValid =
     isWithinLimit(subject.trim(), TEXT_LIMITS.ticketSubject) &&
@@ -153,7 +133,7 @@ export default function CreateTicketScreen() {
                   setPriority(p);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={priorityLabel(p)}
+                accessibilityLabel={ticketPriorityLabel(t, p)}
               >
                 <Text
                   style={[
@@ -163,7 +143,7 @@ export default function CreateTicketScreen() {
                     },
                   ]}
                 >
-                  {priorityLabel(p)}
+                  {ticketPriorityLabel(t, p)}
                 </Text>
               </Pressable>
             ))}

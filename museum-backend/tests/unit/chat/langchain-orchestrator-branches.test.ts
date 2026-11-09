@@ -73,7 +73,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
       const result = await orchestrator.generate(makeInput());
 
-      // Empty content should trigger the "no text" fallback
       expect(result.text).toBeTruthy();
       expect(result.text.length).toBeGreaterThan(0);
     });
@@ -111,7 +110,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
         text: 'A masterpiece by Monet.',
         deeperContext: null,
         openQuestion: null,
-        suggestedFollowUp: null,
         imageDescription: null,
         suggestedImages: null,
         detectedArtwork: null,
@@ -149,14 +147,16 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
       const result = await orchestrator.generate(makeInput());
 
-      // Should fall back gracefully
       expect(result.text).toBeTruthy();
       expect(result.metadata.diagnostics?.degraded).toBe(true);
     });
 
     it('flags the fallback answer as degraded on the output itself, diagnostics or not', async () => {
       const failing = new LangChainChatOrchestrator({
-        model: { invoke: jest.fn().mockRejectedValue(new Error('Invalid API key')), stream: jest.fn() },
+        model: {
+          invoke: jest.fn().mockRejectedValue(new Error('Invalid API key')),
+          stream: jest.fn(),
+        },
         circuitBreaker: new LLMCircuitBreaker({ failureThreshold: 100 }),
       });
       const answering = new LangChainChatOrchestrator({
@@ -213,7 +213,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
   describe('generate — assembleResponse edge cases', () => {
     it('sets status to "fallback" for missing section results when summary failed', async () => {
-      // Force timeout by using a model that never resolves within budget
       const model = {
         invoke: jest.fn().mockImplementation(
           (_messages: unknown, options?: { signal?: AbortSignal }) =>
@@ -263,7 +262,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
         text: 'This is an Impressionist painting.',
         deeperContext: 'The light play is characteristic of Monet.',
         openQuestion: null,
-        suggestedFollowUp: 'What year was it painted?',
         imageDescription: null,
         suggestedImages: null,
         detectedArtwork: null,
@@ -304,7 +302,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
       expect(result.text).toBe('This is an Impressionist painting.');
       expect(result.metadata.deeperContext).toBe('The light play is characteristic of Monet.');
-      expect(result.metadata.suggestedFollowUp).toBe('What year was it painted?');
     });
   });
 
@@ -324,7 +321,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
 
       const result = await orchestrator.generate(makeInput());
 
-      // Should fallback without retrying (string is not retryable)
       expect(result.text).toBeTruthy();
 
       env.llm.retries = originalRetries;
@@ -373,7 +369,6 @@ describe('LangChainChatOrchestrator — uncovered branches', () => {
     it('accepts explicit null model (no LLM key scenario)', () => {
       const orchestrator = new LangChainChatOrchestrator({ model: null });
 
-      // Verify it works — generate should return missing-key fallback
       expect(orchestrator.getCircuitBreakerState().state).toBe('CLOSED');
     });
 

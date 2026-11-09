@@ -1,8 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useProtectedRoute } from '@/features/auth/useProtectedRoute';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
@@ -20,7 +18,6 @@ jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
   ),
 }));
 
-// Pull the mocked functions so we can change return values per test
 import { useSegments } from 'expo-router';
 import { useAuth } from '@/features/auth/application/AuthContext';
 import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
@@ -29,12 +26,9 @@ const mockedUseSegments = useSegments as jest.Mock;
 const mockedUseAuth = useAuth as jest.Mock;
 const mockedUseUserProfileStore = useUserProfileStore as unknown as jest.Mock;
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useProtectedRoute', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default: user has NOT yet seen onboarding
     mockedUseUserProfileStore.mockImplementation(
       (selector: (s: { hasSeenOnboarding: boolean }) => unknown) =>
         selector({ hasSeenOnboarding: false }),
@@ -178,7 +172,11 @@ describe('useProtectedRoute', () => {
   it.each(['reset-password', 'verify-email', 'confirm-email-change'])(
     'lets a signed-out visitor open the %s link from their email',
     (screen) => {
-      mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false, isFirstLaunch: false });
+      mockedUseAuth.mockReturnValue({
+        isAuthenticated: false,
+        isLoading: false,
+        isFirstLaunch: false,
+      });
       mockedUseSegments.mockReturnValue(['(stack)', screen]);
 
       renderHook(() => {
@@ -201,7 +199,11 @@ describe('useProtectedRoute', () => {
   });
 
   it('still sends a signed-out visitor away from any other stack screen', () => {
-    mockedUseAuth.mockReturnValue({ isAuthenticated: false, isLoading: false, isFirstLaunch: false });
+    mockedUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      isFirstLaunch: false,
+    });
     mockedUseSegments.mockReturnValue(['(stack)', 'settings']);
 
     renderHook(() => {

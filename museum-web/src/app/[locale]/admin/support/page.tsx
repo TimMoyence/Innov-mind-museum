@@ -13,8 +13,6 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
 import type { TicketDetail, TicketMessage, TicketStatus, TicketPriority } from '@/lib/admin-types';
 
-// -- Badge colors (same as tickets page) ------------------------------------
-
 const STATUS_COLORS: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-700',
   in_progress: 'bg-yellow-100 text-yellow-700',
@@ -28,13 +26,9 @@ const PRIORITY_COLORS: Record<TicketPriority, string> = {
   high: 'bg-red-100 text-red-700',
 };
 
-// -- Helpers ----------------------------------------------------------------
-
 function isStaffRole(role: string): boolean {
   return role === 'admin' || role === 'moderator' || role === 'museum_manager';
 }
-
-// -- Page component ---------------------------------------------------------
 
 export default function AdminSupportPage() {
   const adminDict = useAdminDict();
@@ -46,10 +40,7 @@ export default function AdminSupportPage() {
 
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
-  // Mutation-specific error (kept distinct from the read-only hook `error`).
   const [mutationError, setMutationError] = useState<string | null>(null);
-
-  // -- Fetch ticket detail --------------------------------------------------
 
   const {
     data: ticket,
@@ -62,8 +53,6 @@ export default function AdminSupportPage() {
     errorFallback: 'Failed to load ticket',
   });
   const combinedError = error ?? mutationError;
-
-  // -- Send reply -----------------------------------------------------------
 
   async function handleSendReply() {
     if (!ticketId || !replyText.trim()) return;
@@ -81,8 +70,6 @@ export default function AdminSupportPage() {
       setSending(false);
     }
   }
-
-  // -- No ticket selected ---------------------------------------------------
 
   if (!ticketId) {
     return (
@@ -104,8 +91,6 @@ export default function AdminSupportPage() {
     );
   }
 
-  // -- Loading --------------------------------------------------------------
-
   if (loading && !ticket) {
     return (
       <div>
@@ -116,8 +101,6 @@ export default function AdminSupportPage() {
       </div>
     );
   }
-
-  // -- Error (no ticket loaded) ---------------------------------------------
 
   if (combinedError && !ticket) {
     return (
@@ -136,11 +119,8 @@ export default function AdminSupportPage() {
 
   if (!ticket) return null;
 
-  // -- Ticket loaded --------------------------------------------------------
-
   return (
     <div>
-      {/* Header + back link */}
       <Link
         href={`/${locale}/admin/tickets`}
         className="text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -150,10 +130,8 @@ export default function AdminSupportPage() {
 
       <h1 className="mt-2 text-2xl font-bold text-text-primary">{adminDict.supportAdmin}</h1>
 
-      {/* Error banner */}
       {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
-      {/* Metadata card */}
       <div className="mt-6 rounded-xl border border-primary-100 bg-white p-6">
         <h2 className="text-lg font-bold text-text-primary">{ticket.subject}</h2>
 
@@ -196,7 +174,6 @@ export default function AdminSupportPage() {
         )}
       </div>
 
-      {/* Messages thread */}
       <div className="mt-6 space-y-4">
         <h3 className="text-sm font-semibold text-text-primary">
           {adminDict.common.messages} ({ticket.messages.length})
@@ -237,7 +214,6 @@ export default function AdminSupportPage() {
         })}
       </div>
 
-      {/* Reply form */}
       <div className="mt-6 rounded-xl border border-primary-100 bg-white p-6">
         <h3 className="text-sm font-semibold text-text-primary">{adminDict.supportPage.reply}</h3>
         <textarea

@@ -26,9 +26,7 @@ describe('ChangePasswordUseCase', () => {
   });
 
   it('rejects same-as-current new password', async () => {
-    (bcrypt.compare as jest.Mock)
-      .mockResolvedValueOnce(true) // current password matches
-      .mockResolvedValueOnce(true); // new password is same
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true).mockResolvedValueOnce(true);
     const repo = makeUserRepo(makeUser());
     const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo());
 
@@ -39,9 +37,7 @@ describe('ChangePasswordUseCase', () => {
   });
 
   it('rejects weak new password', async () => {
-    (bcrypt.compare as jest.Mock)
-      .mockResolvedValueOnce(true) // current password matches
-      .mockResolvedValueOnce(false); // new password is different
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const repo = makeUserRepo(makeUser());
     const useCase = new ChangePasswordUseCase(repo, makeRefreshTokenRepo());
 
@@ -63,9 +59,7 @@ describe('ChangePasswordUseCase', () => {
   });
 
   it('updates password and revokes all tokens on success', async () => {
-    (bcrypt.compare as jest.Mock)
-      .mockResolvedValueOnce(true) // current password matches
-      .mockResolvedValueOnce(false); // new password is different
+    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const repo = makeUserRepo(makeUser());
     const refreshRepo = makeRefreshTokenRepo();
     const useCase = new ChangePasswordUseCase(repo, refreshRepo);

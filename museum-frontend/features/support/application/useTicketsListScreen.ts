@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { ticketApi } from '@/features/support/infrastructure/ticketApi';
 import type { TicketsListViewProps } from '@/features/support/ui/TicketsListView';
+import { ticketStatusLabel } from '@/features/support/ui/ticketHelpers';
 import type { components } from '@/shared/api/generated/openapi';
 import { getErrorMessage } from '@/shared/lib/errors';
 
@@ -19,11 +20,6 @@ export const STATUS_OPTIONS: (TicketStatus | 'all')[] = [
 
 export const PAGE_LIMIT = 15;
 
-/**
- * Orchestrates state, pagination, status filter and i18n labels for the tickets list screen.
- * Pure application layer — no JSX. Consumed by `TicketsListView` (presenter).
- * Return shape mirrors `TicketsListViewProps` so the screen wrapper can spread it directly.
- */
 export function useTicketsListScreen(): TicketsListViewProps {
   const { t } = useTranslation();
 
@@ -87,7 +83,6 @@ export function useTicketsListScreen(): TicketsListViewProps {
       setPage(response.page);
       setTotalPages(response.totalPages);
     } catch {
-      // Silently fail — user can scroll again
     } finally {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
@@ -104,16 +99,8 @@ export function useTicketsListScreen(): TicketsListViewProps {
   }, []);
 
   const statusLabel = useCallback(
-    (s: TicketStatus | 'all'): string => {
-      if (s === 'all') return t('tickets.status');
-      const map: Record<TicketStatus, string> = {
-        open: t('tickets.statusOpen'),
-        in_progress: t('tickets.statusInProgress'),
-        resolved: t('tickets.statusResolved'),
-        closed: t('tickets.statusClosed'),
-      };
-      return map[s];
-    },
+    (s: TicketStatus | 'all'): string =>
+      s === 'all' ? t('tickets.status') : ticketStatusLabel(t, s),
     [t],
   );
 

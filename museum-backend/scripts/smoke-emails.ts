@@ -1,18 +1,4 @@
-/* eslint-disable no-console -- CLI smoke script: console output IS the user-facing channel */
 import 'dotenv/config';
-/**
- * Smoke test for transactional email templates.
- *
- * Sends every variant produced by `src/shared/email/templates/` to a single test
- * recipient via Brevo, so a human can visually validate rendering across email
- * clients (Gmail, Outlook, Apple Mail).
- *
- * Usage:
- *   BREVO_API_KEY=xkeysib-... pnpm smoke:emails
- *   BREVO_API_KEY=xkeysib-... SMOKE_EMAIL_RECIPIENT=foo@bar.com pnpm smoke:emails
- *
- * Exits 0 if every variant was accepted by Brevo, 1 if any failed.
- */
 
 import { BrevoEmailService } from '@shared/email/brevo-email.service';
 import {

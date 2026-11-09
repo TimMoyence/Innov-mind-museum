@@ -1,43 +1,5 @@
-/**
- * RED — T1.10 — R9 — `RedisAccessTokenDenylist` MUST fail-OPEN on Redis error :
- *   - `has(jti)` returns `false` instead of throwing (token accepted).
- *   - `add(jti, ttl)` resolves without throwing.
- *   - warn log emitted, rate-limited 1/minute (in-memory token bucket).
- *
- * Spec : team-state/2026-05-21-p0-c3-auth-crypto/spec.md §R9.
- * Design : team-state/2026-05-21-p0-c3-auth-crypto/design.md §3.1 §9 D9 :
- *   - fail-OPEN policy implemented INSIDE the adapter (not the middleware).
- *   - key shape `denylist:access:<jti>`.
- *   - `add` uses `SET ... EX ... NX` (atomic, no TTL reset on duplicate).
- *   - `has` uses `EXISTS`.
- *   - warn rate-limit : 1 / minute via in-memory `lastWarnAt`.
- *
- * Anchored to PATTERNS / LESSONS :
- *  - `lib-docs/ioredis/PATTERNS.md` §3 DO #6 `SET ... EX ... NX` atomic.
- *  - `lib-docs/ioredis/PATTERNS.md` §3 DON'T #11 `INCR` + `EXPIRE` split → use
- *    Lua / single-command-with-EX (we choose SET ... EX ... NX).
- *  - `lib-docs/ioredis/LESSONS.md:36` "fail-soft cache on get/set/del errors"
- *    pattern adopted from `redis-cache.service.ts`.
- *  - CLAUDE.md "Counters fail-CLOSED (`redis-llm-cost-counter.ts`) → OOM bloque
- *    le chat" — explicit cost/benefit : denylist is defense-in-depth, NOT
- *    primary identity ; we trade revocation latency for auth availability.
- *
- * Failure mode at HEAD `00325d81` :
- *  - The adapter file `src/modules/auth/adapters/secondary/redis/redis-access-token-denylist.ts`
- *    does NOT exist. The import below fails ("Cannot find module") → Jest
- *    marks every assertion in this file as failing.
- *
- * Run scope :
- *   pnpm jest tests/unit/auth/redis-access-token-denylist.failopen.test.ts
- */
-
 import type Redis from 'ioredis';
 
-/**
- * Future adapter shape pinned by R9 design §3.1 §10.
- * Path : src/modules/auth/adapters/secondary/redis/redis-access-token-denylist.ts
- * Constructor : (client: Redis, opts?: { now?: () => number; warn?: (msg, ctx) => void })
- */
 interface IAccessTokenDenylistCtor {
   new (
     client: Redis,
@@ -49,17 +11,12 @@ interface IAccessTokenDenylistCtor {
 }
 
 const requireAdapter = (): IAccessTokenDenylistCtor => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- module is a future export ; require lets us probe without TS error pre-existence
   const mod = require('@modules/auth/adapters/secondary/redis/redis-access-token-denylist') as {
     RedisAccessTokenDenylist: IAccessTokenDenylistCtor;
   };
   return mod.RedisAccessTokenDenylist;
 };
 
-/**
- * Stub Redis client surfacing only the commands the adapter touches : `set` +
- * `exists`. Mirror the stubRedis pattern from `nonce-store.test.ts`.
- */
 const stubRedis = (impl: { set?: jest.Mock; exists?: jest.Mock }): Redis =>
   ({
     set: impl.set ?? jest.fn().mockResolvedValue('OK'),
@@ -142,12 +99,11 @@ describe('RedisAccessTokenDenylist — fail-OPEN on Redis error (R9)', () => {
     });
 
     await denylist.has('jti-a');
-    await denylist.has('jti-b'); // within same minute
+    await denylist.has('jti-b');
     await denylist.has('jti-c');
 
     expect(warn).toHaveBeenCalledTimes(1);
 
-    // Advance > 60s → next warn fires.
     nowMs = 61_000;
     await denylist.has('jti-d');
     expect(warn).toHaveBeenCalledTimes(2);
@@ -162,7 +118,6 @@ describe('RedisAccessTokenDenylist — fail-OPEN on Redis error (R9)', () => {
 
     await denylist.has(sensitiveJti);
 
-    // No call argument (msg or context) should embed the full jti string.
     for (const call of warn.mock.calls) {
       for (const arg of call) {
         const serialized = typeof arg === 'string' ? arg : JSON.stringify(arg);

@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { InMemoryBucketStore } from '@shared/rate-limit/in-memory-bucket-store';
 
@@ -20,11 +21,6 @@ export const releaseCountedUnit = (
   if (buckets.get(key) === bucket && bucket.count > 0) bucket.count -= 1;
 };
 
-/**
- * Atomic INCR + PEXPIRE + PTTL in one Redis call. Prevents race between INCR + EXPIRE
- * across instances → would leak TTL-less key + unbounded bucket persistence.
- * KEYS[1]=key, ARGV[1]=windowMs. Returns [count, pttl, expireAtMs].
- */
 const INCR_EXPIRE_LUA = `
 local count = redis.call('INCR', KEYS[1])
 if count == 1 then
@@ -50,7 +46,6 @@ end
 return 0
 `;
 
-/** In-memory fallback when Redis unavailable. */
 export class RedisRateLimitStore {
   private readonly redis: Redis;
   private readonly fallback: InMemoryBucketStore<RateLimitBucket>;
@@ -77,27 +72,22 @@ export class RedisRateLimitStore {
       return { count, resetAt, release: () => this.releaseRedisUnit(redisKey, expireAtMs) };
     } catch (err) {
       logger.warn('redis_rate_limit_fallback', {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err may not be Error at runtime
-        reason: (err as Error).message ?? 'unknown',
+        reason: errorMessage(err),
         key,
       });
       return this.incrementFallback(key, windowMs);
     }
   }
 
-  /** Exposes ioredis so callers (login lockout) can run specialized Lua scripts. */
   getRedisClient(): Redis {
     return this.redis;
   }
 
-  /** e.g. after successful auth. */
   async reset(key: string): Promise<void> {
     const redisKey = `${this.keyPrefix}${key}`;
     try {
       await this.redis.del(redisKey);
-    } catch {
-      // Best-effort
-    }
+    } catch {}
     this.fallback.delete(key);
   }
 
@@ -114,7 +104,7 @@ export class RedisRateLimitStore {
       await this.redis.eval(DECR_IN_WINDOW_LUA, 1, redisKey, String(expireAtMs));
     } catch (err) {
       logger.warn('redis_rate_limit_refund_failed', {
-        reason: err instanceof Error ? err.message : String(err),
+        reason: errorMessage(err),
         key: redisKey,
       });
     }

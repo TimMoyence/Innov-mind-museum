@@ -1,8 +1,6 @@
 import { maskPersonalData } from '@shared/pii/mask-personal-data';
 
 describe('maskPersonalData', () => {
-  // ── Email detection ──────────────────────────────────────────────────
-
   describe('email detection', () => {
     it('replaces a standard email', () => {
       const result = maskPersonalData('Contact me at john@example.com please');
@@ -22,8 +20,6 @@ describe('maskPersonalData', () => {
       expect(result.count).toBe(1);
     });
   });
-
-  // ── Phone detection ──────────────────────────────────────────────────
 
   describe('phone detection', () => {
     it('replaces international format +33', () => {
@@ -50,8 +46,6 @@ describe('maskPersonalData', () => {
       expect(result.count).toBe(0);
     });
   });
-
-  // ── Mixed and edge cases ───────��─────────────────────────────────────
 
   describe('mixed and edge cases', () => {
     it('replaces both email and phone in same text', () => {

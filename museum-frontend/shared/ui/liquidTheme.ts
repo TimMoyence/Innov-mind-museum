@@ -1,15 +1,12 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- React Native image require() pattern */
 import type { ImageSourcePropType } from 'react-native';
 
 import { lightTheme, type ThemePalette } from './themes';
 
-/** Pair of image sources for mobile and desktop viewports used by LiquidScreen backgrounds. */
 export interface ResponsiveBackground {
   mobile: ImageSourcePropType;
   desktop: ImageSourcePropType;
 }
 
-/** Responsive viewport breakpoints, background opacity values, and layout constraints for the liquid design system. */
 export const viewportConfig = {
   desktopBreakpoint: 1024,
   mobileBackgroundOpacity: 0.18,
@@ -19,7 +16,6 @@ export const viewportConfig = {
   desktopMaxContentWidth: 1180,
 };
 
-/** Pre-loaded set of museum-themed background image pairs (mobile + desktop) used across screens. */
 export const museumBackgrounds: ResponsiveBackground[] = [
   {
     mobile:
@@ -52,12 +48,8 @@ export const museumBackgrounds: ResponsiveBackground[] = [
   },
 ];
 
-/** Returns a museum background by index, wrapping around if the index exceeds the available set. */
 export const pickMuseumBackground = (index: number): ResponsiveBackground => {
   const [first, ...rest] = museumBackgrounds;
-  // Module-level constant has at least one entry — `first` cannot be undefined,
-  // but the destructure satisfies noUncheckedIndexedAccess by capturing it
-  // before indexing.
   if (!first) throw new Error('museumBackgrounds must not be empty');
   const all = [first, ...rest];
   const length = all.length;
@@ -65,7 +57,6 @@ export const pickMuseumBackground = (index: number): ResponsiveBackground => {
   return all[normalized] ?? first;
 };
 
-/** Returns theme-aware color tokens for the liquid design system. */
 export const themeColors = (theme: ThemePalette) => ({
   pageGradient: theme.pageGradient,
   primary: theme.primary,
@@ -75,5 +66,4 @@ export const themeColors = (theme: ThemePalette) => ({
   glassBackground: theme.glassBackground,
 });
 
-/** Core color tokens for the liquid design system (light theme — backward compat for unmigrated files). */
 export const liquidColors = themeColors(lightTheme);

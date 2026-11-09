@@ -1,22 +1,3 @@
-/**
- * F7 (HIGH) — CSRF middleware unit tests.
- *
- * Double-submit token model:
- *   - csrf_token cookie (NOT httpOnly — JS readable)
- *   - X-CSRF-Token request header
- *   - cookie value MUST equal HMAC-SHA256(access_token cookie, CSRF_SECRET)
- *
- * Skip rules:
- *   - GET / HEAD / OPTIONS always skipped (read-only)
- *   - `Authorization: Bearer …` header ⇒ skipped (mobile / SPA path; CSRF
- *     does not apply because Authorization is not auto-sent cross-origin)
- *   - Pre-auth endpoints (login / register / social-* / refresh / etc.) ⇒
- *     skipped (route does not trust the existing cookie for authentication)
- *   - No `access_token` cookie ⇒ skipped (anonymous request)
- *
- * Failure ⇒ 403 CSRF_INVALID.
- */
-
 import crypto from 'node:crypto';
 
 import { AppError } from '@shared/errors/app.error';
@@ -25,7 +6,6 @@ import { makePartialRequest, makeNext } from '../../helpers/http/express-mock.he
 
 import type { Request, Response } from 'express';
 
-// Mock env to control csrfSecret deterministically.
 jest.mock('@src/config/env', () => ({
   env: {
     nodeEnv: 'test',
@@ -115,8 +95,6 @@ describe('csrfMiddleware', () => {
   });
 
   it('throws 403 CSRF_INVALID when csrf cookie is not the HMAC of the access_token cookie', () => {
-    // Attacker sets a matching pair (cookie === header) but cookie is NOT bound
-    // to the actual session. HMAC check should reject.
     const forgedToken = 'attacker-supplied-value';
     const req = makeReq({
       method: 'POST',
@@ -181,10 +159,6 @@ describe('csrfMiddleware', () => {
   });
 
   it('skips when Authorization Bearer header is present even if a stale access_token cookie is also set (regression: 2026-05-08 iOS URLSession leftover cookies)', () => {
-    // iOS URLSession persists Set-Cookie auth_token from a prior session and
-    // auto-attaches it on subsequent requests. The mobile client still
-    // authenticates via Bearer, so CSRF must not gate the request on a cookie
-    // the mobile client never opted into.
     const req = makeReq({
       method: 'POST',
       cookies: { access_token: 'stale-from-prior-session', csrf_token: 'stale' },
@@ -211,10 +185,6 @@ describe('csrfMiddleware', () => {
   ])(
     'skips %s even with stale access_token cookie present (regression: 2026-05-08 social-login 403 CSRF_INVALID)',
     (path) => {
-      // Pre-auth endpoints do not trust the existing cookie; they verify
-      // creds fresh and issue new tokens. iOS URLSession can leave a stale
-      // access_token cookie behind from a prior session that would otherwise
-      // trip the cookie-auth branch.
       const req = makeReq({
         method: 'POST',
         path,
@@ -247,9 +217,6 @@ describe('csrfMiddleware', () => {
   });
 
   it('skips when access_token cookie is absent even if csrf_token cookie is set', () => {
-    // Edge case: client somehow has stale csrf_token cookie but no session.
-    // Without an active cookie session the CSRF check is irrelevant — let it
-    // fall through to auth which will 401.
     const req = makeReq({
       method: 'POST',
       cookies: { csrf_token: 'stale' },
@@ -278,10 +245,6 @@ describe('csrfMiddleware', () => {
   });
 
   it('uses constant-time comparison (no early-exit timing leak)', () => {
-    // We can't observe timing in a unit test, but we assert that two values
-    // that share a prefix but differ at the end are still rejected (proves
-    // the comparison reads through the full string). This is a property test
-    // not a timing test.
     const almostValid = `${VALID_CSRF.slice(0, -2)}xx`;
     const req = makeReq({
       method: 'POST',

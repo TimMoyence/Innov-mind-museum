@@ -40,7 +40,7 @@ describe('mapSessionToDashboardCard', () => {
     assert.equal(card.title, 'Last message text');
   });
 
-  it('falls back to "No messages yet" when both title and preview are null', () => {
+  it('DEC-2026-11-09 · has no title when both title and preview are missing (the screen names it)', () => {
     const card = mapSessionToDashboardCard(
       makeSessionItem({
         title: null as unknown as string,
@@ -48,15 +48,14 @@ describe('mapSessionToDashboardCard', () => {
       }),
     );
 
-    assert.equal(card.title, 'No messages yet');
+    assert.equal(card.title, null);
   });
 
   it('truncates long titles at 90 characters', () => {
     const longTitle = 'A'.repeat(100);
     const card = mapSessionToDashboardCard(makeSessionItem({ title: longTitle }));
 
-    assert.equal(card.title.length, 90);
-    assert.ok(card.title.endsWith('...'));
+    assert.equal(card.title, `${'A'.repeat(87)}...`);
   });
 
   it('does not truncate short titles', () => {
@@ -65,38 +64,26 @@ describe('mapSessionToDashboardCard', () => {
     assert.equal(card.title, 'Short');
   });
 
-  it('shows "Guided mode" for museumMode sessions', () => {
-    const card = mapSessionToDashboardCard(makeSessionItem({ museumMode: true }));
-
-    assert.ok(card.subtitle.includes('Guided mode'));
-  });
-
-  it('shows "Standard mode" for non-museumMode sessions', () => {
-    const card = mapSessionToDashboardCard(makeSessionItem({ museumMode: false }));
-
-    assert.ok(card.subtitle.includes('Standard mode'));
-  });
-
-  it('includes museumName in subtitle when different from title', () => {
+  it('DEC-2026-11-09 · the subtitle is the museum name alone, never the mode or the locale', () => {
     const card = mapSessionToDashboardCard(
-      makeSessionItem({ title: 'Chat', museumName: 'Louvre' }),
+      makeSessionItem({ title: 'Chat', museumName: 'Louvre', museumMode: true, locale: 'fr-FR' }),
     );
 
-    assert.ok(card.subtitle.includes('Louvre'));
+    assert.equal(card.subtitle, 'Louvre');
   });
 
-  it('skips museumName from subtitle when same as title', () => {
+  it('DEC-2026-11-09 · has no subtitle when the museum is already the title', () => {
     const card = mapSessionToDashboardCard(
       makeSessionItem({ title: 'Louvre', museumName: 'Louvre' }),
     );
 
-    assert.ok(!card.subtitle.includes('Louvre'));
+    assert.equal(card.subtitle, null);
   });
 
   it('uses preview.createdAt for timeLabel when available', () => {
-    const card = mapSessionToDashboardCard(makeSessionItem());
+    const fromPreview = mapSessionToDashboardCard(makeSessionItem({ updatedAt: 'not-a-date' }));
 
-    assert.ok(card.timeLabel !== 'Unknown time');
+    assert.notEqual(fromPreview.timeLabel, null);
   });
 
   it('falls back to updatedAt when preview is missing', () => {
@@ -104,10 +91,10 @@ describe('mapSessionToDashboardCard', () => {
       makeSessionItem({ preview: null as unknown as SessionListItemDTO['preview'] }),
     );
 
-    assert.ok(card.timeLabel !== 'Unknown time');
+    assert.notEqual(card.timeLabel, null);
   });
 
-  it('returns "Unknown time" for invalid date', () => {
+  it('AUDIT-2026-11-09 · has no timeLabel for an unreadable date', () => {
     const card = mapSessionToDashboardCard(
       makeSessionItem({
         preview: null as unknown as SessionListItemDTO['preview'],
@@ -115,7 +102,7 @@ describe('mapSessionToDashboardCard', () => {
       }),
     );
 
-    assert.equal(card.timeLabel, 'Unknown time');
+    assert.equal(card.timeLabel, null);
   });
 });
 

@@ -1,8 +1,3 @@
-/**
- * Unit tests for {@link formatOpeningHours}. Pure function — no mocks other
- * than a synthetic `t()` translator + an injected clock. Every assertion
- * pins a locale-independent contract so UI regressions surface fast.
- */
 import {
   formatOpeningHours,
   type I18nTranslator,
@@ -12,8 +7,6 @@ import type {
   ParsedOpeningDay,
   ParsedOpeningHours,
 } from '@/features/museum/infrastructure/museumApi';
-
-// ── Translator factory ───────────────────────────────────────────────────────
 
 const DAYS_SHORT: Record<OpeningDay, string> = {
   mon: 'Mon',
@@ -35,11 +28,6 @@ const DAYS_FULL: Record<OpeningDay, string> = {
   sun: 'Sunday',
 };
 
-/**
- * Minimal translator that matches the structural keys the formatter emits.
- * Mirrors the behavior of i18next's default interpolation so assertions read
- * like the real UI output.
- */
 const makeTranslator = (): I18nTranslator => (key, options) => {
   switch (key) {
     case 'museumDirectory.enrichment.open':
@@ -67,7 +55,6 @@ const makeTranslator = (): I18nTranslator => (key, options) => {
     default:
       break;
   }
-  // Pattern `days.<day>` or `days.on_<day>`.
   const dayMatch = /^days\.(on_)?(mon|tue|wed|thu|fri|sat|sun)$/.exec(key);
   if (dayMatch) {
     const [, onPrefix, day] = dayMatch;
@@ -77,15 +64,12 @@ const makeTranslator = (): I18nTranslator => (key, options) => {
   return key;
 };
 
-// ── Fixture helpers ──────────────────────────────────────────────────────────
-
 const makeDay = (
   day: OpeningDay,
   opens: string | null,
   closes: string | null,
 ): ParsedOpeningDay => ({ day, opens, closes });
 
-/** Full weekly schedule where Mon-Fri share hours, Sat/Sun closed. */
 const weeklyMonFriOpen: ParsedOpeningDay[] = [
   makeDay('mon', '10:00', '18:00'),
   makeDay('tue', '10:00', '18:00'),
@@ -106,10 +90,7 @@ const makeParsed = (overrides?: Partial<ParsedOpeningHours>): ParsedOpeningHours
   ...overrides,
 });
 
-// A Wednesday at noon UTC — deterministic clock for the `now` tests.
 const WED_NOON = new Date('2026-04-22T12:00:00Z');
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('formatOpeningHours', () => {
   const t = makeTranslator();
@@ -167,7 +148,6 @@ describe('formatOpeningHours', () => {
     });
 
     it('tone: warning when closed with no next-open info (neutral only reachable via unknown which returns null)', () => {
-      // With weekly all closed, closed+no opensAtLocal → warning + base label.
       const parsed: ParsedOpeningHours = {
         raw: 'closed',
         status: 'closed',
@@ -198,8 +178,6 @@ describe('formatOpeningHours', () => {
 
     it('renders closed days as a dedicated closed line', () => {
       const result = formatOpeningHours(makeParsed(), t, WED_NOON);
-      // Second line covers Sat–Sun (both closed, consecutive). Formatter uses
-      // en-dash (U+2013) for closed-day ranges — pin it here to catch regressions.
       expect(result?.weeklyLines[1]).toBe('Sat–Sun Closed');
     });
 
@@ -234,7 +212,6 @@ describe('formatOpeningHours', () => {
       ];
       const parsed = makeParsed({ weekly });
       const result = formatOpeningHours(parsed, t, WED_NOON);
-      // Mon is isolated → single_single line, not a range.
       expect(result?.weeklyLines[0]).toBe('Mon 10:00-18:00');
       expect(result?.weeklyLines[1]).toBe('Tue Closed');
     });
@@ -252,7 +229,6 @@ describe('formatOpeningHours', () => {
         return t(key, options);
       };
       formatOpeningHours(makeParsed(), spyingTranslator, WED_NOON);
-      // Short labels used for weekly lines.
       expect(seenKeys).toEqual(
         expect.arrayContaining(['days.mon', 'days.fri', 'days.sat', 'days.sun']),
       );
@@ -261,7 +237,6 @@ describe('formatOpeningHours', () => {
 
   describe('next-open day fallback (closed today)', () => {
     it("emits 'Closed · Opens tomorrow at 10:00' when tomorrow is the next open day", () => {
-      // Today = Wednesday. Closed Wed, opens Thu.
       const weekly: ParsedOpeningDay[] = [
         makeDay('mon', '10:00', '18:00'),
         makeDay('tue', '10:00', '18:00'),
@@ -284,7 +259,6 @@ describe('formatOpeningHours', () => {
     });
 
     it('names the day explicitly when the next open day is not tomorrow', () => {
-      // Today = Saturday. Closed Sat+Sun, opens Mon.
       const SAT_NOON = new Date('2026-04-25T12:00:00Z');
       const parsed = makeParsed({
         status: 'closed',

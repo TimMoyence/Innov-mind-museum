@@ -3,8 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import { makeSupportTicket } from '../helpers/factories/support.factories';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
 const mockListTickets = jest.fn();
 jest.mock('@/features/support/infrastructure/ticketApi', () => ({
   ticketApi: {
@@ -44,8 +42,6 @@ describe('TicketsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-
-  // ── Header & filters ───────────────────────────────────────────────────────
 
   it('renders the screen title from the i18n key', () => {
     mockListTickets.mockResolvedValue(emptyPage());
@@ -109,8 +105,6 @@ describe('TicketsScreen', () => {
     });
   });
 
-  // ── Loading & empty state ──────────────────────────────────────────────────
-
   it('does not render the empty state while the initial fetch is pending', () => {
     mockListTickets.mockReturnValue(new Promise(() => undefined));
     render(<TicketsScreen />);
@@ -137,8 +131,6 @@ describe('TicketsScreen', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/(stack)/create-ticket');
   });
 
-  // ── List rendering ─────────────────────────────────────────────────────────
-
   it('renders a ticket row with subject, status label, priority and message count', async () => {
     mockListTickets.mockResolvedValue(
       pageWith([
@@ -155,10 +147,9 @@ describe('TicketsScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Cannot scan artwork')).toBeTruthy();
     });
-    // Label appears once in the filter pill row + once in the row's status badge.
     expect(screen.getAllByText('tickets.statusOpen').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('high')).toBeTruthy();
-    expect(screen.getByText(/tickets\.messages.*3/)).toBeTruthy();
+    expect(screen.getByText('tickets.priorityHigh')).toBeTruthy();
+    expect(screen.getByText('tickets.messageCount')).toBeTruthy();
   });
 
   it('renders multiple ticket rows in the order returned by the API', async () => {
@@ -173,7 +164,6 @@ describe('TicketsScreen', () => {
       expect(screen.getByText('First subject')).toBeTruthy();
     });
     expect(screen.getByText('Second subject')).toBeTruthy();
-    // Closed status badge present on the second row in addition to the filter pill.
     expect(screen.getAllByText('tickets.statusClosed').length).toBeGreaterThanOrEqual(2);
   });
 
@@ -200,10 +190,8 @@ describe('TicketsScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('No count')).toBeTruthy();
     });
-    expect(screen.queryByText(/tickets\.messages/)).toBeNull();
+    expect(screen.queryByText('tickets.messageCount')).toBeNull();
   });
-
-  // ── FAB / create CTA ───────────────────────────────────────────────────────
 
   it('renders the create-ticket primary button with i18n a11y label', () => {
     mockListTickets.mockResolvedValue(emptyPage());
@@ -220,8 +208,6 @@ describe('TicketsScreen', () => {
     fireEvent.press(screen.getByLabelText('tickets.create'));
     expect(mockRouterPush).toHaveBeenCalledWith('/(stack)/create-ticket');
   });
-
-  // ── Error path ─────────────────────────────────────────────────────────────
 
   it('shows the error notice with the thrown error message when loading fails', async () => {
     mockListTickets.mockRejectedValue(new Error('Network down'));

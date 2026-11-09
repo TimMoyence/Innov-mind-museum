@@ -117,7 +117,6 @@ describe('buildUserMemoryPromptBlock', () => {
     const memory = makeMemory({
       sessionCount: 1,
       preferredExpertise: 'beginner',
-      // All arrays empty
     });
 
     const block = buildUserMemoryPromptBlock(memory);

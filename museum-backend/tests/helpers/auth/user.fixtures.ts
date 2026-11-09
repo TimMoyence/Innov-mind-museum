@@ -12,7 +12,6 @@ export const makeUser = (overrides: Partial<User> = {}): User =>
     email_verified: false,
     onboarding_completed: false,
     contentPreferences: [],
-    defaultLocale: 'en-US',
     defaultMuseumMode: true,
     guideLevel: 'beginner',
     dataMode: 'auto',

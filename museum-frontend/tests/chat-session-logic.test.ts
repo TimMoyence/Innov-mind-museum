@@ -371,7 +371,6 @@ describe('buildVisitSummary', () => {
         metadata: {
           detectedArtwork: { title: 'Impression Sunrise', artist: 'Monet' },
           images: [
-            // Simulate runtime data where thumbnailUrl is undefined (e.g. older API response)
             {
               url: 'https://img.example.com/full.jpg',
               caption: 'Sunrise',
@@ -385,7 +384,6 @@ describe('buildVisitSummary', () => {
 
     const summary = buildVisitSummary(messages, null);
 
-    // thumbnailUrl is undefined so ?? falls back to url
     assert.equal(summary.artworks[0]?.imageUrl, 'https://img.example.com/full.jpg');
   });
 

@@ -5,10 +5,6 @@ import {
   makeNext,
 } from '../../helpers/http/express-mock.helpers';
 
-// Mock the auth session service BEFORE importing the middleware
-// Post C3 (run 2026-05-21-p0-c3-auth-crypto): middleware async + uses
-// verifyAccessTokenWithClaims (returns {id, role, museumId, jti, expSec})
-// for denylist consultation per R8.
 jest.mock('@modules/auth/useCase', () => ({
   authSessionService: {
     verifyAccessToken: jest.fn(),
@@ -23,8 +19,6 @@ jest.mock('@shared/observability/sentry', () => ({
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { authSessionService } from '@modules/auth/useCase';
 
-// Post C3: middlewares are async (await denylist.has). Helper accepts both
-// sync-throw and async-rejection patterns via Promise.resolve(fn()).
 const expectUnauthorized = async (
   fn: () => void | Promise<void>,
   message: string,

@@ -1,17 +1,3 @@
-/**
- * RED (W1-L1-06) — helper C `paceTokens`.
- *
- * Proves the absence of the streaming-token pacer that emits each token through
- * an `onToken` callback, spacing emissions by the profile's downlink bandwidth
- * (`bwDownKbps`) via an INJECTED FakeClock (no real timers). The concatenation of
- * emitted tokens MUST equal the original input (lossless pacing).
- *
- * `paceTokens` / `FakeClock` do not exist yet → import resolves to nothing → suite fails.
- *
- * lib-docs:
- * - @react-native-community/netinfo PATTERNS.md:181 (§4 — degraded bandwidth stalls
- *   delivery; pacing models the per-chunk inter-arrival delay).
- */
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';
 import { paceTokens, FakeClock } from '@/shared/testing/withNetworkSim';
 import { nonNull } from '@/__tests__/helpers/nonNull';
@@ -49,7 +35,6 @@ describe('paceTokens (helper C)', () => {
     await clock.runAll();
     await done;
 
-    // monotonic, strictly increasing emission timestamps under a slow profile
     expect(emittedAt).toHaveLength(3);
     expect(nonNull(emittedAt[1])).toBeGreaterThan(nonNull(emittedAt[0]));
     expect(nonNull(emittedAt[2])).toBeGreaterThan(nonNull(emittedAt[1]));

@@ -1,20 +1,4 @@
-/**
- * Unit tests for env.ts helper functions.
- *
- * The helpers (toNumber, toBoolean, toList, required) are module-private,
- * so we re-implement their logic here and test the contracts they satisfy.
- * This is intentional — the helpers are pure functions whose behaviour
- * must be stable regardless of refactoring.
- *
- * `toIsoTimestamp` (F3 — NPS scale-epoch) IS exported, so it is imported and
- * exercised directly (its stderr warning side-effect is spied/silenced).
- */
-
 import { toIsoTimestamp } from '@src/config/env-helpers';
-
-// ---------------------------------------------------------------------------
-// Extracted pure logic mirrors — kept in sync with src/config/env.ts
-// ---------------------------------------------------------------------------
 
 const toNumber = (value: string | undefined, fallback: number): number => {
   if (!value) return fallback;
@@ -41,10 +25,6 @@ const required = (name: string, value: string | undefined): string => {
   }
   return value;
 };
-
-// ---------------------------------------------------------------------------
-// toNumber
-// ---------------------------------------------------------------------------
 
 describe('toNumber', () => {
   it('returns fallback when value is undefined', () => {
@@ -83,10 +63,6 @@ describe('toNumber', () => {
     expect(toNumber('0', 99)).toBe(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// toBoolean
-// ---------------------------------------------------------------------------
 
 describe('toBoolean', () => {
   it('returns fallback when value is undefined', () => {
@@ -131,10 +107,6 @@ describe('toBoolean', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// toList
-// ---------------------------------------------------------------------------
-
 describe('toList', () => {
   it('returns empty array for undefined', () => {
     expect(toList(undefined)).toEqual([]);
@@ -161,10 +133,6 @@ describe('toList', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// required
-// ---------------------------------------------------------------------------
-
 describe('required', () => {
   it('returns the value when present', () => {
     expect(required('MY_VAR', 'hello')).toBe('hello');
@@ -186,10 +154,6 @@ describe('required', () => {
     );
   });
 });
-
-// ---------------------------------------------------------------------------
-// toIsoTimestamp (F3 — NPS scale-epoch)
-// ---------------------------------------------------------------------------
 
 describe('toIsoTimestamp', () => {
   const FALLBACK = '2026-05-27T00:00:00.000Z';
@@ -219,7 +183,6 @@ describe('toIsoTimestamp', () => {
   });
 
   it('normalises an offset timestamp to UTC', () => {
-    // 2026-06-01 02:00 +02:00 == 2026-06-01 00:00 UTC.
     expect(toIsoTimestamp('2026-06-01T02:00:00+02:00', FALLBACK)).toBe('2026-06-01T00:00:00.000Z');
   });
 
@@ -232,15 +195,8 @@ describe('toIsoTimestamp', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Production validation — required() is the enforcement mechanism
-// ---------------------------------------------------------------------------
-
 describe('production validation via required()', () => {
   it('required() enforces non-empty string (used in prod validation block)', () => {
-    // The production block in env.ts calls required() for each critical var.
-    // If any is missing or blank, required() throws — this is the mechanism
-    // that prevents startup without secrets.
     expect(() => required('JWT_ACCESS_SECRET', undefined)).toThrow(/Missing required/);
     expect(() => required('JWT_ACCESS_SECRET', '')).toThrow(/Missing required/);
     expect(() => required('JWT_ACCESS_SECRET', '  ')).toThrow(/Missing required/);

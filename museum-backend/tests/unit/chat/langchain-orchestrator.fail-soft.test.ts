@@ -17,9 +17,6 @@ interface InvokeOptions {
 }
 
 class FakeSectionModel {
-  // C9.17 — orchestrator default path now goes exclusively through
-  // `withStructuredOutput(schema).invoke()`. Plain `invoke()` retained as a
-  // no-op since the `ChatModel` contract still types it.
   async invoke(_messages: unknown, _options?: InvokeOptions): Promise<{ content: unknown }> {
     return { content: '' };
   }
@@ -38,7 +35,6 @@ class FakeSectionModel {
             text: 'Summary answer',
             deeperContext: 'More context here.',
             openQuestion: null,
-            suggestedFollowUp: 'What technique was used?',
             imageDescription: null,
             suggestedImages: null,
             detectedArtwork: null,
@@ -52,7 +48,6 @@ class FakeSectionModel {
           text: 'Unknown section',
           deeperContext: null,
           openQuestion: null,
-          suggestedFollowUp: null,
           imageDescription: null,
           suggestedImages: null,
           detectedArtwork: null,
@@ -104,7 +99,6 @@ class SlowFakeModel {
           text: 'Too late',
           deeperContext: null,
           openQuestion: null,
-          suggestedFollowUp: null,
           imageDescription: null,
           suggestedImages: null,
           detectedArtwork: null,
@@ -166,7 +160,6 @@ describe('LangChainChatOrchestrator fail-soft profile', () => {
     expect(result.text).toContain('Summary answer');
     expect(result.metadata.citations).toEqual(['catalog-ref']);
     expect(result.metadata.deeperContext).toBe('More context here.');
-    expect(result.metadata.suggestedFollowUp).toBe('What technique was used?');
     expect(result.metadata.diagnostics?.profile).toBe('single_section');
     expect(result.metadata.diagnostics?.sections).toHaveLength(1);
     expect(result.metadata.diagnostics?.degraded).toBe(false);

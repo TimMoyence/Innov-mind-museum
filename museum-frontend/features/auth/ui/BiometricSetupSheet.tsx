@@ -18,13 +18,9 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { fontSize, lineHeightPx, radius, semantic, space } from '@/shared/ui/tokens';
 
 interface BiometricSetupSheetProps {
-  /** Whether the sheet is visible. */
   visible: boolean;
-  /** Human-readable label for the biometric method (e.g. "Face ID", "Touch ID"). */
   biometricLabel: string;
-  /** Called when the user activates biometric login. May resolve even on auth cancel. */
   onActivate: () => Promise<void>;
-  /** Called when the user dismisses the sheet without enrolling. */
   onSkip: () => void;
 }
 
@@ -38,10 +34,6 @@ const pickIconName = (biometricLabel: string): keyof typeof Ionicons.glyphMap =>
   return 'finger-print';
 };
 
-/**
- * Bottom-sheet modal offered after first successful login to invite the
- * user to enroll biometric authentication. Skip-able, never blocking.
- */
 export function BiometricSetupSheet({
   visible,
   biometricLabel,

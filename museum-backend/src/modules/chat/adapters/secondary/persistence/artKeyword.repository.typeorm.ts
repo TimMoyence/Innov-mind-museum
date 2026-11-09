@@ -28,7 +28,6 @@ export class TypeOrmArtKeywordRepository implements ArtKeywordRepository {
     return await qb.getMany();
   }
 
-  /** Atomic INSERT...ON CONFLICT — single round-trip, no read-modify-write race. */
   async upsert(keyword: string, locale: string): Promise<ArtKeyword> {
     const normalized = keyword.toLowerCase().trim();
 

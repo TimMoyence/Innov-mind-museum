@@ -84,9 +84,6 @@ describe('museumApi', () => {
       await museumApi.searchMuseums({});
 
       const calledUrl = mockHttpRequest.mock.calls[0][0] as string;
-      // After migration to openApiRequest, empty query params produce a bare URL
-      // (no trailing '?') because appendQuery skips the suffix when the search
-      // string is empty.
       expect(calledUrl).toBe('/api/museums/search');
     });
 

@@ -4,25 +4,8 @@ import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository
 import type { InsertLeadInput, LeadDTO } from '@modules/leads/domain/lead/lead.types';
 import type { DataSource, Repository } from 'typeorm';
 
-/**
- * Cycle B (« Aucun lead perdu ») — PG adapter for `ILeadRepository` (T2.2,
- * design §3). Mirror of `support.repository.pg.ts` (`dataSource.getRepository`
- * + `toDTO`). Use-cases depend on the port, never this adapter (hexagonal).
- *
- * TypeORM gotchas applied (lib-docs/typeorm/LESSONS.md):
- * - `attempts++` is atomic via QueryBuilder `.set({ attempts: () => '"attempts" + 1' })`
- *   so concurrent retries never lose an increment (LESSONS:12-17 — never
- *   `.set({ field: undefined })`; we never clear a column via `undefined`).
- * - `purgeDeliveredOlderThan` / `deleteByEmail` read the rowCount from the
- *   `DELETE … RETURNING` tuple `result[1]`, NEVER `result.length` (always 2),
- *   to avoid the prune-cron infinite-loop class of bug (LESSONS:5-10).
- * - `lastError` is sliced ≤800 (mirror the Brevo notifier `.slice(0,800)`) and
- *   NEVER carries the api-key or extra PII beyond the payload already stored.
- */
-
 const LAST_ERROR_MAX = 800;
 
-/** Maps the persisted entity to its repository DTO (timestamps → ISO strings). */
 function toDTO(entity: Lead): LeadDTO {
   return {
     id: entity.id,
@@ -85,9 +68,6 @@ export class LeadRepositoryPg implements ILeadRepository {
   }
 
   async scheduleNextAttempt(id: string, nextEligibleAtIso: string | null): Promise<void> {
-    // R11 applicative backoff. Use a literal `null` / explicit value, NEVER
-    // `undefined` (lib-docs/typeorm/LESSONS.md:12-17 — `.set({field:undefined})`
-    // is silently skipped, no `SET … = NULL` emitted).
     await this.repo
       .createQueryBuilder()
       .update(Lead)
@@ -119,8 +99,6 @@ export class LeadRepositoryPg implements ILeadRepository {
   }
 
   async purgeDeliveredOlderThan(cutoffIso: string, batchLimit: number): Promise<number> {
-    // DELETE … RETURNING → TypeORM normalises raw to [rows, rowCount]; read
-    // result[1] (LESSONS:5-10 — result.length is always 2, infinite-loop class).
     const result = await this.repo.query<[unknown[], number] | undefined>(
       `DELETE FROM "leads"
        WHERE id IN (
@@ -136,8 +114,6 @@ export class LeadRepositoryPg implements ILeadRepository {
   }
 
   async deleteByEmail(emailNormalized: string): Promise<number> {
-    // GDPR Art.17 (R20) — purge every lead matching the normalised email,
-    // regardless of status. Backed by IDX_leads_payload_email expression index.
     const result = await this.repo.query<[unknown[], number] | undefined>(
       `DELETE FROM "leads" WHERE LOWER(payload->>'email') = LOWER($1) RETURNING id`,
       [emailNormalized],

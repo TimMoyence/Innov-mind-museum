@@ -12,7 +12,11 @@ const COMPLETION = {
     {
       index: 0,
       finish_reason: 'stop',
-      message: { role: 'assistant', content: JSON.stringify({ answer: 'probe-ok' }), refusal: null },
+      message: {
+        role: 'assistant',
+        content: JSON.stringify({ answer: 'probe-ok' }),
+        refusal: null,
+      },
     },
   ],
   usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
@@ -46,7 +50,9 @@ async function main(): Promise<void> {
   });
 
   try {
-    const structured = model.withStructuredOutput(z.object({ answer: z.string() }), { name: 'probe' });
+    const structured = model.withStructuredOutput(z.object({ answer: z.string() }), {
+      name: 'probe',
+    });
     const output = await structured.invoke('probe');
     report({ ok: true, answer: output.answer });
   } catch (error) {

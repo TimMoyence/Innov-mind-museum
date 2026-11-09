@@ -1,28 +1,8 @@
-/**
- * RUN_ID 2026-06-01-weak-net-idempotency — phase RED (UFR-022).
- *
- * W1-IDEM-05 (FE / hook) — on reconnect flush, `useOfflineSync` MUST forward
- * the queued item's stable `id` as `idempotencyKey` so the backend dedup layer
- * can collapse a double-flush into a single message (spec R4):
- *   - each `chatApi.postMessage` call carries `idempotencyKey === queued.id`;
- *   - exactly ONE post per queued item, even if the effect re-fires (flapping
- *     reconnect) — the backend key makes the duplicate a no-op, and the hook
- *     dequeues each item once.
- *
- * RED expectation: `peek()` currently OMITS `id` from its return type
- * (`useOfflineSync.ts:21` = `{ sessionId, text?, imageUri? }`), and the flush
- * loop never threads an `idempotencyKey` into `chatApi.postMessage`. So
- * `postMessage` is called WITHOUT `idempotencyKey` → assertions fail → exits ≠ 0.
- *
- * Run scope (FE): npx jest idempotency
- */
 import { renderHook, waitFor } from '@testing-library/react-native';
 
 import { useOfflineSync } from '@/features/chat/application/useOfflineSync';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import { makeQueuedMessage, makeGetSessionResponse } from '@/__tests__/helpers/factories';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockPostMessage = jest.fn<Promise<unknown>, [unknown]>();
 const mockGetSession = jest.fn();
@@ -34,11 +14,8 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const SESSION_ID = 'offline-session-idem';
 
-/** Bypasses backoff delays so tests run synchronously. */
 const passthroughRetry = <T>(op: () => Promise<T>): Promise<T> => op();
 
 const makeParams = (queue: ReturnType<typeof makeQueuedMessage>[]) => {
@@ -61,8 +38,6 @@ const makeParams = (queue: ReturnType<typeof makeQueuedMessage>[]) => {
     retry: passthroughRetry,
   };
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useOfflineSync — idempotency forwarding (W1-IDEM-05)', () => {
   beforeEach(() => {
@@ -115,7 +90,6 @@ describe('useOfflineSync — idempotency forwarding (W1-IDEM-05)', () => {
     const queued = makeQueuedMessage({ sessionId: SESSION_ID, text: 'do not duplicate' });
     const params = makeParams([queued]);
 
-    // First render flushes the item; a connectivity blip re-renders the hook.
     const { rerender } = renderHook(
       ({ p }: { p: ReturnType<typeof makeParams> }) => {
         useOfflineSync(p);
@@ -129,8 +103,6 @@ describe('useOfflineSync — idempotency forwarding (W1-IDEM-05)', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
     });
 
-    // Re-fire the effect (flapping). The item was already dequeued, so peek()
-    // now returns undefined → no second post for the same item.
     rerender({ p: params });
 
     await waitFor(() => {

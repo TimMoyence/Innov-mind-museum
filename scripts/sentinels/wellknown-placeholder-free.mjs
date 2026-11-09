@@ -1,40 +1,10 @@
 #!/usr/bin/env node
-// @ts-check
-/**
- * wellknown-placeholder-free sentinel — DEPLOY GATE.
- *
- * The RFC 9116 security.txt advertises an `Encryption:` channel pointing at
- * `/.well-known/pgp-key.txt`. Until the real keypair is generated
- * (docs/operations/PGP_KEY_GENERATION.md), that file ships a placeholder body
- * `PGP_KEY_PLACEHOLDER_DO_NOT_SHIP`. Shipping it to production publishes an
- * empty/broken encrypted-disclosure channel — a "negligent vendor" signal and
- * a broken RFC 9116 promise. The file's own header even claims "the deploy
- * pipeline rejects this file if the body still contains the literal token" —
- * this sentinel makes that promise true.
- *
- * Scans every file under a `.well-known` directory for forbidden placeholder
- * markers. Intended to run in the museum-web **deploy** job only (the
- * placeholder is legitimate in dev/PR until the human generates the key).
- *
- * Usage:
- *   node wellknown-placeholder-free.mjs [--dir <wellKnownDir>] [--root <repoRoot>]
- * Defaults to <repoRoot>/museum-web/public/.well-known.
- *
- * Exit codes:
- *   0 → no placeholder markers — safe to ship
- *   1 → ≥1 placeholder marker detected (or target dir missing)
- */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join, relative } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Forbidden markers (case-insensitive substring). Catches the canonical PGP
- * placeholder plus any generic DO_NOT_SHIP / PLACEHOLDER_DO_NOT_SHIP token a
- * future .well-known stub might use.
- */
 const FORBIDDEN_MARKERS = [/PGP_KEY_PLACEHOLDER_DO_NOT_SHIP/i, /PLACEHOLDER_DO_NOT_SHIP/i, /DO_NOT_SHIP/i];
 
 function parseArgs(argv) {
@@ -55,7 +25,6 @@ function parseArgs(argv) {
   return { dir };
 }
 
-/** Recursively collect all files under `dir`. */
 function walk(dir, acc) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);

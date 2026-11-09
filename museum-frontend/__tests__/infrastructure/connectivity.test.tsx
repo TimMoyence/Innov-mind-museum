@@ -43,8 +43,6 @@ describe('ConnectivityProvider', () => {
     });
 
     expect(result.current).not.toBeNull();
-    // TD-NI-01: the cold-start window reads as null (no fabricated `true`),
-    // while the derived `isOnline` stays online-optimistic for display.
     expect(result.current.isConnected).toBeNull();
     expect(result.current.isInternetReachable).toBeNull();
     expect(result.current.isOnline).toBe(true);
@@ -83,8 +81,6 @@ describe('ConnectivityProvider', () => {
       netInfoCallback?.({ isConnected: null as unknown as boolean, isInternetReachable: null });
     });
 
-    // TD-NI-01: no `?? true` coercion — the raw null is propagated, but the
-    // derived predicate is online-optimistic on an undetermined interface.
     expect(result.current.isConnected).toBeNull();
     expect(result.current.isInternetReachable).toBeNull();
     expect(result.current.isOnline).toBe(true);

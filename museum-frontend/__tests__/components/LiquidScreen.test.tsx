@@ -1,4 +1,3 @@
-// DO NOT import test-utils — it mocks LiquidScreen itself
 import React from 'react';
 import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
@@ -62,7 +61,6 @@ describe('LiquidScreen', () => {
   });
 
   it('renders with desktop viewport dimensions', () => {
-    // Mock useWindowDimensions to return desktop width
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 1280,
       height: 800,
@@ -82,7 +80,7 @@ describe('LiquidScreen', () => {
   });
 
   it('renders with non-responsive (plain ImageSourcePropType) background', () => {
-    const plainBg = 42; // Numeric source (RN require() returns a number)
+    const plainBg = 42;
 
     render(
       <LiquidScreen background={plainBg}>
@@ -104,7 +102,6 @@ describe('LiquidScreen', () => {
   });
 
   it('handles array as background (not responsive)', () => {
-    // Arrays are valid ImageSourcePropType but not ResponsiveBackground
     const arrayBg = [{ uri: 'https://example.com/a.jpg' }];
 
     render(

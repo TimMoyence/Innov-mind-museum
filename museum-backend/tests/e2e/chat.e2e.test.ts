@@ -18,7 +18,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
   it('creates a session, posts a message, reads session, lists sessions, and deletes', async () => {
     const { token } = await registerAndLogin(harness);
 
-    // ── Create session ──
     const createRes = await harness.request(
       '/api/chat/sessions',
       {
@@ -31,7 +30,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     const session = (createRes.body as { session: { id: string } }).session;
     expect(session.id).toEqual(expect.any(String));
 
-    // ── Post a text message ──
     const postRes = await harness.request(
       `/api/chat/sessions/${session.id}/messages`,
       {
@@ -51,7 +49,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     const postBody = postRes.body as { message?: { id: string; text: string } };
     expect(postBody.message).toBeDefined();
 
-    // ── Get session with messages ──
     const getRes = await harness.request(
       `/api/chat/sessions/${session.id}?limit=20`,
       { method: 'GET' },
@@ -63,9 +60,8 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
       messages: Array<{ role: string; text?: string }>;
     };
     expect(getBody.session.id).toBe(session.id);
-    expect(getBody.messages.length).toBeGreaterThanOrEqual(2); // user + assistant
+    expect(getBody.messages.length).toBeGreaterThanOrEqual(2);
 
-    // ── List sessions ──
     const listRes = await harness.request('/api/chat/sessions?limit=20', { method: 'GET' }, token);
     expect(listRes.status).toBe(200);
     const listBody = listRes.body as {
@@ -73,7 +69,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     };
     expect(listBody.sessions.some((s) => s.id === session.id)).toBe(true);
 
-    // ── Delete session with messages (should return deleted: false) ──
     const deleteRes = await harness.request(
       `/api/chat/sessions/${session.id}`,
       { method: 'DELETE' },
@@ -130,7 +125,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
   it('creates multiple sessions and returns most recently active first', async () => {
     const { token } = await registerAndLogin(harness);
 
-    // Create session A
     const createA = await harness.request(
       '/api/chat/sessions',
       {
@@ -143,7 +137,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // Create session B (newer)
     const createB = await harness.request(
       '/api/chat/sessions',
       {
@@ -154,7 +147,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     );
     const sessionB = (createB.body as { session: { id: string } }).session.id;
 
-    // B should be first
     const listBefore = await harness.request(
       '/api/chat/sessions?limit=20',
       { method: 'GET' },
@@ -163,7 +155,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
     const sessionsBefore = (listBefore.body as { sessions: Array<{ id: string }> }).sessions;
     expect(sessionsBefore[0]?.id).toBe(sessionB);
 
-    // Post to A → reactivates it
     await harness.request(
       `/api/chat/sessions/${sessionA}/messages`,
       {
@@ -176,7 +167,6 @@ describeE2E('chat e2e (session + message lifecycle)', () => {
       token,
     );
 
-    // A should now be first
     const listAfter = await harness.request(
       '/api/chat/sessions?limit=20',
       { method: 'GET' },

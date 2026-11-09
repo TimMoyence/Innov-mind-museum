@@ -1,33 +1,3 @@
-/**
- * Unit tests for `SessionIssuerService` — banking-grade refresh-token rotation
- * contract. Pinned co-Stryker hot file with `refresh-token.repository.pg.ts`.
- *
- * Public surface covered:
- *   - `issueSession(...)`       fresh issue (insert path) and rotation
- *                               (rotate path with `rotateFrom`).
- *   - `assertRefreshTokenUsable(...)` enforces hash match, no-revoked,
- *                               no-rotated, no-reuse-detected, not-expired,
- *                               and sliding idle-window before next rotation.
- *
- * Test categories:
- *   - Happy path (insert): JWT pair claims, refresh.exp > access.exp,
- *     persisted row carries the correct sha256 hash + family + jti
- *     (the very same that was signed into the JWT).
- *   - Happy path (rotation): familyId preserved, parent token id passed to
- *     `rotate()`, fresh access+refresh JWTs distinct from the previous pair.
- *   - MFA-warning passthrough into the response envelope.
- *   - Reuse detection (hash mismatch) revokes the family with reuseDetected=true.
- *   - Reuse detection (already revoked / rotated / reuse-flagged row) does the
- *     same — three branches verified independently.
- *   - Expiry: revokeByJti + REFRESH_TOKEN_EXPIRED.
- *   - Sliding idle-window: lastRotatedAt anchor and createdAt fallback both
- *     trigger SESSION_IDLE_TIMEOUT and revokeFamily without reuse=true.
- *   - 401 status code + AppError shape on every enforcement failure.
- *
- * Per CLAUDE.md DRY rule: shared `makeUser` factory + shared
- * `makeRefreshTokenRepo` mock. No inline entity creation.
- */
-
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
 import { AppError } from '@shared/errors/app.error';
@@ -39,9 +9,7 @@ import type { StoredRefreshTokenRow } from '@modules/auth/domain/refresh-token/r
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 
-// ── Fixtures ───────────────────────────────────────────────────────
-
-const REFRESH_IDLE_WINDOW_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const REFRESH_IDLE_WINDOW_SECONDS = 60 * 60 * 24 * 7;
 
 const toSafeUser = (overrides: Parameters<typeof makeUser>[0] = {}) => {
   const u = makeUser(overrides);
@@ -65,7 +33,7 @@ const makeStoredToken = (
   familyId: 'family-1',
   tokenHash: 'placeholder-hash',
   issuedAt: new Date(),
-  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30d future
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   rotatedAt: null,
   lastRotatedAt: new Date(),
   revokedAt: null,
@@ -94,8 +62,6 @@ const expectAppErrorAsync = async (fn: () => Promise<unknown>): Promise<AppError
   throw new Error('Expected promise to reject with AppError, but it did not');
 };
 
-// ── Tests ──────────────────────────────────────────────────────────
-
 describe('SessionIssuerService — issueSession (fresh issue / insert path)', () => {
   it('signs an access+refresh pair with consistent claims and persists via insert()', async () => {
     const { service, repo, tokenJwt } = makeIssuer();
@@ -103,19 +69,16 @@ describe('SessionIssuerService — issueSession (fresh issue / insert path)', ()
 
     const result = await service.issueSession({ user });
 
-    // Envelope shape
     expect(result.user).toBe(user);
     expect(result.expiresIn).toBe(tokenJwt.accessTtlSeconds);
     expect(result.refreshExpiresIn).toBe(tokenJwt.refreshTtlSeconds);
 
-    // Access claims
     const access = jwt.verify(result.accessToken, env.auth.accessTokenSecret) as JwtPayload;
     expect(access.sub).toBe('42');
     expect(access.type).toBe('access');
     expect(typeof access.jti).toBe('string');
     expect(access.role).toBe('visitor');
 
-    // Refresh claims
     const refresh = jwt.verify(result.refreshToken, env.auth.refreshTokenSecret) as JwtPayload & {
       familyId: string;
     };
@@ -124,7 +87,6 @@ describe('SessionIssuerService — issueSession (fresh issue / insert path)', ()
     expect(typeof refresh.jti).toBe('string');
     expect(typeof refresh.familyId).toBe('string');
 
-    // Persisted row mirrors the signed refresh JWT
     expect(repo.insert).toHaveBeenCalledTimes(1);
     expect(repo.rotate).not.toHaveBeenCalled();
     const persisted = repo.insert.mock.calls[0][0];
@@ -156,15 +118,12 @@ describe('SessionIssuerService — issueSession (fresh issue / insert path)', ()
     const after = Date.now();
     const persisted = repo.insert.mock.calls[0][0];
     const expected = persisted.issuedAt.getTime() + tokenJwt.refreshTtlSeconds * 1000;
-    // Generous bounds: persisted expiresAt computed from Date.now() at call,
-    // issuedAt also from Date.now(); they're at most a few ms apart.
     expect(persisted.expiresAt.getTime()).toBeGreaterThanOrEqual(
       before + tokenJwt.refreshTtlSeconds * 1000 - 50,
     );
     expect(persisted.expiresAt.getTime()).toBeLessThanOrEqual(
       after + tokenJwt.refreshTtlSeconds * 1000 + 50,
     );
-    // Match the absolute formula the service uses (issuedAt + ttl).
     expect(Math.abs(persisted.expiresAt.getTime() - expected)).toBeLessThan(1000);
   });
 
@@ -235,7 +194,6 @@ describe('SessionIssuerService — issueSession (rotation / rotate path)', () =>
 
     const newRefresh = jwt.decode(result.refreshToken) as JwtPayload & { familyId: string };
     expect(newRefresh.familyId).toBe('fam-chain');
-    // The persisted next.jti must be exactly the jti embedded in the new JWT.
     expect(rotateArgs.next.jti).toBe(newRefresh.jti);
   });
 
@@ -361,7 +319,6 @@ describe('SessionIssuerService — assertRefreshTokenUsable (rotation contract e
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('SESSION_IDLE_TIMEOUT');
     expect(repo.revokeFamily).toHaveBeenCalledWith('fam-idle');
-    // Critically: idle timeout is NOT reuse → second arg must NOT be `true`.
     expect(repo.revokeFamily).not.toHaveBeenCalledWith('fam-idle', true);
   });
 
@@ -392,7 +349,6 @@ describe('SessionIssuerService — assertRefreshTokenUsable (rotation contract e
       const stored = makeStoredToken({
         familyId: 'fam-edge',
         tokenHash: tokenJwt.sha256(token),
-        // exactly window-ms ago → idleMs === window → must NOT trigger.
         lastRotatedAt: new Date(now.getTime() - REFRESH_IDLE_WINDOW_SECONDS * 1000),
       });
 
@@ -405,9 +361,6 @@ describe('SessionIssuerService — assertRefreshTokenUsable (rotation contract e
 
   it('checks hash mismatch BEFORE flag-based reuse (mismatch wins when both apply)', async () => {
     const { service, repo } = makeIssuer();
-    // Hash mismatch AND already revoked: hash mismatch path runs first (per
-    // source ordering), so we still revoke with reuse=true — same outcome
-    // structurally. We assert exactly one revokeFamily call to pin the order.
     const stored = makeStoredToken({
       tokenHash: 'mismatch',
       revokedAt: new Date(),

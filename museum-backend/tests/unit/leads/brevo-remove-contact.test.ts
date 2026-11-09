@@ -1,18 +1,3 @@
-/**
- * RED (T1.4) — Brevo `removeContact` for GDPR Art.17 erasure (B2, R4–R6).
- *
- * On account deletion the user's marketing contact must be removed from Brevo
- * so they stop receiving marketing. Contract (spec Q3, asserted VERIFIED):
- *   DELETE https://api.brevo.com/v3/contacts/<encodeURIComponent(email)>?identifierType=email_id
- *   header: api-key
- *   - 2xx / 204 → resolves
- *   - 404 (contact never existed) → idempotent success (no throw)        [R5]
- *   - other non-2xx (5xx) → throws WITHOUT the api-key in the message    [R6, security]
- *   - NoopBetaSignupNotifier → resolves { outcome: 'noop' }              [R6]
- *
- * FAILS at red baseline: `removeContact` is not implemented on either notifier
- * (the accessor returns `undefined`), so the first assertion fails.
- */
 import {
   BrevoBetaSignupNotifier,
   NoopBetaSignupNotifier,
@@ -83,7 +68,6 @@ describe('BrevoBetaSignupNotifier.removeContact (B2 / R4–R6)', () => {
     expect(removeContact).toBeInstanceOf(Function);
 
     await expect(removeContact!(EMAIL)).resolves.not.toThrow();
-    // No error-level log on the idempotent not-found path.
     expect(logger.error).not.toHaveBeenCalled();
   });
 

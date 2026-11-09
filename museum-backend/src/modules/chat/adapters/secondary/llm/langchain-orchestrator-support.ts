@@ -24,21 +24,10 @@ export const EMPTY_RESPONSE_FALLBACK =
 export const MISSING_LLM_KEY_FALLBACK =
   'Musaium is running without an LLM key. Configure provider keys to enable live AI responses.';
 
-// `ChatModel` + `UsageMetadata` moved to `domain/llm/chat-model.port.ts`
-// (B2 close, run 2026-06-04-hexagonal-boundaries-enforcement). Re-exported here
-// (identity-preserving, spec R5) so the orchestrator + every existing importer
-// of this adapter module compile unchanged.
 export type { ChatModel, UsageMetadata };
 
-/** C9.5 R6 — three-bucket prompt-cache classification. */
 export type CacheStatus = 'hit' | 'partial' | 'miss';
 
-/**
- * C9.5 R10 — runtime predicate distinguishing the `{ raw, parsed }` shape
- * returned by `withStructuredOutput({ includeRaw: true })` from the legacy
- * parsed-only `T` shape returned by fakes / older SDKs / providers that ignore
- * the option.
- */
 export const isIncludeRawShape = <T>(
   value: T | { raw: { usage_metadata?: UsageMetadata }; parsed: T | null },
 ): value is { raw: { usage_metadata?: UsageMetadata }; parsed: T | null } => {
@@ -46,16 +35,6 @@ export const isIncludeRawShape = <T>(
   return 'raw' in value && 'parsed' in value;
 };
 
-/**
- * C9.5 R6 — pure stateless classifier. Three buckets, no fuzzy thresholds:
- *   miss    = no usage, no cache_read, OR cache_read === 0, OR input_tokens <= 0.
- *   partial = 0 < cache_read < input_tokens.
- *   hit     = cache_read === input_tokens AND input_tokens > 0.
- *
- * Deliberately reads optionally — missing `usage_metadata` (Deepseek
- * OpenAI-compat, transport degradation) classifies as `'miss'` per R7
- * fail-open contract.
- */
 export const classifyCacheStatus = (usage: UsageMetadata | undefined): CacheStatus => {
   const input = usage?.input_tokens ?? 0;
   const cached = usage?.input_token_details?.cache_read ?? 0;
@@ -73,28 +52,12 @@ interface CacheTelemetryInput {
   usage: UsageMetadata | undefined;
 }
 
-/**
- * C9.5 — emits per-section prompt-cache telemetry (Prom Counter + structured
- * log line). Also mutates `usageRef.current` (when provided) so the Langfuse
- * generation `.end()` call in `withLangfuseTrace` can ferry `cached_tokens`
- * + `cacheStatus` onto the same span (R9 / D7).
- *
- * R11 — log fields are enumerated (`requestId, section, provider, model,
- * cacheStatus, inputTokens, cachedTokens, totalTokens`). No raw user text,
- * image bytes, or userId beyond the requestId proxy. Numeric usage only.
- *
- * R12 — Prom Counter `.inc()` wrapped in try/catch; failures `warn`-logged
- * and swallowed so the chat path stays healthy.
- */
-export const recordPromptCacheTelemetry = (
-  input: CacheTelemetryInput,
-): void => {
+export const recordPromptCacheTelemetry = (input: CacheTelemetryInput): void => {
   const status = classifyCacheStatus(input.usage);
   const inputTokens = input.usage?.input_tokens ?? 0;
   const cachedTokens = input.usage?.input_token_details?.cache_read ?? 0;
   const totalTokens = input.usage?.total_tokens ?? 0;
 
-  // R11 — structured log line, no PII.
   logger.info('llm_prompt_cache', {
     requestId: input.requestId,
     section: input.sectionName,
@@ -114,37 +77,13 @@ export interface InvokeSectionInput {
   sectionName: string;
   timeoutMs: number;
   payloadBytes: number;
-  /**
-   * Routes the section through `model.withStructuredOutput(schema).invoke()`.
-   * REQUIRED for sections that go through the default orchestrator —
-   * `invokeSection` fails closed when missing (C9.17 R2, the legacy
-   * plain-text + JSON-tail fallback was retired 2026-05-18). Stays optional
-   * in the shared type so the walk-tour-guide path (which builds its own
-   * structured adapter call) can keep using the same `ChatModel` contract.
-   */
   outputSchema?: {
     schema: z.ZodType;
     name: string;
   };
-  /** C9.4 — Prom gauge label scoping. `null` ⇒ label value `'none'`. */
   museumId?: number | null;
-  /** C9.4 — Prom gauge label. V1: `'anonymous'` | `'free'`. */
   tier?: string;
-  /** C9.5 — propagated into `llm_prompt_cache` log line + Langfuse correlation. */
   requestId?: string;
-  /**
-   * C9.5 D7 — mutable ref that lets `recordPromptCacheTelemetry` lift the
-   * section's `usage_metadata` into the enclosing `withLangfuseTrace`
-   * generation `.end()` call (R9). Undefined when the caller has no Langfuse
-   * wrapper above this invocation (walk-intent path).
-   */
-  /**
-   * TD-LF-02 — mutable ref with the `langfuse-langchain` `CallbackHandler`
-   * that `withLangfuseTrace` constructs against the just-opened trace. Threaded
-   * here so each section `.invoke()` writes its LLM-level observations onto
-   * the same trace root (`updateRoot:true`), powering the Langfuse cost UI.
-   * Undefined / empty array = pre-LF-02 path (no callbacks attached).
-   */
 }
 
 export interface AssembleResponseInput {
@@ -160,22 +99,9 @@ export interface LangChainChatOrchestratorDeps {
   model?: ChatModel | null;
   semaphore?: Semaphore;
   circuitBreaker?: LLMCircuitBreaker;
-  /**
-   * Cost-based circuit breaker (C9.4). When provided, orchestrator records
-   * an `estimateCostCents()` charge per successful section invoke. When
-   * omitted, no cost recording happens (legacy callers / tests).
-   */
   costBreaker?: LlmCostCircuitBreaker | null;
 }
 
-/**
- * TD-LC-02 (PATTERNS.md DO #6) — explicit `maxRetries` + `timeout` on every
- * LangChain chat-model constructor. LangChain's default `maxRetries=6` can
- * be too slow / too eager depending on provider — pinning to 2 makes the
- * retry budget predictable on top of the section-runner's own retry layer
- * (`isRetryableError`). `timeout` mirrors `env.llm.timeoutMs` so a hung
- * provider request doesn't outlive the section deadline.
- */
 const LANGCHAIN_HTTP_RETRIES = 2;
 
 export const toModel = (): ChatModel | null => {
@@ -184,9 +110,6 @@ export const toModel = (): ChatModel | null => {
       apiKey: env.llm.googleApiKey,
       model: env.llm.model,
       maxOutputTokens: env.llm.maxOutputTokens,
-      // PATTERNS.md §2.c documents `maxRetries` on the Gemini class but not
-      // `timeout` — the GoogleGenerativeAIChatInput type rejects it as
-      // unknown, so this branch ships only the retry cap.
       maxRetries: LANGCHAIN_HTTP_RETRIES,
     });
   }
@@ -200,8 +123,6 @@ export const toModel = (): ChatModel | null => {
       model: env.llm.model,
       temperature: env.llm.temperature,
       maxTokens: env.llm.maxOutputTokens,
-      // TD-LC-03 / PATTERNS.md DO #8 — third-party OpenAI-compatible endpoints
-      // (Deepseek) must opt out of streaming usage to avoid token-usage errors.
       streamUsage: false,
       maxRetries: LANGCHAIN_HTTP_RETRIES,
       timeout: env.llm.timeoutMs,

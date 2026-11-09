@@ -40,7 +40,10 @@ export default function ShowcaseSection({
       className="relative overflow-hidden py-24 sm:py-32"
       style={
         isDark
-          ? { background: 'linear-gradient(180deg, var(--sem-section-dark-background) 0%, var(--sem-section-dark-background-alt) 50%, var(--sem-section-dark-background) 100%)' }
+          ? {
+              background:
+                'linear-gradient(180deg, var(--sem-section-dark-background) 0%, var(--sem-section-dark-background-alt) 50%, var(--sem-section-dark-background) 100%)',
+            }
           : { background: 'var(--color-surface)' }
       }
     >
@@ -59,7 +62,6 @@ export default function ShowcaseSection({
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className={`grid items-center gap-12 lg:grid-cols-2 lg:gap-16${reverse ? '' : ''}`}>
-          {/* Text column */}
           <div className={`min-w-0 ${reverse ? 'lg:order-2' : ''}`}>
             <AnimatedSection>
               <h2
@@ -93,7 +95,6 @@ export default function ShowcaseSection({
             )}
           </div>
 
-          {/* Device column */}
           <AnimatedSection delay={0.2} direction={reverse ? 'left' : 'right'} className="min-w-0">
             {children}
           </AnimatedSection>

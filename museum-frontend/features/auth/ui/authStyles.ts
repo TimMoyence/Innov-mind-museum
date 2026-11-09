@@ -2,11 +2,6 @@ import { StyleSheet } from 'react-native';
 
 import { semantic, space, radius, fontSize, lineHeightPx } from '@/shared/ui/tokens';
 
-/**
- * Shared styles for the authentication screen and its sub-components
- * (login form, register form, social login buttons). Extracted so the
- * visual design stays consistent across the split components.
- */
 export const authStyles = StyleSheet.create({
   screen: {
     paddingHorizontal: semantic.screen.padding,
@@ -152,8 +147,6 @@ export const authStyles = StyleSheet.create({
     lineHeight: lineHeightPx['18'],
     marginTop: space['1'],
   },
-  // F11-mobile (2026-05) — "Continue with Face ID" affordance shown when a
-  // refresh token is still locally available + biometric is enabled.
   faceIdButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,5 +165,11 @@ export const authStyles = StyleSheet.create({
   faceIdButtonLabel: {
     fontWeight: '700',
     fontSize: fontSize['base-'],
+  },
+  gated: {
+    opacity: 0.5,
+  },
+  open: {
+    opacity: 1,
   },
 });

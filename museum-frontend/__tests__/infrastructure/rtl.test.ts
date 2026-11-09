@@ -28,7 +28,6 @@ describe('rtl', () => {
     });
 
     it('he is not RTL (not in RTL_LOCALES)', () => {
-      // The source only includes 'ar' in RTL_LOCALES
       expect(isRTLLocale('he')).toBe(false);
     });
   });

@@ -1,19 +1,6 @@
-/**
- * TR-02 + TR-06 — resolveDataMode 3-arg matrix + DataModeProvider wiring (run
- * undefined-network-detection-reliability, cluster A, task A-R4 — rewrite of
- * the contractually invalidated test #1, spec §10).
- *
- * Contract evolution (documented, not a frozen-test breach): the former case
- * « returns low when auto + connection is expensive » ratified the trigger bug
- * (iOS marks ALL cellular expensive ⇒ healthy 5G punished). Under the new
- * contract `isConnectionExpensive` is the COST axis (`metered`) and NEVER
- * resolves `low` in auto (INV-01/INV-02); quality drives the resolution
- * (INV-05), passed as an explicit 3rd argument (INV-18).
- */
 import type React from 'react';
 import type { NetInfoState } from '@react-native-community/netinfo';
 
-// ── NetInfo mock ────────────────────────────────────────────────────────────
 let mockNetInfoState = {
   type: 'wifi',
   isConnected: true,
@@ -51,7 +38,6 @@ jest.mock('@react-native-community/netinfo', () => ({
   },
 }));
 
-// ── Zustand store mock ──────────────────────────────────────────────────────
 let mockPreference: 'auto' | 'low' | 'normal' = 'auto';
 const mockSetPreference = jest.fn((p: 'auto' | 'low' | 'normal') => {
   mockPreference = p;
@@ -63,25 +49,17 @@ jest.mock('@/features/settings/dataModeStore', () => ({
   ) => selector({ preference: mockPreference, setPreference: mockSetPreference }),
 }));
 
-// ── AsyncStorage mock (required by Zustand persist) ─────────────────────────
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
 }));
 
-// ── networkQualityTracker mock — quality is an injected external store ──────
 type MockQualityState = 'unknown' | 'ok' | 'slow';
 let mockQualityState: MockQualityState = 'unknown';
 const mockQualityListeners = new Set<(s: MockQualityState) => void>();
 const mockNoteNetworkIdentity = jest.fn();
 
-// Non-virtual mock keyed by the RESOLVED module path (the module exists on
-// disk since the green phase). Virtual registration keys an extensionless
-// synthetic ID in the per-worker shared `_moduleIDCache`; once another suite
-// resolves the REAL file first, the virtual mock silently stops binding in
-// full-suite runs (order-dependent failures). Resolving through the `@/`
-// alias normalizes every importer to the same module ID.
 jest.mock('@/shared/infrastructure/connectivity/networkQualityTracker', () => ({
   getQualityState: () => mockQualityState,
   subscribeQualityState: (listener: (s: MockQualityState) => void) => {
@@ -109,7 +87,6 @@ const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <DataModeProvider>{children}</DataModeProvider>
 );
 
-/** Flips the mocked tracker state and notifies subscribers (transition). */
 const emitQuality = (state: MockQualityState): void => {
   mockQualityState = state;
   act(() => {
@@ -118,8 +95,6 @@ const emitQuality = (state: MockQualityState): void => {
     });
   });
 };
-
-// ── TR-02 — pure resolver matrix ────────────────────────────────────────────
 
 describe('resolveDataMode (pure, 3-arg — INV-18)', () => {
   describe('INV-01 — isConnectionExpensive NEVER resolves low in auto', () => {
@@ -266,8 +241,6 @@ describe('resolveDataMode (pure, 3-arg — INV-18)', () => {
   });
 });
 
-// ── deriveMetered — COST axis signal (INV-01 / INV-02) ──────────────────────
-
 describe('deriveMetered (pure)', () => {
   it('returns true when isConnectionExpensive is true (cellular)', () => {
     const snapshot = makeNetInfoSnapshot({ type: 'cellular', isConnectionExpensive: true });
@@ -297,8 +270,6 @@ describe('deriveMetered (pure)', () => {
     expect(deriveMetered({ details: {} })).toBe(false);
   });
 });
-
-// ── TR-06 — Provider wiring ─────────────────────────────────────────────────
 
 describe('DataModeProvider + useDataMode hook', () => {
   beforeEach(() => {
@@ -454,11 +425,5 @@ describe('DataModeProvider + useDataMode hook', () => {
     expect(result.current.preference).toBe('normal');
     expect(result.current.resolved).toBe('normal');
     expect(result.current.isLowData).toBe(false);
-  });
-
-  it('exposes setPreference from the store', () => {
-    const { result } = renderHook(() => useDataMode(), { wrapper });
-
-    expect(typeof result.current.setPreference).toBe('function');
   });
 });

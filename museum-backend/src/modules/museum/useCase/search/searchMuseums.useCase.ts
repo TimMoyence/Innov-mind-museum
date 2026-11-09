@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { geocodeWithNominatim } from '@shared/http/nominatim.client';
 import {
   createCachedOverpassClient,
@@ -18,7 +19,6 @@ import type { CacheService } from '@shared/cache/cache.port';
 
 export type { MuseumCategory } from '@shared/http/overpass.client';
 
-/** When both `bbox` and `lat/lng/radiusMeters` are present, `bbox` wins. */
 export interface SearchMuseumsInput {
   lat?: number;
   lng?: number;
@@ -28,11 +28,6 @@ export interface SearchMuseumsInput {
 }
 
 export interface SearchMuseumEntry {
-  /**
-   * DB primary key — present ONLY on `source: 'local'` entries (a museum
-   * backed by a `Museum` row). `source: 'osm'` entries have no DB row, hence
-   * no `id`. Invariant: `'id' in entry === (entry.source === 'local')`.
-   */
   id?: number;
   name: string;
   address: string | null;
@@ -41,13 +36,11 @@ export interface SearchMuseumEntry {
   distance: number;
   source: 'local' | 'osm';
   museumType: MuseumCategory;
-  /** Present only on `source: 'osm'` entries when OSM tag exists. */
   openingHours?: string;
   website?: string;
   phone?: string;
   imageUrl?: string;
   description?: string;
-  /** Raw OSM `wheelchair` value: `yes` | `no` | `limited` | `designated`. */
   wheelchair?: string;
 }
 
@@ -58,15 +51,11 @@ export interface SearchMuseumsResult {
 
 const DEFAULT_RADIUS = 30_000;
 const MAX_RADIUS = 50_000;
-/** Two OSM entries within this distance are always merged (duplicate OSM nodes for the same building). */
 const DEDUP_OSM_OSM_METERS = 100;
-/** OSM vs local: below this, drop the OSM entry regardless of name. */
 const DEDUP_OSM_LOCAL_PURE_METERS = 100;
-/** OSM vs local: up to this distance, drop the OSM entry only if names match. */
 const DEDUP_OSM_LOCAL_DISTANCE_METERS = 500;
 
 interface LocalMuseumWithCoords {
-  /** Originating `Museum.id` (DB PK) — always present for a DB row. */
   id: number;
   name: string;
   address: string | null;
@@ -96,18 +85,12 @@ async function fetchLocalMuseumsWithCoords(
     return results;
   } catch (error) {
     logger.warn('Failed to fetch local museums for search merge', {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     });
     return [];
   }
 }
 
-/**
- * Collapses OSM-only duplicates via union-find: unions two entries when names
- * match (museumNamesAreSimilar) OR coords ≤ DEDUP_OSM_OSM_METERS. Picks
- * representative = longest address, tiebreak longest name. Deterministic:
- * input order preserved on length ties.
- */
 function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumResult[] {
   const n = osmResults.length;
   if (n <= 1) return [...osmResults];
@@ -172,10 +155,6 @@ function dedupeOsmResults(osmResults: OverpassMuseumResult[]): OverpassMuseumRes
   return picked;
 }
 
-/**
- * Duplicate iff coords ≤ DEDUP_OSM_LOCAL_PURE_METERS (name-agnostic), OR
- * coords ≤ DEDUP_OSM_LOCAL_DISTANCE_METERS AND names match.
- */
 function osmDuplicatesLocal(
   osm: OverpassMuseumResult,
   locals: readonly LocalMuseumWithCoords[],
@@ -198,10 +177,6 @@ function osmDuplicatesLocal(
   return false;
 }
 
-/**
- * Merges local + OSM with OSM<->OSM dedup, OSM vs local dedup, and optional
- * radius filter on locals. `radius=null` skips the radius filter (bbox mode).
- */
 function mergeAndDedupe(
   centerLat: number,
   centerLng: number,
@@ -247,12 +222,6 @@ function mergeAndDedupe(
   return entries;
 }
 
-/**
- * Cache key shapes / TTLs / sentinel wrapping live in
- * `shared/http/overpass.client.ts`. Passing `cache` alone is supported: the
- * factory wires the cached fn for you. `overpassSearch` is primarily for test
- * injection.
- */
 export interface SearchMuseumsDeps {
   cache?: CacheService;
   overpassSearch?: CachedOverpassSearchFn;
@@ -274,8 +243,6 @@ export class SearchMuseumsUseCase {
     } else if (deps.cache) {
       this.overpassSearch = createCachedOverpassClient(deps.cache);
     } else {
-      // No cache and no explicit fn — raw live calls. Tests/scripts only;
-      // production wiring always passes cache.
       this.overpassSearch = (params) => queryOverpassMuseums(params);
     }
   }
@@ -287,7 +254,6 @@ export class SearchMuseumsUseCase {
     return await this.executeRadiusSearch(input);
   }
 
-  /** Distance measured from the bbox center. */
   private async executeBboxSearch(
     bbox: BoundingBox,
     q: string | undefined,
@@ -335,7 +301,6 @@ export class SearchMuseumsUseCase {
 
     const localMuseums = await fetchLocalMuseumsWithCoords(this.repository);
 
-    // No coords → return local DB museums only (no Overpass).
     if (lat == null || lng == null) {
       let filtered = localMuseums.map((m) => ({
         ...m,
@@ -367,7 +332,6 @@ export class SearchMuseumsUseCase {
     return { museums: filtered, count: filtered.length };
   }
 
-  /** Non-fatal on failure. */
   private async fetchLocalInBbox(bbox: BoundingBox): Promise<
     {
       id: number;
@@ -395,7 +359,7 @@ export class SearchMuseumsUseCase {
         }));
     } catch (error) {
       logger.warn('Failed to fetch local museums in bbox', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         bbox,
       });
       return [];

@@ -1,207 +1,145 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth Flow: Register a new user -> verify home screen -> logout -> login -> verify home screen
-#
-# Prerequisites:
-#   - Backend running on localhost:3000 (docker-compose)
-#   - Release build of variant `development` installed (bundle com.musaium.mobile.preview)
-#
-# This flow validates the complete authentication lifecycle.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 1: Cold start -> auth screen (login mode by default)
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour|No account|Pas de compte"
+      text: 'Welcome back|Bon retour|No account|Pas de compte'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Phase 2: Switch to registration mode
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Passer à l'inscription|Switch to registration"  # accessibilityLabel (collapses visible "Pas de compte ? S'inscrire")
+    text: "Passer à l'inscription|Switch to registration"
 - waitForAnimationToEnd
 - assertVisible:
-    text: "Create your account|Créez votre compte"
+    text: 'Create your account|Créez votre compte'
 
-# ──────────────────────────────────────────────
-# Phase 3: Fill registration form
-# ──────────────────────────────────────────────
-# Unique email per run (Maestro 2.x inline JS = evalScript, not runScript)
 - evalScript: ${ output.timestamp = Date.now().toString(); }
 
-# Backend name validator rejects digits ("firstname contains invalid characters"),
-# so the first name must be letters-only (NOT "E2E").
 - tapOn:
-    id: "firstname-input"
-- inputText: "Maestro"
+    id: 'firstname-input'
+- inputText: 'Maestro'
 
 - tapOn:
-    id: "lastname-input"
-- inputText: "Tester"
+    id: 'lastname-input'
+- inputText: 'Tester'
 
 - tapOn:
-    id: "email-input"
-- inputText: "maestro-authflow-${output.timestamp}@local.dev"
+    id: 'email-input'
+- inputText: 'maestro-authflow-${output.timestamp}@local.dev'
 
-# Non-breached strong password (prod backend has HIBP breach check ON)
 - tapOn:
-    id: "password-input"
-- inputText: "Mx7$kq2Lp9vRt4Wz"
+    id: 'password-input'
+- inputText: 'Mx7$kq2Lp9vRt4Wz'
 
-# Date of birth (DD/MM/YYYY — accepted by parseDateOfBirth, adult)
 - tapOn:
-    id: "date-of-birth-input"
-- inputText: "10/08/1994"
+    id: 'date-of-birth-input'
+- inputText: '10/08/1994'
 
-# Dismiss keyboard via static-text tap — hideKeyboard hard-FAILS on the custom DOB editor.
 - tapOn:
-    text: "Create your account|Créez votre compte"
+    text: 'Create your account|Créez votre compte'
 
-# Accept GDPR by tapping the checkbox SQUARE (row left edge); the row center has
-# the inline Terms/Privacy links (own onPress → navigate away).
 - tapOn:
-    id: "gdpr-consent-checkbox"
+    id: 'gdpr-consent-checkbox'
 
-# Submit (button already on screen; hard scrollUntilVisible@100% fails when no
-# scroll is needed). Wait + tap by testID.
 - extendedWaitUntil:
     visible:
-      id: "auth-submit"
+      id: 'auth-submit'
     timeout: 10000
 - tapOn:
-    id: "auth-submit"
-# Intercepteur systémique #2 : dialogue iOS natif "Enregistrer le mot de passe ?"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 4: Verify registration succeeded.
-# This backend (prod-mode) requires EMAIL VERIFICATION, so a freshly-registered
-# user is NOT auto-logged-in — the screen flips back to login with the
-# "Inscription terminée. Veuillez vous connecter." banner. (`text` is a full-
-# string regex match, so wrap the substring with .*)
-# ──────────────────────────────────────────────
 - waitForAnimationToEnd:
     timeout: 10000
 - extendedWaitUntil:
     visible:
-      text: ".*(Registration complete|Inscription terminée).*"
+      text: '.*(Registration complete|Inscription terminée).*'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 5: Log in with the SEEDED verified account → home (the just-registered
-# account cannot log in until its email is verified — out of band locally).
-# After registration the screen flips to login mode but the email field RETAINS
-# the registration email, and Maestro's eraseText cannot reliably clear this
-# field (cursor lands at the start → a stale timestamp suffix survives). Relaunch
-# the app for a FRESH, empty login screen instead — the register→"Inscription
-# terminée" outcome was already asserted in Phase 4, so the lifecycle intent
-# (register → login → logout → login) is preserved.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 6: Navigate to settings and sign out
-# (Home reaches Settings only via the hero gear button — no "Settings" text)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "Settings|Paramètres"
+      text: 'Settings|Paramètres'
     timeout: 10000
 
-# Scroll to find Sign out button
 - scrollUntilVisible:
     element:
-      text: "Sign out|Se déconnecter"
+      text: 'Sign out|Se déconnecter'
     direction: DOWN
 - tapOn:
-    text: "Sign out|Se déconnecter"
+    text: 'Sign out|Se déconnecter'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 7: Verify we are back on auth screen
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 8: Login with the seeded account
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 9: Verify home screen after login
-# ──────────────────────────────────────────────
 - waitForAnimationToEnd:
     timeout: 10000
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
-# Confirm the start-conversation CTA exists (match its accessibilityLabel — the
-# Pressable collapses the visible "Démarrer une conversation" Text). Scroll it
-# into view first (it is the last element, below the fold).
 - scrollUntilVisible:
     element:
-      text: "Commencer une nouvelle conversation|Start a new conversation"
+      text: 'Commencer une nouvelle conversation|Start a new conversation'
     direction: DOWN
     timeout: 20000
     visibilityPercentage: 30

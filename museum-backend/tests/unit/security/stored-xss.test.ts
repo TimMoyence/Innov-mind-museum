@@ -8,26 +8,6 @@ import {
 import { userToken } from '../../helpers/auth/token.helpers';
 import { XSS_PAYLOADS } from '../../helpers/security/payloads';
 
-/**
- * Stored-XSS security test suite.
- *
- * Policy (contract):
- *  1. Backend stores user-controlled text as-is (users have the right to special
- *     characters — we do NOT strip `<`, `>`, quotes, etc. at persistence).
- *  2. API responses are ALWAYS `application/json` — so even if a payload
- *     contains `<script>`, it is returned as an inert JSON string value and
- *     cannot execute in any browser context that correctly sets Content-Type.
- *  3. XSS defense for the admin UI is the responsibility of `museum-web`
- *     (React auto-escapes text by default). This test pins the backend side
- *     of the contract only.
- *
- * Covers POST `/api/reviews`, POST `/api/support/tickets`, POST
- * `/api/support/contact` against three canonical payloads (`<script>`,
- * `<img onerror>`, a polyglot).
- */
-
-// ── Mock use cases so handlers execute without a real DB ─────────────
-
 const capturedReviews: Record<string, unknown>[] = [];
 const capturedTickets: Record<string, unknown>[] = [];
 const capturedContacts: Record<string, unknown>[] = [];
@@ -84,8 +64,6 @@ jest.mock('@modules/support/useCase', () => ({
   updateTicketStatusUseCase: { execute: jest.fn() },
 }));
 
-// Review route fetches the user profile through its own UserRepositoryPg —
-// patch the DefaultReviewRouter author resolver by mocking UserRepositoryPg.
 jest.mock('@modules/auth/adapters/secondary/pg/user.repository.pg', () => ({
   UserRepositoryPg: class {
     async getUserById(id: number) {
@@ -120,11 +98,9 @@ describe('Stored-XSS — backend persistence + response contract', () => {
 
         expect(res.status).toBe(201);
 
-        // Backend MUST store the payload as-is — no silent sanitization.
         const captured = capturedReviews[0];
         expect(captured.comment).toBe(body);
 
-        // Response MUST be JSON — so the payload is an inert string value.
         expect(res.headers['content-type']).toMatch(/application\/json/);
         expect(res.body.review.comment).toBe(body);
       },
@@ -180,9 +156,6 @@ describe('Stored-XSS — backend persistence + response contract', () => {
   });
 
   describe('admin-visible list responses stay JSON (no HTML rendering server-side)', () => {
-    // The backend never renders user content as HTML — this is the property
-    // that makes stored XSS harmless at the API boundary. All admin listing
-    // endpoints we ship respond with `application/json`.
     it('review POST response Content-Type is JSON, not text/html', async () => {
       const res = await request(app)
         .post('/api/reviews')

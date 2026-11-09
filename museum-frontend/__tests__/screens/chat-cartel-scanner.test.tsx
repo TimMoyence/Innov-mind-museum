@@ -5,25 +5,6 @@ import '../helpers/test-utils';
 import '../helpers/chat-screen.setup';
 import { defaultChatSession, mockUseChatSession } from '../helpers/chat-screen.setup';
 
-/**
- * Red tests for B4 — chat screen wiring for the cartel scanner.
- *
- * Validates the screen-side glue that A1's `<Composer>` and the C4
- * BottomSheetRouter expect:
- *
- *   - the `attachment-picker` route params object now carries a new
- *     `onOpenScanner: () => void` callback (R18 of B4 spec)
- *   - invoking that callback opens the `cartel-scanner` route with a
- *     captured `onScanned: (code: string) => void` callback (R16)
- *   - invoking the captured `onScanned("ABC-123")` triggers
- *     `sendMessage({ text: <i18n template> })` exactly once (R17)
- *
- * Spec: docs/chat-ux-refonte/specs/B4.md §1.4 (R16-R18), AC23-AC25.
- */
-
-// Capture every router.open(route, params) call so we can introspect the
-// attachment-picker params, the cartel-scanner params, and the resulting
-// sendMessage call after we manually invoke the captured callbacks.
 const mockRouterOpen = jest.fn();
 jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   BottomSheetRouter: () => null,
@@ -34,7 +15,6 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-// Replace Composer with a passthrough that captures its last-received props.
 let composerLastProps: Record<string, unknown> = {};
 jest.mock('@/features/chat/ui/Composer', () => {
   const RN = require('react-native');
@@ -60,8 +40,6 @@ describe('ChatSessionScreen — cartel scanner wiring (B4)', () => {
     mockUseChatSession.mockReturnValue({ ...defaultChatSession(), sendMessage });
     render(<ChatSessionScreen />);
 
-    // Composer received its props — invoke onOpenAttachments to trigger the
-    // attachment-picker route open with the screen-side params object.
     const onOpenAttachments = composerLastProps.onOpenAttachments;
     expect(typeof onOpenAttachments).toBe('function');
     (onOpenAttachments as () => void)();
@@ -114,10 +92,6 @@ describe('ChatSessionScreen — cartel scanner wiring (B4)', () => {
     scannerParams.onScanned('ABC-123');
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
-    // The test-utils react-i18next mock returns the i18n key unchanged, so
-    // the call contains the literal key — that's enough to prove the wiring
-    // (the BE accepts any text; the actual interpolation is asserted in the
-    // locale-coverage suite, see chat-cartel-scanner-i18n.test.ts).
     const call = sendMessage.mock.calls[0]?.[0] as { text: string };
     expect(call.text).toContain('chat.cartelScanner.lookup_template');
   });

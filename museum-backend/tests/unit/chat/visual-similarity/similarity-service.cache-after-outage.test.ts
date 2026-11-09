@@ -27,7 +27,6 @@ function compareWith(
       findNearest: jest.fn().mockResolvedValue(neighbours),
       upsertBatch: jest.fn(),
       findByQid: jest.fn(),
-      count: jest.fn(),
     },
     enricher: { enrichBatch: jest.fn().mockResolvedValue(facts) },
     cache,

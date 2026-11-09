@@ -6,8 +6,6 @@ import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
 import { nonNull } from '@/__tests__/helpers/nonNull';
 import type { DashboardSessionCard } from '@/features/chat/domain/dashboard-session';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => {
@@ -26,7 +24,6 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// Zustand store mock state — use mock prefix for jest.mock() hoisting compatibility
 const mockStoreState = {
   items: [] as DashboardSessionCard[],
   savedSessionIds: [] as string[],
@@ -66,10 +63,7 @@ jest.mock('@/features/conversation/infrastructure/conversationsStore', () => ({
     }),
 }));
 
-// Spy on Alert.alert
 const mockAlertAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useConversationsActions', () => {
   beforeEach(() => {
@@ -176,7 +170,6 @@ describe('useConversationsActions', () => {
   it('toggleSavedSession reports unsaved when toggling off', () => {
     const { result } = renderHook(() => useConversationsActions());
 
-    // session-1 is already saved, so toggling it will unsave
     act(() => {
       result.current.toggleSavedSession('session-1');
     });
@@ -211,7 +204,6 @@ describe('useConversationsActions', () => {
       result.current.confirmDeleteSingle('session-1');
     });
 
-    // Simulate pressing the delete button
     const buttons = nonNull(mockAlertAlert.mock.calls[0])[2] as {
       text: string;
       onPress?: () => void;
@@ -245,7 +237,6 @@ describe('useConversationsActions', () => {
     expect(title).toBe('conversations.delete_confirm');
     expect(body).toContain('conversations.selected_count');
 
-    // Simulate pressing delete
     const deleteButton = buttons.find((b) => b.text === 'common.delete');
 
     await act(async () => {
@@ -286,7 +277,6 @@ describe('useConversationsActions', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    // Even though API failed, item should still be removed from UI
     expect(mockRemoveItems).toHaveBeenCalledWith(['session-1']);
   });
 });

@@ -5,21 +5,14 @@ import { nonNull } from '@/__tests__/helpers/nonNull';
 
 import { useChatSessionStore } from '@/features/chat/infrastructure/chatSessionStore';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Reset the Zustand store between tests. */
 const resetStore = () => {
   useChatSessionStore.setState({ sessions: {} });
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('chatSessionStore', () => {
   beforeEach(() => {
     resetStore();
   });
-
-  // ── setSession ─────────────────────────────────────────────────────────────
 
   describe('setSession', () => {
     it('stores a session with messages, title, and museumName', () => {
@@ -61,8 +54,6 @@ describe('chatSessionStore', () => {
     });
   });
 
-  // ── updateMessages ─────────────────────────────────────────────────────────
-
   describe('updateMessages', () => {
     it('replaces messages for an existing session', () => {
       const store = useChatSessionStore.getState();
@@ -103,15 +94,12 @@ describe('chatSessionStore', () => {
       store.setSession('sess-1', [], null, null);
       const firstTimestamp = nonNull(useChatSessionStore.getState().sessions['sess-1']).updatedAt;
 
-      // Small delay to ensure different timestamp
       useChatSessionStore.getState().updateMessages('sess-1', [makeChatUiMessage()]);
 
       const newTimestamp = nonNull(useChatSessionStore.getState().sessions['sess-1']).updatedAt;
       expect(newTimestamp).toBeGreaterThanOrEqual(firstTimestamp);
     });
   });
-
-  // ── appendMessage ──────────────────────────────────────────────────────────
 
   describe('appendMessage', () => {
     it('appends a message to an existing session', () => {
@@ -135,8 +123,6 @@ describe('chatSessionStore', () => {
       expect(after).toBe(before);
     });
   });
-
-  // ── clearSession ───────────────────────────────────────────────────────────
 
   describe('clearSession', () => {
     it('removes the session from the store', () => {
@@ -168,14 +154,11 @@ describe('chatSessionStore', () => {
     });
   });
 
-  // ── Eviction ───────────────────────────────────────────────────────────────
-
   describe('eviction', () => {
     it('evicts oldest sessions when exceeding MAX_PERSISTED_SESSIONS (10)', () => {
       jest.useFakeTimers();
       resetStore();
 
-      // Create 10 sessions with sequential timestamps (1 second apart)
       for (let i = 0; i < 10; i++) {
         jest.setSystemTime(new Date(2026, 0, 1, 0, 0, i));
         useChatSessionStore
@@ -185,15 +168,12 @@ describe('chatSessionStore', () => {
 
       expect(Object.keys(useChatSessionStore.getState().sessions)).toHaveLength(10);
 
-      // Adding the 11th should evict the oldest (sess-0 has the smallest updatedAt)
       jest.setSystemTime(new Date(2026, 0, 1, 0, 0, 10));
       useChatSessionStore.getState().setSession('sess-new', [makeChatUiMessage()], 'New', null);
 
       const sessionKeys = Object.keys(useChatSessionStore.getState().sessions);
       expect(sessionKeys).toHaveLength(10);
-      // The newest session should be present
       expect(useChatSessionStore.getState().sessions['sess-new']).toBeDefined();
-      // The oldest session (sess-0) should have been evicted
       expect(useChatSessionStore.getState().sessions['sess-0']).toBeUndefined();
 
       jest.useRealTimers();
@@ -203,7 +183,6 @@ describe('chatSessionStore', () => {
       jest.useFakeTimers();
       resetStore();
 
-      // Create 12 sessions with sequential timestamps
       for (let i = 0; i < 12; i++) {
         jest.setSystemTime(new Date(2026, 0, 1, 0, 0, i));
         useChatSessionStore

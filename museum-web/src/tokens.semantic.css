@@ -111,23 +111,15 @@
   --sem-error-screen-text-label: #c7a58e;
   --sem-error-screen-text-value: #f6ebe4;
 
-  /* expertiseLevels */
-  --sem-expertise-levels-beginner-light: #059669;
-  --sem-expertise-levels-beginner-dark: #34D399;
-  --sem-expertise-levels-intermediate-light: #D97706;
-  --sem-expertise-levels-intermediate-dark: #FBBF24;
-  --sem-expertise-levels-expert-light: #7C3AED;
-  --sem-expertise-levels-expert-dark: #A78BFA;
-
   /* statusBadge */
   --sem-status-badge-text-color: #FFFFFF;
-  --sem-status-badge-open: #3B82F6;
-  --sem-status-badge-in-progress: #F59E0B;
-  --sem-status-badge-resolved: #22C55E;
+  --sem-status-badge-open: #1D4ED8;
+  --sem-status-badge-in-progress: #B45309;
+  --sem-status-badge-resolved: #15803D;
   --sem-status-badge-closed: #6B7280;
   --sem-status-badge-priority-low: #6B7280;
-  --sem-status-badge-priority-medium: #F59E0B;
-  --sem-status-badge-priority-high: #EF4444;
+  --sem-status-badge-priority-medium: #B45309;
+  --sem-status-badge-priority-high: #B91C1C;
 
   /* deviceChrome */
   --sem-device-chrome-bezel: #000000;

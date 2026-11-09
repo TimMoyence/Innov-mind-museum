@@ -51,8 +51,6 @@ describe('buildHealthPayload', () => {
     expect(payload.commitSha).toBe(env.commitSha);
   });
 
-  // ── Redis status ────────────────────────────────────────────────────
-
   it('includes redis status when provided', () => {
     const payload = buildHealthPayload({
       checks: { database: 'up', redis: 'up' },
@@ -92,8 +90,6 @@ describe('buildHealthPayload', () => {
     expect(payload.checks.redis).toBe('skipped');
   });
 
-  // ── Circuit breaker state ──────────────────────────────────────────
-
   it('includes llmCircuitBreaker state when provided', () => {
     const payload = buildHealthPayload({
       checks: { database: 'up', llmCircuitBreaker: 'CLOSED' },
@@ -111,8 +107,6 @@ describe('buildHealthPayload', () => {
 
     expect(payload.checks.llmCircuitBreaker).toBeUndefined();
   });
-
-  // ── DB down = 503 scenario ─────────────────────────────────────────
 
   it('returns degraded status when database is down with redis up', () => {
     const payload = buildHealthPayload({
@@ -136,8 +130,6 @@ describe('buildHealthPayload', () => {
     expect(payload.checks.llmConfigured).toBe(false);
   });
 
-  // ── Timestamp format ───────────────────────────────────────────────
-
   it('returns a valid ISO-8601 timestamp', () => {
     const payload = buildHealthPayload({
       checks: { database: 'up' },
@@ -147,8 +139,6 @@ describe('buildHealthPayload', () => {
     const parsed = new Date(payload.timestamp);
     expect(parsed.toISOString()).toBe(payload.timestamp);
   });
-
-  // ── Production redaction (L4) ──────────────────────────────────────
 
   describe('production redaction', () => {
     it('omits commitSha, environment, version, llmConfigured, redis, llmCircuitBreaker in prod', () => {
@@ -162,7 +152,6 @@ describe('buildHealthPayload', () => {
       expect(payload.checks.database).toBe('up');
       expect(payload.timestamp).toBeDefined();
 
-      // Redacted fields
       expect(payload.commitSha).toBeUndefined();
       expect(payload.environment).toBeUndefined();
       expect(payload.version).toBeUndefined();

@@ -5,33 +5,6 @@ import { makePostMessageResponse } from '@/__tests__/helpers/factories/session.f
 import { makeEnrichedImage } from '@/__tests__/helpers/factories/chat.factories';
 import type { PostMessageResponseDTO } from '@/features/chat/domain/contracts';
 
-// ────────────────────────────────────────────────────────────────────────────
-// Cycle 5 (UFR-022 RED) — "no empty/phantom assistant bubble" across the four
-// vulnerable strategies (streaming / audio / cache / history-load).
-//
-// DOCTRINE D8 (anti fake-world): every streaming case drives the LIVE sync
-// transport via `mockSendMessageSmart.mockResolvedValue(...)`. We NEVER fire
-// `onDone` — `sendMessageSmart` ignores it (send.ts:169-172). A test using
-// onDone reproduces the fake world that let P0-FA1 ship green. The live finalize
-// path is the sync-fallback block `sendMessageStreaming.ts:117-153`, whose
-// internal truthy guard `if (response.message.text)` (`:128`) is the residual
-// hole this cycle closes.
-//
-// EXPECTED RED today:
-//   - streaming '' → placeholder `${ts}-streaming` (text:'') survives, never
-//     replaced (truthy guard skips the swap, no cleanup). Phantom bubble.
-//   - streaming '   ' / '\n' → truthy whitespace REPLACES the placeholder with
-//     a visually-empty bubble (markdown trim). Empty-looking bubble.
-//   - audio '' / whitespace → assistantMessage appended unconditionally
-//     (sendMessageAudio.ts:52-75, no guard). Empty bubble.
-//   - cache hit answer:'' → cached assistant bubble pushed (sendMessageCache.ts:39-47).
-//   - history-load assistant text:null/'' → mapped 1:1, rendered as empty bubble.
-// EXPECTED to already pass (non-regression pins):
-//   - streaming '' + images → bubble kept (D7 image-only). Today survives via
-//     the orphan placeholder; the GREEN must keep it rendered via the helper.
-//   - happy path (non-blank) → bubble rendered. (Mirrors TR.1-TR.6.)
-// ────────────────────────────────────────────────────────────────────────────
-
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -142,11 +115,8 @@ jest.mock('@/features/chat/infrastructure/chatSessionStore', () => {
   return { useChatSessionStore: hook };
 });
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const SESSION_ID = 'test-session-empty-bubble';
 
-/** Session with only a user message so each turn adds exactly the asserted assistant bubble. */
 const userOnlySessionResponse = () => ({
   session: { title: 'Test Session', museumName: 'Louvre', museumMode: true },
   messages: [
@@ -162,7 +132,6 @@ const userOnlySessionResponse = () => ({
   ],
 });
 
-/** Counts assistant bubbles whose visible text is blank (empty or whitespace) AND that carry no renderable media. */
 const blankAssistantBubbles = (messages: ChatUiMessage[]) =>
   messages.filter(
     (m) =>
@@ -186,8 +155,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
     mockPeek.mockReturnValue(undefined);
     mockCacheLookup.mockReturnValue(null);
   });
-
-  // ── Streaming (live sync path, D8) ────────────────────────────────────────
 
   it('AC-1 — streaming empty text leaves no assistant bubble and no -streaming placeholder', async () => {
     mockSendMessageSmart.mockResolvedValue(
@@ -277,8 +244,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
         message: {
           id: 'resp-null-1',
           role: 'assistant',
-          // Runtime API can return a null text on a degraded 200 even though the
-          // OpenAPI type is `string`; the FE must tolerate it.
           text: null as unknown as string,
           createdAt: new Date().toISOString(),
         },
@@ -309,9 +274,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
           text: '',
           createdAt: new Date().toISOString(),
         },
-        // Enriched-image factory is the UI shape; the API metadata DTO carries
-        // the same fields at runtime. Cast at the boundary (mirrors the
-        // `response.metadata as ChatUiMessageMetadata` cast in the call-sites).
         metadata: {
           images: [makeEnrichedImage()],
         } as unknown as PostMessageResponseDTO['metadata'],
@@ -327,11 +289,9 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
       await result.current.sendMessage({ text: 'Show me similar works' });
     });
 
-    // The image-only bubble is legitimate content — it MUST survive (no over-blocking).
     const imageBubble = result.current.messages.find((m) => m.id === 'resp-img-only-1');
     expect(imageBubble).toBeDefined();
     expect((imageBubble?.metadata?.images?.length ?? 0) > 0).toBe(true);
-    // And it must not leave a -streaming placeholder behind.
     expect(streamingIds(result.current.messages)).toHaveLength(0);
   });
 
@@ -366,8 +326,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
     expect(streamingIds(result.current.messages)).toHaveLength(0);
   });
 
-  // ── Audio ─────────────────────────────────────────────────────────────────
-
   it('AC-4 — audio empty text adds no assistant bubble (transcription user still applied)', async () => {
     mockPostAudioMessage.mockResolvedValue({
       message: {
@@ -390,7 +348,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
     });
 
     expect(blankAssistantBubbles(result.current.messages)).toHaveLength(0);
-    // EARS-9 — the optimistic user bubble still carries the transcription.
     const transcribed = result.current.messages.find(
       (m) => m.role === 'user' && m.text.includes('What is this painting?'),
     );
@@ -444,8 +401,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
     expect(assistant).toBeDefined();
     expect(blankAssistantBubbles(result.current.messages)).toHaveLength(0);
   });
-
-  // ── Cache (low-data hit) ────────────────────────────────────────────────────
 
   it('AC-5 — cache hit with empty answer adds no cached assistant bubble', async () => {
     mockIsLowData = true;
@@ -503,8 +458,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
     expect(blankAssistantBubbles(result.current.messages)).toHaveLength(0);
   });
 
-  // ── History-load (session reload) ───────────────────────────────────────────
-
   it('AC-6 — history-load with an empty assistant message renders no blank bubble', async () => {
     mockGetSession.mockResolvedValue({
       session: { title: 'Reloaded', museumName: 'Louvre', museumMode: true },
@@ -544,7 +497,6 @@ describe('useChatSession — no empty/phantom assistant bubble (Cycle 5)', () =>
       expect(result.current.isLoading).toBe(false);
     });
 
-    // The empty assistant bubble must not appear; the good one (and the user) stay.
     expect(blankAssistantBubbles(result.current.messages)).toHaveLength(0);
     expect(result.current.messages.find((m) => m.id === 'hist-assistant-ok')).toBeDefined();
     expect(result.current.messages.find((m) => m.id === 'hist-user-1')).toBeDefined();

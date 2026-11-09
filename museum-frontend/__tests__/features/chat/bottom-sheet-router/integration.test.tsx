@@ -1,22 +1,3 @@
-/**
- * Red integration tests for the BottomSheetRouter (C4 / AC8 partial).
- *
- * Bigger than the unit-component tests in `BottomSheetRouter.test.tsx`:
- * exercises sequential transitions (replace-pattern between blocking routes)
- * and gesture-level dismissal rules (backdrop tap on blocking vs non-blocking).
- *
- * Q1 hypothesis traced for green-code-agent:
- *
- *   The spec (§7 Q1) leaves the ordering of blocking modals unsettled.
- *   This test follows the §1.2 R2 "last-write-wins replace" rule LITERALLY
- *   even when both routes are blocking: open(consent) then open(voice-intro)
- *   replaces consent with voice-intro. R6 only gates NON-BLOCKING openers,
- *   per its EARS wording ("system SHALL refuse open() calls for non-blocking
- *   routes"). If the product owner answers Q1 with strict ordering
- *   (`consent > voice-intro` always), this test will need adapting and the
- *   reducer/router gain a priority table.
- */
-
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { act, render } from '@testing-library/react-native';
@@ -32,8 +13,6 @@ import type {
   BottomSheetRouteDefinition,
   BottomSheetRouteId,
 } from '@/features/chat/ui/bottom-sheet-router/routes';
-
-// ── mock content registry ────────────────────────────────────────────────────
 
 const MockConsentContent: React.FC<{ close: () => void }> = ({ close }) => (
   <View testID="mock-consent-content">
@@ -95,8 +74,6 @@ function installMockRoutes(): void {
   } as BottomSheetRouteDefinition<BottomSheetRouteId>;
 }
 
-// ── imperative driver bridge ────────────────────────────────────────────────
-
 interface RouterHandle {
   open: (route: BottomSheetRouteId, params: unknown) => void;
   close: () => void;
@@ -131,8 +108,6 @@ function renderRouter() {
   return { ref, view };
 }
 
-// ── tests ───────────────────────────────────────────────────────────────────
-
 describe('BottomSheetRouter — integration scenarios', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -155,9 +130,6 @@ describe('BottomSheetRouter — integration scenarios', () => {
       act(() => {
         ref.current?.open('voice-intro', { locale: 'fr' });
       });
-      // Sequencing per spec R12 — exit anim of consent must settle before
-      // voice-intro's entrance anim runs. Drain timers twice so both anims
-      // resolve (the second `runAllTimers` covers the queued OPEN's entrance).
       act(() => {
         jest.runAllTimers();
       });
@@ -165,7 +137,6 @@ describe('BottomSheetRouter — integration scenarios', () => {
         jest.runAllTimers();
       });
 
-      // After the close+open chain settles, voice-intro should be the visible content.
       expect(view.queryByLabelText('consent.accept')).toBeNull();
       expect(view.getByLabelText('voice.disclosure.ack')).toBeTruthy();
       jest.useRealTimers();
@@ -181,8 +152,6 @@ describe('BottomSheetRouter — integration scenarios', () => {
       });
       expect(view.getByLabelText('consent.accept')).toBeTruthy();
 
-      // The backdrop is rendered by `BottomSheetBackdrop.tsx`; it MUST expose
-      // a stable testID `bottom-sheet-backdrop` so call-sites can target it.
       const backdrop = view.queryByTestId('bottom-sheet-backdrop');
       expect(backdrop).not.toBeNull();
       if (backdrop) {
@@ -215,7 +184,6 @@ describe('BottomSheetRouter — integration scenarios', () => {
           backdrop.props.onPress?.();
         });
       }
-      // Drain exit timing → container dispatches CLOSE_DONE (spec R12).
       act(() => {
         jest.runAllTimers();
       });

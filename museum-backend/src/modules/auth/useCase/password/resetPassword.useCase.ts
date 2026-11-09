@@ -9,23 +9,17 @@ import { assertPasswordNotBreached } from '@shared/validation/password-breach-ch
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 
-/**
- * Atomic consume + update. Revokes all active refresh tokens on success
- * (OWASP Forgot Password Cheat Sheet).
- */
 export class ResetPasswordUseCase {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly refreshTokenRepository: IRefreshTokenRepository,
   ) {}
 
-  /** @throws {AppError} 400 if token invalid/expired or password too weak. */
   async execute(token: string, newPassword: string) {
     const pw = validatePassword(newPassword);
     if (!pw.valid) {
       throw invalidInput(pw.reason ?? 'Invalid password');
     }
-    // F10 — block breached passwords at reset; same fail-open semantics as registration.
     await assertPasswordNotBreached(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     const hashedToken = hashEmailTokenForLookup(token, { trim: false });

@@ -1,21 +1,3 @@
-/**
- * COMP-02 — S3 Public Access Block production gate (RGPD Art.32).
- *
- * Object keys are enumerable (`chat-images/YYYY/MM/user-<id>/...`); a bucket
- * left world-readable exposes every user's photos + voice audio. There is no
- * aws-sdk / Terraform in the repo, so the bucket's Public Access Block cannot
- * be asserted automatically at boot. Instead this gate forces the operator to
- * consciously attest (S3_PUBLIC_ACCESS_BLOCK_VERIFIED=true) that they verified
- * the bucket is private before any prod deploy — fail-closed, no boot-time
- * network dependency. Same shape as the DeepSeek residency gate (COMP-04).
- *
- * Actually enforcing the block (Terraform aws_s3_bucket_public_access_block or
- * a GetPublicAccessBlock probe) needs cloud credentials — escalated.
- *
- * Drives `validateProductionEnv` directly, matching
- * env-production-validation-redis.test.ts.
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import {
@@ -30,7 +12,7 @@ const makeEnv = (storageOverrides: Partial<AppEnv['storage']> = {}): AppEnv =>
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'openai', openAiApiKey: 'sk-openai' },
+    llm: { costGuard: { userDailyCapUsd: 0 }, provider: 'openai', openAiApiKey: 'sk-openai' },
     storage: {
       driver: 's3',
       localUploadsDir: '/app/tmp/uploads',

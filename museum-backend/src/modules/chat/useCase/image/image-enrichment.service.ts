@@ -1,4 +1,7 @@
+import { THUMBNAIL_WIDTH_PX } from '@modules/chat/domain/ports/image-source.port';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
+import { wikimediaHttps } from '@shared/media/wikimedia-https';
 
 import { scoreImage } from './image-scoring';
 
@@ -21,22 +24,12 @@ interface CacheEntry {
   expiresAt: number;
 }
 
-/**
- * Per-search-term annotation propagated from the LLM through the aggregator.
- *
- * v2 (C2 finition 2026-05) — when the LLM produces a `suggestedImages` entry,
- * the matching `query` plus its `caption` + `rationale` flow here so the FE
- * can render LLM-authored copy under each carousel thumb. Legacy single-term
- * fallback (`enrich(searchTerm)`) emits an annotation with empty caption +
- * rationale, FE falls back to the i18n string.
- */
 export interface SuggestedImageAnnotation {
   query: string;
   caption: string;
   rationale: string;
 }
 
-/** Source-priority ranks for tie-break dedup. Higher wins. */
 const SOURCE_PRIORITY: Record<EnrichedImageSource, number> = {
   musaium: 4,
   wikidata: 3,
@@ -44,18 +37,6 @@ const SOURCE_PRIORITY: Record<EnrichedImageSource, number> = {
   unsplash: 1,
 };
 
-/**
- * Multi-source image enrichment service with in-memory cache, per-source
- * timeout, fail-open behaviour, and Langfuse spans.
- *
- * v1 (pre-C2): Wikidata P18 + Unsplash. Single search term per request.
- * v2 (C2 2026-05): adds Wikimedia Commons + Musaium curated catalogue clients
- * and accepts an array of search terms (parallel fan-out). Tie-break on
- * duplicate URLs follows source-priority `musaium > wikidata > commons > unsplash`.
- *
- * Any source error / timeout / malformed payload returns `[]` for that
- * source — the chat hot path is never short-circuited.
- */
 export class ImageEnrichmentService {
   private readonly cache = new Map<string, CacheEntry>();
 
@@ -66,12 +47,6 @@ export class ImageEnrichmentService {
     private readonly musaiumClient?: ImageSourceClient | undefined,
   ) {}
 
-  /**
-   * v2 overload accepts `searchTerms: string[]` (one fan-out per entry). The
-   * legacy single-term path forwards to this overload via `[searchTerm]` to
-   * keep the public surface stable. `museumMode` (R13) hoists any Musaium hit
-   * to position 0.
-   */
   async enrich(
     searchTermOrTerms: string | string[],
     wikidataImageUrl?: string,
@@ -98,9 +73,6 @@ export class ImageEnrichmentService {
         candidates.push(this.buildWikidataCandidate(wikidataImageUrl, cleaned[0], ann));
       }
 
-      // Parallel fan-out: per-term × per-source. Each (term, source) pair is
-      // an independent Promise; sources fail-open per pair so a Commons error
-      // doesn't block Unsplash on the same term.
       const tasks: Promise<EnrichedImage[] | null>[] = [];
       for (const term of cleaned) {
         const ann = annotationByTerm.get(term.toLowerCase());
@@ -130,7 +102,7 @@ export class ImageEnrichmentService {
       logger.info('image_enrichment_success', { searchTerms: cleaned, count: results.length });
       return results;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       logger.warn('image_enrichment_error', { searchTerms: cleaned, error: msg });
       return [];
     }
@@ -141,9 +113,10 @@ export class ImageEnrichmentService {
     wikidataImageUrl: string,
     searchTerm: string,
   ): EnrichedImage[] {
-    if (existing.some((img) => img.url === wikidataImageUrl)) return existing;
+    const candidate = this.buildWikidataCandidate(wikidataImageUrl, searchTerm);
+    if (existing.some((img) => img.url === candidate.url)) return existing;
 
-    const merged = [...existing, this.buildWikidataCandidate(wikidataImageUrl, searchTerm)];
+    const merged = [...existing, candidate];
     merged.sort((a, b) => b.score - a.score);
 
     const seen = new Set<string>();
@@ -166,21 +139,19 @@ export class ImageEnrichmentService {
   }
 
   private buildWikidataCandidate(
-    imageUrl: string,
+    wikidataImageUrl: string,
     searchTerm: string,
     annotation?: SuggestedImageAnnotation,
   ): EnrichedImage {
+    const imageUrl = wikimediaHttps(wikidataImageUrl);
     const candidate: ImageCandidate = { caption: searchTerm, source: 'wikidata', apiPosition: 0 };
-    // `||` (not `??`) is intentional: annotation.caption may be the empty
-    // string when the LLM omitted the field — we want to fall back to the
-    // searchTerm in that case, not retain an empty caption.
     const captionFallback =
       annotation?.caption !== undefined && annotation.caption.length > 0
         ? annotation.caption
         : searchTerm;
     return {
       url: imageUrl,
-      thumbnailUrl: imageUrl,
+      thumbnailUrl: `${imageUrl}?width=${String(THUMBNAIL_WIDTH_PX)}`,
       caption: captionFallback,
       rationale: annotation?.rationale ?? '',
       source: 'wikidata',
@@ -208,7 +179,7 @@ export class ImageEnrichmentService {
         mapPhotoToEnriched(photo, index, source, searchTerm, annotation),
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       logger.warn(`image_enrichment_${source}_failed`, { searchTerm, error: msg });
       return null;
     } finally {
@@ -226,7 +197,6 @@ export class ImageEnrichmentService {
         byUrl.set(img.url, img);
         continue;
       }
-      // Tie-break: keep higher source-priority, falling back to higher score.
       const existingRank = SOURCE_PRIORITY[existing.source];
       const incomingRank = SOURCE_PRIORITY[img.source];
       if (
@@ -240,7 +210,6 @@ export class ImageEnrichmentService {
     let deduped = Array.from(byUrl.values());
     deduped.sort((a, b) => b.score - a.score);
 
-    // R13 — pin Musaium catalogue hit to position 0 when museumMode is on.
     if (museumMode) {
       const museumIdx = deduped.findIndex((img) => img.source === 'musaium');
       if (museumIdx > 0) {
@@ -286,10 +255,7 @@ function mapPhotoToEnriched(
     height: photo.height,
     apiPosition: index,
   };
-  const score =
-    source === 'musaium'
-      ? 1 // Decision D4: musaium pins to score=1.0 to keep the 0..1 range.
-      : scoreImage(candidate, searchTerm);
+  const score = source === 'musaium' ? 1 : scoreImage(candidate, searchTerm);
 
   const caption =
     source === 'unsplash' ? photo.caption : pickNonUnsplashCaption(photo, annotation, searchTerm);

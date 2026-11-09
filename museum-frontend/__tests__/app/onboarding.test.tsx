@@ -1,19 +1,5 @@
-/**
- * OnboardingScreen v2 Spec B — integration tests for the 4-step carousel.
- *
- * Covers:
- * 1. Greeting slide rendered on mount
- * 2. Next advances through all 4 slides
- * 3. Skip on slide 1 → setHasSeenOnboarding(true) + router.replace home
- * 4. Done on slide 4 → setHasSeenOnboarding(true) + router.replace home
- * 5. Skip when unauthenticated → markOnboardingComplete NOT called (F3.1)
- * 6. Done when unauthenticated → markOnboardingComplete NOT called (F3.2)
- */
-
 import '../helpers/test-utils';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockSetHasSeenOnboarding = jest.fn();
 jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
@@ -22,19 +8,11 @@ jest.mock('@/features/settings/infrastructure/userProfileStore', () => ({
 }));
 
 const mockMarkOnboardingComplete = jest.fn().mockResolvedValue(undefined);
-// Mutable auth state for per-test override (F3 — T3-GREEN).
-// Default `isAuthenticated:true` preserves existing 4 tests' behavior. The 2
-// new tests flip to `false` via the `setMockAuth` global helper exposed below.
 const mockAuthState = { isAuthenticated: true };
 (globalThis as unknown as { setMockAuth: (v: boolean) => void }).setMockAuth = (v: boolean) => {
   mockAuthState.isAuthenticated = v;
 };
 jest.mock('@/features/auth/application/AuthContext', () => ({
-  // `isAuthenticated: true` is required since 6c39e9365 — the onboarding
-  // handleComplete now skips the server-side mark when the user is not yet
-  // signed in (markOnboardingComplete endpoint needs a session). Tests in
-  // this file all simulate an authenticated user reaching the onboarding
-  // tail, so we always expose `true`.
   useAuth: () => ({
     markOnboardingComplete: mockMarkOnboardingComplete,
     get isAuthenticated() {
@@ -53,7 +31,6 @@ jest.mock('@/features/onboarding/application/useOnboarding', () => ({
   useOnboarding: (...args: unknown[]) => mockUseOnboarding(...args),
 }));
 
-// Stub each slide so FlatList renderItem can work without native layout.
 jest.mock('@/features/onboarding/ui/GreetingSlide', () => {
   const { View, Text } = require('react-native');
   return {
@@ -111,8 +88,6 @@ jest.mock('@/features/onboarding/ui/StepIndicator', () => {
 
 import OnboardingScreen from '@/app/(stack)/onboarding';
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('OnboardingScreen v2', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -133,12 +108,10 @@ describe('OnboardingScreen v2', () => {
   });
 
   it('Next advances through 4 slides', () => {
-    // Slide 0 → press Next → next() called
     render(<OnboardingScreen />);
     fireEvent.press(screen.getByLabelText('a11y.onboarding.next'));
     expect(mockNext).toHaveBeenCalledTimes(1);
 
-    // FlatList renders all slides; verify subsequent slide stubs are in tree
     expect(screen.getByTestId('slide-museum-mode')).toBeTruthy();
     expect(screen.getByTestId('slide-camera-intent')).toBeTruthy();
     expect(screen.getByTestId('slide-walk-intent')).toBeTruthy();
@@ -179,14 +152,6 @@ describe('OnboardingScreen v2', () => {
       expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)/home');
     });
   });
-
-  // ── F3 — isAuthenticated:false branch coverage (T3-RED) ────────────────────
-  // Spec F3.1, F3.2. Production guard in app/(stack)/onboarding.tsx:61-67
-  // (commit 6c39e936) skips markOnboardingComplete() when isAuthenticated is
-  // false. These tests assert that skip path. They require per-test override
-  // of the useAuth mock — wired by T3-GREEN. On red HEAD the module-level
-  // mock hardcodes isAuthenticated:true, so the new tests fail at the
-  // setMockAuth() call (ReferenceError) — that IS the RED state.
 
   it('Skip on slide 1 when not authenticated does NOT call markOnboardingComplete', async () => {
     (globalThis as unknown as { setMockAuth: (v: boolean) => void }).setMockAuth(false);

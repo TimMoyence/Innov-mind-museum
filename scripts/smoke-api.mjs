@@ -1,26 +1,4 @@
 #!/usr/bin/env node
-// scripts/smoke-api.mjs
-//
-// Local API contract smoke runner — covers the critical auth/account paths
-// that the FE depends on, with auto-cleanup of every test account created.
-//
-// Why this exists : on 2026-05-17 a missing migration (User.tier) made
-// /api/auth/login return 500s, and the FE remapped it to a generic
-// "Veuillez vérifier votre saisie" message. No automated test caught the
-// regression because CI auto-runs migrations on a fresh DB while local
-// Docker persists volumes between restarts. This script closes that gap.
-//
-// Usage :
-//   pnpm smoke:api              # default: localhost:3000
-//   API_BASE=https://staging... pnpm smoke:api
-//
-// Exit codes :
-//   0 = all scenarios pass
-//   1 = one or more scenarios fail
-//   2 = setup failure (backend unreachable, no node fetch, etc.)
-//
-// Each created account is tracked in CLEANUP and DELETEd in a finally
-// block, so re-runs don't accumulate orphan rows.
 
 const API_BASE = process.env.API_BASE ?? 'http://localhost:3000';
 const VERBOSE = process.env.VERBOSE === '1';
@@ -36,23 +14,20 @@ const C = process.stdout.isTTY
     }
   : { green: '', red: '', yellow: '', gray: '', bold: '', reset: '' };
 
-// ──────────────────────────────────────────────────────────────────────────
-// Test fixtures + helpers
-// ──────────────────────────────────────────────────────────────────────────
 
 const RUN_TAG = Date.now().toString(36);
 const fixtures = {
   email: (suffix) => `smoke+${RUN_TAG}-${suffix}@local.dev`,
-  freshPassword: () => `MuseumSmk!${RUN_TAG}A1`, // unique, non-pwned
-  breachedPassword: () => 'password123', // widely breached, in any HIBP list
+  freshPassword: () => `MuseumSmk!${RUN_TAG}A1`,
+  breachedPassword: () => 'password123',
   shortPassword: () => 'ab',
   validDob: () => '1994-08-10',
-  minorDob: () => '2015-01-01', // under 15 → MINOR_PARENTAL_CONSENT_REQUIRED
+  minorDob: () => '2015-01-01',
   firstname: 'Smoke',
   lastname: 'Local',
 };
 
-const CLEANUP_TOKENS = []; // accumulated tokens for accounts we created
+const CLEANUP_TOKENS = [];
 
 async function api(method, path, { body, token } = {}) {
   const url = `${API_BASE}${path}`;
@@ -78,11 +53,6 @@ async function api(method, path, { body, token } = {}) {
 
 const errCode = (responseBody) => responseBody?.error?.code ?? responseBody?.code;
 
-// Reset Redis rate-limit + auth-lockout buckets so back-to-back smoke runs
-// don't trip the IP-keyed registerLimiter (5 req / 10 min by default) or the
-// email-keyed loginByAccountLimiter. Scoped to `ratelimit:*`, `auth:lockout:*`,
-// `ratelimit:auth-login-account:*` — no app data touched. Local-only operation
-// against dev-redis container.
 async function resetLocalRateLimits() {
   const { execSync } = await import('node:child_process');
   const patterns = ['ratelimit:*', 'auth:lockout:*'];
@@ -91,16 +61,10 @@ async function resetLocalRateLimits() {
       const cmd = `docker exec dev-redis sh -c "redis-cli --scan --pattern '${pattern}' | xargs -r redis-cli del" 2>/dev/null || true`;
       execSync(cmd, { stdio: VERBOSE ? 'inherit' : 'pipe' });
     } catch {
-      // best-effort; rate-limit miss is not fatal
     }
   }
 }
 
-// Local-only DB poke to flip the email_verified flag on accounts we created
-// via /api/auth/register. Mirrors what museum-backend/scripts/seed-smoke-account.ts
-// does for the CI pre-seeded account. Scoped to smoke+RUN_TAG-*@local.dev so we
-// can never accidentally flip a real user. Uses `docker exec` against the dev
-// Postgres container — no DB driver dependency in this script.
 async function verifyEmailViaDb(email) {
   const { execSync } = await import('node:child_process');
   const sql = `UPDATE users SET email_verified = true WHERE email = '${email.replace(/'/g, "''")}'`;
@@ -114,9 +78,6 @@ async function verifyEmailViaDb(email) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Assertion DSL
-// ──────────────────────────────────────────────────────────────────────────
 
 function assertStatus(actual, expected, label) {
   if (actual !== expected) {
@@ -131,14 +92,10 @@ function assertCode(body, expected, label) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Scenarios (each is { name, fn() })
-// ──────────────────────────────────────────────────────────────────────────
 
 const scenarios = [];
 const scenario = (name, fn) => scenarios.push({ name, fn });
 
-// Track the primary happy-path account for the duplicate-email + login tests.
 let happyEmail = null;
 let happyToken = null;
 
@@ -260,7 +217,6 @@ scenario('AUTH /me — authenticated (200 + profile)', async () => {
   if (!happyToken) throw new Error('precondition: login did not run');
   const r = await api('GET', '/api/auth/me', { token: happyToken });
   assertStatus(r.status, 200, 'me with token');
-  // Shape: { user: { id, email, firstname, lastname, role, ... } } per auth-profile.route.ts:40
   if (!r.body?.user?.email) throw new Error('me: response missing user.email');
   if (r.body.user.email !== happyEmail) {
     throw new Error(`me: returned email "${r.body.user.email}" does not match registered "${happyEmail}"`);
@@ -285,9 +241,6 @@ scenario('ONBOARDING /auth/onboarding-complete — authenticated (200/204)', asy
   }
 });
 
-// ──────────────────────────────────────────────────────────────────────────
-// Cleanup — delete every account we created (called from finally)
-// ──────────────────────────────────────────────────────────────────────────
 
 async function cleanup() {
   if (CLEANUP_TOKENS.length === 0) return;
@@ -304,9 +257,6 @@ async function cleanup() {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// Runner
-// ──────────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log(`${C.bold}Musaium API smoke — ${API_BASE}${C.reset}`);

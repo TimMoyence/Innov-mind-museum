@@ -2,7 +2,6 @@ import { QL_TIMEOUT_SECONDS } from './overpass-constants';
 
 import type { OverpassBoundingBox } from './overpass-types';
 
-/** `nwr` = readability shortcut for `(node;way;relation;)` (Overpass-API #504, same plan). */
 export const buildRadiusQuery = (lat: number, lng: number, radiusMeters: number): string => {
   const r = String(radiusMeters);
   const coords = `${String(lat)},${String(lng)}`;
@@ -13,7 +12,6 @@ export const buildRadiusQuery = (lat: number, lng: number, radiusMeters: number)
   ].join('\n');
 };
 
-/** Overpass uses (S,W,N,E) ordering — opposite to GeoJSON. */
 export const buildBboxQuery = (bbox: OverpassBoundingBox): string => {
   const [minLng, minLat, maxLng, maxLat] = bbox;
   const filter = `${String(minLat)},${String(minLng)},${String(maxLat)},${String(maxLng)}`;

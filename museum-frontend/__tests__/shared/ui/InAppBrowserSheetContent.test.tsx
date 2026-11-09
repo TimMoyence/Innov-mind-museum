@@ -4,20 +4,6 @@ import { render, fireEvent, screen, act } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 
-/**
- * Sheet-content variant of the legacy `InAppBrowser` tests (migrated under
- * C4). The `<Modal>` wrapper is now owned by the bottom-sheet router, so the
- * `url=null → no Modal mounts` branch is dropped (the router simply does not
- * activate this route when no URL is supplied). Every other security /
- * navigation behaviour is preserved.
- */
-
-// react-native-webview is not in test-utils; mock it to capture props per render
-// so the test can drive callback semantics (onLoadStart, onError, scheme guard, etc.).
-// Variable must be `mock`-prefixed so jest's hoist guard allows the closure ref.
-// Using React.createElement (not JSX) inside the factory avoids the babel
-// jsx-runtime `_jsx` helper, whose out-of-scope reference triggers Jest's
-// hoist-guard ReferenceError.
 const mockCapturedProps: Record<string, unknown> = {};
 jest.mock('react-native-webview', () => {
   const RN = require('react-native');

@@ -38,7 +38,6 @@ function formatMuseum(museum: MuseumEnrichment): string[] {
   return lines;
 }
 
-/** Builds `[LOCAL KNOWLEDGE]` prompt block. Empty string when no data. */
 export function buildLocalKnowledgeBlock(
   artworks: ArtworkKnowledge[],
   museums: MuseumEnrichment[],

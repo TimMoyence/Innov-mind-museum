@@ -17,15 +17,6 @@ interface PrivacyMetaRowProps {
   };
 }
 
-/**
- * One row in the privacy-policy hero card metadata block (version,
- * controller, contact, etc.). Renders a "PENDING" warning badge when
- * the value is still a `__placeholder__` token from the policy fixture.
- *
- * Style tokens are passed in from the screen's stylesheet so the row
- * stays purely presentational — keeps `app/(stack)/privacy.tsx` under
- * the 300 LOC budget per the F.2 sprint goal.
- */
 export const PrivacyMetaRow = ({ label, value, styles }: PrivacyMetaRowProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

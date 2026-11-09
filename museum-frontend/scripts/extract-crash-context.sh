@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-# extract-crash-context.sh
-#
-# Pulls the iOS 26 / A18 Pro launch-crash post-mortem context written by
-# RNCrashCapture (ios/Musaium/AppDelegate.swift) plus the matching
-# [MUSAIUM_INIT] / [MUSAIUM_CRASH] device-log lines.
-#
-# Sources, in priority order:
-#   1. Booted simulator app sandbox  -> NSTemporaryDirectory()/musaium-crash-context.json
-#   2. Connected iOS device app sandbox via `idevicesyslog` (libimobiledevice) when installed
-#   3. macOS `log` command for [MUSAIUM_INIT|CRASH] entries since the last launch
-#
-# Usage:
-#   ./scripts/extract-crash-context.sh                  # auto-detect, print timeline to stdout
-#   ./scripts/extract-crash-context.sh --json           # raw JSON, one event per line
-#   ./scripts/extract-crash-context.sh --since '5m'     # restrict log lookups to last N minutes
-#
-# Doc: museum-frontend/docs/IOS26_CRASH_DIAG.md
 set -euo pipefail
 
 JSON_ONLY=false
@@ -41,7 +24,6 @@ log_section() {
   echo "=== $1 ==="
 }
 
-# --- 1. Try booted simulator sandbox -----------------------------------------
 SIMCTL_OK=false
 if command -v xcrun >/dev/null 2>&1 && xcrun simctl list devices booted 2>/dev/null | grep -q Booted; then
   SIM_DATA_DIR="$(xcrun simctl get_app_container booted "$APP_BUNDLE_ID" data 2>/dev/null || true)"
@@ -55,7 +37,6 @@ if command -v xcrun >/dev/null 2>&1 && xcrun simctl list devices booted 2>/dev/n
   fi
 fi
 
-# --- 2. Try connected iOS device via libimobiledevice ------------------------
 DEVICE_OK=false
 if ! $SIMCTL_OK && command -v idevice_id >/dev/null 2>&1; then
   UDID="$(idevice_id -l 2>/dev/null | head -1 || true)"
@@ -64,8 +45,6 @@ if ! $SIMCTL_OK && command -v idevice_id >/dev/null 2>&1; then
     if command -v ifuse >/dev/null 2>&1; then
       MOUNT_POINT="$(mktemp -d)"
       if ifuse --documents "$APP_BUNDLE_ID" "$MOUNT_POINT" 2>/dev/null; then
-        # tmp dir lives alongside Documents; AFC exposes the app sandbox's Documents only
-        # so users must enable file sharing in Info.plist OR tail the device log instead.
         if [[ -f "$MOUNT_POINT/musaium-crash-context.json" ]]; then
           DEVICE_OK=true
           log_section "Crash context (device sandbox)"
@@ -78,7 +57,6 @@ if ! $SIMCTL_OK && command -v idevice_id >/dev/null 2>&1; then
   fi
 fi
 
-# --- 3. macOS device-log fallback (works for simulator + USB-attached) -------
 if ! $JSON_ONLY; then
   log_section "Device log (last $SINCE, [MUSAIUM_*] tags)"
   if command -v log >/dev/null 2>&1; then

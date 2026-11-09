@@ -590,8 +590,6 @@ describe('isListSessionsResponseDTO', () => {
   });
 });
 
-// ── Additional negative-path tests ──────────────────────────────────────────
-
 describe('isCreateSessionResponseDTO — additional negatives', () => {
   it('rejects when session is null', () => {
     assert.equal(isCreateSessionResponseDTO({ session: null }), false);

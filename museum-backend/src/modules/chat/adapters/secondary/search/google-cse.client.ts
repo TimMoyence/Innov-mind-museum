@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -11,7 +12,6 @@ const HARD_RESULT_LIMIT = 10;
 
 export interface GoogleCseConfig {
   apiKey: string;
-  /** Programmable Search Engine id (`cx`), distinct from the API key. */
   cseId: string;
 }
 
@@ -25,10 +25,6 @@ interface GoogleCseApiResponse {
   items?: GoogleCseApiItem[];
 }
 
-/**
- * Google Programmable Search (Custom Search JSON API).
- * Never throws — any error returns an empty array so the caller can fail-open.
- */
 export class GoogleCseClient implements WebSearchProvider {
   readonly name = 'google-cse';
 
@@ -71,7 +67,7 @@ export class GoogleCseClient implements WebSearchProvider {
       }));
     } catch (err) {
       logger.warn('google_cse_search_exception', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
         query: query.query,
       });
       return [];

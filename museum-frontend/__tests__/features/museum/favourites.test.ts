@@ -1,13 +1,3 @@
-/**
- * Tests — favourites CRUD (W3 R15/R16).
- *
- * Asserts:
- *   - getFavourites returns [] on missing key + parse-error tolerance.
- *   - addFavourite is idempotent (newest first) + filters invalid IDs.
- *   - removeFavourite is a no-op when absent.
- *   - All operations tolerate storage failure silently.
- */
-
 const mockGetItem = jest.fn<Promise<string | null>, [string]>();
 const mockSetItem = jest.fn<Promise<void>, [string, string]>();
 

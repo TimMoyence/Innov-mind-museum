@@ -1,30 +1,3 @@
-/**
- * RED — T1.11 — R10 — `POST /api/chat/art-keywords` MUST require role
- * `ADMIN | MODERATOR | SUPER_ADMIN` (super_admin implicit via `requireRole`).
- *
- * Spec : team-state/2026-05-21-p0-c3-auth-crypto/spec.md §R10.
- * Design : team-state/2026-05-21-p0-c3-auth-crypto/design.md §3.4 :
- *   - middleware chain : isAuthenticated → requireRole(ADMIN, MODERATOR) →
- *     taxonomyWriteLimiter → handler.
- *   - GET `/art-keywords` UNCHANGED (isAuthenticated only).
- *
- * Anchored to PATTERNS / LESSONS :
- *  - `require-role.middleware.ts:22` "super_admin implicitly satisfies any
- *    role check".
- *  - CLAUDE.md "Mutating middleware ordering" — limiter AFTER role gate so
- *    visitors who 403 don't inflate counters.
- *  - OWASP API1+API5 broken function/object level auth (spec §1.4 + §5).
- *
- * Failure mode at HEAD `00325d81` :
- *  - `chat-message.route.ts:184` :
- *      router.post('/art-keywords', isAuthenticated, createBulkUpsertArtKeywordsHandler(repo));
- *    Any authenticated user (visitor included) reaches the handler and gets
- *    201 → the `expect 403` assertions fail.
- *
- * Run scope :
- *   pnpm jest tests/unit/chat/chat-message.art-keywords.authz.test.ts
- */
-
 import express from 'express';
 import request from 'supertest';
 
@@ -46,9 +19,6 @@ import type { ArtKeyword } from '@modules/chat/domain/art-keyword/artKeyword.ent
 import type { ArtKeywordRepository } from '@modules/chat/domain/art-keyword/artKeyword.repository.interface';
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-/**
- * Minimal in-memory repo. bulkUpsert is the only path POST exercises.
- */
 class InMemoryArtKeywordRepository implements ArtKeywordRepository {
   bulkUpsertSpy = jest.fn();
 
@@ -68,11 +38,10 @@ class InMemoryArtKeywordRepository implements ArtKeywordRepository {
 
 const moderatorToken = (): string => makeToken({ role: 'moderator' });
 
-/** Build a small express app mounting ONLY the chat-message router under /api/chat. */
 const buildApp = (repo: ArtKeywordRepository): express.Express => {
   const app = express();
   app.use(express.json());
-  const chatService = {} as ChatService; // not exercised by /art-keywords routes
+  const chatService = {} as ChatService;
   app.use('/api/chat', createMessageRouter(chatService, repo));
   app.use(errorHandler);
   return app;
@@ -151,7 +120,6 @@ describe('POST /api/chat/art-keywords — requireRole (R10)', () => {
       .get('/api/chat/art-keywords?locale=fr')
       .set('Authorization', `Bearer ${visitorToken()}`);
 
-    // GET stays `isAuthenticated` only ; visitor MUST NOT be 403'd on reads.
     expect(res.status).not.toBe(403);
   });
 });

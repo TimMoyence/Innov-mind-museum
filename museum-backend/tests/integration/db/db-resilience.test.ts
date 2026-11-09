@@ -8,18 +8,6 @@ import { buildHealthPayload } from '@shared/routers/api.router';
 import { EntityNotFoundError } from 'typeorm/error/EntityNotFoundError';
 import { QueryFailedError } from 'typeorm/error/QueryFailedError';
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-
-// Prevent dotenv.config() (called inside @src/config/env at module load) from
-// re-injecting CACHE_ENABLED + REDIS_URL from the host's .env. Without this,
-// resolveCacheService(options) at app.ts:177 instantiates a live
-// RedisCacheService that tries to connect to `redis://...redis:6379`
-// (Docker DNS hostname), `cacheService.ping()` fails, the /health route
-// reports redis='down' and the test's expected status='ok' assertion fails.
-// Mocking dotenv keeps env.cache?.enabled === false → MemoryCacheService
-// fallback → ping() returns true → redisStatus='up' → status='ok'.
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 jest.mock('@shared/logger/logger', () => ({
@@ -31,18 +19,7 @@ jest.mock('@shared/observability/sentry', () => ({
   setupSentryExpressErrorHandler: jest.fn(),
 }));
 
-// Auto-mock bullmq: createApp transitively imports the BullMQ enrichment
-// queue adapter, and despite the comment in api.router.ts:197 about lazy
-// instantiation, the queue still resolves to ioredis on app boot when
-// REDIS_HOST=redis (Docker DNS) leaks from the host .env. Auto-mock makes
-// Queue/Worker no-op constructors so the integration test exercises the DB
-// resilience surface without requiring a reachable Redis. The dedicated
-// Redis-resilience tests live in tests/integration/cache/.
 jest.mock('bullmq');
-
-// ---------------------------------------------------------------------------
-// Helpers shared across sections
-// ---------------------------------------------------------------------------
 
 const mockReq = (overrides: Record<string, unknown> = {}): Request =>
   ({
@@ -69,10 +46,6 @@ const mockRes = (): Response & { _status: number; _body: unknown } => {
 };
 
 const noop: NextFunction = jest.fn();
-
-// =========================================================================
-// 1. Health check resilience (DB down / recovery)
-// =========================================================================
 
 describe('db-resilience: health check vs database state', () => {
   it('returns status "ok" (200) when database query succeeds', async () => {
@@ -106,12 +79,10 @@ describe('db-resilience: health check vs database state', () => {
       return { database: dbAvailable ? 'up' : 'down' };
     };
 
-    // Phase 1 — DB is down
     const downChecks = await healthCheck();
     const downPayload = buildHealthPayload({ checks: downChecks, llmConfigured: true });
     expect(downPayload.status).toBe('degraded');
 
-    // Phase 2 — DB recovers
     dbAvailable = true;
     const upChecks = await healthCheck();
     const upPayload = buildHealthPayload({ checks: upChecks, llmConfigured: true });
@@ -120,7 +91,6 @@ describe('db-resilience: health check vs database state', () => {
   });
 
   it('health check via createApp returns 503 when injected check signals DB down', async () => {
-    // Lazy-import to avoid env side-effects in the module scope
     const { createApp } = await import('@src/app');
 
     const healthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
@@ -200,10 +170,6 @@ describe('db-resilience: health check vs database state', () => {
   });
 });
 
-// =========================================================================
-// 2. Error handler resilience — TypeORM errors
-// =========================================================================
-
 describe('db-resilience: error handler with TypeORM errors', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -218,7 +184,6 @@ describe('db-resilience: error handler with TypeORM errors', () => {
     const body = res._body as { error: { code: string; message: string } };
     expect(body.error.code).toBe('INTERNAL_ERROR');
     expect(body.error.message).toBe('Internal server error');
-    // Must not leak entity or criteria details
     expect(body.error.message).not.toContain('User');
     expect(body.error.message).not.toContain('42');
   });
@@ -235,7 +200,6 @@ describe('db-resilience: error handler with TypeORM errors', () => {
     const body = res._body as { error: { code: string; message: string } };
     expect(body.error.code).toBe('INTERNAL_ERROR');
     expect(body.error.message).toBe('Internal server error');
-    // Must not leak SQL
     expect(body.error.message).not.toContain('SELECT');
     expect(body.error.message).not.toContain('users');
   });
@@ -273,14 +237,8 @@ describe('db-resilience: error handler with TypeORM errors', () => {
   });
 });
 
-// =========================================================================
-// 3. Connection pool behavior (mock-based)
-// =========================================================================
-
 describe('db-resilience: connection pool behavior', () => {
   it('concurrent requests wait for pool — no immediate rejection', async () => {
-    // Simulates a pool of size 2 where 3 concurrent requests arrive.
-    // The third request waits until one of the first two completes.
     const poolMax = 2;
     let activeConnections = 0;
     let peakConnections = 0;
@@ -311,19 +269,12 @@ describe('db-resilience: connection pool behavior', () => {
       releaseConnection();
     };
 
-    // Two fast queries + one that must wait
-    await Promise.all([
-      simulateQuery(1, 30),
-      simulateQuery(2, 30),
-      simulateQuery(3, 10), // will wait for a slot, then finish quickly
-    ]);
+    await Promise.all([simulateQuery(1, 30), simulateQuery(2, 30), simulateQuery(3, 10)]);
 
-    // All three completed (no rejection)
     expect(completionOrder).toHaveLength(3);
     expect(completionOrder).toContain(1);
     expect(completionOrder).toContain(2);
     expect(completionOrder).toContain(3);
-    // Peak never exceeded pool max
     expect(peakConnections).toBeLessThanOrEqual(poolMax);
   });
 
@@ -340,11 +291,9 @@ describe('db-resilience: connection pool behavior', () => {
     acquire();
     expect(activeConnections).toBe(1);
 
-    // Simulate query completion
     release();
     expect(activeConnections).toBe(0);
 
-    // Second acquire should succeed on empty pool
     acquire();
     expect(activeConnections).toBe(1);
     release();
@@ -352,13 +301,8 @@ describe('db-resilience: connection pool behavior', () => {
   });
 });
 
-// =========================================================================
-// 4. Query timeout handling
-// =========================================================================
-
 describe('db-resilience: query timeout handling', () => {
   it('propagates timeout error as AppError-style 500 through error handler', () => {
-    // Simulates the kind of error pg driver produces on timeout
     const driverErr = new Error('canceling statement due to statement timeout');
     const err = new QueryFailedError('SELECT pg_sleep(60)', undefined, driverErr);
     const req = mockReq({ requestId: 'timeout-1' });
@@ -369,7 +313,6 @@ describe('db-resilience: query timeout handling', () => {
     expect(res._status).toBe(500);
     const body = res._body as { error: { code: string; message: string } };
     expect(body.error.code).toBe('INTERNAL_ERROR');
-    // Must not expose the pg_sleep query
     expect(body.error.message).not.toContain('pg_sleep');
   });
 
@@ -378,12 +321,10 @@ describe('db-resilience: query timeout handling', () => {
 
     const simulateTimedOutQuery = async (): Promise<void> => {
       try {
-        // Simulate slow query that throws
         await new Promise<never>((_resolve, reject) => {
           setTimeout(() => reject(new Error('statement timeout')), 10);
         });
       } finally {
-        // Pool driver always releases in finally
         connectionHeld = false;
       }
     };
@@ -392,10 +333,6 @@ describe('db-resilience: query timeout handling', () => {
     expect(connectionHeld).toBe(false);
   });
 });
-
-// =========================================================================
-// 5. Connection error & recovery simulation
-// =========================================================================
 
 describe('db-resilience: connection error and recovery', () => {
   it('healthCheck returns "down" when DataSource.query throws', async () => {
@@ -433,11 +370,9 @@ describe('db-resilience: connection error and recovery', () => {
       }
     };
 
-    // Phase 1 — DB down
     const downResult = await healthCheck();
     expect(downResult.database).toBe('down');
 
-    // Phase 2 — DB recovers
     shouldFail = false;
     const upResult = await healthCheck();
     expect(upResult.database).toBe('up');
@@ -455,10 +390,6 @@ describe('db-resilience: connection error and recovery', () => {
     expect(checks.database).toBe('down');
   });
 });
-
-// =========================================================================
-// 6. Graceful error handling — no internal detail leaks
-// =========================================================================
 
 describe('db-resilience: graceful error handling (no internal leaks)', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -534,12 +465,6 @@ describe('db-resilience: graceful error handling (no internal leaks)', () => {
   });
 });
 
-// =========================================================================
-// 7. Transaction isolation (conditional — requires real PG)
-// =========================================================================
-
-// Gated on RUN_E2E=true OR RUN_INTEGRATION=true — the RUN_INTEGRATION arm is
-// what makes this transaction-isolation suite run in the CI integration job.
 const shouldRunE2E = process.env.RUN_E2E === 'true' || process.env.RUN_INTEGRATION === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
@@ -547,8 +472,6 @@ describeE2E('db-resilience: transaction isolation (real PG)', () => {
   jest.setTimeout(60000);
 
   it('concurrent reads do not see uncommitted transaction data', async () => {
-    // This test requires a real Postgres connection via testcontainer.
-    // It validates READ COMMITTED isolation level (PG default).
     const { startPostgresTestContainer } = await import('tests/helpers/e2e/postgres-testcontainer');
     const { Client } = await import('pg');
 
@@ -569,23 +492,19 @@ describeE2E('db-resilience: transaction isolation (real PG)', () => {
       await writer.connect();
       await reader.connect();
 
-      // Setup
       await writer.query(
         'CREATE TABLE IF NOT EXISTS isolation_test (id SERIAL PRIMARY KEY, value TEXT)',
       );
       await writer.query("INSERT INTO isolation_test (value) VALUES ('committed-row')");
 
-      // Writer starts a transaction but does NOT commit
       await writer.query('BEGIN');
       await writer.query("INSERT INTO isolation_test (value) VALUES ('uncommitted-row')");
 
-      // Reader should NOT see the uncommitted row
       const readerResult = await reader.query('SELECT * FROM isolation_test');
       const values = readerResult.rows.map((r: { value: string }) => r.value);
       expect(values).toContain('committed-row');
       expect(values).not.toContain('uncommitted-row');
 
-      // Commit and verify reader can now see it
       await writer.query('COMMIT');
       const afterCommit = await reader.query('SELECT * FROM isolation_test');
       const afterValues = afterCommit.rows.map((r: { value: string }) => r.value);

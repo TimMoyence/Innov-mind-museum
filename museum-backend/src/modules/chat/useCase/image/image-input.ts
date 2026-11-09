@@ -20,21 +20,12 @@ const privateHostPatterns = [
   /^\[?fe80:/i,
   /^\[?fd[0-9a-f]{2}:/i,
   /^\[?fc[0-9a-f]{2}:/i,
-  /^0x[0-9a-f]/i, // hex IP
-  /^0[0-7]+\./, // octal IP
-  /^::ffff:/i, // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
-  /^\[::ffff:/i, // bracketed IPv4-mapped IPv6
+  /^0x[0-9a-f]/i,
+  /^0[0-7]+\./,
+  /^::ffff:/i,
+  /^\[::ffff:/i,
 ];
 
-/**
- * Validates that the given URL is a safe HTTPS image URL (not pointing to private/internal hosts).
- * Rejects non-HTTPS, non-443 ports, and all private/reserved IP ranges.
- *
- * Note: The validated URL is never fetched by this backend — it is passed to the LLM
- * provider's API as an image reference. DNS rebinding attacks target the fetching host,
- * so the SSRF surface is on the provider side, not ours. If server-side fetching is ever
- * added (thumbnailing, caching), DNS resolution validation must be introduced here.
- */
 export const isSafeImageUrl = (value: string): boolean => {
   try {
     const url = new URL(value);
@@ -46,7 +37,6 @@ export const isSafeImageUrl = (value: string): boolean => {
   }
 };
 
-/** Falls back to `image/jpeg` when no MIME type prefix is present. */
 export const decodeBase64Image = (input: string): DecodedImage => {
   const dataUrlMatch = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(input);
   if (dataUrlMatch) {
@@ -101,7 +91,6 @@ export const detectImageMimeFromBytes = (base64: string): string | null => {
   return null;
 };
 
-/** Defense-in-depth: validates actual file content, not just declared MIME type. */
 export const assertMagicBytes = (base64: string): void => {
   const detected = detectImageMimeFromBytes(base64);
   if (!detected) {

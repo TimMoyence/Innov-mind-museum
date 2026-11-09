@@ -1,8 +1,3 @@
-/**
- * OpenAiAudioTranscriber unit tests.
- * Mocks global fetch and env to test transcription, error, and timeout paths.
- */
-
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -113,7 +108,6 @@ describe('OpenAiAudioTranscriber', () => {
   });
 
   it('throws 501 when provider is not openai', async () => {
-    // Temporarily override env.llm.provider
     const envModule = require('@src/config/env');
     const originalProvider = envModule.env.llm.provider;
     envModule.env.llm.provider = 'deepseek';
@@ -142,7 +136,6 @@ describe('OpenAiAudioTranscriber', () => {
     });
 
     expect(result.text).toBe('Bonjour');
-    // Verify fetch was called (language hint is embedded in FormData body)
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });

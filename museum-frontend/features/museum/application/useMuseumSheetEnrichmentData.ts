@@ -19,12 +19,6 @@ export interface UseMuseumSheetEnrichmentDataResult {
   hoursToneColor: string;
 }
 
-/**
- * Pulls together every derived enrichment value the sheet renders. Keeps the
- * shell component close to a layout concern only. Synthetic OSM museums (id ≤ 0)
- * are guarded by passing `null` to {@link useMuseumEnrichment}, mirroring the
- * pre-refactor behaviour.
- */
 export const useMuseumSheetEnrichmentData = (
   museum: MuseumWithDistance | null,
   lang: string,

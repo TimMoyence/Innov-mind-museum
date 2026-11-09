@@ -7,18 +7,12 @@ const makeEmailService = (): jest.Mocked<EmailService> => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
 });
 
-/**
- * Shared verified-user factory — forgot-password requires email_verified=true (M16).
- * @returns a `User` fixture whose email is already verified.
- */
 const makeVerifiedUser = () => makeUser({ email_verified: true });
 
 describe('ForgotPasswordUseCase', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-
-  // ── Happy paths ──────────────────────────────────────────────────
 
   it('generates token, stores it, and sends email when user exists and email service is configured', async () => {
     const repo = makeUserRepo(makeVerifiedUser());
@@ -28,12 +22,11 @@ describe('ForgotPasswordUseCase', () => {
     const token = await useCase.execute('user@test.com');
 
     expect(typeof token).toBe('string');
-    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(repo.getUserByEmail).toHaveBeenCalledWith('user@test.com');
-    // Stored token is SHA-256 hash (64 hex chars), not the raw token
     const storedToken = repo.setResetToken.mock.calls[0][1];
-    expect(storedToken.length).toBe(64); // SHA-256 hash
-    expect(storedToken).not.toBe(token); // stored hash !== raw token
+    expect(storedToken.length).toBe(64);
+    expect(storedToken).not.toBe(token);
     expect(repo.setResetToken).toHaveBeenCalledWith('user@test.com', storedToken, expect.any(Date));
     expect(emailService.sendEmail).toHaveBeenCalledWith(
       'user@test.com',
@@ -49,9 +42,8 @@ describe('ForgotPasswordUseCase', () => {
     const token = await useCase.execute('user@test.com');
 
     expect(typeof token).toBe('string');
-    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(repo.setResetToken).toHaveBeenCalled();
-    // No email service, so sendEmail should not have been called at all
   });
 
   it('sets token expiration roughly 1 hour in the future', async () => {
@@ -63,12 +55,9 @@ describe('ForgotPasswordUseCase', () => {
     const after = Date.now();
 
     const expiresArg = repo.setResetToken.mock.calls[0][2];
-    // Expiration should be ~1h from now
     expect(expiresArg.getTime()).toBeGreaterThanOrEqual(before + 3600000 - 100);
     expect(expiresArg.getTime()).toBeLessThanOrEqual(after + 3600000 + 100);
   });
-
-  // ── Anti-enumeration ─────────────────────────────────────────────
 
   it('returns undefined silently when user does not exist (anti-enumeration)', async () => {
     const repo = makeUserRepo(null);
@@ -82,10 +71,7 @@ describe('ForgotPasswordUseCase', () => {
     expect(emailService.sendEmail).not.toHaveBeenCalled();
   });
 
-  // ── Email-verified gate (M16) ────────────────────────────────────
-
   it('silently skips and issues no token when user exists but email is not verified', async () => {
-    // makeUser default has email_verified=false
     const repo = makeUserRepo(makeUser());
     const emailService = makeEmailService();
     const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
@@ -97,12 +83,7 @@ describe('ForgotPasswordUseCase', () => {
     expect(emailService.sendEmail).not.toHaveBeenCalled();
   });
 
-  // ── Soft-delete email-squat (TD-65) ──────────────────────────────
-
   it('silently skips and issues no token when the account is soft-deleted', async () => {
-    // A soft-deleted account is typically already verified — without a
-    // deletedAt guard, the use-case would issue a reset token + email to a
-    // deleted account (TD-65, HIGH severity).
     const repo = makeUserRepo(makeUser({ email_verified: true, deletedAt: new Date() }));
     const emailService = makeEmailService();
     const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
@@ -113,8 +94,6 @@ describe('ForgotPasswordUseCase', () => {
     expect(repo.setResetToken).not.toHaveBeenCalled();
     expect(emailService.sendEmail).not.toHaveBeenCalled();
   });
-
-  // ── Edge cases ───────────────────────────────────────────────────
 
   it('returns undefined for empty email string', async () => {
     const repo = makeUserRepo(makeVerifiedUser());
@@ -152,11 +131,10 @@ describe('ForgotPasswordUseCase', () => {
     emailService.sendEmail.mockRejectedValue(new Error('SMTP timeout'));
     const useCase = new ForgotPasswordUseCase(repo, emailService, 'https://app.musaium.com');
 
-    // Should not throw
     const token = await useCase.execute('user@test.com');
 
     expect(typeof token).toBe('string');
-    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(repo.setResetToken).toHaveBeenCalled();
   });
 

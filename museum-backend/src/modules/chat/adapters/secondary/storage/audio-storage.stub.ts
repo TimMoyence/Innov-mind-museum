@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile, unlink, stat } from 'node:fs/promises';
 import path from 'node:path';
 
+import { nonEmpty } from '@shared/utils/defaults';
+
 import type {
   AudioStorage,
   SaveAudioInput,
@@ -27,15 +29,13 @@ export const resolveLocalAudioFilePath = (
   return path.join(audiosDir, match[1]);
 };
 
-/** Dev-only local-filesystem `AudioStorage`. */
 export class LocalAudioStorage implements AudioStorage {
   constructor(private readonly audiosDir = DEFAULT_LOCAL_AUDIOS_DIR) {}
 
   async save({ buffer, contentType, objectKey }: SaveAudioInput): Promise<string> {
     await mkdir(this.audiosDir, { recursive: true });
     const extension = extensionByContentType[contentType] ?? 'mp3';
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    const fileName = objectKey || `${randomUUID()}.${extension}`;
+    const fileName = nonEmpty(objectKey) ?? `${randomUUID()}.${extension}`;
     const filePath = path.join(this.audiosDir, fileName);
     await writeFile(filePath, buffer);
     return `local-audio://${fileName}`;
@@ -60,8 +60,6 @@ export class LocalAudioStorage implements AudioStorage {
     if (!filePath) return;
     try {
       await unlink(filePath);
-    } catch {
-      // best-effort delete
-    }
+    } catch {}
   }
 }

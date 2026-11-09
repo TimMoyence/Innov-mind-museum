@@ -6,12 +6,6 @@ import {
   type AuthSessionResponse,
 } from '@modules/auth/useCase/session/authSession.service';
 
-/**
- * Narrow `login()`'s discriminated-union return to the happy-path session
- * shape. All tests in this file exercise visitor accounts (no MFA) so the
- * branch is statically guaranteed; the helper just keeps assertions clean.
- * @param result
- */
 const assertSession = (result: unknown): AuthSessionResponse => {
   if (typeof result !== 'object' || result === null || !('accessToken' in result)) {
     throw new Error('expected AuthSessionResponse');
@@ -43,8 +37,6 @@ const mockCheckLoginRateLimit = checkLoginRateLimit as jest.MockedFunction<
 const mockRecordFailedLogin = recordFailedLogin as jest.MockedFunction<typeof recordFailedLogin>;
 const mockClearLoginAttempts = clearLoginAttempts as jest.MockedFunction<typeof clearLoginAttempts>;
 
-// ── Helpers ────────────────────────────────────────────────────────
-
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo, makeRefreshTokenRepo } from '../../helpers/auth/user-repo.mock';
 
@@ -59,7 +51,7 @@ const makeStoredToken = (
   familyId: 'family-1',
   tokenHash: 'placeholder-hash',
   issuedAt: new Date(),
-  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days future
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   rotatedAt: null,
   lastRotatedAt: new Date(),
   revokedAt: null,
@@ -89,16 +81,11 @@ const createService = (
   };
 };
 
-// ── Tests ──────────────────────────────────────────────────────────
-
 describe('AuthSessionService', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  // ================================================================
-  // LOGIN
-  // ================================================================
   describe('login', () => {
     it('returns tokens and user info for valid credentials', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
@@ -107,7 +94,6 @@ describe('AuthSessionService', () => {
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Use bcrypt to compare (real bcrypt)
       const hashed = await bcrypt.hash('ValidPass1', 1);
       userRepo.getUserByEmail.mockResolvedValue(
         makeUser({ password: hashed, email_verified: true }),
@@ -116,9 +102,9 @@ describe('AuthSessionService', () => {
       const result = assertSession(await service.login('user@test.com', 'ValidPass1'));
 
       expect(typeof result.accessToken).toBe('string');
-      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.accessToken.split('.')).toHaveLength(3);
       expect(typeof result.refreshToken).toBe('string');
-      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.refreshToken.split('.')).toHaveLength(3);
       expect(result.expiresIn).toBeGreaterThan(0);
       expect(result.refreshExpiresIn).toBeGreaterThan(0);
       expect(result.user.id).toBe(1);
@@ -143,7 +129,7 @@ describe('AuthSessionService', () => {
 
     it('calls clearLoginAttempts after successful login', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
-      const hashed = await bcrypt.hash('ValidPass1', 4); // fast rounds for test
+      const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(
         makeUser({ password: hashed, email_verified: true }),
       );
@@ -248,9 +234,6 @@ describe('AuthSessionService', () => {
     });
   });
 
-  // ================================================================
-  // REFRESH
-  // ================================================================
   describe('refresh', () => {
     it('rotates token and returns new session for valid refresh token', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
@@ -259,7 +242,6 @@ describe('AuthSessionService', () => {
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Issue an initial session to get a real refresh token
       refreshTokenRepo.insert.mockResolvedValue(makeStoredToken());
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(
@@ -267,7 +249,6 @@ describe('AuthSessionService', () => {
       );
       const loginResult = assertSession(await service.login('user@test.com', 'ValidPass1'));
 
-      // Extract the jti/familyId from the real refresh token
       const decoded = jwt.verify(
         loginResult.refreshToken,
         env.auth.refreshTokenSecret,
@@ -284,12 +265,11 @@ describe('AuthSessionService', () => {
       const result = await service.refresh(loginResult.refreshToken);
 
       expect(typeof result.accessToken).toBe('string');
-      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.accessToken.split('.')).toHaveLength(3);
       expect(typeof result.refreshToken).toBe('string');
-      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.refreshToken.split('.')).toHaveLength(3);
       expect(result.user.id).toBe(1);
       expect(result.user.onboardingCompleted).toBe(false);
-      // Should have called rotate (since we have a rotateFrom)
       expect(refreshTokenRepo.rotate).toHaveBeenCalledWith(
         expect.objectContaining({
           currentTokenId: storedToken.id,
@@ -307,7 +287,6 @@ describe('AuthSessionService', () => {
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Create initial login
       const hashed = await bcrypt.hash('ValidPass1', 4);
       userRepo.getUserByEmail.mockResolvedValue(
         makeUser({ password: hashed, email_verified: true }),
@@ -354,7 +333,6 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Create a valid JWT that won't be in the DB
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'missing-jti', familyId: 'fam-1' },
         env.auth.refreshTokenSecret,
@@ -423,7 +401,6 @@ describe('AuthSessionService', () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Create a JWT that's not yet expired in JWT terms but expired in DB
       const token = jwt.sign(
         { sub: '1', type: 'refresh', jti: 'jti-expired', familyId: 'fam-expired' },
         env.auth.refreshTokenSecret,
@@ -435,7 +412,7 @@ describe('AuthSessionService', () => {
           jti: 'jti-expired',
           familyId: 'fam-expired',
           tokenHash: sha256(token),
-          expiresAt: new Date(Date.now() - 1000), // expired 1 second ago
+          expiresAt: new Date(Date.now() - 1000),
         }),
       );
 
@@ -488,7 +465,7 @@ describe('AuthSessionService', () => {
           jti: 'jti-rotated',
           familyId: 'fam-rotated',
           tokenHash: sha256(token),
-          rotatedAt: new Date(), // already rotated
+          rotatedAt: new Date(),
         }),
       );
 
@@ -500,9 +477,6 @@ describe('AuthSessionService', () => {
     });
   });
 
-  // ================================================================
-  // LOGOUT
-  // ================================================================
   describe('logout', () => {
     it('revokes token on valid refresh token', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
@@ -538,16 +512,12 @@ describe('AuthSessionService', () => {
     it('catches silently when JWT is invalid', async () => {
       const { service, refreshTokenRepo } = createService();
 
-      // Should NOT throw
       await service.logout('not-a-valid-jwt');
 
       expect(refreshTokenRepo.revokeByJti).not.toHaveBeenCalled();
     });
   });
 
-  // ================================================================
-  // VERIFY ACCESS TOKEN
-  // ================================================================
   describe('verifyAccessToken', () => {
     it('returns { id, role, museumId } for a valid access token', () => {
       const { service } = createService();
@@ -608,7 +578,6 @@ describe('AuthSessionService', () => {
         { expiresIn: '0s' },
       );
 
-      // Token is immediately expired
       expect(() => service.verifyAccessToken(token)).toThrow(
         expect.objectContaining({ statusCode: 401, code: 'INVALID_ACCESS_TOKEN' }),
       );
@@ -655,9 +624,6 @@ describe('AuthSessionService', () => {
     });
   });
 
-  // ================================================================
-  // SOCIAL LOGIN
-  // ================================================================
   describe('socialLogin', () => {
     it('issues session and returns tokens + user info', async () => {
       const { userRepo, refreshTokenRepo } = makeMockRepos();
@@ -668,9 +634,9 @@ describe('AuthSessionService', () => {
       );
 
       expect(typeof result.accessToken).toBe('string');
-      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.accessToken.split('.')).toHaveLength(3);
       expect(typeof result.refreshToken).toBe('string');
-      expect(result.refreshToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.refreshToken.split('.')).toHaveLength(3);
       expect(result.user.id).toBe(7);
       expect(result.user.email).toBe('social@test.com');
       expect(refreshTokenRepo.insert).toHaveBeenCalled();
@@ -682,11 +648,10 @@ describe('AuthSessionService', () => {
 
       const service = new AuthSessionService(userRepo, refreshTokenRepo);
 
-      // Should NOT throw even if deleteExpiredTokens fails
       const result = await service.socialLogin(makeUser({ id: 1, email: 'social@test.com' }));
 
       expect(typeof result.accessToken).toBe('string');
-      expect(result.accessToken.split('.')).toHaveLength(3); // JWT format
+      expect(result.accessToken.split('.')).toHaveLength(3);
     });
   });
 });

@@ -14,10 +14,6 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-/**
- * Wraps the shared factory: getUserByEmail defaults to null (email not taken).
- * @param user
- */
 const makeUserRepo = (user: User | null = makeUser()) =>
   makeUserRepoBase(user, {
     getUserByEmail: jest.fn().mockResolvedValue(null),
@@ -40,12 +36,12 @@ describe('ChangeEmailUseCase', () => {
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
-    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(repo.getUserById).toHaveBeenCalledWith(1);
     expect(repo.getUserByEmail).toHaveBeenCalledWith('new@test.com');
     expect(repo.setEmailChangeToken).toHaveBeenCalledWith(
       1,
-      expect.any(String), // hashed token
+      expect.any(String),
       'new@test.com',
       expect.any(Date),
     );
@@ -54,7 +50,6 @@ describe('ChangeEmailUseCase', () => {
       'Confirm your Musaium email change',
       expect.stringContaining(token),
     );
-    // Default locale 'fr' is prepended to the confirmation URL
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
     expect(htmlArg).toContain('https://app.musaium.com/fr/confirm-email-change?token=' + token);
   });
@@ -141,8 +136,6 @@ describe('ChangeEmailUseCase', () => {
     });
   });
 
-  // TD-65: a soft-deleted account must keep its email reserved — changing into
-  // it would let the new owner squat the deleted account's identity.
   it('rejects when the target email belongs to a soft-deleted account', async () => {
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(true);
     const repo = makeUserRepo();
@@ -183,7 +176,7 @@ describe('ChangeEmailUseCase', () => {
 
     const token = await useCase.execute(1, 'new@test.com', 'ValidPass1');
 
-    expect(token).toMatch(/^[0-9a-f]{64}$/); // 32 bytes hex
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
     expect(repo.setEmailChangeToken).toHaveBeenCalled();
   });
 

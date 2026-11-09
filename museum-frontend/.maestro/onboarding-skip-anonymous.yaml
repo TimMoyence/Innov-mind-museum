@@ -1,74 +1,46 @@
 appId: com.musaium.mobile.preview
 ---
-# Onboarding — Skip with no authenticated session (regression guard)
-#
-# Validates:
-#   1. Fresh install (clearState) -> app shows auth (anonymous).
-#   2. Tap "Skip" / "Passer" if an onboarding carousel is showing.
-#   3. Assert NO "Authentication required" / 401 noise appears — the exact
-#      regression fixed in app/(stack)/onboarding.tsx: markOnboardingComplete()
-#      previously threw 401 with no session; now guarded by `isAuthenticated`.
-#   4. Assert routing terminates somewhere safe (home OR auth) — never a crash,
-#      blank screen, or auth-required error.
-#
-# App runs in FRENCH — text selectors use FR|EN alternation.
-# screen: AuthScreen
-
 - launchApp:
     clearState: true
     stopApp: true
 
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Phase 1: Confirm anonymous (auth screen). DO NOT log in.
-# ──────────────────────────────────────────────
 - assertVisible:
-    text: "Welcome back|Bon retour"
+    text: 'Welcome back|Bon retour'
 
-# ──────────────────────────────────────────────
-# Phase 2: If an onboarding "Skip" button is showing, tap it.
-# Otherwise no-op and fall through to the safety assertions.
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Verify the regression is fixed — no auth-required error
-# (these strings should NEVER appear after a Skip when unauthenticated)
-# ──────────────────────────────────────────────
-- assertNotVisible: "Authentication required"
-- assertNotVisible: "Auth required"
-- assertNotVisible: "Unauthorized"
-- assertNotVisible: "401"
-
-# ──────────────────────────────────────────────
-# Phase 4: Routing terminates somewhere safe (home OR auth)
-# ──────────────────────────────────────────────
-- runFlow:
-    when:
-      visible:
-        text: "Your museum companion|Votre compagnon de musée"
-    commands:
-      - assertVisible:
-          text: "Your museum companion|Votre compagnon de musée"
+- assertNotVisible: 'Authentication required'
+- assertNotVisible: 'Auth required'
+- assertNotVisible: 'Unauthorized'
+- assertNotVisible: '401'
 
 - runFlow:
     when:
       visible:
-        text: "Welcome back|Bon retour"
+        text: 'Your museum companion|Votre compagnon de musée'
     commands:
       - assertVisible:
-          text: "Welcome back|Bon retour"
-      - assertNotVisible: "Authentication required"
+          text: 'Your museum companion|Votre compagnon de musée'
+
+- runFlow:
+    when:
+      visible:
+        text: 'Welcome back|Bon retour'
+    commands:
+      - assertVisible:
+          text: 'Welcome back|Bon retour'
+      - assertNotVisible: 'Authentication required'

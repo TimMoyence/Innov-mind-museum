@@ -28,15 +28,7 @@ export interface PersistMessageInput {
   imageRef?: string;
   metadata?: Record<string, unknown>;
   sessionUpdates?: PersistMessageSessionUpdates;
-  /** Persisted in the same transaction as the message. */
   artworkMatch?: Omit<PersistArtworkMatchInput, 'messageId'>;
-  /**
-   * PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie persisted on
-   * the `chat_messages.cache_key` column. Set ONLY for assistant messages
-   * whose response was cached (so `ChatMediaService.invalidateCacheForFeedback`
-   * can purge the exact entry on negative feedback). Null otherwise.
-   * Internal-only (NFR-2) — never exposed via API responses.
-   */
   cacheKey?: string | null;
 }
 
@@ -56,7 +48,6 @@ export interface SessionMessagesPage {
   hasMore: boolean;
 }
 
-/** Used for ownership checks. */
 export interface ChatMessageWithSessionOwnership {
   message: ChatMessage;
   session: ChatSession;
@@ -91,13 +82,11 @@ export interface PersistMessageReportInput {
   comment?: string;
 }
 
-/** Shape returned by {@link ChatRepository.exportUserData} for GDPR data export. */
 export interface UserChatExportData {
   sessions: {
     id: string;
     locale?: string | null;
     museumMode: boolean;
-    // B3 (DSAR) — previously-omitted ChatSession columns (R13).
     intent?: string | null;
     museumId?: number | null;
     coordinates?: { lat: number; lng: number } | null;
@@ -116,9 +105,6 @@ export interface UserChatExportData {
       audioUrl?: string | null;
       createdAt: string;
       metadata?: Record<string, unknown> | null;
-      // Cycle 4 (DSAR Art.15/20 — B-03) — recognised artworks (ArtworkMatch)
-      // nested in each message (design D-1). Allow-listed business fields only
-      // (D-2): never the internal uuid PK nor the FK. `[]` when none (EARS-3).
       artworkMatches: {
         artworkId: string | null;
         title: string | null;
@@ -132,18 +118,12 @@ export interface UserChatExportData {
   }[];
 }
 
-/** DSAR (Art.15/20) — subject-facing message-feedback export row (B3 / T1.10). */
 export interface MessageFeedbackExportRow {
   messageId: string;
   value: string;
   createdAt: Date | string;
 }
 
-/**
- * DSAR (Art.15/20) — subject-facing message-report export row (B3 / T1.10, D7).
- * `reviewedBy` / `reviewerNotes` / `reviewedAt` are third-party moderator data
- * and are intentionally NOT part of this shape.
- */
 export interface MessageReportExportRow {
   messageId: string;
   reason: string;
@@ -152,25 +132,17 @@ export interface MessageReportExportRow {
   createdAt: Date | string;
 }
 
-/** Implemented by {@link TypeOrmChatRepository}. */
 export interface ChatRepository {
   createSession(input: CreateSessionInput): Promise<ChatSession>;
 
   getSessionById(sessionId: string): Promise<ChatSession | null>;
 
-  /** For ownership verification. */
   getMessageById(messageId: string): Promise<ChatMessageWithSessionOwnership | null>;
 
-  /** @returns `true` if deleted, `false` if it had messages. */
   deleteSessionIfEmpty(sessionId: string): Promise<boolean>;
 
   persistMessage(input: PersistMessageInput): Promise<ChatMessage>;
 
-  /**
-   * Atomically persists a blocked user message + assistant refusal in a single
-   * transaction. Prevents data-integrity bug where the user attempt lands in DB
-   * but the refusal write fails — orphan row for auditors + broken view for user.
-   */
   persistBlockedExchange(input: {
     userMessage: PersistMessageInput;
     refusal: PersistMessageInput;
@@ -178,7 +150,6 @@ export interface ChatRepository {
 
   listSessionMessages(params: ListSessionMessagesParams): Promise<SessionMessagesPage>;
 
-  /** Most recent messages for LLM history context. Chronological order. */
   listSessionHistory(sessionId: string, limit: number): Promise<ChatMessage[]>;
 
   listSessions(params: ListSessionsParams): Promise<ChatSessionsPage>;
@@ -187,17 +158,14 @@ export interface ChatRepository {
 
   persistMessageReport(input: PersistMessageReportInput): Promise<void>;
 
-  /** GDPR data portability. */
   exportUserData(userId: number): Promise<UserChatExportData>;
 
-  /** INSERT or UPDATE on conflict. */
   upsertMessageFeedback(messageId: string, userId: number, value: FeedbackValue): Promise<void>;
 
   deleteMessageFeedback(messageId: string, userId: number): Promise<void>;
 
   getMessageFeedback(messageId: string, userId: number): Promise<{ value: FeedbackValue } | null>;
 
-  /** Assistant only. `audioUrl` = `s3://<key>` or `local-audio://<file>`. */
   updateMessageAudio(
     messageId: string,
     input: { audioUrl: string; audioGeneratedAt: Date; audioVoice: string },
@@ -205,39 +173,14 @@ export interface ChatRepository {
 
   clearMessageAudio(messageId: string): Promise<void>;
 
-  /**
-   * Used by GDPR right-to-erasure (SEC-23) to resolve "legacy" image keys —
-   * records written before the user-scoped key format existed. MUST run BEFORE
-   * the user row is removed, otherwise CASCADE nukes the rows and refs are lost.
-   */
   findLegacyImageRefsByUserId(userId: number): Promise<string[]>;
 
-  /**
-   * GDPR right-to-erasure (B1) — resolves the user's stored TTS audio refs from
-   * the DB so the deletion flow can delete each S3 object via
-   * `AudioStorage.deleteByRef`. MUST run BEFORE the user row is removed (CASCADE
-   * wipes the rows that carry `audioUrl`). Audio keys have no user segment, so a
-   * prefix scan is impossible — the DB ref set is the only reliable source.
-   */
   findAudioRefsByUserId(userId: number): Promise<string[]>;
 
-  /** DSAR (Art.15/20) — the user's message feedback projected to the export DTO. */
   listMessageFeedbackForUser(userId: number): Promise<MessageFeedbackExportRow[]>;
 
-  /** DSAR (Art.15/20) — the user's message reports projected to the export DTO (excludes moderator fields, D7). */
   listMessageReportsForUser(userId: number): Promise<MessageReportExportRow[]>;
 
-  /**
-   * W3 (T5.3) — patches `current_artwork_id` and/or `current_room` on the
-   * given session row. `undefined` skips the field (do not touch);
-   * explicit `null` clears it (visitor scanned a museum-only QR). The caller
-   * MUST validate UUID v4 format BEFORE invoking — repo does no validation.
-   *
-   * Concurrency: no row-lock — last writer wins; cartel scans are rare-enough
-   * single-user events that we accept the natural race.
-   *
-   * @throws {Error} bubbles TypeORM driver errors.
-   */
   updateSessionContext(
     sessionId: string,
     patch: {

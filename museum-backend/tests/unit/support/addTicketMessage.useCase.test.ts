@@ -97,7 +97,6 @@ describe('AddTicketMessageUseCase', () => {
   });
 
   it('does not auto-transition when ticket is already in_progress', async () => {
-    // First, transition to in_progress
     await repo.updateTicket({ ticketId, status: 'in_progress' });
 
     await useCase.execute({

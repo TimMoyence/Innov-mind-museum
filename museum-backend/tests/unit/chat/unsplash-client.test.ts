@@ -10,7 +10,6 @@ afterEach(() => {
   fetchSpy.mockRestore();
 });
 
-/** Helper: builds a realistic Unsplash API photo result object. */
 const makeUnsplashResult = (overrides: Record<string, unknown> = {}) => ({
   urls: {
     regular: 'https://img.unsplash.com/regular.jpg',

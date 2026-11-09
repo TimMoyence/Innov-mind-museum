@@ -1,13 +1,3 @@
-/**
- * TD-MUL-01 integration test — multer `limits.fields` enforcement.
- *
- * Acceptance batch L #2 : a POST exceeding the configured `fields` limit
- * (11 fields against `fields: 10`) MUST surface as HTTP 413 PAYLOAD_TOO_LARGE,
- * not 400 BAD_REQUEST nor 500. Wires a real multer middleware into a real
- * Express app and drives it via supertest — exercises the full path multer
- * MulterError → error.middleware → response, the same path production hits.
- */
-
 import express from 'express';
 import multer from 'multer';
 import request from 'supertest';
@@ -22,7 +12,6 @@ jest.mock('@shared/observability/sentry', () => ({
   captureExceptionWithContext: jest.fn(),
 }));
 
-/** Minimal app : in-memory multer with the same DoS bounds Musaium ships. */
 function buildApp() {
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -40,7 +29,6 @@ describe('multer fields limit → 413 (TD-MUL-01)', () => {
   it('returns 413 PAYLOAD_TOO_LARGE when 11 form fields are posted (limit=10)', async () => {
     const app = buildApp();
     const req = request(app).post('/upload');
-    // Build exactly 11 distinct non-file fields → trips LIMIT_FIELD_COUNT.
     for (let i = 0; i < 11; i += 1) {
       req.field(`f${String(i)}`, `v${String(i)}`);
     }

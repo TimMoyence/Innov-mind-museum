@@ -18,11 +18,6 @@ interface B2bContactFormProps {
 type ValidationKey = 'email' | 'name' | 'museum' | 'role' | 'message' | 'consent';
 type B2bRole = keyof Dictionary['landing']['b2b']['contact']['roleOptions'];
 
-/**
- * B2B contact form (R4 §1 R6-R11). Uses native required + a per-field error
- * map for the empty-submit case, posts JSON to /api/leads/b2b on success and
- * surfaces success/error in a polite aria-live region.
- */
 export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -79,7 +74,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-      {/* Email */}
       <div>
         <label htmlFor="b2b-email" className="mb-1 block text-sm font-medium text-text-primary">
           {dict.fieldEmail}
@@ -102,7 +96,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
         <FormFieldError id="b2b-email-error" error={errors.email} />
       </div>
 
-      {/* Name */}
       <div>
         <label htmlFor="b2b-name" className="mb-1 block text-sm font-medium text-text-primary">
           {dict.fieldName}
@@ -125,7 +118,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
         <FormFieldError id="b2b-name-error" error={errors.name} />
       </div>
 
-      {/* Museum */}
       <div>
         <label htmlFor="b2b-museum" className="mb-1 block text-sm font-medium text-text-primary">
           {dict.fieldMuseum}
@@ -148,7 +140,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
         <FormFieldError id="b2b-museum-error" error={errors.museum} />
       </div>
 
-      {/* Role */}
       <div>
         <label htmlFor="b2b-role" className="mb-1 block text-sm font-medium text-text-primary">
           {dict.fieldRole}
@@ -178,7 +169,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
         <FormFieldError id="b2b-role-error" error={errors.role} />
       </div>
 
-      {/* Message */}
       <div>
         <label htmlFor="b2b-message" className="mb-1 block text-sm font-medium text-text-primary">
           {dict.fieldMessage}
@@ -200,7 +190,6 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
         <FormFieldError id="b2b-message-error" error={errors.message} />
       </div>
 
-      {/* Consent */}
       <div className="flex items-start gap-3">
         <input
           id="b2b-consent"
@@ -229,10 +218,8 @@ export default function B2bContactForm({ dict, locale }: B2bContactFormProps) {
       </div>
       <FormFieldError error={errors.consent} />
 
-      {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
       <HoneypotField value={website} onChange={setWebsite} />
 
-      {/* Live region for error message (success has its own block above) */}
       <div aria-live="polite" className="min-h-[1.5rem]">
         {failed ? <AlertBanner variant="error" message={dict.error} /> : null}
       </div>

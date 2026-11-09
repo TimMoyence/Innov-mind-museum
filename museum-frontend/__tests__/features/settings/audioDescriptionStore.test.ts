@@ -1,11 +1,3 @@
-/**
- * Tests for `useAudioDescriptionStore` (TD-2 Option B 2026-05-15).
- *
- * Refactor of the prior `useAudioDescriptionMode` `useState` hook to a
- * Zustand-persist store with cross-device `mergeFromServer` hydration. The
- * compat shim (`useAudioDescriptionMode`) re-exports the same public shape
- * — covered separately by its consumer screens.
- */
 import '@/__tests__/helpers/test-utils';
 
 import { useAudioDescriptionStore } from '@/features/settings/infrastructure/audioDescriptionStore';

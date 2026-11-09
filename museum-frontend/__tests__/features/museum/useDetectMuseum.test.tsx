@@ -1,15 +1,3 @@
-/**
- * Tests — `useDetectMuseum(lat, lng)` hook (W3 cluster B).
- *
- * Asserts:
- *   - GPS gate: null coords → no fetch, `{ result: null, isLoading: false }`.
- *   - Calls `museumApi.detectMuseum({ lat, lng })` exactly once per ~111 m tile.
- *   - Returns the BE detection payload verbatim through `result`.
- *   - Tolerates API rejection silently — `result` stays null, `error` set.
- *
- * Spec : team-state W3 R11.
- */
-
 import { renderHook, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
@@ -122,7 +110,6 @@ describe('useDetectMuseum', () => {
       expect(result.current.result).not.toBeNull();
     });
 
-    // Tiny GPS jitter inside the same 3-dec tile (~111 m). Same key → no refetch.
     rerender({ lat: 48.86061, lng: 2.33759 });
     rerender({ lat: 48.86058, lng: 2.33762 });
 

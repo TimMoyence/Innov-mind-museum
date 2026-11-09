@@ -15,7 +15,6 @@ import type { IUserRepository } from '@modules/auth/domain/user/user.repository.
 import type { GrantConsentUseCase } from '@modules/auth/useCase/consent/grantConsent.useCase';
 import type { EmailService } from '@shared/email/email.port';
 
-/** French digital majority (CNIL Délibération 2021-018). Below this, FE must route to parental-consent. */
 const MINIMUM_AGE_FOR_REGISTRATION = 15;
 
 const calculateAgeYears = (dob: Date, now: Date = new Date()): number => {
@@ -33,9 +32,7 @@ export interface RegisterInput {
   firstname?: string;
   lastname?: string;
   locale?: EmailLocale;
-  /** YYYY-MM-DD. When present, gates on CNIL digital-majority age. */
   dateOfBirth?: string;
-  /** Forwarded to consent audit row (S4-P0-02 forensics). */
   ip?: string | null;
   requestId?: string | null;
 }
@@ -48,7 +45,6 @@ export class RegisterUseCase {
     private readonly grantConsentUseCase?: GrantConsentUseCase,
   ) {}
 
-  /** @throws {AppError} 400 validation, 422 if below digital-majority age. */
   async execute(input: RegisterInput): Promise<User> {
     const normalizedEmail = input.email.trim().toLowerCase();
 
@@ -72,9 +68,6 @@ export class RegisterUseCase {
       throw invalidInput((error as Error).message);
     }
 
-    // F10 — block known-breached passwords via HIBP k-anonymity. Throws
-    // AppError(PASSWORD_BREACHED, 400) on hit; fails open with Sentry warning
-    // if HIBP unavailable (no SLA).
     await assertPasswordNotBreached(input.password);
 
     const user = await this.userRepository.registerUser(
@@ -98,14 +91,7 @@ export class RegisterUseCase {
     return user;
   }
 
-  /**
-   * CNIL Délibération 2021-018 — stable code so FE can route to parental-consent
-   * screen instead of showing a generic validation error.
-   */
   private assertDigitalMajority(dateOfBirth: string | undefined): void {
-    // A2 (design D2) — defence in depth: the Zod schema is the primary R3 gate
-    // (returns 400), but a falsy DOB reaching here MUST hard-fail rather than
-    // silently bypass the age check. Never parse `undefined` into `new Date(...)`.
     if (!dateOfBirth) {
       throw invalidInput('dateOfBirth is required');
     }
@@ -123,12 +109,6 @@ export class RegisterUseCase {
     }
   }
 
-  /**
-   * GDPR — records ToS/privacy at POLICY_VERSION. FE blocks submit unless GDPR
-   * checkbox ticked, so reaching here is proof of consent. Failure logged but
-   * does NOT abort registration (legal proof is on FE; missing row surfaces in
-   * DPO dashboards).
-   */
   private async recordTosConsent(
     userId: number,
     auditContext?: { ip?: string | null; requestId?: string | null },
@@ -151,7 +131,6 @@ export class RegisterUseCase {
     }
   }
 
-  /** Non-blocking. SEC (H2): raw token emailed, SHA-256 hash persisted (mirrors reset flow). */
   private async sendVerificationEmail(
     userId: number,
     email: string,

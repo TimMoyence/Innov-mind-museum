@@ -1,13 +1,3 @@
-/**
- * A5 corrective loop 1 — `useAutoTts.loading` signal exposure (R16 wire).
- *
- * Asserts that the hook surfaces the underlying `useTextToSpeech.isLoading`
- * state so the chat screen can wire it through `useStatusPhase({ ttsPending })`
- * and render the `synthesizing-voice` phase in `<StatusIndicator>`.
- *
- * Spec : `docs/chat-ux-refonte/specs/A5.md` §1.2 R16 + review I2.
- */
-
 import { renderHook } from '@testing-library/react-native';
 
 let mockIsLoading = false;
@@ -51,9 +41,6 @@ describe('useAutoTts — loading signal (R16 ttsPending wire)', () => {
   });
 
   it('gates loading behind `enabled` so a stale isLoading does not leak when audio desc is off', () => {
-    // Scenario : user just toggled audio description off, but the underlying
-    // useTextToSpeech is still reporting isLoading=true mid-request. The
-    // screen must NOT show `synthesizing-voice` in that case.
     mockIsLoading = true;
 
     const { result } = renderHook(() => useAutoTts({ messages: [], enabled: false }));
@@ -70,12 +57,10 @@ describe('useAutoTts — loading signal (R16 ttsPending wire)', () => {
     );
     expect(result.current.loading).toBe(false);
 
-    // TTS request starts.
     mockIsLoading = true;
     rerender({ en: true });
     expect(result.current.loading).toBe(true);
 
-    // TTS request resolves.
     mockIsLoading = false;
     rerender({ en: true });
     expect(result.current.loading).toBe(false);

@@ -8,8 +8,6 @@ import { AdminDictProvider, useAdminDict } from '@/lib/admin-dictionary';
 import type { ReactNode } from 'react';
 import type { Dictionary } from '@/lib/i18n';
 
-// ── Nav item keys that map to Dictionary['admin'] fields ───────────────
-
 const NAV_KEYS = [
   'dashboard',
   'users',
@@ -24,15 +22,8 @@ const NAV_KEYS = [
 
 type NavKey = (typeof NAV_KEYS)[number];
 
-// C1B / R8 — nav keys a `museum_manager` can actually use, tenant-scoped to
-// their own museum. Mirrors the backend `requireRole` allow-list that admits
-// museum_manager (stats→dashboard, nps, reviews, tickets). Every other role
-// sees the full NAV_KEYS set. The 5 hidden keys (users, auditLogs, reports,
-// analytics, supportAdmin) stay admin/moderator-only — leaving them visible
-// gave the manager dead 403 links.
 const MUSEUM_MANAGER_NAV_KEYS: readonly NavKey[] = ['dashboard', 'reviewsAdmin', 'tickets', 'nps'];
 
-/** Map each nav key to its URL suffix. */
 const NAV_PATHS: Record<NavKey, string> = {
   dashboard: '',
   users: '/users',
@@ -45,16 +36,12 @@ const NAV_PATHS: Record<NavKey, string> = {
   nps: '/nps',
 };
 
-// ── Authenticated admin layout with sidebar ────────────────────────────
-
 function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale: string }) {
   const adminDict = useAdminDict();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
 
-  // C1B / R8 — a museum_manager only sees the links it can use (tenant-scoped);
-  // every other allow-listed role sees the full nav set.
   const visibleNavKeys: readonly NavKey[] =
     user?.role === 'museum_manager' ? MUSEUM_MANAGER_NAV_KEYS : NAV_KEYS;
 
@@ -67,7 +54,6 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-muted">
-      {/* Sidebar overlay (mobile) */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/30 md:hidden"
@@ -78,20 +64,17 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-primary-100 bg-white transition-transform duration-200 md:static md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Logo */}
         <div className="flex h-16 items-center border-b border-primary-100 px-6">
           <Link href={basePath} className="text-lg font-bold tracking-tight text-primary-700">
             Musaium Admin
           </Link>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Admin">
           <ul className="space-y-1">
             {visibleNavKeys.map((key) => {
@@ -130,9 +113,7 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar with hamburger (mobile) */}
         <header className="flex h-16 items-center border-b border-primary-100 bg-white px-4 md:hidden">
           <button
             type="button"
@@ -159,14 +140,11 @@ function AuthenticatedLayout({ children, locale }: { children: ReactNode; locale
           <span className="ml-3 text-lg font-bold text-primary-700">Musaium Admin</span>
         </header>
 
-        {/* Page content */}
         <div className="flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );
 }
-
-// ── Main exported shell ────────────────────────────────────────────────
 
 interface AdminShellProps {
   children: ReactNode;
@@ -189,12 +167,6 @@ export default function AdminShell({ children, locale, adminDict }: AdminShellPr
   return (
     <AdminDictProvider dict={adminDict} locale={locale as 'fr' | 'en'}>
       <AuthProvider>
-        {/* Wave B C9 / R-C9 — `museum_manager` added to admin allow-list.
-            The role was previously blocked at the entry by RoleGuard despite being
-            valid everywhere else (ExportCsvButton, support/page, OpenAPI). FE
-            sub-pages still rely on per-page scoping to confine the operator to
-            their own tenant; the BE enforces the actual tenant scope (Wave B C8
-            admin route RBAC scope museumId forcing). */}
         <RoleGuard allowedRoles={['admin', 'moderator', 'super_admin', 'museum_manager']}>
           <AuthenticatedLayout locale={locale}>{children}</AuthenticatedLayout>
         </RoleGuard>

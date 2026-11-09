@@ -4,8 +4,6 @@ import { useOfflineSync } from '@/features/chat/application/useOfflineSync';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import { makeChatUiMessage, makeGetSessionResponse } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockPostMessage = jest.fn<Promise<unknown>, [unknown]>();
 const mockGetSession = jest.fn();
 
@@ -16,8 +14,6 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const SESSION_ID = 'offline-session-1';
 
 interface QueueItem {
@@ -26,12 +22,10 @@ interface QueueItem {
   imageUri?: string;
 }
 
-/** The shape `useOfflineSync.peek()` returns — a queued item carries a stable id. */
 interface PeekedItem extends QueueItem {
   id: string;
 }
 
-/** Bypasses backoff delays so tests run synchronously. */
 const passthroughRetry = <T>(op: () => Promise<T>): Promise<T> => op();
 
 const makeDefaultParams = (overrides?: {
@@ -66,8 +60,6 @@ const makeDefaultParams = (overrides?: {
     ...(overrides?.isRetryable ? { isRetryable: overrides.isRetryable } : {}),
   };
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useOfflineSync', () => {
   beforeEach(() => {
@@ -197,9 +189,7 @@ describe('useOfflineSync', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(2);
     });
 
-    // Only the first message was dequeued
     expect(params.dequeue).toHaveBeenCalledTimes(1);
-    // Still re-fetches because flushedAny was true (first message succeeded)
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
@@ -253,10 +243,8 @@ describe('useOfflineSync', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
     });
 
-    // Should dequeue and attempt getSession but not throw
     expect(params.dequeue).toHaveBeenCalledTimes(1);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
-    // setMessages should NOT be called since getSession failed
     expect(params.setMessages).not.toHaveBeenCalled();
   });
 
@@ -284,8 +272,6 @@ describe('useOfflineSync', () => {
     );
   });
 
-  // ── First item fails: loop breaks, no further processing ────────────────
-
   it('breaks immediately when the first queue item fails', async () => {
     mockPostMessage.mockRejectedValue(new Error('Server down'));
 
@@ -305,14 +291,10 @@ describe('useOfflineSync', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
     });
 
-    // No messages dequeued since the first one failed
     expect(params.dequeue).not.toHaveBeenCalled();
-    // No refetch since flushedAny is false
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(params.setMessages).not.toHaveBeenCalled();
   });
-
-  // ── Partial flush: 2 of 3 succeed, 3rd fails → refetch for successful ones
 
   it('refetches session after partial flush (2 succeed, 3rd fails)', async () => {
     mockPostMessage
@@ -340,14 +322,10 @@ describe('useOfflineSync', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(3);
     });
 
-    // 2 successful dequeues
     expect(params.dequeue).toHaveBeenCalledTimes(2);
-    // flushedAny is true so getSession is called
     expect(mockGetSession).toHaveBeenCalledTimes(1);
     expect(params.setMessages).toHaveBeenCalled();
   });
-
-  // ── getSession throws after successful posts → no crash ─────────────────
 
   it('catches getSession error silently after successful posts', async () => {
     mockPostMessage.mockResolvedValue({});
@@ -371,16 +349,12 @@ describe('useOfflineSync', () => {
 
     expect(params.dequeue).toHaveBeenCalledTimes(2);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
-    // setMessages NOT called because getSession threw
     expect(params.setMessages).not.toHaveBeenCalled();
   });
-
-  // ── Non-retryable (fatal) error: drop poison item and continue ─────────
 
   it('drops a non-retryable item and continues to the next queued message', async () => {
     const sessionResponse = makeGetSessionResponse();
     mockGetSession.mockResolvedValue(sessionResponse);
-    // First item throws a fatal error (4xx), second succeeds
     mockPostMessage.mockRejectedValueOnce(new Error('Bad request')).mockResolvedValueOnce({});
 
     const params = makeDefaultParams({
@@ -389,7 +363,7 @@ describe('useOfflineSync', () => {
         { sessionId: SESSION_ID, text: 'poison item' },
         { sessionId: SESSION_ID, text: 'valid item' },
       ],
-      isRetryable: () => false, // treat all errors as non-retryable for this test
+      isRetryable: () => false,
     });
 
     renderHook(() => {
@@ -400,14 +374,10 @@ describe('useOfflineSync', () => {
       expect(mockPostMessage).toHaveBeenCalledTimes(2);
     });
 
-    // Both items dequeued: first dropped (fatal), second succeeded
     expect(params.dequeue).toHaveBeenCalledTimes(2);
-    // flushedAny = true, so getSession is called
     expect(mockGetSession).toHaveBeenCalledTimes(1);
     expect(params.setMessages).toHaveBeenCalled();
   });
-
-  // ── Empty queue: peek returns undefined → skips refetch entirely ────────
 
   it('skips refetch when queue is empty (peek returns undefined)', () => {
     const params = makeDefaultParams({
@@ -419,7 +389,6 @@ describe('useOfflineSync', () => {
       useOfflineSync(params);
     });
 
-    // peek is called once and returns undefined
     expect(params.peek).toHaveBeenCalled();
     expect(mockPostMessage).not.toHaveBeenCalled();
     expect(params.dequeue).not.toHaveBeenCalled();

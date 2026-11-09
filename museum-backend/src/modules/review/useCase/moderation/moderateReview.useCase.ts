@@ -24,12 +24,6 @@ export interface ModerateReviewUseCaseInput {
   actorId: number;
   ip?: string;
   requestId?: string;
-  /**
-   * C1B — tenant ownership guard (BOLA, write side). `undefined`/`null` =
-   * unscoped (super_admin/admin may moderate any review). When set (forced by
-   * the route for a `museum_manager`), a review whose `museumId` differs from
-   * this scope is treated as non-existent → `404` (existence-hiding), no write.
-   */
   scopeMuseumId?: number | null;
 }
 
@@ -41,11 +35,6 @@ export interface ModerateReviewUseCaseDeps {
   authorLookup?: ReviewAuthorLookup;
 }
 
-/**
- * Compliance: SOC2 CC7.2 + GDPR Art. 30 + NIST SP 800-53 AU-2 — every privileged
- * action on user-generated content is auditable. Notification delivery is
- * best-effort: a failed email must NOT fail the moderation (ADR-notifications-best-effort).
- */
 export class ModerateReviewUseCase {
   private readonly audit: Pick<AuditService, 'log' | 'logActorAction'>;
   private readonly notifier?: ReviewModerationNotifier;
@@ -55,7 +44,6 @@ export class ModerateReviewUseCase {
     private readonly repository: IReviewRepository,
     depsOrAudit: ModerateReviewUseCaseDeps | Pick<AuditService, 'log' | 'logActorAction'> = {},
   ) {
-    // Back-compat: accept either a full deps object OR a bare audit stub (existing tests).
     const deps: ModerateReviewUseCaseDeps =
       'log' in depsOrAudit ? { audit: depsOrAudit } : depsOrAudit;
     this.audit = deps.audit ?? defaultAuditService;
@@ -73,10 +61,6 @@ export class ModerateReviewUseCase {
       throw notFound('Review not found');
     }
 
-    // C1B — tenant ownership guard (BOLA write side). A scoped actor
-    // (museum_manager) may only moderate reviews of their own museum; a
-    // foreign-tenant or NULL-museum review is hidden as non-existent (404)
-    // BEFORE any write, so no audit row is emitted for a rejected attempt.
     if (input.scopeMuseumId != null && before.museumId !== input.scopeMuseumId) {
       throw notFound('Review not found');
     }
@@ -108,7 +92,6 @@ export class ModerateReviewUseCase {
     return updated;
   }
 
-  /** Fire-and-forget: best-effort email to author, gated on their opt-in flag. */
   private scheduleAuthorNotification(updated: ReviewDTO): void {
     if (!this.notifier || !this.authorLookup) return;
     const terminalStatus = updated.status;

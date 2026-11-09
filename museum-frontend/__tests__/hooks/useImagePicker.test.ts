@@ -6,8 +6,6 @@ jest.mock('react-i18next', () => ({
 
 import { useImagePicker } from '@/features/chat/application/useImagePicker';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockOptimizeImageAdaptive = jest.fn<Promise<{ uploadUri: string }>, [string, unknown]>();
 const mockRequestMediaLibraryPermissionsAsync = jest.fn<Promise<{ status: string }>, []>();
 const mockLaunchImageLibraryAsync = jest.fn<
@@ -32,8 +30,6 @@ jest.mock('@/features/chat/application/imageUploadOptimization', () => ({
   optimizeImageAdaptive: (...args: unknown[]) =>
     mockOptimizeImageAdaptive(args[0] as string, args[1]),
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useImagePicker', () => {
   beforeEach(() => {

@@ -4,7 +4,6 @@ type TicketDTO = components['schemas']['TicketDTO'];
 type TicketDetailDTO = components['schemas']['TicketDetailDTO'];
 type TicketMessageDTO = components['schemas']['TicketMessageDTO'];
 
-/** Creates a TicketDTO (list-row shape) with sensible defaults. */
 export function makeSupportTicket(overrides: Partial<TicketDTO> = {}): TicketDTO {
   return {
     id: 'ticket-1',
@@ -22,7 +21,6 @@ export function makeSupportTicket(overrides: Partial<TicketDTO> = {}): TicketDTO
   };
 }
 
-/** Creates a TicketMessageDTO with sensible defaults. */
 export function makeTicketMessage(overrides: Partial<TicketMessageDTO> = {}): TicketMessageDTO {
   return {
     id: 'msg-1',
@@ -35,7 +33,6 @@ export function makeTicketMessage(overrides: Partial<TicketMessageDTO> = {}): Ti
   };
 }
 
-/** Creates a TicketDetailDTO (TicketDTO + messages) with sensible defaults. */
 export function makeSupportTicketDetail(overrides: Partial<TicketDetailDTO> = {}): TicketDetailDTO {
   const { messages, ...ticketOverrides } = overrides;
   return {

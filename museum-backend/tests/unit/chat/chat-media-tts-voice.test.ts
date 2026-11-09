@@ -1,15 +1,3 @@
-/**
- * Spec C T2.5 — chat-media TTS reads `user.ttsVoice` w/ env fallback.
- *
- * The synthesizeSpeech path must prefer the per-user voice preference
- * (`session.user.ttsVoice`) over the env default (`env.tts.voice`).
- * When `user.ttsVoice` is null/undefined, fall back to env.tts.voice.
- *
- * The replay path (`getMessageAudioUrl`) is intentionally NOT covered here:
- * it must keep using the audioVoice snapshot persisted at synthesis time
- * (audio-cache invariant), not re-resolve from the user.
- */
-
 import { ChatMediaService } from '@modules/chat/useCase/audio/chat-media.service';
 import type { ChatMessageWithSessionOwnership } from '@modules/chat/domain/session/chat.repository.interface';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
@@ -22,12 +10,6 @@ import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 const SESSION_ID = 'a0a0a0a0-b1b1-4c2c-8d3d-e4e4e4e4e4e4';
 const MESSAGE_ID = 'b1b1b1b1-c2c2-4d3d-9e4e-f5f5f5f5f5f5';
 
-/**
- * Builds a ChatSession.user stub with a pinned `ttsVoice`.
- * `makeSessionUser` only sets `id`, so we extend it for this test's needs.
- * @param id
- * @param ttsVoice
- */
 const makeUserWithVoice = (id: number, ttsVoice: string | null): ChatSession['user'] => {
   const base = makeSessionUser(id)!;
   return Object.assign(base, { ttsVoice }) as ChatSession['user'];
@@ -73,8 +55,6 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
       text: 'Hello world',
       voice: 'echo',
       requestId: MESSAGE_ID,
-      // TD-20 (R13a/R12) — per-tenant scope propagated; museumId omitted
-      // (makeSession default museumId is null), tier derived from userId 42.
       tier: 'free',
     });
   });
@@ -89,14 +69,14 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
 
     expect(tts.synthesize).toHaveBeenCalledWith({
       text: 'Hello world',
-      voice: 'alloy', // env.tts.voice default per env.ts
+      voice: 'alloy',
       requestId: MESSAGE_ID,
-      tier: 'free', // TD-20 — propagated per-tenant scope (userId 42)
+      tier: 'free',
     });
   });
 
   it('falls back to env.tts.voice when session.user is missing entirely', async () => {
-    const row = makeMessageRow({}, { user: makeSessionUser(42) }); // no ttsVoice prop
+    const row = makeMessageRow({}, { user: makeSessionUser(42) });
     const repo = makeRepo(row);
     const tts = makeTts();
     const svc = new ChatMediaService({ repository: repo, tts });
@@ -107,7 +87,7 @@ describe('chat-media TTS voice resolution (Spec C T2.5)', () => {
       text: 'Hello world',
       voice: 'alloy',
       requestId: MESSAGE_ID,
-      tier: 'free', // TD-20 — propagated per-tenant scope (userId 42)
+      tier: 'free',
     });
   });
 });

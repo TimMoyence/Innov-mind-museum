@@ -1,14 +1,3 @@
-/**
- * Tests for ConversationsHeader — the thin wrapper that renders the four
- * action buttons (filter / saved / share / edit) via FloatingContextMenu.
- *
- * We do NOT import the shared test-utils because it stubs FloatingContextMenu.
- * This wrapper's only meaningful behavior is the actions array it forwards,
- * so we render the real FloatingContextMenu and assert on its labels.
- */
-
-// ── Mocks (hoisted by Jest) ─────────────────────────────────────────────────
-
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -48,8 +37,6 @@ jest.mock('@expo/vector-icons', () => {
     ),
   };
 });
-
-// ── Imports ─────────────────────────────────────────────────────────────────
 
 import type React from 'react';
 import { render } from '@testing-library/react-native';

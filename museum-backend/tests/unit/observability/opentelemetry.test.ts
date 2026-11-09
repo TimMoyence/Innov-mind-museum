@@ -1,11 +1,4 @@
-/**
- * Tests for shared/observability/opentelemetry.ts conditional init + shutdown
- * branches. The module holds a singleton `sdkInstance` at module scope, so
- * each test resets modules and re-mocks the OTel CJS packages before
- * `require()`-ing the module under test.
- */
-
-export {}; // ensure this file is treated as a module (scopes helper names)
+export {};
 
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
@@ -56,16 +49,6 @@ interface OtelMocks {
   ATTR_SERVICE_VERSION: string;
 }
 
-/**
- * Wires up jest.doMock for every OTel CJS package the module under test
- * `require()`s lazily inside initOpenTelemetry(). Returns the spies so each
- * test can assert call args.
- *
- * The factory closes over a single `sdkInstance` so the test can both observe
- * `start()` after init and stub `shutdown()` for the swallow-error branch.
- * @param shutdownImpl - optional impl for sdk.shutdown(); defaults to a
- *  resolved promise.
- */
 const wireOtelMocks = (shutdownImpl?: () => Promise<void>): OtelMocks => {
   const sdkInstance: FakeSdk = {
     start: jest.fn<void, []>(),
@@ -151,20 +134,17 @@ describe('opentelemetry — initOpenTelemetry', () => {
       require('@shared/observability/opentelemetry') as typeof import('@shared/observability/opentelemetry');
     mod.initOpenTelemetry();
 
-    // Resource attributes
     expect(mocks.resourceFromAttributes).toHaveBeenCalledTimes(1);
     expect(mocks.resourceFromAttributes).toHaveBeenCalledWith({
       'service.name': 'museum-backend',
       'service.version': '9.9.9',
     });
 
-    // Exporter URL = endpoint + /v1/traces
     expect(mocks.OTLPTraceExporter).toHaveBeenCalledTimes(1);
     expect(mocks.OTLPTraceExporter).toHaveBeenCalledWith({
       url: 'http://otel:4318/v1/traces',
     });
 
-    // Auto-instrumentations disabled list
     expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledTimes(1);
     expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledWith({
       '@opentelemetry/instrumentation-fs': { enabled: false },
@@ -173,7 +153,6 @@ describe('opentelemetry — initOpenTelemetry', () => {
       '@opentelemetry/instrumentation-openai': { enabled: false },
     });
 
-    // NodeSDK ctor receives the wired pieces
     expect(mocks.NodeSDK).toHaveBeenCalledTimes(1);
     expect(mocks.NodeSDK).toHaveBeenCalledWith({
       resource: {
@@ -184,10 +163,8 @@ describe('opentelemetry — initOpenTelemetry', () => {
       instrumentations: [[{ instrumentationName: 'auto' }]],
     });
 
-    // start() called exactly once
     expect(mocks.sdkInstance.start).toHaveBeenCalledTimes(1);
 
-    // logger.info called with init event
     expect(loggerMock.info).toHaveBeenCalledTimes(1);
     expect(loggerMock.info).toHaveBeenCalledWith('opentelemetry_initialized', {
       endpoint: 'http://otel:4318',
@@ -196,8 +173,6 @@ describe('opentelemetry — initOpenTelemetry', () => {
   });
 
   it('re-invoking initOpenTelemetry rebuilds the SDK (no internal idempotency guard)', () => {
-    // The source has no `if (sdkInstance) return` guard at the top of init —
-    // documenting current behavior so a future refactor adding one is caught.
     jest.doMock('@src/config/env', () =>
       makeEnvMock(
         {

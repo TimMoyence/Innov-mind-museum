@@ -30,17 +30,10 @@ export interface MuseumEnrichmentWorkerDeps {
   cache: MuseumEnrichmentCachePort;
   wikidata: WikidataMuseumClient;
   wikipedia: WikipediaClient;
-  /** Overridable in tests — defaults to the real Overpass call. */
   fetchOpeningHoursTag?: (input: { lat: number; lng: number }) => Promise<string | null>;
-  /** Overridable clock — defaults to `new Date()`. */
   clock?: () => Date;
 }
 
-/**
- * Pure pipeline used by the BullMQ worker AND unit tests. Fail-open: a null
- * return from Wikidata / Wikipedia / OSM downgrades the output but never
- * aborts the job.
- */
 export async function processMuseumEnrichmentJob(
   job: MuseumEnrichmentJob,
   deps: MuseumEnrichmentWorkerDeps,
@@ -158,10 +151,6 @@ function buildEnrichmentView(input: BuildViewInput): MuseumEnrichmentView {
     phone: facts.phone,
     imageUrl: facts.imageUrl,
     openingHours: input.openingHours,
-    // The auto-fetch pipeline (Wikidata/Wikipedia/OSM) does not source these
-    // rich fields — they stay null at refresh time. The cache adapter's UPDATE
-    // path deliberately leaves the columns untouched so any seeded value is
-    // preserved (see typeorm-museum-enrichment-cache.adapter.ts).
     admissionFees: null,
     collections: null,
     currentExhibitions: null,
@@ -182,10 +171,6 @@ interface MuseumEnrichmentWorkerConfig {
   concurrency?: number;
 }
 
-/**
- * Delegates to the shared DLQ policy. Exported so unit tests can drive the
- * failure path without spinning up a real BullMQ worker.
- */
 export const onMuseumEnrichmentJobFailed = (
   job: Job<MuseumEnrichmentJob> | undefined,
   err: Error,
@@ -213,10 +198,6 @@ export const onMuseumEnrichmentJobFailed = (
   );
 };
 
-/**
- * Thin BullMQ wrapper around {@link processMuseumEnrichmentJob} so unit
- * tests stay BullMQ-free.
- */
 export class MuseumEnrichmentWorker {
   private worker?: Worker<MuseumEnrichmentJob>;
 
@@ -225,7 +206,6 @@ export class MuseumEnrichmentWorker {
     private readonly config: MuseumEnrichmentWorkerConfig,
   ) {}
 
-  /** Safe to call once at boot. */
   start(): void {
     this.worker = new Worker<MuseumEnrichmentJob>(
       MUSEUM_ENRICHMENT_QUEUE_NAME,
@@ -243,7 +223,6 @@ export class MuseumEnrichmentWorker {
       logger.info('museum_enrichment_job_completed', { jobId: job.id });
     });
     this.worker.on('failed', onMuseumEnrichmentJobFailed);
-    // TD-BMQ-01 — mandatory worker 'error' listener (lib-docs/bullmq/PATTERNS.md §3 DO).
     this.worker.on('error', (err) => {
       captureExceptionWithContext(err, {
         queue: MUSEUM_ENRICHMENT_QUEUE_NAME,
@@ -252,7 +231,6 @@ export class MuseumEnrichmentWorker {
     });
   }
 
-  /** Idempotent graceful shutdown. */
   async close(): Promise<void> {
     await this.worker?.close();
   }

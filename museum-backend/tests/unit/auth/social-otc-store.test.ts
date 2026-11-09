@@ -1,13 +1,3 @@
-/**
- * F11-mobile (2026-05) — One-time-code (OTC) store unit tests.
- *
- * Covers the in-memory implementation that backs the mobile OAuth redeem flow:
- * after the server-mediated /google/callback succeeds for a mobile platform
- * state, the resulting AuthSessionResponse is stashed under a fresh OTC, the
- * client receives the OTC via deeplink, and exchanges it once for the session
- * payload via POST /api/auth/social-redeem. Single-use semantics make a
- * leaked deeplink unredeemable past the first /redeem call.
- */
 import { z } from 'zod';
 
 import {
@@ -41,10 +31,8 @@ describe('InMemorySocialOtcStore — F11-mobile single-use redeem', () => {
   it('issue() returns a base64url string with at least 128 bits of entropy', async () => {
     const store = new InMemorySocialOtcStore<FakeSession>();
     const code = await store.issue(fakeSession());
-    // base64url of 16 bytes is 22 chars (no padding)
     expect(code).toMatch(/^[A-Za-z0-9_-]{22,}$/);
 
-    // Two consecutive calls must not collide.
     const code2 = await store.issue(fakeSession());
     expect(code2).not.toEqual(code);
   });
@@ -69,7 +57,7 @@ describe('InMemorySocialOtcStore — F11-mobile single-use redeem', () => {
       now: () => nowMs,
     });
     const code = await store.issue(fakeSession());
-    nowMs += 2_000; // advance past TTL
+    nowMs += 2_000;
     await expect(store.consume(code)).resolves.toBeNull();
   });
 
@@ -81,7 +69,7 @@ describe('InMemorySocialOtcStore — F11-mobile single-use redeem', () => {
     });
     const session = fakeSession();
     const code = await store.issue(session);
-    nowMs += 30_000; // half TTL
+    nowMs += 30_000;
     await expect(store.consume(code)).resolves.toEqual(session);
     await expect(store.consume(code)).resolves.toBeNull();
   });
@@ -95,11 +83,6 @@ describe('InMemorySocialOtcStore — F11-mobile single-use redeem', () => {
 });
 
 describe('RedisSocialOtcStore — T1.7 Zod schema validation on consume', () => {
-  /**
-   * Fake Redis surface: a `Map<string, string>` plus the two methods the
-   * adapter touches (`set`, `getdel`). Strictly enough to drive the
-   * happy-path + poisoned-cache branches without an ioredis dependency.
-   */
   function makeFakeRedis() {
     const store = new Map<string, string>();
     return {
@@ -131,23 +114,15 @@ describe('RedisSocialOtcStore — T1.7 Zod schema validation on consume', () => 
   });
 
   it('consume() falls through to the in-memory fallback (returns null) when the schema REJECTS a poisoned Redis blob', async () => {
-    // Covers the T1.7 fix: replace `JSON.parse(value) as TPayload` with
-    // `schema.safeParse(...)`. A blob that does NOT match the schema (post-
-    // deploy shape drift, corrupted entry, attacker-controlled write, …) MUST
-    // NOT leak through to the use case as a typed `TPayload`.
     const redis = makeFakeRedis();
     const adapter = new RedisSocialOtcStore<FakeSession>(redis, {
       schema: fakeSessionSchema,
     });
 
-    // Seed Redis directly with a JSON blob that misses the required `user.id`
-    // field — schema.safeParse(...) MUST reject it.
     const poisonedCode = 'poisoned-code-xyz';
     redis.store.set(`oidc:otc:${poisonedCode}`, JSON.stringify({ wrong: 'shape' }));
 
     await expect(adapter.consume(poisonedCode)).resolves.toBeNull();
-    // The poisoned entry was atomically removed by getdel — Redis no longer
-    // holds it after the failed consume.
     expect(redis.store.has(`oidc:otc:${poisonedCode}`)).toBe(false);
   });
 

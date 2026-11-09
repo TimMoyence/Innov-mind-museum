@@ -1,19 +1,8 @@
-/**
- * Tests for {@link VoicePreferenceSection} (Spec C T2.9).
- *
- * The section renders 7 rows: a "Default" row at the top (which posts
- * `null` to reset to the env-level default) followed by the 6 catalog
- * voices (Alloy, Echo, Fable, Onyx, Nova, Shimmer). Tapping a row fires
- * the {@link useUpdateTtsVoice} mutation; the current voice is reflected
- * via `accessibilityState.selected`.
- */
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 import { renderWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 import { VoicePreferenceSection } from '@/features/settings/ui/VoicePreferenceSection';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockUpdateTtsVoice = jest.fn();
 
@@ -23,8 +12,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
   },
 }));
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('VoicePreferenceSection (Spec C T2.9)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,7 +20,6 @@ describe('VoicePreferenceSection (Spec C T2.9)', () => {
 
   it('renders 7 rows (default + 6 voices)', () => {
     const { getAllByRole } = renderWithQueryClient(<VoicePreferenceSection currentVoice={null} />);
-    // Section header is accessibilityRole="header", not "button".
     const rows = getAllByRole('button');
     expect(rows).toHaveLength(7);
   });

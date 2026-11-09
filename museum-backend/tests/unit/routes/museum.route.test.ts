@@ -6,8 +6,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { adminToken, visitorToken, makeToken, userToken } from '../../helpers/auth/token.helpers';
 
-// ── Mock use cases so handlers execute without DB ────────────────────
-
 const mockListMuseums = jest.fn();
 const mockCreateMuseum = jest.fn();
 const mockGetMuseum = jest.fn();
@@ -35,11 +33,6 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-/**
- * Museum route integration tests — auth enforcement + RBAC + validation + happy-path handler bodies.
- * No DB required — use cases are mocked.
- */
-
 const { app } = createRouteTestApp();
 
 describe('Museum Routes — HTTP Layer', () => {
@@ -51,8 +44,6 @@ describe('Museum Routes — HTTP Layer', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {
     it('GET /api/museums/directory returns 401 without token', async () => {
@@ -86,8 +77,6 @@ describe('Museum Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Visitor role (non-admin) RBAC ──────────────────────────────
-
   describe('Visitor role returns 403 on admin-only museum routes', () => {
     it('POST /api/museums returns 403 for visitor', async () => {
       const res = await request(app)
@@ -112,8 +101,6 @@ describe('Museum Routes — HTTP Layer', () => {
       expect(res.status).toBe(403);
     });
   });
-
-  // ── Body validation with admin token ───────────────────────────
 
   describe('Body validation on museum routes (with admin token)', () => {
     it('POST /api/museums returns 400 for empty body', async () => {
@@ -157,8 +144,6 @@ describe('Museum Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Query validation on search ──────────────────────────────────
-
   describe('GET /api/museums/search — query validation', () => {
     it('returns 400 when lat is provided without lng', async () => {
       const res = await request(app)
@@ -189,8 +174,6 @@ describe('Museum Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Error response format ──────────────────────────────────────
-
   describe('Error response format', () => {
     it('401 returns structured JSON with error field', async () => {
       const res = await request(app).get('/api/museums/directory');
@@ -209,8 +192,6 @@ describe('Museum Routes — HTTP Layer', () => {
       expect(res.body.error).toHaveProperty('code', 'FORBIDDEN');
     });
   });
-
-  // ── Happy-path handler body coverage ─────────────────────────────
 
   describe('Happy-path — handler bodies', () => {
     it('GET /api/museums/directory returns museum list', async () => {
@@ -328,7 +309,6 @@ describe('Museum Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ museums: allMuseums });
-      // Admin list calls without activeOnly
       expect(mockListMuseums).toHaveBeenCalledWith();
     });
 
@@ -343,8 +323,6 @@ describe('Museum Routes — HTTP Layer', () => {
       expect(res.status).toBe(500);
     });
   });
-
-  // ── GET /api/museums/:id/low-data-pack (authenticated + rate-limited) ──
 
   describe('GET /api/museums/:id/low-data-pack', () => {
     it('returns 401 without auth token', async () => {
@@ -387,7 +365,6 @@ describe('Museum Routes — HTTP Layer', () => {
 
     it('rate-limits to 10 requests per minute per IP (11th returns 429)', async () => {
       const token = userToken();
-      // Fire 10 allowed requests
       for (let i = 0; i < 10; i += 1) {
         const ok = await request(app)
           .get('/api/museums/42/low-data-pack')

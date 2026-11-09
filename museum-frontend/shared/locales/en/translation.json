@@ -125,6 +125,7 @@
     "session_unsaved": "Session removed from saved",
     "session_saved": "Session saved",
     "empty_title": "No conversations yet",
+    "untitled": "No messages yet",
     "empty_saved": "No saved sessions yet. Long-press a session to save it.",
     "empty_body": "Start a new conversation from Home to create your first session.",
     "message_count": "Messages: {{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "Close",
       "noQuote": "No quote available for this source."
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "Museum catalogue",
-        "reference-db": "Reference database",
-        "web": "Web result",
-        "ai-knowledge": "AI knowledge"
-      },
-      "confidence": {
-        "high": "High confidence",
-        "medium": "Medium confidence",
-        "low": "Low — AI only"
-      },
-      "chip": {
-        "a11y_hint": "Tap to see the source details"
-      },
-      "ai_only": {
-        "disclosure_title": "AI-only response",
-        "disclosure_body": "This answer is based on the AI's general knowledge. No source was retrieved to support specific facts. Verify before relying on details."
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "Open attachments",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "Untitled artwork",
       "a11y_label": "Artwork: {{title}} by {{artist}}, tap to expand",
+      "a11y_label_no_artist": "Artwork: {{title}}, tap to expand",
       "a11y_label_untitled": "Artwork: untitled, tap to expand",
       "a11y_hint": "Opens fullscreen with pinch-to-zoom",
       "expand": "Expand",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "Identification pending"
       },
@@ -569,6 +550,7 @@
       "empty": "No similar artwork found — try a clearer photo",
       "viewArtist": "View artist",
       "attribution": "Source: Wikimedia Commons",
+      "card_a11y": "Similar artwork: {{credit}}, {{rationale}}",
       "rationale": {
         "fallback": "Similar artwork"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "Guided walk",
       "suggestionsLabel": "Walk suggestions",
       "suggestionHint": "Sends this suggestion as your next prompt"
-    },
-    "askMore": {
-      "a11y_label": "Ask follow-up: {{text}}",
-      "a11y_hint": "Tap to ask this follow-up"
     },
     "sottoVoce": {
       "a11y_label": "Sotto-voce mode",
@@ -648,7 +626,7 @@
     "placeholder": "Ask about an artwork, monument, or send voice/photo...",
     "send": "Send"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "Beginner",
     "intermediate": "Intermediate",
     "expert": "Expert"
@@ -1062,6 +1040,7 @@
     },
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, open visit",
+      "session_card_no_date": "{{title}}, {{museum}}, open visit",
       "continue_hint": "Opens this past visit for reading"
     }
   },
@@ -1114,7 +1093,7 @@
     "save": "Save",
     "skip": "Skip",
     "saved": "Saved!",
-    "by": "by",
+    "by": "by {{artist}}",
     "fun_fact": "Did you know?",
     "swipeToSave": "Save"
   },
@@ -1125,7 +1104,8 @@
     "description": "Description",
     "priority": "Priority",
     "status": "Status",
-    "messages": "Messages",
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages",
     "noTickets": "No tickets yet",
     "noTicketsDesc": "Create a ticket to get help from our support team.",
     "createFirst": "Create your first ticket",
@@ -1134,7 +1114,7 @@
     "replyPlaceholder": "Type your message...",
     "send": "Send",
     "sending": "Sending...",
-    "created": "Created",
+    "createdOn": "Created {{date}}",
     "noMessages": "No messages yet",
     "submitTicket": "Submit Ticket",
     "subjectPlaceholder": "Brief summary of your issue",
@@ -1174,7 +1154,14 @@
     "alreadyReviewed": "You have already submitted a review",
     "empty": "No reviews yet. Be the first!",
     "reviewCount": "{{count}} reviews",
-    "submitFailed": "Failed to submit review. Please try again."
+    "submitFailed": "Failed to submit review. Please try again.",
+    "age": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "days": "{{count}}d",
+      "months": "{{count}}mo",
+      "years": "{{count}}y"
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1219,7 @@
     "error": "Something went wrong. Please try again.",
     "dismiss": "Close",
     "consent": "I agree to receive an email when premium launches.",
-    "resetsOn": "Resets on",
+    "resetsOn": "Resets on {{date}}",
     "analyticsConsent": {
       "title": "Help us improve Musaium",
       "description": "With your consent we anonymously measure how the app is used (pages viewed, features used). No personal data, no advertising tracker — just aggregated counters that help us understand what works.",

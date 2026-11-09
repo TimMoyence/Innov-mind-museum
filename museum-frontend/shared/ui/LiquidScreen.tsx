@@ -23,16 +23,10 @@ const isResponsiveBackground = (
   value: ImageSourcePropType | ResponsiveBackground,
 ): value is ResponsiveBackground => {
   return (
-    typeof value === 'object' &&
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- responsive type guard
-    value !== null &&
-    !Array.isArray(value) &&
-    'mobile' in value &&
-    'desktop' in value
+    typeof value === 'object' && !Array.isArray(value) && 'mobile' in value && 'desktop' in value
   );
 };
 
-/** Renders a full-screen layout with a gradient background, responsive background image, and centered content area. */
 export const LiquidScreen = ({ children, background, contentStyle }: LiquidScreenProps) => {
   const { theme } = useTheme();
   const { width, height } = useWindowDimensions();

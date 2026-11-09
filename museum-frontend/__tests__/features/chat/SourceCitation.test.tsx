@@ -31,12 +31,10 @@ describe('SourceCitation', () => {
     });
     render(<SourceCitation source={source} index={1} />);
 
-    // Pre-tap: bottom-sheet content not yet visible.
     expect(screen.queryByText('Mona Lisa — Wikidata')).toBeNull();
 
     fireEvent.press(screen.getByLabelText('chat.sources.viewSource'));
 
-    // Post-tap: title + quote visible inside the sheet.
     expect(screen.getByText('Mona Lisa — Wikidata')).toBeTruthy();
     expect(
       screen.getByText('The Mona Lisa is a half-length portrait painting by Leonardo da Vinci.'),
@@ -48,7 +46,6 @@ describe('SourceCitation', () => {
     const source = makeCitationSource({ url: 'https://www.wikidata.org/wiki/Q12418' });
     render(<SourceCitation source={source} index={1} />);
 
-    // Open the sheet first, then tap the external-link CTA.
     fireEvent.press(screen.getByLabelText('chat.sources.viewSource'));
     fireEvent.press(screen.getByLabelText('chat.sources.openLink'));
 
@@ -70,7 +67,6 @@ describe('SourceCitation', () => {
     expect(screen.getByText('[1]')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('chat.sources.viewSource'));
-    // Title still shown, quote area handles empty defensively.
     expect(screen.getByText('Source without quote')).toBeTruthy();
   });
 });

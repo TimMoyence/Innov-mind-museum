@@ -1,0 +1,181 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · avis : la requête part identique 1`] = `
+{
+  "body": "{"rating":9,"comment":"Bien"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · avis sur un message : la requête part identique 1`] = `
+{
+  "body": "{"value":"positive"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · changement d’e-mail : la requête part identique 1`] = `
+{
+  "body": "{"newEmail":"n@b.fr","currentPassword":"cp"}",
+  "headers": undefined,
+  "method": "PUT",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · code social : la requête part identique 1`] = `
+{
+  "body": "{"code":"c-1"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · confirmation d’e-mail : la requête part identique 1`] = `
+{
+  "body": "{"token":"tk"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · connexion sociale : la requête part identique 1`] = `
+{
+  "body": "{"provider":"google","idToken":"id-token","nonce":"n-1"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · contexte de session : la requête part identique 1`] = `
+{
+  "body": "{"currentRoom":null}",
+  "headers": undefined,
+  "method": "PATCH",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · déconnexion sans jeton : la requête part identique 1`] = `
+{
+  "body": "{}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · inscription : la requête part identique 1`] = `
+{
+  "body": "{"email":"a@b.fr","password":"p","firstname":"A"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · mot de passe oublié : la requête part identique 1`] = `
+{
+  "body": "{"email":"a@b.fr"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · nouveau ticket : la requête part identique 1`] = `
+{
+  "body": "{"subject":"S","description":"D","priority":"high"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · préférences de contenu : la requête part identique 1`] = `
+{
+  "body": "{"preferences":["history"]}",
+  "headers": undefined,
+  "method": "PATCH",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · préférences du compte : la requête part identique 1`] = `
+{
+  "body": "{"guideLevel":"expert"}",
+  "headers": undefined,
+  "method": "PATCH",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · rafraîchissement : la requête part identique 1`] = `
+{
+  "body": "{"refreshToken":"rt"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · réinitialisation : la requête part identique 1`] = `
+{
+  "body": "{"token":"tk","newPassword":"np"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · signalement : la requête part identique 1`] = `
+{
+  "body": "{"reason":"inaccurate"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · voix de lecture : la requête part identique 1`] = `
+{
+  "body": "{"voice":null}",
+  "headers": undefined,
+  "method": "PATCH",
+  "requiresAuth": undefined,
+  "signal": undefined,
+}
+`;
+
+exports[`Requêtes envoyées — le corps JSON part identique sur le fil REFACTOR-2026-11-09 · vérification : la requête part identique 1`] = `
+{
+  "body": "{"token":"tk"}",
+  "headers": undefined,
+  "method": "POST",
+  "requiresAuth": false,
+  "signal": undefined,
+}
+`;

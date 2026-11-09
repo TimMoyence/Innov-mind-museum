@@ -1,11 +1,3 @@
-/**
- * F5 (2026-04-30) — Helmet CSP + HSTS preload contract test (source-level).
- *
- * Asserts the production directives shipped in `src/app.ts`. We grep the source
- * rather than booting the app under NODE_ENV=production (which would invoke the
- * production-validation invariants and require a full secrets pack) — this is a
- * lightweight contract guard against a regression that drops the locked-down CSP.
- */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -26,9 +18,7 @@ describe('F5 — Helmet CSP + HSTS preload (source contract)', () => {
   });
 
   it('production CSP scriptSrc has no unsafe-inline', () => {
-    // Match the scriptSrc directive but NOT styleSrc (which retains unsafe-inline as a stop-gap).
     expect(appSource).toMatch(/scriptSrc:\s*\["'self'"\]/);
-    // Sanity: the literal "scriptSrc.*unsafe-inline" must not appear.
     expect(appSource).not.toMatch(/scriptSrc:[^\]]*unsafe-inline/);
   });
 

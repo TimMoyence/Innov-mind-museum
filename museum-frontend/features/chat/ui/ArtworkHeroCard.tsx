@@ -1,31 +1,8 @@
-/**
- * A2 — Artwork hero card pinned (collapsed/expanded modes).
- *
- * Renders a sticky pin-row above the message list with the user-uploaded
- * artwork + detected metadata. Two modes:
- *
- *   - Expanded (default) : 56dp thumb + title + artist + museum-room.
- *   - Collapsed (mini)   : 32dp thumb + title only.
- *
- * `model === null` → renders `null` (no DOM). The hero is always mounted at
- * screen level ; data-gating happens here so the screen JSX stays clean.
- *
- * A11y : `Pressable` with `accessibilityRole="button"`, i18n label
- * (interpolated with title + artist), `accessibilityHint` only when
- * `onExpand` is provided. No unicode emoji (Ionicons + RN Image only).
- *
- * Telemetry : one `console.debug('[A2] artwork_hero_rendered', {...})` per
- * render with flags (`has_title`, `has_artist`, `has_museum`, `collapsed`).
- * No image URL / artwork ID emitted (NFR4 — image URLs are signed S3 ephemeral
- * but still excluded from logs).
- *
- * Spec: docs/chat-ux-refonte/specs/A2.md §1.2 (R8-R15).
- */
-
 import React, { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { artworkLocation } from '@/features/chat/ui/ArtworkCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { fontSize, semantic, space } from '@/shared/ui/tokens';
 
@@ -51,8 +28,6 @@ export const ArtworkHeroCard = React.memo(function ArtworkHeroCard({
 
   useEffect(() => {
     if (!model) return;
-    // R28 — flag-only telemetry (no PII, no URLs). console.debug intentionally
-    // (no Sentry V1 — deferred per dispatcher Q5).
     console.debug('[A2] artwork_hero_rendered', {
       has_title: model.title !== null,
       has_artist: model.artist !== null,
@@ -65,18 +40,16 @@ export const ArtworkHeroCard = React.memo(function ArtworkHeroCard({
 
   const titleText = model.title ?? t('chat.artworkHero.untitled');
 
-  const a11yLabel = model.title
-    ? t('chat.artworkHero.a11y_label', {
-        title: model.title,
-        artist: model.artist ?? '',
-      })
-    : t('chat.artworkHero.a11y_label_untitled');
+  const a11yLabel = !model.title
+    ? t('chat.artworkHero.a11y_label_untitled')
+    : model.artist
+      ? t('chat.artworkHero.a11y_label', { title: model.title, artist: model.artist })
+      : t('chat.artworkHero.a11y_label_no_artist', { title: model.title });
 
   const a11yHint = onExpand ? t('chat.artworkHero.a11y_hint') : undefined;
 
   const thumbSize = collapsed ? THUMB_COLLAPSED : THUMB_EXPANDED;
-  const locationLine =
-    !collapsed && model.museum ? [model.museum, model.room].filter(Boolean).join(' — ') : null;
+  const locationLine = collapsed ? null : artworkLocation(model.museum, model.room);
 
   return (
     <Pressable
@@ -123,12 +96,6 @@ interface HeroThumbProps {
   readonly testID: string;
 }
 
-/**
- * Resolves the hero thumbnail through {@link useCarnetImageSource} so the image
- * survives a signed-URL expiry / app-data wipe (D4): it prefers the durable
- * cache, re-mints a fresh signed URL on a miss, and only falls back to the
- * embedded (possibly stale) `fallbackUrl` when re-minting fails.
- */
 function HeroThumb({ messageId, fallbackUrl, size, testID }: HeroThumbProps): React.ReactElement {
   const { uri } = useCarnetImageSource({ messageId: messageId ?? '', fallbackUrl });
   return (

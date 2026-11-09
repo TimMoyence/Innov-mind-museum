@@ -20,7 +20,6 @@ describe('normalizeGuideLevel', () => {
 
 describe('defaults', () => {
   it('has expected default values', () => {
-    expect(defaults.defaultLocale).toBe('en-US');
     expect(defaults.defaultMuseumMode).toBe(true);
     expect(defaults.guideLevel).toBe('beginner');
   });

@@ -88,7 +88,6 @@ describe('HttpWikipediaClient.fetchSummary', () => {
     await client.fetchSummary({ title: 'Musée du Louvre', locale: 'fr' });
 
     const calledUrl = fetchSpy.mock.calls[0][0] as string;
-    // encodeURIComponent("Musée du Louvre") = "Mus%C3%A9e%20du%20Louvre"
     expect(calledUrl).toContain('Mus%C3%A9e%20du%20Louvre');
     expect(calledUrl).not.toContain('Musée du Louvre');
   });

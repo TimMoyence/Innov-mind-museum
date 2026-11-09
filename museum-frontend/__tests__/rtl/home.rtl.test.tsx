@@ -41,7 +41,6 @@ describe('HomeScreen RTL audit', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'ar',
       defaultMuseumMode: false,
       guideLevel: 'beginner',
       _hydrated: true,

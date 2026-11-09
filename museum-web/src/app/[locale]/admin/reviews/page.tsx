@@ -14,16 +14,13 @@ import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
-
-// -- Badge colors ────────────────────────────────────────────────────────
+import { adminListUrl } from '@/lib/admin-list-url';
 
 const STATUS_COLORS: Record<ReviewStatus, string> = {
   pending: 'bg-amber-100 text-amber-700',
   approved: 'bg-green-100 text-green-700',
   rejected: 'bg-red-100 text-red-700',
 };
-
-// -- Page component ──────────────────────────────────────────────────────
 
 export default function AdminReviewsPage() {
   const adminDict = useAdminDict();
@@ -32,25 +29,16 @@ export default function AdminReviewsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | ''>('pending');
 
-  // Moderation modal state
   const [moderating, setModerating] = useState<ReviewDTO | null>(null);
   const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
   const [saving, setSaving] = useState(false);
-  // Mutation-specific error (kept distinct from the read-only hook `error`).
   const [mutationError, setMutationError] = useState<string | null>(null);
 
-  // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
 
-  const reviewsUrl = (() => {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '20');
-    if (statusFilter) params.set('status', statusFilter);
-    return `/api/admin/reviews?${params.toString()}`;
-  })();
+  const reviewsUrl = adminListUrl('/api/admin/reviews', page, 20, { status: statusFilter });
 
   const {
     data: reviewsPayload,
@@ -67,8 +55,6 @@ export default function AdminReviewsPage() {
   const totalPages = pagination?.totalPages ?? 0;
   const total = pagination?.total ?? 0;
   const combinedError = error ?? mutationError;
-
-  // -- Moderation handler ─────────────────────────────────────────────
 
   async function handleModerate() {
     if (!moderating || !decision) return;
@@ -98,7 +84,6 @@ export default function AdminReviewsPage() {
         <ExportCsvButton kind="reviews" />
       </div>
 
-      {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="text-sm font-medium text-text-secondary" htmlFor="review-status-filter">
           {adminDict.reviewsPage.filterStatus}
@@ -120,17 +105,14 @@ export default function AdminReviewsPage() {
         </select>
       </div>
 
-      {/* Error */}
       {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
           <div className="overflow-x-auto">
@@ -210,7 +192,6 @@ export default function AdminReviewsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <AdminPagination
             page={page}
             totalPages={totalPages}
@@ -220,8 +201,6 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* Moderation confirm modal (outlier OQ-6: inline footer with green/red
-          dynamic button — keeps BaseModal scaffold but not ModalActions). */}
       {moderating && decision && (
         <BaseModal
           open

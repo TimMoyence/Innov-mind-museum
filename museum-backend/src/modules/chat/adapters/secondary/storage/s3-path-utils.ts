@@ -1,4 +1,9 @@
-/** RFC 3986 — also encodes `!'()*` which `encodeURIComponent` leaves unencoded. */
+export const trimTrailingSlashes = (value: string): string => {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+};
+
 export const encodeRfc3986 = (value: string): string => {
   return encodeURIComponent(value).replace(/[!'()*]/g, (c) => {
     return `%${c.charCodeAt(0).toString(16).toUpperCase()}`;
@@ -22,8 +27,7 @@ export const normalizeEndpoint = (endpoint: string): URL => {
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error('S3 endpoint must use http or https');
   }
-  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
-  url.pathname = url.pathname.replace(/\/+$/, '');
+  url.pathname = trimTrailingSlashes(url.pathname);
   return url;
 };
 
@@ -32,8 +36,7 @@ export const buildObjectPath = (params: {
   key: string;
   endpointPath?: string;
 }): string => {
-  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
-  const base = params.endpointPath?.replace(/\/+$/, '') ?? '';
+  const base = trimTrailingSlashes(params.endpointPath ?? '');
   const bucketPart = encodePathSegments(params.bucket);
   const keyPart = encodePathSegments(params.key);
   return `${base}/${bucketPart}/${keyPart}`.replace(/\/{2,}/g, '/');
@@ -48,7 +51,6 @@ export const joinKeyParts = (...parts: (string | undefined)[]): string => {
     .join('/');
 };
 
-/** SEC: validates against path-traversal attacks (`..` segment). */
 export const normalizeObjectKey = (params: { key: string; objectKeyPrefix?: string }): string => {
   const normalized = joinKeyParts(params.objectKeyPrefix, params.key);
   if (!normalized) {
@@ -60,10 +62,6 @@ export const normalizeObjectKey = (params: { key: string; objectKeyPrefix?: stri
   return normalized;
 };
 
-/**
- * Handles public base URL override + bucket-in-host (virtual-hosted) AND bucket-in-path
- * endpoint styles.
- */
 export const buildReadBaseUrlAndPath = (params: {
   endpoint: string;
   publicBaseUrl?: string;
@@ -73,14 +71,12 @@ export const buildReadBaseUrlAndPath = (params: {
   const publicBaseUrl = params.publicBaseUrl?.includes('{bucket}')
     ? params.publicBaseUrl.replaceAll('{bucket}', params.bucket)
     : params.publicBaseUrl;
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-  const base = normalizeEndpoint(publicBaseUrl || params.endpoint);
+  const base = normalizeEndpoint(nonEmpty(publicBaseUrl) ?? params.endpoint);
   const bucketPath = `/${encodePathSegments(params.bucket)}`;
   const keyPath = `/${encodePathSegments(params.key)}`;
 
   const hasBucketInHost = base.hostname.startsWith(`${params.bucket}.`);
-  // eslint-disable-next-line sonarjs/slow-regex -- `/\/+$/` anchored at end on single char class, no alternation: linear time
-  const pathname = base.pathname.replace(/\/+$/, '');
+  const pathname = trimTrailingSlashes(base.pathname);
   const hasBucketInPath = pathname === bucketPath || pathname.startsWith(`${bucketPath}/`);
 
   let objectPath: string;
@@ -102,3 +98,4 @@ export const buildReadBaseUrlAndPath = (params: {
 
   return { url, objectPath };
 };
+import { nonEmpty } from '@shared/utils/defaults';

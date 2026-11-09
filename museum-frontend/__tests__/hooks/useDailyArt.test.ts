@@ -6,8 +6,6 @@ import {
 } from '@/features/daily-art/application/useDailyArt';
 import type { DailyArtwork } from '@/features/daily-art/infrastructure/dailyArtApi';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -20,15 +18,11 @@ jest.mock('@/features/daily-art/infrastructure/dailyArtApi', () => ({
   fetchDailyArt: (...args: unknown[]) => mockFetchDailyArt(...(args as [])),
 }));
 
-// QA-08: the hook reads the active i18n locale and forwards it to fetchDailyArt.
 jest.mock('react-i18next', () => ({
   useTranslation: (): { i18n: { language: string } } => ({ i18n: { language: 'fr' } }),
 }));
 
-// Import AsyncStorage after mock so we can spy on it
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const sampleArtwork: DailyArtwork = {
   title: 'Starry Night',
@@ -41,8 +35,6 @@ const sampleArtwork: DailyArtwork = {
 };
 
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useDailyArt', () => {
   beforeEach(() => {
@@ -73,7 +65,6 @@ describe('useDailyArt', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // The mocked useTranslation reports language 'fr'.
     expect(mockFetchDailyArt).toHaveBeenCalledWith('fr');
   });
 
@@ -101,7 +92,6 @@ describe('useDailyArt', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Artwork should be null (silently failed), no thrown error
     expect(result.current.artwork).toBeNull();
     expect(result.current.dismissed).toBe(false);
   });
@@ -124,7 +114,6 @@ describe('useDailyArt', () => {
   });
 
   it('returns dismissed=true on mount if already dismissed today', async () => {
-    // Simulate today's date already stored as dismissed
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
       if (key === DISMISSED_KEY) return Promise.resolve(todayKey());
       return Promise.resolve(null);
@@ -137,14 +126,10 @@ describe('useDailyArt', () => {
     });
 
     expect(result.current.dismissed).toBe(true);
-    // Should not fetch artwork when already dismissed
     expect(mockFetchDailyArt).not.toHaveBeenCalled();
   });
 
   it('carries a legacy-keyed dismiss value forward to the new key on first read (TD-AS-01 migrate)', async () => {
-    // Only the PRE-namespacing key holds today's dismiss flag. The
-    // migrateStorageKey wiring in the load effect must copy it forward to the
-    // new key before the read, so the hook still resolves dismissed=true.
     const legacyStore = new Map<string, string>([['@musaium/daily_art_dismissed', todayKey()]]);
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
       Promise.resolve(legacyStore.get(key) ?? null),
@@ -166,7 +151,6 @@ describe('useDailyArt', () => {
 
     expect(result.current.dismissed).toBe(true);
     expect(mockFetchDailyArt).not.toHaveBeenCalled();
-    // Migrated forward to the namespaced key, legacy key dropped.
     expect(legacyStore.get(DISMISSED_KEY)).toBe(todayKey());
     expect(legacyStore.has('@musaium/daily_art_dismissed')).toBe(false);
   });
@@ -192,7 +176,6 @@ describe('useDailyArt', () => {
   });
 
   it('save() does not duplicate if artwork already saved', async () => {
-    // Pre-populate storage with the same artwork
     (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
       if (key === SAVED_ARTWORKS_KEY) {
         return Promise.resolve(JSON.stringify([sampleArtwork]));
@@ -206,19 +189,15 @@ describe('useDailyArt', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // The hook should detect it was already saved on mount
     expect(result.current.isSaved).toBe(true);
 
-    // Calling save again should still not duplicate
     await act(async () => {
       await result.current.save();
     });
 
-    // setItem should have been called once (not with a duplicated array)
     const setItemCalls = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === SAVED_ARTWORKS_KEY,
     );
-    // If called, the array should still have length 1
     if (setItemCalls.length > 0) {
       const stored = JSON.parse(
         setItemCalls[setItemCalls.length - 1][1] as string,
@@ -242,12 +221,10 @@ describe('useDailyArt', () => {
       await result.current.save();
     });
 
-    // Should not attempt to write to storage
     expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SAVED_ARTWORKS_KEY, expect.anything());
   });
 
   it('cleanup sets cancelled flag — late API resolve does not update state', async () => {
-    // Use a delayed resolve that we can control
     let resolveApi: (value: DailyArtwork) => void = () => {};
     const apiPromise = new Promise<DailyArtwork>((res) => {
       resolveApi = res;
@@ -256,23 +233,18 @@ describe('useDailyArt', () => {
 
     const { result, unmount } = renderHook(() => useDailyArt());
 
-    // Wait until the hook has called fetchDailyArt
     await waitFor(() => {
       expect(mockFetchDailyArt).toHaveBeenCalledTimes(1);
     });
 
     expect(result.current.isLoading).toBe(true);
 
-    // Unmount before the API resolves
     unmount();
 
-    // Resolve after unmount — should not throw or update state
     resolveApi(sampleArtwork);
 
-    // Allow microtasks to flush
     await new Promise((r) => setTimeout(r, 0));
 
-    // After unmount + late resolve, artwork should still be null (state not updated)
     expect(result.current.artwork).toBeNull();
   });
 });

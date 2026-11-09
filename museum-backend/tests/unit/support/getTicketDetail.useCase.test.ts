@@ -34,7 +34,7 @@ describe('GetTicketDetailUseCase', () => {
   it('returns ticket detail for admin', async () => {
     const result = await useCase.execute({
       ticketId,
-      userId: 99, // not the owner
+      userId: 99,
       userRole: 'admin',
     });
 
@@ -55,7 +55,7 @@ describe('GetTicketDetailUseCase', () => {
     await expect(
       useCase.execute({
         ticketId,
-        userId: 999, // not the owner
+        userId: 999,
         userRole: 'user',
       }),
     ).rejects.toMatchObject({ statusCode: 403 });

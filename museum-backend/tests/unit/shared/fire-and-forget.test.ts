@@ -18,7 +18,6 @@ describe('fireAndForget', () => {
     const err = new Error('something broke');
     fireAndForget(Promise.reject(err), 'my-context');
 
-    // Wait for microtask queue to flush
     await new Promise(process.nextTick);
 
     expect(logger.warn).toHaveBeenCalledWith('fire_and_forget_failed', {

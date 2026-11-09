@@ -1,4 +1,3 @@
-// Museum module composition root.
 import { AppDataSource } from '@data/db/data-source';
 import { MuseumEnrichmentWorker } from '@modules/museum/adapters/primary/museum-enrichment.worker';
 import {
@@ -52,10 +51,6 @@ export const buildEnrichMuseumUseCase = (queue: MuseumEnrichmentQueuePort): Enri
   return new EnrichMuseumUseCase(museumRepository, cache, queue);
 };
 
-/**
- * Queue MUST be the SAME adapter instance used by buildEnrichMuseumUseCase
- * so the dedup key collapses on-demand + scheduled jobs for `(museumId, locale)`.
- */
 export const buildRefreshStaleEnrichmentsUseCase = (
   queue: MuseumEnrichmentQueuePort,
 ): RefreshStaleEnrichmentsUseCase => {
@@ -68,7 +63,6 @@ export const buildPurgeDeadEnrichmentsUseCase = (): PurgeDeadEnrichmentsUseCase 
   return new PurgeDeadEnrichmentsUseCase(cache);
 };
 
-/** Caller owns the lifecycle (`start` on boot, `stop` on shutdown). */
 export const createBullmqEnrichmentScheduler = (
   useCase: RefreshStaleEnrichmentsUseCase,
   config: BullmqEnrichmentSchedulerConfig,
@@ -77,14 +71,7 @@ export const createBullmqEnrichmentScheduler = (
 ): EnrichmentSchedulerPort =>
   new BullmqEnrichmentSchedulerAdapter(useCase, config, purgeUseCase, purgeThresholdDays);
 
-/**
- * Test-only injection seams for {@link buildMuseumEnrichmentWorker}. Production
- * boot passes `{}` so every collaborator resolves to its real default; the
- * integration harness passes its container-bound `dataSource` (so `cache.upsert`
- * + `loadMuseum` hit the test Postgres) plus offline HTTP stubs.
- */
 export interface BuildMuseumEnrichmentWorkerOverrides {
-  /** Bind the cache adapter + museum repo to a specific DataSource (default: AppDataSource). */
   dataSource?: DataSource;
   wikidata?: MuseumEnrichmentWorkerDeps['wikidata'];
   wikipedia?: MuseumEnrichmentWorkerDeps['wikipedia'];
@@ -92,16 +79,6 @@ export interface BuildMuseumEnrichmentWorkerOverrides {
   clock?: MuseumEnrichmentWorkerDeps['clock'];
 }
 
-/**
- * On-demand enrichment CONSUMER factory. Constructs the {@link MuseumEnrichmentWorker}
- * with its real deps so enqueued `museum-enrichment` jobs are drained at boot and
- * `processMuseumEnrichmentJob → cache.upsert` writes the `museum_enrichment` row the
- * fiche reads back. Caller owns the lifecycle (`start()` on boot, `close()` on shutdown).
- *
- * The `connection` MUST carry `maxRetriesPerRequest: null` (BullMQ Worker hard
- * requirement, lib-docs/bullmq/PATTERNS.md:79,126) — pass the shared
- * `createRedisConnectionOptions()` rather than hand-rolling options.
- */
 export const buildMuseumEnrichmentWorker = (
   connection: ConnectionOptions,
   overrides: BuildMuseumEnrichmentWorkerOverrides = {},

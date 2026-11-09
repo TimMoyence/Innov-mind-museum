@@ -4,7 +4,6 @@ import {
 } from 'tests/helpers/integration/integration-harness';
 
 describe('integration-harness smoke [integration]', () => {
-
   let harness: IntegrationHarness;
 
   beforeAll(async () => {

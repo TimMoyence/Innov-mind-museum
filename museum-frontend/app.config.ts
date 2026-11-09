@@ -1,16 +1,8 @@
+import packageJson from './package.json';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 import { resolveApiBaseUrl, resolveVariant, type BuildEnv } from './api-url.config';
 
-// `readEnvString` est inliné ici plutôt qu'importé depuis `shared/lib/env.ts` :
-// `app.config.ts` est loadé par Expo CLI (Node.js require) qui (a) n'honore
-// PAS l'alias TS `@/*` (Metro bundler le résout pour l'app, pas Expo prebuild),
-// et (b) ne compile pas transitivement les modules TS imports — l'app.config
-// elle-même est compilée mais ses imports `.ts` deviennent introuvables.
-// Cf. CI mobile run 25987246319 (audit-s1 T1.9 refactor → prebuild fail).
-// Pérein 10y : tout helper utilisé dans app.config DOIT être inliné ou
-// re-exporté via un `.js` co-located. Le helper canonique reste dans
-// `shared/lib/env.ts` pour le reste de l'app — voir doc là-bas.
 const readEnvString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') {
     return undefined;
@@ -58,14 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: APP_NAME,
     slug: APP_SLUG,
-    // C4 A5 (2026-05-21) — single-source-of-truth: derive the published
-    // Expo binary version from museum-frontend/package.json so a manual
-    // literal bump cannot drift behind the npm manifest. `require()` is
-    // licit here because Expo CLI loads app.config.ts via Node `require`
-    // (cf. lib-docs/expo/LESSONS.md:34); ESM/import is not honoured.
-    // Sentinel `scripts/sentinels/fe-version-sync.mjs` keeps the invariant.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Expo CLI Node require entry; no ESM import resolution available in app.config.ts
-    version: (require('./package.json') as { version: string }).version,
+    version: packageJson.version,
     orientation: 'portrait',
     icon: BRAND_ICON,
     scheme: APP_SCHEME,
@@ -80,10 +65,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       icon: BRAND_ICON,
       bundleIdentifier: variant === 'production' ? APP_IOS_BUNDLE_ID : APP_IOS_BUNDLE_ID_PREVIEW,
-      // TD-RNAV-01 — Universal Links. Production-only (spec R3 / design D3):
-      // the entitlement is asserted per-bundle-id, and the preview bundle
-      // (`com.musaium.mobile.preview`) is absent from the published AASA, so a
-      // non-prod build claiming `applinks:musaium.com` would fail verification.
       associatedDomains: variant === 'production' ? ['applinks:musaium.com'] : undefined,
       buildNumber: '93',
       usesAppleSignIn: true,
@@ -100,21 +81,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSFaceIDUsageDescription: 'Allow $(PRODUCT_NAME) to use Face ID to unlock the app.',
         NSLocationWhenInUseUsageDescription:
           'Musaium uses your location to find museums and cultural sites near you, show them on the map, and recommend nearby visits — your location is never tracked or shared with third parties.',
-        // P3.3 — Transport security hardening.
-        // Deny arbitrary cleartext loads at all times; require Certificate
-        // Transparency for production builds so misissued certs for the API
-        // domain are rejected by the OS at TLS handshake. Dev/preview keep
-        // CT off to permit staging certs that may not be CT-logged.
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: false,
           NSAllowsLocalNetworking: variant === 'development',
           NSRequiresCertificateTransparency: variant === 'production',
         },
-        // Background audio capability — required for TTS playback to continue
-        // when the device locks or the app backgrounds. Backed by
-        // `setAudioModeAsync({ shouldPlayInBackground: true })` in
-        // `useTextToSpeech.ts` (Apple Forum #95216 — declaring without using
-        // triggers App Store reject).
         UIBackgroundModes: ['audio'],
       },
       privacyManifests: {
@@ -190,10 +161,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: variant === 'production' ? APP_ANDROID_PACKAGE : APP_ANDROID_PACKAGE_PREVIEW,
-      // TD-RNAV-01 — App Links. Production-only (spec R3 / design D3): the
-      // `autoVerify` VIEW filter delegates https://musaium.com to this package,
-      // which is matched server-side by `public/.well-known/assetlinks.json`.
-      // The preview package is not in assetlinks, so non-prod stays browser-open.
       intentFilters:
         variant === 'production'
           ? [
@@ -228,10 +195,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           android: {
-            // P3.3 — Block plaintext HTTP at the OS network layer for all
-            // non-dev variants. Dev keeps cleartext on so Metro/LAN backends
-            // (http://10.0.x.x:3000) keep working; preview/internal/production
-            // are HTTPS-only.
             usesCleartextTraffic: variant === 'development',
             blockedPermissions: [
               'android.permission.READ_EXTERNAL_STORAGE',
@@ -241,18 +204,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             ],
           },
           ios: {
-            // RN 0.83.6 prebuilt React.framework tarball bakes RCTSwiftUI
-            // symbols in, then the pod system rebuilds RCTSwiftUI locally
-            // and statically links into Musaium.debug.dylib → ObjC runtime
-            // "Class implemented in both" warnings at launch (29 symbols
-            // duplicated). Building RN from source uses one canonical compile
-            // path. +8-10 min on clean Xcode build, cached after.
             buildReactNativeFromSource: true,
-            // P3.4 (TD-SSL-01) — Disable Expo dev-client iOS network inspector
-            // because it interferes with `initializeSslPinning` setup on dev-client
-            // builds (lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md §5.3
-            // lines 135-152). Production builds disable the inspector automatically ;
-            // this opt-out only affects dev/preview.
             networkInspector: false,
           },
         },
@@ -301,18 +253,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ['./plugins/withNetworkSecurity', { variant }],
       './plugins/withFmtConstevalPatch',
       '@maplibre/maplibre-react-native',
-      // Bumps `org.gradle.jvmargs` to -Xmx6144m to keep D8 dex-merge under
-      // the new-architecture (Hermes V1, RN 0.83) heap pressure on CI runners.
-      // Kept last so any earlier plugin that mutates gradle.properties cannot
-      // overwrite the heap setting.
       './plugins/withGradleJvmHeap',
     ],
     experiments: {
       typedRoutes: true,
     },
-    // OTA disabled intentionally — see docs/adr/ADR-009-ota-disabled.md.
-    // Channel URL is kept configured so EAS Build metadata stays consistent;
-    // runtime flag `enabled: false` ensures no OTA fetch at app start.
     updates: {
       enabled: false,
       checkAutomatically: 'NEVER',

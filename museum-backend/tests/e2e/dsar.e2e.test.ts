@@ -1,11 +1,3 @@
-/**
- * GDPR DSAR (Article 15 right of access + Article 20 portability) e2e tests.
- *
- * Boots the full Postgres-backed harness so every layer involved in the
- * export — JWT auth, rate limiter, useCase orchestrator, repositories,
- * audit log — is exercised end-to-end. Anything below E2E (unit tests) only
- * proves the assembly logic, not the IDOR / audit / rate-limit guarantees.
- */
 import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 import { seedUserWithFullDataset } from 'tests/helpers/auth/export-fixtures';
@@ -36,10 +28,6 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
     expect(res.status).toBe(200);
 
     const body = res.body as Record<string, unknown>;
-    // schemaVersion bumped 2 → 3 in the photo-recognised-artworks export commit
-    // (Cycle 4 / B-03, 2026-05-26) — each exported message now nests
-    // artworkMatches[]. See exportUserData.types.ts:12. (Earlier 1 → 2 in
-    // 6e92ff9de, DSAR Art.15 chain B3, 2026-05-21, added UserMemory.)
     expect(body.schemaVersion).toBe('3');
     expect(typeof body.exportedAt).toBe('string');
 
@@ -78,8 +66,6 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
     const body = res.body as Record<string, unknown>;
     expect((body.user as { id: number }).id).toBe(userId);
     expect((body.user as { email: string }).email).toBe(email);
-    // Registration auto-records a tos_privacy consent (register.useCase.ts:recordTosConsent),
-    // so even a "no-data" user has 1 consent row right after signup.
     const consent = body.consent as { scope: string }[];
     expect(consent).toHaveLength(1);
     expect(consent[0].scope).toBe('tos_privacy');
@@ -102,7 +88,6 @@ describeE2E('GDPR DSAR e2e — GET /api/users/me/export', () => {
       email: `dsar-attacker-${Date.now()}@musaium.test`,
     });
 
-    // Attacker tries to coerce the export to victim by spoofing both query and body params.
     const res = await harness.request(
       `/api/users/me/export?userId=${victim.userId}`,
       { method: 'GET' },

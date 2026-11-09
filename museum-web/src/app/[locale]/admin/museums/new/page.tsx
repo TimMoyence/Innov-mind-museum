@@ -12,11 +12,6 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
 
-// W4 W2.1 — Admin museum onboarding form. Posts to POST /api/museums
-// (BE route: museum-backend/src/modules/museum/adapters/primary/http/routes/museum.route.ts).
-// Admin role required. Validation mirrors the BE Zod createMuseumSchema
-// (name 1..200, slug 1..128, lat/lng nullable, description ≤2000).
-
 const STRINGS = {
   title: 'Onboard a new museum',
   subtitle:

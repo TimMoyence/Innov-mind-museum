@@ -25,7 +25,6 @@ export class EmailReviewModerationNotifier implements ReviewModerationNotifier {
   }
 }
 
-/** No-op notifier used when email delivery is disabled (dev/local). */
 export class NoopReviewModerationNotifier implements ReviewModerationNotifier {
   notify(payload: ReviewModerationPayload): Promise<void> {
     logger.warn('review_moderation_notifier_noop', {

@@ -1,41 +1,12 @@
 #!/usr/bin/env node
-// @ts-check
-/**
- * web-domain-canonical sentinel.
- *
- * The canonical, OWNED public domain for Musaium is `musaium.com`
- * (museum-web `NEXT_PUBLIC_SITE_URL`). `musaium.app` is NOT owned — shipping it
- * in user-facing web content (notably the EAA accessibility-statement contact
- * email) advertises an unreachable feedback channel, a conformance defect under
- * Directive (EU) 2019/882 §6.
- *
- * Why this sentinel exists: a 2026-05-14 fix corrected the markdown statements
- * (`docs/legal/accessibility-statement-{en,fr}.md`) but MISSED the rendered TS
- * content (`museum-web/src/lib/accessibility-content.ts`) that users actually
- * see (CHANGELOG 2026-05-14). The unit test guards that one file; this sentinel
- * guards the whole user-facing surface so a NEW file can't reintroduce the
- * non-owned domain.
- *
- * Scans application source across ALL three apps (not just web) for the literal
- * `musaium.app` — backend outbound User-Agents / contact emails, frontend i18n
- * share footers (user-facing!), and web surfaces. The C11 sweep (2026-05-26)
- * found musaium.app pervasive beyond the web accessibility page.
- *
- * Usage: `node web-domain-canonical.mjs [--root <repoRoot>]`
- * Exit codes:
- *   0 → no non-owned domain in scanned application source
- *   1 → ≥1 occurrence of musaium.app detected
- */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join, relative, extname } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Non-owned domain that must never appear in user-facing web content. */
 const FORBIDDEN = /musaium\.app(?![a-zA-Z])/;
 
-/** File extensions that can carry user-facing strings. */
 const SCANNED_EXT = new Set([
   '.ts',
   '.tsx',
@@ -51,7 +22,6 @@ const SCANNED_EXT = new Set([
   '.css',
 ]);
 
-/** Directories never worth scanning. */
 const SKIP_DIRS = new Set([
   'node_modules',
   '.next',
@@ -62,11 +32,6 @@ const SKIP_DIRS = new Set([
   'e2e',
 ]);
 
-/**
- * Test files legitimately reference the forbidden domain to assert its absence
- * (e.g. `expect(...).not.toContain('musaium.app')`). They are not user-facing
- * content, so exclude them to avoid a self-defeating false positive.
- */
 function isTestFile(name) {
   return /\.(test|spec)\.[cm]?[jt]sx?$/.test(name);
 }
@@ -86,7 +51,6 @@ function parseArgs(argv) {
   return { root };
 }
 
-/** Recursively collect scannable files under `dir`. */
 function walk(dir, acc) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);

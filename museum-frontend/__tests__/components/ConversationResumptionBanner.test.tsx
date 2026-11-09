@@ -1,58 +1,13 @@
-/**
- * Red tests for B2 — `<ConversationResumptionBanner>` component +
- * pure helper `formatResumptionTimeAgo`.
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B2.md` :
- *
- *   §1.2 (R13-R24) — null-render gate + a11y role/label/hint + title
- *                    fallback + subtitle fallback + dismiss separate
- *                    Pressable + onResume / onDismiss wiring + memo.
- *   §1.3 (R25-R29) — formatResumptionTimeAgo branch boundaries.
- *   §4 (AC11-AC19) — testIDs + a11y + tap behaviour + helper boundaries.
- *
- * Key invariants :
- *   - `<ConversationResumptionBanner session={null}>` renders nothing
- *     (queryByTestId returns null).
- *   - Root testID="conversation-resumption-banner", role="button".
- *   - Title testID="conversation-resumption-title", subtitle
- *     testID="conversation-resumption-subtitle".
- *   - Dismiss is a SEPARATE Pressable with its own testID + role.
- *   - Tap card → onResume(session.id) exactly once, no onDismiss call.
- *   - Tap dismiss → onDismiss() exactly once, no onResume call.
- *   - formatResumptionTimeAgo boundaries :
- *       0ms       → just_now
- *       59_999ms  → just_now
- *       60_000ms  → minutes(1)
- *       3_599_000 → minutes(59)
- *       3_600_000 → hours(1)
- *       86_400_000→ days(1)
- *       NaN       → just_now (safe fallback, no throw)
- *
- * At baseline (B2 not yet implemented) :
- *   - `@/features/chat/ui/ConversationResumptionBanner` does not exist.
- *     → Jest fails with "Cannot find module" at module load time.
- *
- * Spec : `docs/chat-ux-refonte/specs/B2.md` §1.2 R13-R24 ; §1.3 R25-R29 ;
- *        §4 AC11-AC19.
- */
-
 import '../helpers/test-utils';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 
-// RED ASSERTION 1 : module does not exist yet at baseline.
 import {
   ConversationResumptionBanner,
   formatResumptionTimeAgo,
 } from '@/features/chat/ui/ConversationResumptionBanner';
 
 import type { ResumableSession } from '@/features/chat/application/useResumableSession';
-
-// Identity i18n :  test-utils mocks `t = (key) => key` and supports
-// interpolation via second-arg `{{var}}` substitution — but the default
-// mock returns the key as-is. So title text below === i18n KEY, not
-// the resolved English string. We assert on the KEY which is sufficient
-// to verify the BRANCH chosen (with-artwork vs fallback).
 
 function makeSession(overrides: Partial<ResumableSession> = {}): ResumableSession {
   return {
@@ -70,9 +25,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     jest.clearAllMocks();
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R13 / §4 AC11 — null gate
-  // ────────────────────────────────────────────────────────────────────────
   describe('null gate (R13, AC11)', () => {
     it('renders nothing when session is null', () => {
       const { queryByTestId } = render(
@@ -85,9 +37,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R14-R16 / §4 AC12 — root testID + a11y
-  // ────────────────────────────────────────────────────────────────────────
   describe('root structure + a11y (R14-R16, AC12)', () => {
     it('renders a Pressable with testID="conversation-resumption-banner"', () => {
       const { getByTestId } = render(
@@ -151,9 +100,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R17 / §4 AC13 — title branch
-  // ────────────────────────────────────────────────────────────────────────
   describe('title branch (R17, AC13)', () => {
     it('renders title using chat.resumption.title_with_artwork when lastArtworkTitle present', () => {
       const { getByTestId } = render(
@@ -163,7 +109,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
           onDismiss={jest.fn()}
         />,
       );
-      // Test-utils mock returns the i18n KEY as-is.
       expect(getByTestId('conversation-resumption-title').props.children).toBe(
         'chat.resumption.title_with_artwork',
       );
@@ -196,9 +141,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R18 / §4 AC14 — subtitle branch
-  // ────────────────────────────────────────────────────────────────────────
   describe('subtitle branch (R18, AC14)', () => {
     it('renders subtitle using subtitle_with_museum when museumName present', () => {
       const { getByTestId } = render(
@@ -227,9 +169,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R19 / §4 AC15 — dismiss is a separate Pressable
-  // ────────────────────────────────────────────────────────────────────────
   describe('dismiss separate Pressable (R19, AC15)', () => {
     it('renders a dismiss Pressable with testID="conversation-resumption-dismiss"', () => {
       const { getByTestId } = render(
@@ -267,9 +206,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R20-R21 / §4 AC16-AC17 — onResume / onDismiss wiring
-  // ────────────────────────────────────────────────────────────────────────
   describe('tap wiring (R20-R21, AC16-AC17)', () => {
     it('invokes onResume(session.id) verbatim on card press, exactly once (AC16)', () => {
       const onResume = jest.fn();
@@ -304,12 +240,8 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.2 R22 — Ionicons placeholder thumb + no emoji
-  // ────────────────────────────────────────────────────────────────────────
   describe('thumb placeholder (R22-R23)', () => {
     it('renders Ionicons name="images-outline" as the thumb placeholder', () => {
-      // test-utils mocks Ionicons → renders <Text>{name}</Text>.
       const { getByText } = render(
         <ConversationResumptionBanner
           session={makeSession()}
@@ -334,9 +266,6 @@ describe('<ConversationResumptionBanner> (B2 — banner UI)', () => {
 });
 
 describe('formatResumptionTimeAgo (B2 — pure time-ago helper)', () => {
-  // The test-utils mock of `useTranslation` returns `t = (key) => key`.
-  // Our helper accepts `t` as an argument and calls it ; we pass a minimal
-  // stub that returns the i18n key as-is.
   const t: (key: string, _interp?: Record<string, unknown>) => string = (key) => key;
 
   describe('boundary inputs (R25-R28, AC18)', () => {
@@ -407,9 +336,6 @@ describe('formatResumptionTimeAgo (B2 — pure time-ago helper)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.3 R29 / §4 AC19 — invalid input → safe fallback
-  // ────────────────────────────────────────────────────────────────────────
   describe('invalid input fallback (R29, AC19)', () => {
     it('returns just_now for unparseable iso string and does NOT throw', () => {
       expect(() => formatResumptionTimeAgo('not-an-iso', Date.now(), t)).not.toThrow();

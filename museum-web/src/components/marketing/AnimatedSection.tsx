@@ -8,13 +8,9 @@ type AnimationVariant = 'slide' | 'scale' | 'fade' | 'blur-scale';
 interface AnimatedSectionProps {
   children: ReactNode;
   className?: string;
-  /** Delay before animation starts (seconds) */
   delay?: number;
-  /** Direction the element slides in from (only used with 'slide' variant) */
   direction?: 'up' | 'down' | 'left' | 'right';
-  /** Animation variant: 'slide' (default), 'scale', or 'fade' */
   variant?: AnimationVariant;
-  /** When true, staggers children elements */
   stagger?: boolean;
 }
 

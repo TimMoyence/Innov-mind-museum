@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Seeds the fixed Maestro accounts straight into the e2e database (bypasses the
-# HTTP register breach-check). Each seed deletes then recreates its account, so
-# running this before every shard attempt hands every attempt fresh accounts:
-# the one auth-account-delete destroys, and quotas spent by the previous attempt.
-#
-# DB coordinates default to the CI service container; the iOS job passes
-# DB_PORT=5433 (local docker compose).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

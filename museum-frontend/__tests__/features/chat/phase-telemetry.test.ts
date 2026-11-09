@@ -1,25 +1,10 @@
-/**
- * A5 corrective loop 1 — `logPhaseTelemetry` consumer (R22 FE telemetry).
- *
- * The FE consumes `metadata.phase` for telemetry only — the visible status
- * string is driven by the client-side simulation. This test locks the
- * contract :
- *
- *   - When `metadata.phase` is a non-empty string, log a `console.debug`
- *     line tagged `[chat.phase]` with the value + correlation ids.
- *   - When `metadata` is `null` / `undefined` / lacks `phase` (legacy, NFR8 +
- *     R23), DO NOT throw and DO NOT log.
- */
-
 import { logPhaseTelemetry } from '@/features/chat/application/sendStrategies/phase-telemetry';
 
 describe('logPhaseTelemetry (A5 R22)', () => {
   let debugSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    debugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {
-      /* swallow */
-    });
+    debugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
   });
 
   afterEach(() => {

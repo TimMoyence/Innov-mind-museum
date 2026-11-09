@@ -3,8 +3,6 @@ import { Alert } from 'react-native';
 import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithQueryClient as render } from '../helpers/data/renderWithQueryClient';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
 const mockLoginWithSession = jest.fn();
 jest.mock('@/features/auth/application/AuthContext', () => ({
   useAuth: () => ({ loginWithSession: mockLoginWithSession }),
@@ -13,10 +11,6 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
 const mockForgotPassword = jest.fn();
-// Use factory functions to avoid the jest.mock hoisting trap: if the factory captured
-// `mockLogin` directly (login: mockLogin), the reference would be uninitialized because
-// jest.mock() is hoisted above const declarations. Wrapping in arrow functions defers the
-// lookup to call time, when the jest.fn() instances are already assigned.
 jest.mock('@/features/auth/infrastructure/authApi', () => ({
   authService: {
     login: (...args: unknown[]) => mockLogin(...args),
@@ -81,13 +75,11 @@ describe('AuthScreen', () => {
     render(<AuthScreen />);
     expect(screen.getByText('auth.welcome_back')).toBeTruthy();
 
-    // Toggle to register
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
     await waitFor(() => {
       expect(screen.getByText('auth.create_account')).toBeTruthy();
     });
 
-    // Toggle back to login
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_login'));
     await waitFor(() => {
       expect(screen.getByText('auth.welcome_back')).toBeTruthy();
@@ -96,11 +88,9 @@ describe('AuthScreen', () => {
 
   it('shows firstname and lastname fields only in register mode', async () => {
     render(<AuthScreen />);
-    // Login mode: no name fields
     expect(screen.queryByLabelText('a11y.auth.firstname_input')).toBeNull();
     expect(screen.queryByLabelText('a11y.auth.lastname_input')).toBeNull();
 
-    // Switch to register mode
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
     await waitFor(() => {
       expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
@@ -143,10 +133,6 @@ describe('AuthScreen', () => {
   });
 
   it('login submit with empty fields surfaces inline Zod errors (TD-RHF-02)', async () => {
-    // Cluster 7 (TD-RHF-02): submit with empty fields no longer bubbles to the
-    // catch-all `auth.fill_all_fields` Alert — the Zod resolver gates handleSubmit
-    // so the business mutation never runs, and the user sees the inline error
-    // attached to the offending field (testID="auth-email-error" et al.).
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
@@ -163,7 +149,6 @@ describe('AuthScreen', () => {
     const registerButton = await waitFor(() => screen.getByLabelText('a11y.auth.register_button'));
     expect(registerButton.props.accessibilityState.disabled).toBe(true);
 
-    // CNIL Délibération 2021-018 — DOB required for the button to enable.
     fireEvent.changeText(screen.getByLabelText('auth.date_of_birth_a11y'), '2000-01-01');
     fireEvent.press(screen.getByLabelText('a11y.auth.gdpr_checkbox'));
     await waitFor(() => {
@@ -184,21 +169,16 @@ describe('AuthScreen', () => {
   it('hides legal notice text in register mode', async () => {
     render(<AuthScreen />);
     fireEvent.press(screen.getByLabelText('a11y.auth.toggle_register'));
-    // Wait for register mode to be active (positive assertion first)
     await waitFor(() => {
       expect(screen.getByLabelText('a11y.auth.firstname_input')).toBeTruthy();
     });
     expect(screen.queryByText('auth.legal_notice')).toBeNull();
   });
 
-  // ── react-hook-form + Zod integration (ADR-025, T3.3) ───────────────────────
-
   it('RHF: form fields update — email input value reflects typed text', async () => {
     render(<AuthScreen />);
     const emailInput = screen.getByLabelText('a11y.auth.email_input');
 
-    // RHF setValue is called via onChangeText; the input value prop should
-    // reflect the watched RHF field value after re-render.
     fireEvent.changeText(emailInput, 'user@example.com');
     await waitFor(() => {
       expect(emailInput.props.value).toBe('user@example.com');
@@ -209,11 +189,9 @@ describe('AuthScreen', () => {
     mockLogin.mockResolvedValueOnce({ accessToken: 'tok', refreshToken: 'ref' });
     render(<AuthScreen />);
 
-    // Use testID to target the TextInput elements directly
     fireEvent.changeText(screen.getByTestId('email-input'), 'user@example.com');
     fireEvent.changeText(screen.getByTestId('password-input'), 'secret1234');
 
-    // Wait for RHF watched values to propagate through re-render
     await waitFor(() => {
       expect(screen.getByTestId('email-input').props.value).toBe('user@example.com');
     });
@@ -232,10 +210,6 @@ describe('AuthScreen', () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     render(<AuthScreen />);
 
-    // Submit without entering any value — handleSubmit gates on Zod validity,
-    // so the catch-all `auth.fill_all_fields` Alert (legacy behavior) is no
-    // longer reached. The inline `auth-email-error` testID is the new
-    // observable user-facing signal (TD-RHF-02, AC1 — Maestro mirror).
     fireEvent.press(screen.getByLabelText('a11y.auth.login_button'));
 
     await waitFor(() => {

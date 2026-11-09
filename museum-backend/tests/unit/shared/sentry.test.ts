@@ -1,13 +1,3 @@
-/**
- * Tests for shared/observability/sentry.ts conditional initialization branches.
- *
- * The module uses a module-level `initialized` flag, so we need to isolate each test
- * by re-importing the module fresh. We use jest.isolateModules for this.
- */
-
-// Prevent dotenv.config() (called inside @src/config/env) from re-injecting
-// SENTRY_DSN from the host's .env after the test deletes it. The "no DSN"
-// branches assume process.env.SENTRY_DSN remains absent across the require.
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
 jest.mock('@shared/logger/logger', () => ({
@@ -24,7 +14,6 @@ describe('sentry — conditional initialization', () => {
 
   it('initSentry is a no-op when env.sentry is falsy (no SENTRY_DSN)', () => {
     jest.isolateModules(() => {
-      // env.sentry should be undefined/falsy when SENTRY_DSN is not set
       const { initSentry, isSentryEnabled } = require('@shared/observability/sentry');
       initSentry();
       expect(isSentryEnabled()).toBe(false);
@@ -39,7 +28,6 @@ describe('sentry — conditional initialization', () => {
       } = require('@shared/observability/sentry');
       expect(isSentryEnabled()).toBe(false);
 
-      // Should not throw even when called without initialization
       expect(() => captureExceptionWithContext(new Error('test'))).not.toThrow();
       expect(() =>
         captureExceptionWithContext(new Error('test'), { requestId: 'r1' }),
@@ -56,7 +44,6 @@ describe('sentry — conditional initialization', () => {
       expect(isSentryEnabled()).toBe(false);
 
       const fakeApp = {} as unknown as import('express').Express;
-      // Should not throw
       expect(() => setupSentryExpressErrorHandler(fakeApp)).not.toThrow();
     });
   });
@@ -67,7 +54,6 @@ describe('sentry — conditional initialization', () => {
       expect(isSentryEnabled()).toBe(false);
 
       const result = startSpan({ name: 'test', op: 'test' }, (span: any) => {
-        // NOOP_SPAN proxy: any method call should return the proxy itself
         expect(typeof span).not.toBe('undefined');
         return 42;
       });
@@ -91,11 +77,8 @@ describe('sentry — conditional initialization', () => {
       const { startSpan } = require('@shared/observability/sentry');
 
       startSpan({ name: 'test', op: 'test' }, (span: any) => {
-        // Should be able to call any method without error
         const result = span.setAttribute('key', 'value');
-        // Proxy returns itself
         expect(typeof result).not.toBe('undefined');
-        // Chaining should work
         span.setStatus('ok').end();
       });
     });

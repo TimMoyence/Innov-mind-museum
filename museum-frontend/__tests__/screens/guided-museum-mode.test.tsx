@@ -5,7 +5,6 @@ jest.mock('@/features/settings/runtimeSettings', () => ({
   loadRuntimeSettings: jest.fn().mockResolvedValue({
     defaultMuseumMode: true,
     guideLevel: 'beginner',
-    defaultLocale: 'en',
   }),
 }));
 

@@ -44,12 +44,10 @@ describe('validateQuery middleware', () => {
     const req = mockReq(query);
     const res = mockRes();
 
-    // Should not throw even though req.query is frozen
     expect(() => {
       validateQuery(testSchema)(req, res, noop);
     }).not.toThrow();
     expect(res.locals.validatedQuery).toEqual({ page: 5, limit: 10 });
-    // req.query should remain the original string values
     expect(req.query).toEqual({ page: '5', limit: '10' });
   });
 
@@ -134,26 +132,15 @@ describe('validateQuery middleware', () => {
 
     try {
       validateQuery(testSchema)(req, res, noop);
-    } catch {
-      // expected
-    }
+    } catch {}
 
     expect(noop).not.toHaveBeenCalled();
   });
 });
 
-/**
- * UFR-022 RED phase — RUN_ID 2026-05-23-pr-4-formatZodIssues.
- *
- * Wire-format parity guards between validateQuery and validateBody.
- * Canonical formatter = `@shared/validation/zod-issue.formatter` ; see spec §5 AC2
- * and design.md §4.2. These cases MUST fail before the green codemod
- * (current inline `${path.join('.')}: ${msg}` diverges from `formatZodIssues`).
- */
 describe('validateQuery — wire-format parity with validateBody', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // Helper: run a middleware and return the thrown AppError's message.
   const captureMessage = (run: () => void): string => {
     try {
       run();
@@ -179,11 +166,8 @@ describe('validateQuery — wire-format parity with validateBody', () => {
       validateBody(schema)(bodyReq, bodyRes, noop);
     });
 
-    // Parity: both middlewares MUST produce byte-equal messages.
     expect(queryMsg).toBe(bodyMsg);
-    // Canonical form: starts with `q ` (space, not colon).
     expect(queryMsg).toMatch(/^q /);
-    // Negative regression: no `<field>: ` prefix anywhere at start.
     expect(queryMsg).not.toMatch(/^\w+: /);
   });
 
@@ -198,20 +182,16 @@ describe('validateQuery — wire-format parity with validateBody', () => {
       validateQuery(schema)(queryReq, queryRes, noop);
     });
 
-    // Compute the canonical expected wire format directly from formatZodIssues
-    // for the same issue set, ensuring byte-equal parity.
     const probe = schema.safeParse('not-an-object');
     expect(probe.success).toBe(false);
     if (probe.success) throw new Error('unreachable: schema must reject string');
     const canonical = formatZodIssues(probe.error.issues);
 
     expect(queryMsg).toBe(canonical);
-    // Root error MUST NOT be prefixed by ": " (legacy inline bug).
     expect(queryMsg).not.toMatch(/^: /);
   });
 
   it('C3 — dedupe: issue whose message already starts with its path MUST NOT be double-prefixed', () => {
-    // `.refine` with a custom message that includes the field name in its prose.
     const schema = z.object({
       q: z.string().refine(() => false, { message: 'q must be set' }),
     });
@@ -222,14 +202,11 @@ describe('validateQuery — wire-format parity with validateBody', () => {
       validateQuery(schema)(queryReq, queryRes, noop);
     });
 
-    // Canonical dedupe branch of formatZodIssue → no "q: q must be set" double-prefix.
     expect(queryMsg).toBe('q must be set');
     expect(queryMsg).not.toMatch(/^q: q /);
   });
 
   it('C4 — empty issues edge case: defensive fallback to "Invalid payload" (not empty string)', () => {
-    // Synthesise a schema whose safeParse yields success:false with issues:[]
-    // to exercise the defensive branch of formatZodIssues.
     const fakeSchema = {
       safeParse: () => ({ success: false as const, error: { issues: [] as z.core.$ZodIssue[] } }),
     } as unknown as z.ZodType;
@@ -240,8 +217,6 @@ describe('validateQuery — wire-format parity with validateBody', () => {
       validateQuery(fakeSchema)(queryReq, queryRes, noop);
     });
 
-    // Canonical formatter returns 'Invalid payload' for empty issues; legacy
-    // inline produced '' (empty string).
     expect(queryMsg).toBe('Invalid payload');
     expect(queryMsg).not.toBe('');
   });
@@ -255,8 +230,6 @@ describe('validateQuery — wire-format parity with validateBody', () => {
       validateQuery(schema)(queryReq, queryRes, noop);
     });
 
-    // Anti-regression: even if a future hand edit reintroduces the inline
-    // `${path}: ${message}` form, this assertion catches it.
     expect(queryMsg).not.toMatch(/^\w+: /);
   });
 });

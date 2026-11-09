@@ -10,6 +10,4 @@ const plugin = {
   },
 };
 
-// eslint-plugin-* packages use module.exports for compatibility with both ESM and CJS consumers
-// export = compiles to module.exports = plugin, which is the conventional plugin shape
 export = plugin;

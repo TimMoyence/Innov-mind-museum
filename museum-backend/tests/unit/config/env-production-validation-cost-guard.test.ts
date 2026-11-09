@@ -1,27 +1,3 @@
-/**
- * W1-C2 RED — LLM cost-guard fail-CLOSED at boot in production.
- * Run: 2026-05-26-kr-domains · design.md §W1-C2 / AC-C2.1..C2.2.
- *
- * Problem pinned: in production, the per-user daily USD cap is enforced via the
- * Redis-backed `llmCostCounter`. If `OPENAI_USER_DAILY_USD_CAP > 0` (the default
- * is 0.5) but Redis is disabled (`REDIS_URL` unset → `env.cache` undefined), the
- * counter is never wired and `llmCostGuard` silently fails OPEN — paid LLM calls
- * run with NO per-user cap. `validateProductionEnv` must fail-CLOSED at boot
- * instead: throw a clear error naming `OPENAI_USER_DAILY_USD_CAP` and `REDIS_URL`.
- *
- * Mirrors `env-production-validation-redis.test.ts`: drives `validateProductionEnv`
- * directly with a synthesized AppEnv + a matching `process.env` so the existing
- * required(...) gates are satisfied and only the cost-guard/Redis branch decides.
- *
- * RED failure mode at be758ab56: `validateProductionEnv` has NO cost-guard ↔ Redis
- * cross-check, so the first case (cap > 0, cache disabled) does NOT throw → the
- * `toThrow(...)` assertion FAILS. Counts as RED (design.md §6 / AC-C2.1).
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import {
@@ -35,18 +11,10 @@ import {
 const STRONG_REDIS_PASSWORD = 'r'.repeat(48);
 
 interface MakeEnvOptions {
-  /** Per-authenticated-user daily USD ceiling. Default 0.5 (env.ts default). */
   userDailyCapUsd?: number;
-  /** When false, simulates Redis disabled (REDIS_URL unset → env.cache undefined). */
   cacheEnabled?: boolean;
 }
 
-/**
- * Synthesizes a production AppEnv that passes every OTHER required(...) gate so the
- * cost-guard ↔ Redis cross-check is the only decision under test. When
- * `cacheEnabled` is false, `cache` is omitted entirely (mirrors `REDIS_URL` unset).
- * @param options
- */
 const makeEnv = ({ userDailyCapUsd = 0.5, cacheEnabled = false }: MakeEnvOptions = {}): AppEnv =>
   ({
     nodeEnv: 'production',
@@ -90,7 +58,6 @@ describe('validateProductionEnv — LLM cost-guard fail-CLOSED (W1-C2)', () => {
       EXPORT_PSEUDONYM_SALT: VALID_EXPORT_PSEUDONYM_SALT,
       OPENAI_API_KEY: 'sk-test',
     };
-    // Simulate Redis NOT configured by default — REDIS_URL/REDIS_HOST unset.
     delete process.env.REDIS_URL;
     delete process.env.REDIS_HOST;
     delete process.env.REDIS_PASSWORD;
@@ -106,7 +73,6 @@ describe('validateProductionEnv — LLM cost-guard fail-CLOSED (W1-C2)', () => {
       validateProductionEnv(makeEnv({ userDailyCapUsd: 0.5, cacheEnabled: false }));
     }).toThrow(/OPENAI_USER_DAILY_USD_CAP/);
 
-    // Same throw must also name REDIS_URL so the operator knows the two ways out.
     expect(() => {
       validateProductionEnv(makeEnv({ userDailyCapUsd: 0.5, cacheEnabled: false }));
     }).toThrow(/REDIS_URL/);

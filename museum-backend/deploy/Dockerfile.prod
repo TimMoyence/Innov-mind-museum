@@ -1,31 +1,15 @@
-# ---------- Build stage ----------
-# NOTE: build context is the REPO ROOT (not museum-backend/), so the
-# `file:../tools/eslint-plugin-musaium-test-discipline` workspace dep
-# in museum-backend/package.json resolves correctly. See E4 fix.
 FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS build
 WORKDIR /app
 
-# `ca-certificates` ensures TLS trust for the pnpm registry fetch below.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# C3 (2026-06) — SigLIP ONNX vision encoder, baked into a pinned, self-owned
-# GHCR base image (museum-backend-base:siglip-v1) and COPY'd in here. This layer
-# is content-addressed by the base image digest, so it is cached across source
-# changes: the 354 MB model is pulled at most once per runner, NEVER re-fetched
-# per build. Provenance + rebuild recipe (HF google/siglip2-base-patch16-224 →
-# ONNX vision export, sha256 c0573e3f…b163bcad): deploy/model-base/README.md.
-# Replaces fetch-models.sh + its never-provisioned GCS bucket — the phantom URL
-# that 500'd /api/chat/compare. `models/` is dockerignored so the later
-# `COPY museum-backend ./` cannot clobber this file.
 COPY --from=ghcr.io/timmoyence/museum-backend-base:siglip-v1 \
      /models/siglip2-base-patch16-224.onnx ./models/siglip2-base-patch16-224.onnx
 
-# Copy the workspace plugin AND @musaium/shared FIRST so file: paths exist
-# when pnpm resolves the lockfile. Both are committed with their dist/.
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
 COPY packages/musaium-shared /packages/musaium-shared
 
@@ -35,60 +19,37 @@ RUN pnpm install --frozen-lockfile
 COPY museum-backend ./
 RUN pnpm run build
 
-# (SigLIP ONNX model is COPY'd from the pinned GHCR base image near the top of
-# this build stage — see the C3 note after corepack. No per-build download.)
 
-# ---------- Production deps stage ----------
 FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS deps
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# pnpm walks the lockfile during `--prod` install and verifies file: paths
-# exist. Copy both the workspace plugin (devDep, listed in lockfile) AND
-# @musaium/shared (runtime dep) here too.
 COPY tools/eslint-plugin-musaium-test-discipline /tools/eslint-plugin-musaium-test-discipline
 COPY packages/musaium-shared /packages/musaium-shared
 
 COPY museum-backend/package.json museum-backend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
-# ---------- Runtime stage ----------
 FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Apply latest security patches to the base Debian system packages.
-# Required because `node:22-bookworm-slim` is rebuilt monthly upstream, but
-# new HIGH/CRITICAL CVEs land in glibc/libc6/libcap/systemd between releases.
-# Trivy fail-on-HIGH gate (cf. .github/workflows/ci-cd-backend.yml) catches
-# the gap and fails CI — `apt upgrade` keeps us aligned with Debian's
-# latest patched versions without changing the base image.
-# Seen 2026-05-17: CVE-2026-0861 (glibc memalign), CVE-2026-4878 (libcap
-# TOCTOU), CVE-2026-29111 (systemd IPC) all fixed in bookworm but not yet
-# in upstream node image. Trivy fail-on-HIGH triggered.
 RUN apt-get update \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-v* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
-# Copier uniquement package.json pour traçabilité
 COPY museum-backend/package.json ./
 
-# Copier prod-only node_modules du deps stage (no devDependencies)
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/openapi ./openapi
-# C3 (2026-06) — visual-similarity ONNX bundle, COPY'd into the build stage from
-# the pinned GHCR base image. Path mirrors SIGLIP_ONNX_MODEL_PATH default
-# (./models/siglip2-base-patch16-224.onnx) so env.ts resolution works at runtime.
 COPY --from=build /app/models ./models
 
-# Strip source maps from production image (uploaded to Sentry separately)
 RUN find /app/dist -name '*.map' -delete
 
-# Sécurité : user non-root + uploads directory
 RUN adduser --system --uid 1001 nodeuser \
     && mkdir -p /app/tmp/uploads \
     && chown -R nodeuser:nogroup /app/tmp
@@ -101,12 +62,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 STOPSIGNAL SIGTERM
 
-# Boot runs the app ONLY. Migrations run on a SINGLE path — the CI deploy step
-# (`docker compose run --rm backend node dist/src/data/db/run-migrations.js`),
-# which carries the pgvector preflight guard (run-migrations.ts:17). The boot
-# CMD no longer migrates (I-OPS3, 2026-05-25): a double-run on two code paths
-# turned a failed migration into an opaque `restart: unless-stopped` loop.
-# DR NOTE: a fresh prod DB brought up WITHOUT the CI deploy step (manual rebuild)
-# will boot against an unmigrated schema — the DR runbook MUST first run
-# `docker compose run --rm backend node dist/src/data/db/run-migrations.js`.
 CMD ["node", "dist/src/index.js"]

@@ -1,26 +1,3 @@
-/**
- * W2-07 (RED) — prod-refusal: middleware NOT mounted under production +
- * boot-throw when the flag is enabled in production.
- *
- * spec.md §EARS:
- *   R5 — WHEN NODE_ENV=production THE mw SHALL NEVER mount
- *        (`resolveNetFaultEnabled` coerces false unconditionally, NO hatch).
- *   R6 — WHEN NET_FAULT_INJECTION_ENABLED=true in production THE boot SHALL
- *        throw (validateProductionEnv), unconditionally.
- * design.md §Architecture: `shouldMountNetFault(nodeEnv, raw)` double-guards on
- *   `nodeEnv !== 'production' && resolveNetFaultEnabled(raw, nodeEnv)`;
- *   `validateProductionEnv` gains an unconditional throw (class of the
- *   AUTH_EMAIL_SERVICE_KIND='test' ban) when the flag is truthy in prod.
- *
- * RED state: `shouldMountNetFault` (in @src/config/net-fault.config) does not
- * exist yet, and `validateProductionEnv` does not yet throw on the flag → both
- * import + assertion fail.
- *
- * lib-docs: none — pure predicate + boot validator. Reuses the shared
- *   prod-env fixtures (`validProductionEnv`) — no inline test entities.
- *
- * Frozen-test invariant: byte-immutable once manifested (phase=green).
- */
 import { shouldMountNetFault } from '@src/config/net-fault.config';
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
@@ -65,7 +42,7 @@ const makeEnv = (): AppEnv =>
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'openai', openAiApiKey: 'sk-openai' },
+    llm: { costGuard: { userDailyCapUsd: 0 }, provider: 'openai', openAiApiKey: 'sk-openai' },
     storage: { driver: 'local', localUploadsDir: '/app/tmp/uploads', signedUrlTtlSeconds: 900 },
     exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     auth: {

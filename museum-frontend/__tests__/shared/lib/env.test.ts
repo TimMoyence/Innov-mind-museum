@@ -1,16 +1,3 @@
-/**
- * Tests for `readEnvString()` canonical env-reader helper.
- *
- * Why these tests exist (T4-RED-EXTRA, run 2026-05-19-w2-followup-fixpack):
- * close the FE branch-coverage gate (78%). The helper was at 75% branches —
- * the typeof-guard branch (non-string input) was never exercised. Covers:
- *   - typeof guard rejecting non-string inputs (undefined / number / null / object)
- *   - trim branch returning undefined on whitespace-only input
- *   - happy-path returning the trimmed value
- *
- * F4-EXTRA is test-only — production code is already correct.
- */
-
 import { readEnvString } from '@/shared/lib/env';
 
 describe('readEnvString', () => {

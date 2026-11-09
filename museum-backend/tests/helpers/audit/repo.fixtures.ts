@@ -1,6 +1,5 @@
 import type { IAuditLogRepository } from '@shared/audit/audit.repository.interface';
 
-/** Shared mock IAuditLogRepository factory. */
 export const makeAuditRepo = (
   overrides: Partial<IAuditLogRepository> = {},
 ): IAuditLogRepository => ({

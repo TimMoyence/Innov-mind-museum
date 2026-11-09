@@ -52,39 +52,19 @@ export const toApiErrorPayload = (value: unknown): ApiErrorPayload | null => {
   return value as ApiErrorPayload;
 };
 
-export const getApiErrorCode = (value: unknown): string | undefined => {
+const pickApiErrorField = (value: unknown, field: 'code' | 'message'): string | undefined => {
   const payload = toApiErrorPayload(value);
-  if (!payload) {
-    return undefined;
-  }
-
-  if (typeof payload.error?.code === 'string') {
-    return payload.error.code;
-  }
-
-  if (typeof payload.code === 'string') {
-    return payload.code;
-  }
-
-  return undefined;
+  const nested = payload?.error?.[field];
+  if (typeof nested === 'string') return nested;
+  const flat = payload?.[field];
+  return typeof flat === 'string' ? flat : undefined;
 };
 
-export const getApiErrorMessage = (value: unknown): string | undefined => {
-  const payload = toApiErrorPayload(value);
-  if (!payload) {
-    return undefined;
-  }
+export const getApiErrorCode = (value: unknown): string | undefined =>
+  pickApiErrorField(value, 'code');
 
-  if (typeof payload.error?.message === 'string') {
-    return payload.error.message;
-  }
-
-  if (typeof payload.message === 'string') {
-    return payload.message;
-  }
-
-  return undefined;
-};
+export const getApiErrorMessage = (value: unknown): string | undefined =>
+  pickApiErrorField(value, 'message');
 
 export const getApiRequestId = (value: unknown): string | undefined => {
   const payload = toApiErrorPayload(value);
@@ -100,12 +80,6 @@ export const getApiRequestId = (value: unknown): string | undefined => {
   return undefined;
 };
 
-/**
- * Converts an Axios error (or unknown thrown value) into a structured {@link AppError}.
- * Handles timeout, network, 401, 403, 404, and 4xx/5xx status codes.
- * @param error - The caught error value.
- * @returns An `AppError & Error` with the appropriate kind and message.
- */
 export const mapAxiosError = (error: unknown): AppError & Error => {
   const axiosLike = toAxiosLikeError(error);
 

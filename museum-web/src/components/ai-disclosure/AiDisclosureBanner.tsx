@@ -7,14 +7,6 @@ const COPY = {
   en: 'Musaium is an AI assistant. Replies are generated automatically and may contain errors.',
 } as const;
 
-/**
- * AI-generated-content disclosure required by EU AI Act Article 50
- * (Regulation (EU) 2024/1689, in force 2026-08-02). Rendered on any
- * page that exposes Musaium's generative chat — currently the public
- * landing page + the marketing chat preview surface. Lives as a
- * standalone component so legal can adjust copy without touching the
- * marketing layout.
- */
 export function AiDisclosureBanner({ locale }: AiDisclosureBannerProps) {
   return (
     <div

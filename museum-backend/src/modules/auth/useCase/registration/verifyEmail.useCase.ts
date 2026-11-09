@@ -12,7 +12,6 @@ export class VerifyEmailUseCase {
       throw invalidInput('Verification token is required');
     }
 
-    // SEC (H2): hash the raw token before lookup — DB only stores the SHA-256 digest.
     const hashedToken = hashEmailTokenForLookup(trimmed);
 
     const user = await this.userRepository.verifyEmail(hashedToken);

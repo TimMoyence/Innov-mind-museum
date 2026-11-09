@@ -21,6 +21,7 @@ import { AUTH_ROUTE } from '@/features/auth/routes';
 import { useChatLocalCacheStore } from '@/features/chat/application/chatLocalCache';
 import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
 import { clearDailyArtStorage } from '@/features/daily-art/application/logoutCleanup';
+import { forgetAcceptedPreferences } from '@/features/settings/infrastructure/accountPreference';
 import { reportError } from '@/shared/observability/errorReporting';
 import {
   runAuthRefresh,
@@ -41,15 +42,12 @@ import {
 } from '../domain/authLogic.pure';
 import { useAuthAppStateSync } from './useAuthAppStateSync';
 
-/** Extracts user ID from a JWT access token and sets Sentry user context. Non-critical — fails silently. */
 const identifySentryUser = (accessToken: string): void => {
   const userId = extractUserIdFromToken(accessToken);
   if (userId) Sentry.setUser({ id: userId });
 };
 
-SplashScreen.preventAutoHideAsync().catch(() => {
-  /* fire-and-forget */
-});
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const bootstrapBreadcrumb = (step: string, data?: Record<string, unknown>): void => {
   try {
@@ -59,9 +57,7 @@ const bootstrapBreadcrumb = (step: string, data?: Record<string, unknown>): void
       message: step,
       data,
     });
-  } catch {
-    /* Sentry may not be initialised in tests */
-  }
+  } catch {}
 };
 
 interface SessionData {
@@ -109,15 +105,11 @@ const clearPersistedTokens = async (): Promise<void> => {
 };
 
 const clearPerUserFeatureStorage = async (): Promise<void> => {
+  forgetAcceptedPreferences();
   const results = await Promise.allSettled([
     useChatLocalCacheStore.getState().clearAll(),
     clearDailyArtStorage(),
     clearBiometricPreference(),
-    // B8 (spec R6) — clear the per-userId "already asked" consent memo so the
-    // next user on a shared device is re-prompted (GDPR Art. 7 — no consent
-    // inheritance across users). MUST run before `clearPersistedTokens()` so the
-    // access token is still readable when the namespaced key is derived
-    // (`useAiConsent.consentMemoKey`) — call-site ordering enforced below.
     clearConsentAcceptedFlag(),
   ]);
   for (const outcome of results) {
@@ -139,9 +131,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(true);
     setIsFirstLaunch(!session.user.onboardingCompleted);
     identifySentryUser(session.accessToken);
-    // TD-2 (2026-05-15) — hydrate the 4 local-first preference stores from
-    // GET /auth/me so devices see server-persisted prefs instead of local
-    // defaults. Fire-and-forget; never throws.
     void bootstrapProfile();
   }, []);
 
@@ -165,30 +154,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Hydrate the cached access token regardless of expiry — the response
-        // interceptor's single-flight refresh handles renewal on the first 401
-        // (or on the first authed request if no token is set). Bootstrap MUST
-        // NOT issue its own /auth/refresh call: a parallel API call from the
-        // first screen mount would trigger a second concurrent refresh and the
-        // backend rotates the refresh token, invalidating whichever request
-        // arrives second → spurious logout on every cold start.
         const cachedAccess = await authStorage.getPersistedAccessToken();
         if (cachedAccess) {
           setAccessToken(cachedAccess);
           identifySentryUser(cachedAccess);
         }
         setIsAuthenticated(true);
-        // A stored refresh token proves the user has logged in before; they
-        // are not first-launch. The accurate onboarding flag arrives with
-        // the first refresh response (authRefreshHandler) — defaulting to
-        // false here unblocks useProtectedRoute, which early-returns while
-        // isFirstLaunch === null and would otherwise leave the user stuck
-        // on /auth after a biometric unlock.
         setIsFirstLaunch(false);
-        // TD-2 (2026-05-15) — hydrate prefs from /auth/me on session resume
-        // (cold start with valid refresh token). Mirrors the login path.
-        // Fire-and-forget; idempotence guard prevents double-fire if
-        // loginWithSession runs later in the same session.
         void bootstrapProfile();
         const biometricOn = await getBiometricEnabled();
         if (biometricOn) setIsBiometricLocked(true);
@@ -205,9 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         bootstrapBreadcrumb('done', { duration_ms: Date.now() - startedAt });
         try {
           await SplashScreen.hideAsync();
-        } catch {
-          /* ignore error */
-        }
+        } catch {}
       }
     };
 
@@ -222,9 +192,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useAuthAppStateSync(silentRefresh, {
     onForeground: (durationMs) => {
       if (durationMs > 30_000) {
-        // User was away long enough that volatile data (notifications, sessions)
-        // is likely stale. Invalidate only that scope — everything else stays
-        // cached so returning feels instant.
         void queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
         void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       }
@@ -247,37 +214,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsAuthenticated(true);
         setIsFirstLaunch(!session.user.onboardingCompleted);
         identifySentryUser(session.accessToken);
-        // TD-2 (2026-05-15) — intentionally NOT calling bootstrapProfile()
-        // on the refresh path. Refresh fires whenever the access token
-        // expires (every 15 min) and would otherwise re-overwrite any local
-        // pending writes that happened between login and refresh, violating
-        // R3 (server-wins-first per session, not per token rotation). The
-        // session-scoped guard inside bootstrapProfile would short-circuit
-        // anyway, but skipping the call avoids the unnecessary breadcrumb.
         return { kind: 'success', accessToken: session.accessToken };
       } catch (error) {
         if (isAuthInvalidError(error)) {
           return { kind: 'invalid' };
         }
-        // Network / 5xx during refresh: keep tokens intact so the next attempt
-        // can retry with the same refresh token. The pending request fails
-        // with its original 401 but the session survives the outage.
         return { kind: 'transient' };
       }
     });
 
     setUnauthorizedHandler(() => {
-      // B8 — clear per-user feature storage (incl. the namespaced consent memo)
-      // BEFORE clearing tokens, so the access token is still readable when the
-      // consent memo key is derived from it.
       void clearPerUserFeatureStorage();
       void clearPersistedTokens();
       void resetPersistedCache();
       setIsAuthenticated(false);
       setIsFirstLaunch(null);
-      // TD-2 (2026-05-15) — server-forced logout (401 with no recoverable
-      // refresh) is equivalent to logout; release the bootstrap guard so
-      // the next login re-hydrates from /auth/me.
       resetBootstrapProfileGuard();
       Sentry.setUser(null);
       router.replace(AUTH_ROUTE);
@@ -296,31 +247,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async (): Promise<void> => {
     let refreshToken: string | null = null;
-    // B8 — clear per-user feature storage (incl. the namespaced consent memo)
-    // BEFORE clearing tokens, so the access token is still readable when the
-    // consent memo key is derived from it.
     await clearPerUserFeatureStorage();
     try {
       refreshToken = await authStorage.getRefreshToken();
       await clearPersistedTokens();
-    } catch {
-      // Token clear failure is non-critical — proceed with logout
-    }
+    } catch {}
 
     await resetPersistedCache();
     setIsAuthenticated(false);
     setIsFirstLaunch(null);
-    // TD-2 (2026-05-15) — reset the session-scoped bootstrap guard so the
-    // next login re-hydrates the 4 preference stores from /auth/me.
     resetBootstrapProfileGuard();
     Sentry.setUser(null);
     router.replace(AUTH_ROUTE);
 
     try {
       await authService.logout(refreshToken);
-    } catch {
-      // Logout API failure is non-critical — user is already logged out locally
-    }
+    } catch {}
   };
 
   const checkTokenValidity = async (): Promise<boolean> => {
@@ -336,11 +278,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     }
     if (result.kind === 'invalid') {
-      // unauthorizedHandler has already purged the session for the shared cycle.
       return false;
     }
-    // Transient failure — preserve the session so the user can keep using
-    // the app; the next authed request will retry the refresh flow.
     return isAuthenticated;
   };
 

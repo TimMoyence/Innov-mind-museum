@@ -1,8 +1,6 @@
 import { RuleCreator } from '@typescript-eslint/utils/eslint-utils';
 import type { TSESTree } from '@typescript-eslint/utils';
 
-// Inline AST_TOKEN_TYPES values used (only what's needed) to avoid pulling
-// in @typescript-eslint/utils/ts-eslint which transitively requires 'eslint'.
 const AST_TOKEN_TYPES = {
   Line: 'Line',
   Block: 'Block',
@@ -40,8 +38,6 @@ export default createRule<[], MessageIds>({
     const sourceCode = context.sourceCode ?? context.getSourceCode?.();
     return {
       Program(programNode) {
-        // Use ast.comments for a deduplicated list (getAllComments can return duplicates
-        // when comments are attached to multiple AST nodes as leading/trailing)
         const comments =
           (programNode as unknown as { body: unknown; comments?: TSESTree.Comment[] }).comments ??
           sourceCode.getAllComments();
@@ -53,10 +49,8 @@ export default createRule<[], MessageIds>({
             continue;
           }
 
-          // Normalise to single-line so multiline block comments don't bypass matching
           const value = comment.value.replace(/\s+/g, ' ').trim();
 
-          // Match eslint-disable or eslint-disable-next-line with rule names
           const disableMatch = value.match(
             /^eslint-disable(?:-next-line)?\s+([^\s]+(?:\s*,\s*[^\s]+)*)(?:\s+--\s+(.*))?$/,
           );
@@ -65,15 +59,12 @@ export default createRule<[], MessageIds>({
           const rulesText = disableMatch[1];
           const justification = disableMatch[2] ?? '';
 
-          // Check if any disabled rule targets our plugin
           const disabledRules = rulesText.split(',').map((s) => s.trim());
           const targetsOurPlugin = disabledRules.some(
             (r) => TARGET_RULES.includes(r) || r.startsWith(TARGET_PLUGIN + '/'),
           );
           if (!targetsOurPlugin) continue;
 
-          // Require Justification: with ≥20 chars body (stopped before Approved-by:),
-          // and Approved-by: with ≥1 char
           const justificationMatch = justification.match(
             /Justification:\s*(.*?)(?:\s+Approved-by:|$)/,
           );

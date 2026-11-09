@@ -2,17 +2,6 @@ import type React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
 
-/**
- * B8 (spec R6 / AC-B8-1 / AC-B8-2 / AC-B8-5, design §9 D2) — `logout()` AND the
- * forced-logout (`unauthorizedHandler`) path MUST clear the per-userId consent
- * "already asked" memo via `clearConsentAcceptedFlag`, so the next user on a
- * shared device is re-prompted. Today `clearPerUserFeatureStorage()` clears
- * chat cache / daily-art / biometric prefs but NOT the consent memo → these
- * assertions FAIL until T3.5 wires the clear into `clearPerUserFeatureStorage`.
- */
-
-// ── Mocks (mirror __tests__/context/AuthContext.test.tsx) ─────────────────────
-
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   router: { replace: (...args: unknown[]) => mockReplace(...args) },
@@ -79,7 +68,6 @@ jest.mock('@/features/daily-art/application/logoutCleanup', () => ({
   clearDailyArtStorage: (...args: unknown[]) => mockClearDailyArtStorage(...args),
 }));
 
-// B8 — the consent-memo clear the green phase must wire into the cascade.
 const mockClearConsentAcceptedFlag = jest.fn(() => Promise.resolve());
 jest.mock('@/features/chat/application/useAiConsent', () => ({
   clearConsentAcceptedFlag: () => mockClearConsentAcceptedFlag(),
@@ -107,13 +95,9 @@ jest.mock('@/features/auth/domain/authLogic.pure', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
 );
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('AuthContext — consent memo cleared on logout (B8)', () => {
   beforeEach(() => {
@@ -162,7 +146,6 @@ describe('AuthContext — consent memo cleared on logout (B8)', () => {
 
     await act(async () => {
       registeredHandler?.();
-      // handler fires void promises; give microtasks a couple ticks to flush
       await Promise.resolve();
       await Promise.resolve();
     });

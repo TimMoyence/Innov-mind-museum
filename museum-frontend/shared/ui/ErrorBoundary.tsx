@@ -15,13 +15,6 @@ interface State {
   hasError: boolean;
 }
 
-/**
- * Top-level error boundary that catches unhandled JS errors and renders
- * a recovery screen instead of crashing the entire app.
- *
- * Must be a class component — React does not support error boundaries as
- * function components.
- */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
@@ -40,10 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
       if (!__DEV__) {
         await Updates.reloadAsync();
       }
-    } catch {
-      // Updates.reloadAsync may not be available in dev or bare workflow
-    }
-    // Fallback: reset state to re-mount the tree
+    } catch {}
     this.setState({ hasError: false });
   };
 

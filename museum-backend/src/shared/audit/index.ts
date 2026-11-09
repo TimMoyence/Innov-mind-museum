@@ -7,7 +7,6 @@ const auditRepository = new AuditRepositoryPg(AppDataSource);
 
 export const auditService = new AuditService(auditRepository);
 
-/** DSAR (Art.15, B3) — read accessor for the user's own audit rows. */
 export { auditRepository };
 
 export { AuditService } from './audit.service';

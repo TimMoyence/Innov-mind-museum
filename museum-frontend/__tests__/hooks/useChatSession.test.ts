@@ -3,8 +3,6 @@ import { useChatSession } from '@/features/chat/application/useChatSession';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import { makePostMessageResponse } from '@/__tests__/helpers/factories/session.factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -16,7 +14,6 @@ jest.mock('@/shared/infrastructure/inAppReview', () => ({
   maybeRequestReview: jest.fn(),
 }));
 
-// chatApi
 const mockGetSession = jest.fn<
   Promise<{
     session: { title: string | null; museumName: string | null };
@@ -47,13 +44,11 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// Sentry
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
   captureMessage: jest.fn(),
 }));
 
-// Runtime settings
 jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   useRuntimeSettings: () => ({
     locale: 'en-US',
@@ -64,10 +59,6 @@ jest.mock('@/features/settings/application/useRuntimeSettings', () => ({
   }),
 }));
 
-// Connectivity — tri-state shape (post-2026-05-21 connectivity-offline-first
-// run). useChatSession now consumes the canonical `isOnline` (design §D7), so
-// the mock mirrors the wider context: `mockIsConnected` drives both the raw
-// interface flag and the derived `isOnline`.
 let mockIsConnected = true;
 jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   useConnectivity: () => ({
@@ -77,7 +68,6 @@ jest.mock('@/shared/infrastructure/connectivity/useConnectivity', () => ({
   }),
 }));
 
-// Offline queue
 const mockEnqueue = jest
   .fn<
     {
@@ -126,13 +116,11 @@ jest.mock('@/features/chat/application/useOfflineQueue', () => ({
   }),
 }));
 
-// DataMode
 let mockIsLowData = false;
 jest.mock('@/features/chat/application/DataModeProvider', () => ({
   useDataMode: () => ({ isLowData: mockIsLowData }),
 }));
 
-// chatLocalCache
 const mockCacheLookup = jest.fn().mockReturnValue(null);
 const mockCacheStore = jest.fn();
 jest.mock('@/features/chat/application/chatLocalCache', () => ({
@@ -140,12 +128,10 @@ jest.mock('@/features/chat/application/chatLocalCache', () => ({
     selector({ lookup: mockCacheLookup, store: mockCacheStore }),
 }));
 
-// Zustand session store
 const mockSetSession = jest.fn();
 const mockUpdateMessages = jest.fn();
 
 jest.mock('@/features/chat/infrastructure/chatSessionStore', () => {
-  // Lazy accessor — evaluated at call time so jest.fn() variables are initialized.
   const getState = () => ({
     sessions: {},
     setSession: mockSetSession,
@@ -157,8 +143,6 @@ jest.mock('@/features/chat/infrastructure/chatSessionStore', () => {
   );
   return { useChatSessionStore: hook };
 });
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const SESSION_ID = 'test-session-123';
 
@@ -181,8 +165,6 @@ const defaultSessionResponse = () => ({
   ]),
 });
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useChatSession', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -198,7 +180,6 @@ describe('useChatSession', () => {
   it('initialises with isLoading=true, loads session via API, and updates messages', async () => {
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
-    // Immediately after mount, loading should be true
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => {
@@ -238,7 +219,6 @@ describe('useChatSession', () => {
     expect(sendResult).toBe(true);
     expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
 
-    // The call should contain the session ID and text
     const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
     expect(callArgs.sessionId).toBe(SESSION_ID);
     expect(callArgs.text).toBe('Hi there');
@@ -269,10 +249,8 @@ describe('useChatSession', () => {
         text: 'Offline msg',
       }),
     );
-    // Should NOT call the API
     expect(mockSendMessageSmart).not.toHaveBeenCalled();
 
-    // The message should appear in the list as an optimistic entry
     const offlineMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'queued-1');
     expect(offlineMsg).toBeDefined();
     expect(offlineMsg?.role).toBe('user');
@@ -317,7 +295,6 @@ describe('useChatSession', () => {
     expect(mockGetMessageImageUrl).toHaveBeenCalledWith('msg-1');
     expect(signedResult).toEqual(signedUrlResponse);
 
-    // The message should now have the signed image
     const updatedMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'msg-1');
     expect(updatedMsg?.image).toEqual(signedUrlResponse);
   });
@@ -384,8 +361,6 @@ describe('useChatSession', () => {
     expect(result.current.museumMode).toBe(true);
   });
 
-  // ── Audio message flow ────────────────────────────────────────────────────
-
   it('sendMessage() with audioUri uses postAudioMessage and adds assistant message', async () => {
     mockPostAudioMessage.mockResolvedValue({
       message: {
@@ -415,7 +390,6 @@ describe('useChatSession', () => {
     expect(callArgs.audioUri).toBe('file://voice.m4a');
     expect(mockSendMessageSmart).not.toHaveBeenCalled();
 
-    // Should have assistant message in the list
     const assistantMsg = result.current.messages.find(
       (m: ChatUiMessage) => m.id === 'audio-resp-1',
     );
@@ -474,15 +448,12 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
     });
 
-    // The optimistic user message should have been updated with transcription text
     const userMessages = result.current.messages.filter((m: ChatUiMessage) => m.role === 'user');
     const transcribedMsg = userMessages.find((m: ChatUiMessage) =>
       m.text.includes('What is this painting?'),
     );
     expect(transcribedMsg).toBeDefined();
   });
-
-  // ── Image message with optimistic placeholder ─────────────────────────────
 
   it('sendMessage() with imageUri adds optimistic message with [Image sent] text', async () => {
     mockSendMessageSmart.mockResolvedValue({
@@ -509,8 +480,6 @@ describe('useChatSession', () => {
     const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
     expect(callArgs.imageUri).toBe('file://photo.jpg');
   });
-
-  // ── Send failure recovery ─────────────────────────────────────────────────
 
   it('marks optimistic message as sendFailed when API call throws', async () => {
     mockSendMessageSmart.mockRejectedValue(new Error('Network error'));
@@ -543,17 +512,13 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'will fail' });
     });
 
-    // No message should end with '-streaming'
     const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
       m.id.endsWith('-streaming'),
     );
     expect(streamingMsgs).toHaveLength(0);
   });
 
-  // ── Retry failed message ──────────────────────────────────────────────────
-
   it('retryMessage() removes the failed message and re-sends', async () => {
-    // First send fails
     mockSendMessageSmart.mockRejectedValueOnce(new Error('Temp error'));
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
@@ -569,7 +534,6 @@ describe('useChatSession', () => {
     const failedMsg = result.current.messages.find((m: ChatUiMessage) => m.sendFailed === true);
     expect(failedMsg).toBeDefined();
 
-    // Now retry - second call succeeds
     mockSendMessageSmart.mockResolvedValueOnce({
       message: {
         id: 'retry-resp',
@@ -585,17 +549,13 @@ describe('useChatSession', () => {
       result.current.retryMessage(failedMsg);
     });
 
-    // retryMessage fires sendMessage asynchronously via void - wait for it
     await waitFor(() => {
       expect(mockSendMessageSmart).toHaveBeenCalledTimes(2);
     });
 
-    // The second call should contain the text from the failed message
     const retryArgs = mockSendMessageSmart.mock.calls[1][0] as Record<string, unknown>;
     expect(retryArgs.text).toBe('retry me');
   });
-
-  // ── Offline mode with image ───────────────────────────────────────────────
 
   it('sendMessage() in offline mode with imageUri queues correctly', async () => {
     mockIsOffline = true;
@@ -619,7 +579,6 @@ describe('useChatSession', () => {
 
     const offlineMsg = result.current.messages.find((m: ChatUiMessage) => m.id === 'queued-1');
     expect(offlineMsg).toBeDefined();
-    // i18n mock returns key as-is; prod renders localized label via useTranslation
     expect(offlineMsg?.text).toBe('chat.optimistic.image_placeholder');
     expect(offlineMsg?.image).toEqual({ url: 'file://offline-photo.jpg', expiresAt: '' });
   });
@@ -642,8 +601,6 @@ describe('useChatSession', () => {
     expect(sendResult).toBe(false);
   });
 
-  // ── Voice message text for optimistic message ─────────────────────────────
-
   it('sendMessage() with audioUri but no text shows [Voice message] optimistic text', async () => {
     mockPostAudioMessage.mockResolvedValue({
       message: {
@@ -665,14 +622,11 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ audioUri: 'file://voice.m4a' });
     });
 
-    // Should have an optimistic user message with voice placeholder (i18n key in test mock)
     const voiceMsg = result.current.messages.find(
       (m: ChatUiMessage) => m.role === 'user' && m.text === 'chat.optimistic.voice_placeholder',
     );
     expect(voiceMsg).toBeDefined();
   });
-
-  // ── Review prompt at 3rd successful send ──────────────────────────────────
 
   it('calls incrementCompletedSessions on 3rd successful send', async () => {
     const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
@@ -693,7 +647,6 @@ describe('useChatSession', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Send 3 messages
     for (let i = 0; i < 3; i++) {
       await act(async () => {
         await result.current.sendMessage({ text: `msg ${String(i)}` });
@@ -702,8 +655,6 @@ describe('useChatSession', () => {
 
     expect(incrementCompletedSessions).toHaveBeenCalledTimes(1);
   });
-
-  // ── isEmpty ───────────────────────────────────────────────────────────────
 
   it('isEmpty is true when no messages loaded', async () => {
     mockGetSession.mockResolvedValue({
@@ -720,10 +671,7 @@ describe('useChatSession', () => {
     expect(result.current.isEmpty).toBe(true);
   });
 
-  // ── Non-streaming fallback for image messages ─────────────────────────────
-
   it('sendMessage() with imageUri keeps optimistic local file:// preview and does not reload the session', async () => {
-    // sendMessageSmart returns a response with message.text for image path
     mockSendMessageSmart.mockImplementation(() => {
       return Promise.resolve({
         sessionId: SESSION_ID,
@@ -756,21 +704,16 @@ describe('useChatSession', () => {
 
     expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
 
-    // No extra getSession call — the optimistic local preview is preserved.
     expect(mockGetSession).toHaveBeenCalledTimes(initialGetSessionCalls);
 
-    // The optimistic user message is kept with its local file:// URI.
     const userMsg = result.current.messages.find(
       (m) => m.role === 'user' && m.text === 'What painting is this?',
     );
     expect(userMsg?.image?.url).toBe('file://painting.jpg');
 
-    // The assistant reply replaced the streaming placeholder.
     const assistantMsg = result.current.messages.find((m) => m.id === 'img-server-resp');
     expect(assistantMsg?.text).toBe('This is a beautiful painting');
   });
-
-  // ── Streaming onDone callback ──────────────────────────────────────────────
 
   it('sendMessage() with streaming invokes onToken and onDone to build assistant message', async () => {
     mockSendMessageSmart.mockImplementation(
@@ -782,7 +725,6 @@ describe('useChatSession', () => {
           metadata: Record<string, unknown>;
         }) => void;
       }) => {
-        // Simulate streaming: call onToken then onDone
         params.onToken?.('Hello ');
         params.onToken?.('world!');
         params.onDone?.({
@@ -804,7 +746,6 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'Tell me about this' });
     });
 
-    // The onDone callback should have replaced the streaming placeholder
     const streamedMsg = result.current.messages.find(
       (m: ChatUiMessage) => m.id === 'streamed-msg-1',
     );
@@ -812,8 +753,6 @@ describe('useChatSession', () => {
     expect(streamedMsg?.role).toBe('assistant');
     expect(streamedMsg?.text).toBe('Hello world!');
   });
-
-  // ── Streaming onGuardrail callback ────────────────────────────────────────
 
   it('sendMessage() with streaming invokes onGuardrail to set guardrail text', async () => {
     mockSendMessageSmart.mockImplementation(
@@ -825,7 +764,6 @@ describe('useChatSession', () => {
           metadata: Record<string, unknown>;
         }) => void;
       }) => {
-        // Simulate guardrail being triggered
         params.onGuardrail?.('This topic is off-limits.', 'not_art');
         params.onDone?.({
           messageId: 'guardrail-msg',
@@ -846,15 +784,12 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'Off topic question' });
     });
 
-    // The guardrail text should have been flushed into the streaming message
     const guardrailMsg = result.current.messages.find(
       (m: ChatUiMessage) => m.id === 'guardrail-msg',
     );
     expect(guardrailMsg).toBeDefined();
     expect(guardrailMsg?.text).toBe('This topic is off-limits.');
   });
-
-  // ── Audio 3rd send triggers review prompt ─────────────────────────────────
 
   it('calls incrementCompletedSessions on 3rd successful audio send', async () => {
     const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
@@ -876,7 +811,6 @@ describe('useChatSession', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Send 3 audio messages
     for (let i = 0; i < 3; i++) {
       await act(async () => {
         await result.current.sendMessage({ audioUri: `file://voice${String(i)}.m4a` });
@@ -885,8 +819,6 @@ describe('useChatSession', () => {
 
     expect(incrementCompletedSessions).toHaveBeenCalledTimes(1);
   });
-
-  // ── Audio message failure ─────────────────────────────────────────────────
 
   it('sendMessage() with audio marks message as failed on error', async () => {
     mockPostAudioMessage.mockRejectedValue(new Error('Audio upload failed'));
@@ -905,8 +837,6 @@ describe('useChatSession', () => {
     expect(result.current.error).toBeTruthy();
   });
 
-  // ── Audio error: sets error state and resets streaming ───────────────────
-
   it('postAudioMessage error sets error string and resets isSending/isStreaming', async () => {
     mockPostAudioMessage.mockRejectedValue(new Error('Audio codec unsupported'));
 
@@ -924,21 +854,12 @@ describe('useChatSession', () => {
     expect(result.current.error).toBe('Audio codec unsupported');
     expect(result.current.isSending).toBe(false);
     expect(result.current.isStreaming).toBe(false);
-    // streaming placeholder should not remain
     const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>
       m.id.endsWith('-streaming'),
     );
     expect(streamingMsgs).toHaveLength(0);
   });
 
-  // ── Streaming with empty response.message.text (live sync transport) ────────
-  //
-  // Cycle 5 realignment (UFR-022 D6/D8): this test previously fired `onDone`
-  // directly and asserted the empty bubble SURVIVED (`text:''`). That encoded
-  // the bug on a DEAD path — `sendMessageSmart` ignores `onDone` (send.ts:169-172),
-  // so the live finalize is the sync-fallback block (sendMessageStreaming.ts:117).
-  // It is now driven via `mockResolvedValue` (live transport) and asserts the
-  // real contract: a blank response leaves NO bubble and NO `-streaming` orphan.
   it('empty final text on the live sync transport leaves no bubble and no -streaming placeholder', async () => {
     mockSendMessageSmart.mockResolvedValue(
       makePostMessageResponse({
@@ -963,7 +884,6 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'Hi' });
     });
 
-    // No phantom bubble for the blank response, and no orphan placeholder.
     expect(
       result.current.messages.find((m: ChatUiMessage) => m.id === 'empty-text-msg'),
     ).toBeUndefined();
@@ -976,8 +896,6 @@ describe('useChatSession', () => {
     );
     expect(streamingMsgs).toHaveLength(0);
   });
-
-  // ── getErrorMessage with non-Error object ───────────────────────────────
 
   it('sets a string error when catch receives a non-Error thrown value', async () => {
     mockSendMessageSmart.mockRejectedValue('plain string error');
@@ -992,12 +910,9 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'trigger non-error' });
     });
 
-    // getErrorMessage returns the generic fallback for non-Error values
     expect(result.current.error).toBeTruthy();
     expect(typeof result.current.error).toBe('string');
   });
-
-  // ── Image send no longer auto-reloads — no loadSession failure to surface ───
 
   it('sending with an image does not trigger an extra getSession reload (no reload-error surface)', async () => {
     mockSendMessageSmart.mockResolvedValue({
@@ -1032,13 +947,10 @@ describe('useChatSession', () => {
     expect(result.current.error).toBeNull();
   });
 
-  // ── 3rd send increment: failure does NOT increment ──────────────────────
-
   it('failed send on 3rd attempt does not trigger incrementCompletedSessions', async () => {
     const { incrementCompletedSessions } = require('@/shared/infrastructure/inAppReview');
     incrementCompletedSessions.mockClear();
 
-    // First two succeed
     mockSendMessageSmart
       .mockResolvedValueOnce({
         message: {
@@ -1058,7 +970,6 @@ describe('useChatSession', () => {
         },
         metadata: null,
       })
-      // Third fails
       .mockRejectedValueOnce(new Error('3rd fail'));
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
@@ -1073,11 +984,8 @@ describe('useChatSession', () => {
       });
     }
 
-    // successfulSendsRef only reached 2 (3rd failed), so no increment
     expect(incrementCompletedSessions).not.toHaveBeenCalled();
   });
-
-  // ── Low-data mode cache-first ──────────────────────────────────────────────
 
   describe('low-data mode cache-first', () => {
     const emptySessionResponse = () => ({
@@ -1110,10 +1018,8 @@ describe('useChatSession', () => {
       });
 
       expect(sendResult).toBe(true);
-      // Should NOT call the API
       expect(mockSendMessageSmart).not.toHaveBeenCalled();
 
-      // Should have both user and cached assistant messages
       expect(result.current.messages).toHaveLength(2);
       const assistantMsg = result.current.messages.find(
         (m: ChatUiMessage) => m.role === 'assistant',
@@ -1196,7 +1102,6 @@ describe('useChatSession', () => {
         await result.current.sendMessage({ text: 'Hello' });
       });
 
-      // cacheLookup should not have been called
       expect(mockCacheLookup).not.toHaveBeenCalled();
       expect(mockSendMessageSmart).toHaveBeenCalledTimes(1);
       const callArgs = mockSendMessageSmart.mock.calls[0][0] as Record<string, unknown>;
@@ -1240,16 +1145,6 @@ describe('useChatSession', () => {
     });
   });
 
-  // ── P0-FA1: text-only sync-path finalize (empty-bubble bug) ────────────────
-  //
-  // RED phase (UFR-022). These tests drive the LIVE sync transport: the mock
-  // RESOLVES a PostMessageResponseDTO and NEVER fires onToken/onDone/onGuardrail
-  // (sendMessageSmart ignores them — send.ts:169-172). The bug: for a text-only
-  // turn the sync-fallback finalize block (sendMessageStreaming.ts:117) is
-  // guarded out (`attempt.imageUri` falsy + `streamingIdRef.current` still set),
-  // so the assistant placeholder keeps `text: ''` and its `${ts}-streaming` id.
-  // A Red test that fires onDone would reproduce a FAKE world (the very reason
-  // the bug shipped green) — see design §6 Q2.
   describe('text-only sync finalize (P0-FA1 empty bubble)', () => {
     it('TR.1 — text-only success replaces the placeholder with the API answer text (R1)', async () => {
       const answer = 'The Mona Lisa was painted by Leonardo.';
@@ -1275,21 +1170,16 @@ describe('useChatSession', () => {
         await result.current.sendMessage({ text: 'Tell me more' });
       });
 
-      // The finalized assistant bubble shows the API answer.
       const answered = result.current.messages.find(
         (m: ChatUiMessage) => m.role === 'assistant' && m.text === answer,
       );
       expect(answered).toBeDefined();
 
-      // No empty assistant bubble survives.
       const emptyAssistant = result.current.messages.filter(
         (m: ChatUiMessage) => m.role === 'assistant' && m.text === '',
       );
       expect(emptyAssistant).toHaveLength(0);
 
-      // Exactly one assistant bubble for this turn (no double-render). The
-      // session seed has one assistant message ('Welcome!'), so the turn adds
-      // exactly one more → none empty.
       const assistantBubbles = result.current.messages.filter(
         (m: ChatUiMessage) => m.role === 'assistant',
       );
@@ -1319,11 +1209,9 @@ describe('useChatSession', () => {
         await result.current.sendMessage({ text: 'When was it painted?' });
       });
 
-      // The server message id is applied to the finalized bubble.
       const byServerId = result.current.messages.find((m: ChatUiMessage) => m.id === 'resp-text-2');
       expect(byServerId).toBeDefined();
 
-      // The transient placeholder id must not survive.
       const streamingIds = result.current.messages.filter((m: ChatUiMessage) =>
         m.id.endsWith('-streaming'),
       );
@@ -1362,8 +1250,6 @@ describe('useChatSession', () => {
     });
 
     it('TR.4 — text-only guardrail/refusal text renders, never blank (R5)', async () => {
-      // design D4 / OQ1: guardrail arrives via response.message.text on the live
-      // sync transport — NOT via onGuardrail (which sendMessageSmart ignores).
       const refusal = 'I can only discuss art and the works around you.';
       mockSendMessageSmart.mockResolvedValue(
         makePostMessageResponse({
@@ -1421,8 +1307,6 @@ describe('useChatSession', () => {
         await result.current.sendMessage({ text: 'Anything else?' });
       });
 
-      // Observable state only (design D6, lib-docs/react/PATTERNS.md:152) — do
-      // NOT introspect streamingIdRef.current.
       expect(result.current.isStreaming).toBe(false);
 
       const streamingIds = result.current.messages.filter((m: ChatUiMessage) =>

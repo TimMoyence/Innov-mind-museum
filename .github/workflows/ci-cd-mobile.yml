@@ -42,24 +42,15 @@ on:
       - 'museum-backend/openapi/**'
       - '.github/workflows/ci-cd-mobile.yml'
   schedule:
-    # Nightly slot at 03:17 UTC. Since E41 (ubuntu-latest + KVM) the Android
-    # Maestro matrix runs PER-PR, so this cron is mainly the iOS nightly suite
-    # (maestro-ios-nightly, macos-latest) plus a full-matrix Android re-run as a
-    # backstop against per-PR flakiness.
     - cron: '17 3 * * *'
 
 concurrency:
   group: ci-cd-mobile-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Top-level least-privilege default. EAS build/submit jobs do not need write
-# scopes (they delegate to Expo) so contents:read is sufficient for all jobs.
 permissions:
   contents: read
 
-# Every Maestro run logs in with the same seeded free-tier account and opens a
-# chat session in many flows; the production cap (3 per month) would 402 them.
-# The seed reads the same value, so the paywall account stays exhausted.
 env:
   FREE_TIER_MONTHLY_SESSION_LIMIT: '1000'
 
@@ -83,14 +74,6 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Expo Doctor
-        # I-OPS8 (R10): was `continue-on-error: true` (gate theatre — a failing
-        # expo-doctor was ignored). Now a REAL blocking gate: it fails on any failed
-        # check EXCEPT the one irreducible, intentional failure — the Metro config
-        # check flags `resolver.unstable_enableSymlinks: true`, which is REQUIRED to
-        # resolve the `@musaium/shared` file: dependency (see metro.config.js +
-        # CLAUDE.md) and has NO expo-doctor disable toggle. App-config-sync (Prebuild,
-        # committed native folders) + SDK version drift are silenced via
-        # expo.doctor / expo.install in package.json, so any NEW failure surfaces.
         run: |
           set +e
           OUTPUT=$(npx expo-doctor 2>&1)
@@ -146,15 +129,9 @@ jobs:
         run: npm run check:i18n
 
       - name: Check no unicode emoji in screens/copy (P4 emoji guard)
-        # UX policy: mobile uses PNG (require) + Ionicons only. Per-line
-        # allowlist at museum-frontend/shared/i18n/copy-emoji-allowlist.json
-        # for legitimate symbols (©, OSM attribution).
         run: node ../scripts/check-no-unicode-emoji.cjs
 
       - name: Screen test-coverage sentinel (UFR-021)
-        # Every new/changed user-facing screen MUST ship a Maestro flow (or an
-        # explicit `// e2e-skip`). Mirrors pre-push Gate 22; `../` because the
-        # quality job's default working-directory is museum-frontend.
         run: node ../scripts/sentinels/screen-test-coverage.mjs
 
       - name: Maestro shard-manifest sentinel
@@ -167,57 +144,19 @@ jobs:
         run: npm run typecheck
 
       - name: Test with coverage gate
-        # Phase 8: dedicated `test:coverage` script invokes Jest with --coverage,
-        # so the global coverage threshold in jest.config.js hard-fails the PR
-        # if FE drops below the Phase 8 floor (Phase 9 will lift toward 85/70/74/85).
         run: npm run test:coverage
 
-  # ─── 2. Maestro APK prebuild (cached on mobile-source content hash) ──────
   prebuild:
     needs: quality
-    # Android builds need no macOS — moved off macos-latest (10× minute cost)
-    # to ubuntu-latest. The Maestro emulator job is now also Linux (KVM), so the
-    # whole Android e2e path is x86_64 + hardware-accelerated.
     runs-on: ubuntu-latest
-    # E17: gradle/actions/setup-gradle caches ~/.gradle/caches + wrapper across
-    # runs, so cold first run still ~30 min, warm runs ~3-5 min.
-    # E34: bumped 25 → 35 after run 25508936326 hit the 25min cap on the cold
-    # path with the new 6GB heap (heap fixed OOM but D8 :app:mergeExtDexRelease
-    # still wants ~18-22 min wall on cold cache). Warm cache stays well under
-    # 5 min, so this only widens the cold-path budget.
     timeout-minutes: 35
     defaults:
       run:
         working-directory: museum-frontend
-    # E40 — Build a RELEASE APK of the `development` variant, NOT assembleDebug.
-    #   * A Debug APK expects a Metro dev server on :8081 (it never embeds the JS
-    #     bundle) → on a CI emulator with no Metro it shows the RN red error
-    #     screen — the Android equivalent of the iOS expo-dev-client launcher
-    #     that made the local e2e suite 0/43 false-green. assembleRelease runs
-    #     `bundleReleaseJsAndAssets` → JS is embedded → standalone, no launcher.
-    #   * APP_VARIANT=development keeps Android cleartext HTTP allowed
-    #     (app.config.ts `usesCleartextTraffic: variant === 'development'` +
-    #     plugins/withNetworkSecurity DEV_XML whitelists 10.0.2.2 / localhost),
-    #     which a Release of preview/production would block.
-    #   * On the Android emulator, the host runner is reachable at 10.0.2.2, NOT
-    #     localhost (that is the emulator's own loopback). EXPO_PUBLIC_* vars are
-    #     inlined into the JS bundle at assembleRelease time, so they MUST be set
-    #     on this job (apiConfig.ts reads process.env.EXPO_PUBLIC_API_BASE_URL
-    #     then Constants.expoConfig.extra.API_BASE_URL — both baked here).
     env:
       APP_VARIANT: development
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3000
-      # Test-only audio-fixture injection seam (useAudioRecorder.ts): bakes the
-      # bundled "Who painted the Mona Lisa" clip into the recorder so the
-      # audio-recording-flow STT→LLM→TTS round-trip is deterministic (Maestro
-      # cannot drive a real microphone). EXPO_PUBLIC_* vars are inlined into the
-      # JS bundle at assembleRelease, so it MUST be set on this build job. This
-      # APK only runs on the CI emulator and is never shipped, so the seam never
-      # reaches production. See .maestro/fixtures/audio.md.
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
-      # @sentry/react-native's gradle integration auto-uploads JS sourcemaps on
-      # RELEASE builds and needs SENTRY_AUTH_TOKEN (absent here). Disable it: the
-      # Maestro APK only runs on the CI emulator and is never shipped.
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     outputs:
       cache-hit: ${{ steps.cache-apk.outputs.cache-hit }}
@@ -235,10 +174,6 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
-          # `release-v2` namespace so any stale Debug APK cached under the old
-          # `maestro-apk-<os>-` key (different content) can never be restored.
-          # The 10.0.2.2 base URL is baked into the bundle, so it is part of the
-          # cache identity via app.config.ts in the hash set.
           key: maestro-apk-release-v2-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/api-url.config.js', 'museum-frontend/babel.config.js', 'museum-frontend/metro.config.js', 'museum-frontend/index.js', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
           restore-keys: |
             maestro-apk-release-v2-${{ runner.os }}-
@@ -259,35 +194,13 @@ jobs:
         run: npx expo prebuild --platform android --clean
 
       - name: Setup Gradle (cache deps, cache miss only)
-        # E17: caches ~/.gradle/caches/modules-2 (~1-2 GB) + ~/.gradle/wrapper
-        # (~150 MB) keyed on **/*.gradle*, **/gradle-wrapper.properties.
-        # First run still cold (writes cache); subsequent cold-source runs warm-
-        # restore in ~30s, cutting Gradle assembleRelease from ~35min → ~5min.
-        # GRADLE_ENCRYPTION_KEY secret would encrypt the cache; left out for
-        # now (works unencrypted) — future hardening when secret is provisioned.
         if: steps.cache-apk.outputs.cache-hit != 'true'
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1  # v4.4.4
         with:
           cache-read-only: false
-          # NOTE: `build-root-directory` is NOT a valid input for
-          # gradle/actions/setup-gradle@v4 (it warned + was ignored). The action
-          # caches ~/.gradle regardless of the project root, and the build runs
-          # from museum-frontend/android via `cd android` below.
 
       - name: Gradle assembleRelease (cache miss only)
         if: steps.cache-apk.outputs.cache-hit != 'true'
-        # Expo's generated android/app/build.gradle signs the `release` buildType
-        # with the debug keystore when no upload keystore is configured, so this
-        # produces a self-signed but installable APK — sufficient for `adb
-        # install` on the CI emulator (no Play upload).
-        #
-        # E41 — `-PreactNativeArchitectures=x86_64`: the CI emulator is x86_64,
-        # so build ONLY that ABI instead of the default 4 (armeabi-v7a, arm64-v8a,
-        # x86, x86_64). Quarters the native build's time/disk/RAM and removes the
-        # most likely cause of the silent process kill on the first run (the
-        # 4-ABI cold build at 25% config exhausted runner resources with no
-        # graceful Gradle error). `--info` dropped — it produced 23k lines that
-        # buried the real failure; `--stacktrace` alone surfaces a clean error.
         run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace --init-script ../scripts/ci/maven-central-mirror.init.gradle -PreactNativeArchitectures=x86_64
 
       - name: Upload APK artifact
@@ -297,12 +210,6 @@ jobs:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 1
 
-  # ─── 3a. Maestro matrix selector ─────────────────────────────────────────
-  # Per-PR runs only the fast `smoke` subset (~12min, one emulator boot); the
-  # full per-shard suite runs nightly (cron) + on manual dispatch. Emulator e2e
-  # is ~45min/shard, so running all four shards on every PR (~50-65min) is too
-  # heavy — smoke gives a fast pre-merge guard rail on the critical happy paths
-  # while nightly keeps full coverage.
   maestro-matrix:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     needs: quality
@@ -321,21 +228,10 @@ jobs:
             echo 'shards=["auth","chat","museum","settings"]' >> "$GITHUB_OUTPUT"
           fi
 
-  # ─── 3b. Maestro shard matrix (Android, ubuntu-latest + KVM emulator) ─────
-  # E41 — migrated off macos-latest. GitHub's hosted ubuntu-latest runners
-  # expose /dev/kvm (nested hardware virtualization), so an x86_64 AVD runs
-  # HW-accelerated and boots in ~60-90s instead of timing out at 600s under
-  # macos-latest's software-only arm64 path (HVF unavailable on hosted Macs).
-  # This unlocks per-PR Maestro (smoke subset), turning the local-green Maestro
-  # suite into a permanent CI guard rail (UFR-021) and closing the CNIL age-15
-  # e2e blocker. iOS Maestro stays nightly — HVF on iOS needs a Mac runner.
   maestro-shard:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     needs: [prebuild, maestro-matrix]
     runs-on: ubuntu-latest
-    # 70min cap: a nightly full shard (~45min, 18 flows × ~2.5min) plus a
-    # boot-flake retry (attempt 1 timeout + attempt 2 full) must fit. The per-PR
-    # smoke shard finishes in ~12-25min and never approaches this cap.
     timeout-minutes: 70
     strategy:
       fail-fast: false
@@ -346,14 +242,6 @@ jobs:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
-    # GHA service containers (mirror ci-cd-backend.yml + the docker-compose.dev
-    # contract). pgvector/pgvector:pg16 because migration AddArtworkEmbeddings
-    # runs `CREATE EXTENSION vector` (halfvec) — plain postgres:16 aborts the
-    # migration and the backend never boots. redis:7-alpine because `pnpm dev`
-    # eagerly boots BullMQ → without Redis, /api/health times out and every
-    # shard dies at setup (the real reason the old macos native-PG path was
-    # false-green: it had no Redis). No requirepass here (the host `pnpm dev`
-    # connects password-less), matching ci-cd-backend.yml's redis service.
     services:
       postgres:
         image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
@@ -385,11 +273,6 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: museum-frontend/package-lock.json
-      # No `pnpm/action-setup` here: the backend boot script
-      # (maestro-runner-setup.sh) runs `corepack enable`, which resolves pnpm
-      # per-package from each package.json's `packageManager` field (the repo
-      # SSOT — museum-backend = pnpm@10.8.0) — the canonical way the backend is
-      # launched, and it sidesteps the action's "multiple versions" error.
       - name: Setup Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3  # v4.9.1
         with:
@@ -410,11 +293,6 @@ jobs:
       - name: Verify Maestro version
         run: maestro --version
 
-      # The chat shard provisions the SigLIP ONNX encoder from the pinned
-      # (private) GHCR base image so chat-compare.yaml can reach a real match.
-      # pull-siglip-model.sh (gated CHAT_COMPARE_PROVISION=1) 401s without an
-      # authenticated docker — mirror recall-e2e.yml's GHCR login. Other shards
-      # do not pull the ~355 MB model, so the login is chat-only.
       - name: Login to GHCR (chat shard — SigLIP base image)
         if: matrix.shard == 'chat'
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -426,7 +304,6 @@ jobs:
       - name: Boot backend (PG/Redis services + migrations + API + e2e seed)
         working-directory: museum-frontend
         env:
-          # Host `pnpm dev` talks to the GHA service containers on localhost.
           SKIP_DOCKER_COMPOSE: '1'
           DB_HOST: localhost
           DB_PORT: '5432'
@@ -435,26 +312,9 @@ jobs:
           PGDATABASE: museum_dev
           REDIS_HOST: localhost
           REDIS_PORT: '6379'
-          # Keep the host backend lightweight so it doesn't contend with the
-          # software-GPU emulator boot for CPU on the 4-core runner (the BullMQ
-          # extraction worker + its redis polling churn was a plausible cause of
-          # intermittent emulator boot timeouts). The e2e flows never exercise
-          # knowledge-extraction. (CLAUDE.md Stryker gotcha — same flags.)
           EXTRACTION_WORKER_ENABLED: 'false'
-          # Real LLM for the chat shard flows (guardrail/off-topic/multiturn).
-          # Same secret ci-cd-backend.yml + promptfoo use. The auth/museum/
-          # settings shards never hit the LLM, so spend stays near zero there.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # Provision the SigLIP encoder model + one public-domain artwork
-          # embedding ONLY on the `chat` shard (the only shard that runs
-          # chat-compare.yaml — shards.json). maestro-runner-setup.sh gates the
-          # ~354MB model pull + catalog:ingest on this flag so the per-PR `smoke`
-          # subset (which excludes chat-compare) stays lightweight. Without it the
-          # nightly chat-compare carousel renders header-only and its strengthened
-          # per-card assert fails RED — by design.
           CHAT_COMPARE_PROVISION: ${{ matrix.shard == 'chat' && '1' || '' }}
-        # The Maestro accounts are seeded by maestro-emulator-script.sh at the
-        # start of every shard attempt (maestro-seed-accounts.sh).
         run: ./scripts/maestro-runner-setup.sh
 
       - name: Enable KVM (hardware-accelerated emulator)
@@ -463,16 +323,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # E41 — emulator-boot retry. The AVD boot is intermittently flaky on hosted
-      # runners ("Timeout waiting for emulator to boot"): the IDENTICAL config
-      # booted in 49s on some runs and timed out on others (pure runner-side
-      # flake, not config). A single retry takes the per-run flake probability
-      # from ~p to ~p². Attempt 1 is `continue-on-error`; attempt 2 only runs if
-      # attempt 1 failed, and IT decides the job outcome. The in-emulator work is
-      # a single committed script (maestro-emulator-script.sh) so the action runs
-      # it as ONE line — normal shell state persists, and the two attempts share
-      # one definition. Per-flow retries live inside maestro-run-shard.sh; this
-      # outer retry exists for the boot itself.
       - name: Run Maestro shard on Android emulator (attempt 1)
         id: maestro_attempt1
         continue-on-error: true
@@ -481,8 +331,6 @@ jobs:
           MATRIX_SHARD: ${{ matrix.shard }}
         with:
           api-level: 33
-          # ubuntu-latest is x86_64 + KVM → x86_64 system image runs natively
-          # accelerated. The prebuild APK is x86_64-only, matching this emulator.
           arch: x86_64
           target: google_apis
           profile: pixel_6
@@ -518,11 +366,6 @@ jobs:
           path: museum-frontend/.maestro/logs/
           retention-days: 7
 
-      # Diagnostics for failing flows: the backend log carries the exact HTTP
-      # response of each register/login attempt (201 vs 409/422/500), and
-      # Maestro's debug dir (~/.maestro/tests/<ts>/) carries the view hierarchy
-      # + screenshot of the screen the app was actually on when an assertion
-      # failed. Collected into one dir so a single artifact has both.
       - name: Collect failure diagnostics (backend log + Maestro hierarchy)
         if: always()
         run: |
@@ -537,11 +380,7 @@ jobs:
           path: /tmp/diag/
           retention-days: 7
 
-  # ─── 4. Aggregate shard results into a PR comment ─────────────────────────
   maestro-summary:
-    # E41 — runs whenever the shard matrix runs: per-PR (the new guard rail),
-    # nightly cron, and manual dispatch. `always()` so a failed shard still
-    # gets summarized + turns this aggregator red (anti-false-green).
     if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: maestro-shard
     runs-on: ubuntu-latest
@@ -584,23 +423,12 @@ jobs:
               core.setFailed(`${totalFails} Maestro flow(s) failed across ${shards.length} shard(s) — see logs.`);
             }
 
-      # Belt-and-suspenders: the matrix `needs` result is `success` only when ALL
-      # shards exited 0. If a shard errored before writing parseable logs (emulator
-      # boot crash, backend boot failure) the log-scan above can miss it — this gate
-      # still turns the summary red. `skipped` (upstream prebuild/quality failed) is
-      # also NOT a passed e2e, so anything other than `success` fails here.
       - name: Fail if any shard did not succeed
         if: ${{ needs.maestro-shard.result != 'success' }}
         run: |
           echo "::error::Maestro e2e did not pass (maestro-shard result: ${{ needs.maestro-shard.result }}). A green maestro-summary now REQUIRES every shard to succeed."
           exit 1
 
-  # ─── 4b. Nightly / push-main alert — make a red FULL run impossible to miss ─
-  # A scheduled (or push-to-main) full Maestro run executes unattended; a silent
-  # red is a dead gate. On failure this opens (or re-pings) a tracking issue via
-  # the native GITHUB_TOKEN — the repo owner gets a GitHub notification and the
-  # issue stays visible in the Issues tab until fixed. On a green full run it
-  # auto-closes the issue. No external secret/webhook needed.
   maestro-full-alert:
     if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: [maestro-shard, maestro-summary]
@@ -636,17 +464,6 @@ jobs:
               }
             }
 
-  # ─── 4b. Weak-net APK prebuild (baked at the Toxiproxy shaped listener) ───
-  # The default `prebuild` APK bakes EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000,
-  # i.e. it talks to the UNSHAPED host backend directly. If the netshape job reused
-  # that APK, the device would never traverse Toxiproxy (:3100) and the "weak-net"
-  # run would be a silent no-op (false-green): the toxics seeded on :3100 shape a
-  # link nobody uses. This dedicated APK bakes the base URL at the Toxiproxy SHAPED
-  # listener (http://10.0.2.2:3100), so every request the device makes goes
-  # 10.0.2.2:3100 → toxiproxy → host.docker.internal:3000 and is genuinely shaped.
-  # Its own cache namespace (`maestro-apk-netshape-v1-*`) keeps it distinct from the
-  # unshaped :3000 APK so the two can never be cross-restored (the base URL is baked
-  # into the JS bundle, so it is part of the cache identity).
   prebuild-netshape:
     needs: quality
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
@@ -657,10 +474,6 @@ jobs:
         working-directory: museum-frontend
     env:
       APP_VARIANT: development
-      # Baked at the Toxiproxy SHAPED listener (NOT the unshaped :3000 backend) so
-      # the device→proxy link is genuinely shaped. This is the load-bearing
-      # difference from the `prebuild` job and the fix for the false-green netshape
-      # run: the emulator reaches 10.0.2.2:3100 (Toxiproxy) → host backend :3000.
       EXPO_PUBLIC_API_BASE_URL: http://10.0.2.2:3100
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
     steps:
@@ -677,8 +490,6 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
-          # `netshape-v1` namespace: a SEPARATE cache from the :3000 APK so the two
-          # (different baked base URL → different bundle content) never cross-restore.
           key: maestro-apk-netshape-v1-${{ runner.os }}-${{ hashFiles('museum-frontend/src/**', 'museum-frontend/features/**', 'museum-frontend/shared/**', 'museum-frontend/app/**', 'museum-frontend/assets/**', 'museum-frontend/app.config.ts', 'museum-frontend/api-url.config.js', 'museum-frontend/babel.config.js', 'museum-frontend/metro.config.js', 'museum-frontend/index.js', 'museum-frontend/plugins/**', 'museum-frontend/package.json', 'museum-frontend/package-lock.json') }}
           restore-keys: |
             maestro-apk-netshape-v1-${{ runner.os }}-
@@ -715,12 +526,6 @@ jobs:
           path: museum-frontend/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 1
 
-  # ─── 4c. Weak-net (Toxiproxy) Maestro selector ───────────────────────────
-  # W3 device track (Layer 3). The full `netshape` shard runs on the nightly cron
-  # + manual dispatch; on a PR it runs only the 2-flow `netshapeSmoke` subset and
-  # ONLY when the chat / connectivity / net-shaping surfaces actually changed
-  # (paths-filtered) — a fast pre-merge guard without paying the full weak-net
-  # cost on every unrelated FE PR.
   netshape-matrix:
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' }}
     needs: quality
@@ -731,8 +536,6 @@ jobs:
       shard: ${{ steps.set.outputs.shard }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      # On a PR, only proceed if a weak-net-relevant path changed. On cron /
-      # dispatch the full shard always runs.
       - id: changed
         if: ${{ github.event_name == 'pull_request' }}
         uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad  # v3.0.4
@@ -765,17 +568,6 @@ jobs:
             echo 'shard=netshape' >> "$GITHUB_OUTPUT"
           fi
 
-  # ─── 4d. Weak-net Maestro job (device → Toxiproxy shaped link) ────────────
-  # The device→proxy wiring is now GENUINE (no false-green): the APK consumed here
-  # comes from `prebuild-netshape`, baked at the Toxiproxy shaped listener
-  # (EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3100), so every request the emulator
-  # makes goes 10.0.2.2:3100 → toxiproxy → host backend :3000 and is shaped. The
-  # seed step FAILS HARD if the proxy or its toxics cannot be installed (it no
-  # longer swallows curl errors), and asserts both an upstream + a downstream toxic
-  # are live before the emulator boots. This job boots backend + Toxiproxy, seeds
-  # the toxics from the W3 mapper, runs the netshape flows, and records the upload
-  # wall-clock for the compression metric. The unit gate still proves the mapper /
-  # sentinel / compose contract; this job proves the end-to-end shaped link.
   maestro-netshape-nightly:
     needs: [prebuild-netshape, netshape-matrix]
     if: ${{ needs.netshape-matrix.outputs.run == 'true' }}
@@ -810,10 +602,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      # Toxiproxy shaped link (Layer 3). 8474 = admin API (seed toxics here),
-      # 3100 = shaped listener forwarding to the host backend on :3000. Mirrors
-      # docker-compose.dev.yml profiles:[weaknet]. NEVER in a prod artifact
-      # (sentinel:toxiproxy-no-prod).
       toxiproxy:
         image: ghcr.io/shopify/toxiproxy:2.9.0
         ports:
@@ -836,10 +624,6 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Download weak-net APK artifact
-        # The weak-net APK (from prebuild-netshape) bakes the API base URL at the
-        # Toxiproxy SHAPED listener (10.0.2.2:3100), NOT the unshaped :3000 backend,
-        # so every request the device makes is genuinely shaped. Reusing the plain
-        # `maestro-apk` (:3000) here would bypass Toxiproxy → silent no-op false-green.
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           name: maestro-apk-netshape
@@ -866,23 +650,10 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: ./scripts/maestro-runner-setup.sh
 
-      # Seed the Toxiproxy proxy + the per-profile toxics from the W1 mapper.
-      # `profile-to-toxics.mjs <profile>` emits the admin-API JSON (NO inline
-      # kbps→KB/s — DRY single site in toToxics) covering BOTH streams (one upstream
-      # bandwidth toxic + one downstream). The shaped listener forwards 3100 → host
-      # backend :3000; the weak-net APK is baked at 10.0.2.2:3100, so the device's
-      # requests traverse this shaped link.
-      #
-      # This step FAILS HARD (no `|| echo ::warning::` swallowing): if the proxy or
-      # any toxic cannot be created, the shaped link is not actually in place and the
-      # netshape run would be a false-green no-op — exactly the bug this fix closes.
-      # We verify the proxy + its toxics are live before booting the emulator.
       - name: Seed Toxiproxy shaped link (edge profile, both streams)
         working-directory: museum-frontend
         run: |
           set -euo pipefail
-          # On GHA the backend runs on the runner host; from the toxiproxy
-          # service container the host is reachable at host.docker.internal.
           curl -fsS -X POST http://localhost:8474/proxies \
             -d '{"name":"backend","listen":"0.0.0.0:3100","upstream":"host.docker.internal:3000","enabled":true}'
           TOXICS=$(node ../scripts/net-shaping/profile-to-toxics.mjs edge)
@@ -891,8 +662,6 @@ jobs:
             curl -fsS -X POST http://localhost:8474/proxies/backend/toxics \
               -d "$toxic"
           done
-          # Assert the proxy exists and at least one upstream + one downstream toxic
-          # were installed — proves the link is genuinely shaped before the device run.
           SEEDED=$(curl -fsS http://localhost:8474/proxies/backend/toxics)
           echo "installed toxics: $SEEDED"
           echo "$SEEDED" | jq -e 'map(.stream) | (index("upstream") != null) and (index("downstream") != null)' \
@@ -906,9 +675,6 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # Compression wall-clock metric: time the netshape shard end-to-end so the
-      # summary can report how long the shaped (compressed) run took. A bare
-      # number, not a pass/fail gate.
       - name: Run weak-net Maestro shard (shaped link, wall-clock timed)
         id: netshape_run
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d  # v2.38.0
@@ -953,16 +719,9 @@ jobs:
             echo "- shaped link: APK baked at 10.0.2.2:3100 → Toxiproxy → backend :3000 (genuine, both streams; seed fails hard)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # ─── 5. iOS nightly Maestro suite (cron-only) ───────────────────────────
   maestro-ios-nightly:
     if: ${{ github.event_name == 'schedule' }}
     needs: quality
-    # Pinned to macos-26 (Xcode 26.x), NOT macos-latest. macos-latest still
-    # resolved to macos-15 (Xcode 16.4), whose Swift 6.1 toolchain failed to
-    # compile expo-modules-core@55.0.20 (swift_version 6.0). The app targets
-    # Xcode 26 everywhere else (Xcode Cloud for prod; withFmtConstevalPatch exists
-    # specifically for "Xcode 26+"), so this nightly was the only stale-toolchain
-    # surface. macos-26 is GA and macos-latest migrates to it in June 2026 anyway.
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -970,11 +729,6 @@ jobs:
         working-directory: museum-frontend
     env:
       MAESTRO_VERSION: '2.5.1'
-      # Test-only audio-fixture injection seam (useAudioRecorder.ts) — bakes the
-      # bundled clip so the iOS audio-recording-flow STT→TTS round-trip is
-      # deterministic (Maestro cannot drive a real microphone). Inlined into the
-      # JS bundle at the Debug build step; the sim-only Debug app is never
-      # shipped, so the seam never reaches production. See .maestro/fixtures/audio.md.
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
@@ -1021,9 +775,6 @@ jobs:
           APP_PATH=$(find ios/build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -1)
           xcrun simctl install booted "$APP_PATH"
       - name: Seed Maestro fixtures into simulator photo library
-        # T9.x — Inject the chat-compare fixture into the booted simulator
-        # so the PHPicker surfaces it as the most-recent asset. Skipped if
-        # the fixture file is missing (fail-open).
         run: |
           if [ -f .maestro/fixtures/test-artwork.jpg ]; then
             xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg
@@ -1106,11 +857,6 @@ jobs:
       - name: Build Android preview
         run: eas build --platform android --profile preview --non-interactive --no-wait
 
-  # Trigger: `workflow_dispatch` only with profile=internal + platform in
-  # (android|all). The previous on-push trigger drained the EAS Free plan
-  # Android quota on every merge to main; operators now run this job
-  # manually from the Actions tab when an internal Android release is
-  # actually wanted.
   build-internal-android:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'internal' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') }}
     needs: quality

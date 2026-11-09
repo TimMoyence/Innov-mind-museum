@@ -1,6 +1,3 @@
-/**
- * Admin tickets page tests — ticket list, status/priority filters, update modal, pagination, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -9,8 +6,6 @@ import TicketsPage from '@/app/[locale]/admin/tickets/page';
 import type { Ticket, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/tickets',
@@ -33,8 +28,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 
@@ -45,8 +38,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -54,8 +45,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -106,10 +95,6 @@ const mockTicketsPage1: PaginatedResponse<Ticket> = {
   totalPages: 3,
 };
 
-// ============================================================================
-// Tickets page
-// ============================================================================
-
 describe('TicketsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -128,11 +113,7 @@ describe('TicketsPage', () => {
   });
 
   it('shows loading spinner while fetching data', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending */
-      }),
-    );
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -159,7 +140,6 @@ describe('TicketsPage', () => {
 
     expect(screen.getByText('Wrong artwork info')).toBeInTheDocument();
     expect(screen.getByText('App crash on startup')).toBeInTheDocument();
-    // Statuses and priorities appear both in the table and in the filter dropdown options
     expect(screen.getAllByText('open').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('in_progress').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('resolved').length).toBeGreaterThanOrEqual(1);
@@ -320,7 +300,6 @@ describe('TicketsPage', () => {
     });
 
     expect(screen.getByText('Update Ticket')).toBeInTheDocument();
-    // Modal shows the ticket subject
     expect(screen.getAllByText('Cannot upload photo').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -344,7 +323,6 @@ describe('TicketsPage', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // Confirm is disabled because status=open and priority=high haven't changed
     expect(screen.getByText('Confirm')).toBeDisabled();
   });
 
@@ -395,7 +373,6 @@ describe('TicketsPage', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // Change the status in the modal
     const statusSelects = screen.getByRole('dialog').querySelectorAll('select');
     fireEvent.change(requireIndex(Array.from(statusSelects), 0, 'statusSelects'), {
       target: { value: 'resolved' },
@@ -514,7 +491,6 @@ describe('TicketsPage', () => {
     );
 
     await waitFor(() => {
-      // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
       expect(mockApiGet).toHaveBeenCalled();
       expect(mockApiGet.mock.calls[0]?.[0]).toEqual(expect.stringContaining('/api/admin/tickets'));
     });

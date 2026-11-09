@@ -1,23 +1,3 @@
-/**
- * C4 / T3.5 — Orchestrator → KnowledgeRouter result threading.
- *
- * Verifies that `LangChainChatOrchestrator` propagates the `facts` +
- * `factsSource` fields from `OrchestratorInput` (populated upstream by
- * `PrepareMessagePipeline` from `KnowledgeRouter.resolve()`) into every call
- * to `buildSectionMessages`. The Spotlighting envelope (T2.3 / T3.4) is the
- * SECOND SystemMessage when `facts.length > 0 && factsSource !== 'none'`.
- *
- * Entry points covered (2 of 2 — see editor notes — there is NO separate
- * orchestrator-level "repair" or "judge fallback" path; the judge lives
- * inside `KnowledgeRouterService`, not in the orchestrator):
- *
- *   1. `generate` (full-shot)   → `buildSectionTasks` → `buildSectionMessages`
- *   2. `generate` (walk intent) → `generateWalk`      → `buildSectionMessages`
- *
- * Backward-compat (NFR8): when `facts`/`factsSource` are absent on
- * `OrchestratorInput`, the legacy `knowledgeBaseBlock` / `webSearchBlock` path
- * remains active and no Spotlighting envelope is emitted.
- */
 jest.mock('@src/config/env', () => ({
   env: {
     llm: {
@@ -65,13 +45,11 @@ jest.mock('@langchain/google-genai', () => ({
   ChatGoogleGenerativeAI: jest.fn(),
 }));
 
-/* eslint-disable import/first -- jest.mock must hoist first */
 import { SystemMessage } from '@langchain/core/messages';
 
 import { LangChainChatOrchestrator } from '@modules/chat/adapters/secondary/llm/langchain.orchestrator';
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
-/* eslint-enable import/first */
 
 interface CapturedCall {
   messages: SystemMessage[];
@@ -165,7 +143,6 @@ describe('LangChainChatOrchestrator — KnowledgeRouter facts threading (T3.5)',
       await orchestrator.generate(
         makeInput({
           knowledgeBaseBlock: 'Legacy KB block content.',
-          // facts / factsSource intentionally omitted
         }),
       );
 
@@ -173,7 +150,6 @@ describe('LangChainChatOrchestrator — KnowledgeRouter facts threading (T3.5)',
       const envelope = findEnvelope(captured[0].messages);
       expect(envelope).toBeNull();
 
-      // Legacy knowledge_base block still rendered downstream
       const legacyBlock = captured[0].messages.find(
         (m): m is SystemMessage =>
           m instanceof SystemMessage &&
@@ -216,7 +192,6 @@ describe('LangChainChatOrchestrator — KnowledgeRouter facts threading (T3.5)',
         }),
       );
 
-      // walk path uses withStructuredOutput → captured via that adapter
       expect(captured.length).toBeGreaterThan(0);
       const envelope = findEnvelope(captured[0].messages);
       expect(envelope).not.toBeNull();

@@ -1,14 +1,3 @@
-/**
- * T3.1 — KnowledgeRouterPort compile-only type contract test.
- *
- * Asserts the new port surface required by C4.1 design D1 / spec R6:
- *   - `KnowledgeRouterPort.resolve(searchTerm, signal?): Promise<KnowledgeRouterResult>`
- *   - `KnowledgeRouterResult` shape with `facts`, `source`, `fallback_triggered`,
- *     optional `judge_confidence`, optional `metadata.latencyMs.{kb,judge,web}`.
- *
- * No runtime side effects — verifies imports + `satisfies` against a literal
- * stub so that breaking the port shape fails this spec at TypeScript level.
- */
 import type {
   KnowledgeRouterPort,
   KnowledgeRouterResult,

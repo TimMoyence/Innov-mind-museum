@@ -1,17 +1,3 @@
-/**
- * B15 + B16 — Vendors checklist + HTML age correction (RED phase, UFR-022).
- *
- * Each of the 3 public privacy surfaces (HTML, museum-web, museum-frontend)
- * MUST disclose the 19 subprocessors enumerated in `team-state/2026-05-21-
- * p0-gdpr/spec.md` §3 R11. The HTML Article 10 minor-age string MUST read
- * "15 ans" (not 16) and cite CNIL Délibération 2021-018 (R13).
- *
- * Pre-impl state (RED): each surface lacks ≥13 vendors and HTML Article 10
- * still reads "16 ans". These assertions MUST fail with non-zero exit until
- * the GREEN phase regenerates the surfaces from the canonical source (T2.10).
- *
- * No applicative code touched here — only file reads + greps.
- */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -31,11 +17,6 @@ const FE_PRIVACY_PATH = path.join(
   'museum-frontend/features/legal/privacyPolicyContent.ts',
 );
 
-// ---------------------------------------------------------------------------
-// Per-surface fixture loaders. Each returns the raw source text the test
-// greps against. Surfaces are read from disk, not mocked — RED catches the
-// real-world drift state.
-// ---------------------------------------------------------------------------
 function readSurface(surface: PublicSurface): string {
   if (surface === 'museum-web') return readFileSync(WEB_PRIVACY_PATH, 'utf8');
   return readFileSync(FE_PRIVACY_PATH, 'utf8');
@@ -48,8 +29,6 @@ describe('B15 — vendor disclosure on 3 public surfaces (R11)', () => {
     describe(`surface: ${surface}`, () => {
       const surfaceText = readSurface(surface);
 
-      // One test per vendor × surface = 19 × 3 = 57 assertions in RED.
-      // Granular reporting makes the GREEN drift diagnosis trivial.
       for (const vendor of CANONICAL_VENDORS) {
         it(`mentions vendor "${vendor.name}" (${vendor.category})`, () => {
           expect(surfaceMentionsVendor(surfaceText, vendor)).toBe(true);
@@ -62,7 +41,6 @@ describe('B15 — vendor disclosure on 3 public surfaces (R11)', () => {
 describe('B15 — public /subprocessors route exists on museum-web', () => {
   it('exposes museum-web/src/app/[locale]/subprocessors/page.tsx', () => {
     const pagePath = path.join(REPO_ROOT, 'museum-web/src/app/[locale]/subprocessors/page.tsx');
-    // RED: page does not exist. require.resolve / fs.statSync throws ENOENT.
     expect(() => readFileSync(pagePath, 'utf8')).not.toThrow();
   });
 });

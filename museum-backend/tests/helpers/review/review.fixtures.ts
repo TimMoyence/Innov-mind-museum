@@ -1,10 +1,6 @@
 import type { Review } from '@modules/review/domain/review/review.entity';
 import type { DataSource } from 'typeorm';
 
-/**
- * Creates a Review entity with sensible defaults. Override any field via `overrides`.
- * @param overrides
- */
 export const makeReview = (overrides: Partial<Review> = {}): Review =>
   ({
     id: 'review-001',
@@ -18,18 +14,6 @@ export const makeReview = (overrides: Partial<Review> = {}): Review =>
     ...overrides,
   }) as Review;
 
-/**
- * Real-PG insert helper for integration tests (S-BE-AGG / T-AGG-2).
- *
- * Inserts an approved-by-default review row directly, bypassing the use-case
- * validation layer (we are exercising the SQL aggregation, not the create
- * flow). `museumId` defaults to `null` (global / B2C). The `comment` satisfies
- * the 10..2000 length constraint so the row survives if a CHECK is ever added.
- *
- * Column names are snake_case where the entity declares `name:` overrides
- * (`museum_id`), camelCase otherwise (`userId`, `userName`) — mirrors the
- * entity (`review.entity.ts`). Returns the generated review id.
- */
 export interface InsertReviewRowOptions {
   rating: number;
   status?: string;
@@ -37,15 +21,6 @@ export interface InsertReviewRowOptions {
   userId?: number;
   userName?: string;
   comment?: string;
-  /**
-   * Explicit `createdAt` override (NPS scale-epoch tests, S-BE-AGG F3). When
-   * omitted the DB default (`now()`) applies, so the row lands AFTER any
-   * realistic `NPS_SCALE_EPOCH`. Accepts a `Date` or an ISO string; passed as a
-   * bound parameter ($7) so legacy pre-epoch rows (e.g. `2026-01-01`) can be
-   * seeded without string concatenation. Column is `"createdAt"` (camelCase, no
-   * naming-strategy override — cf. `review.entity.ts:64` / CreateReviewsTable
-   * migration).
-   */
   createdAt?: Date | string;
 }
 

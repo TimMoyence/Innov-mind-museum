@@ -1,7 +1,6 @@
 import { UpdateTicketStatusUseCase } from '@modules/support/useCase/ticket-admin/updateTicketStatus.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
-// Mock the audit module — the use case imports the singleton directly
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_TICKET_UPDATED: 'ADMIN_TICKET_UPDATED',
@@ -59,10 +58,8 @@ describe('UpdateTicketStatusUseCase', () => {
   });
 
   it('unassigns ticket (set assignedTo to null)', async () => {
-    // First assign
     await useCase.execute({ ticketId, assignedTo: 42, actorId: 1 });
 
-    // Then unassign
     const result = await useCase.execute({
       ticketId,
       assignedTo: null,

@@ -7,14 +7,6 @@ import {
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
 
-/**
- * Suite focused on the image-cleanup pipeline wired into
- * {@link DeleteAccountUseCase} (user-scoped S3 deletion + legacy DB ref lookup).
- *
- * Complements the existing `deleteAccount.useCase.test.ts` — which covers the
- * top-level happy/error paths — with targeted assertions on the legacy fetcher
- * call order and payload.
- */
 const makeImageStorage = (): jest.Mocked<ImageCleanupPort> => ({
   deleteByPrefix: jest.fn().mockResolvedValue(undefined),
 });
@@ -50,8 +42,6 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
 
     await useCase.execute(7);
 
-    // Order is load-bearing — CASCADE wipes chat_messages, so legacy refs MUST
-    // be read (via the fetcher) before the user row is deleted.
     expect(callOrder).toEqual(['storage:deleteByPrefix', 'repo:deleteUser']);
 
     expect(imageStorage.deleteByPrefix).toHaveBeenCalledTimes(1);
@@ -73,8 +63,6 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     });
     await useCase.execute(42);
 
-    // Grab the fetcher the use case handed to the storage adapter and exercise
-    // it the way the real S3 implementation would.
     const forwardedFetcher = imageStorage.deleteByPrefix.mock.calls[0][1];
     expect(forwardedFetcher).toBeDefined();
     expect(typeof forwardedFetcher).toBe('function');
@@ -100,8 +88,6 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     const forwardedFetcher = imageStorage.deleteByPrefix.mock.calls[0][1];
     expect(forwardedFetcher).toBeDefined();
 
-    // A lookup failure must degrade gracefully (empty list) — the S3 prefix
-    // scan still removes every user-scoped key, so the deletion flow is safe.
     await expect(forwardedFetcher!(13)).resolves.toEqual([]);
     expect(repo.deleteUser).toHaveBeenCalledWith(13);
   });
@@ -113,7 +99,6 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
     const useCase = new DeleteAccountUseCase({
       userRepository: repo,
       imageStorage,
-      /* no lookup */
     });
     await useCase.execute(5);
 

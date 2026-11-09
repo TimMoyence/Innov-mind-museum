@@ -62,7 +62,7 @@ describe('MusaiumCatalogueClient (C2 v2)', () => {
 
   it('preserves multi-word titles exactly (no fuzzy match)', async () => {
     const client = new MusaiumCatalogueClient(fixtureCatalogue);
-    expect(await client.searchPhotos('Starry Night')).toEqual([]); // 'The' missing → no match
+    expect(await client.searchPhotos('Starry Night')).toEqual([]);
     const exact = await client.searchPhotos('The Starry Night');
     expect(exact).toHaveLength(1);
     expect(exact[0].caption).toBe('The Starry Night');
@@ -70,7 +70,6 @@ describe('MusaiumCatalogueClient (C2 v2)', () => {
 
   it('reads default catalogue when no override provided (smoke — uses real artworks.data)', async () => {
     const client = new MusaiumCatalogueClient();
-    // Use a title we know is in the curated 30-list.
     const photos = await client.searchPhotos('Mona Lisa');
     expect(photos.length).toBeGreaterThanOrEqual(1);
   });

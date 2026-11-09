@@ -21,7 +21,6 @@ interface SettingsComplianceLinksProps {
   isExporting: boolean;
 }
 
-/** Compliance links card: privacy, terms, support, onboarding, export. */
 export const SettingsComplianceLinks = ({
   onNavigate,
   onExportData,

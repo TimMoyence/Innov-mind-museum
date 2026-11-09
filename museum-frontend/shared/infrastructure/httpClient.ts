@@ -1,6 +1,9 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import * as Sentry from '@sentry/react-native';
 
+import type { components } from '@/shared/api/generated/openapi';
+import type { QuotaInfo } from '@/shared/types/quota-info';
+
 import { resolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
@@ -10,13 +13,6 @@ import { recordHttpQualitySample } from './connectivity/qualitySampling';
 
 type UnauthorizedHandler = () => void;
 
-/**
- * Outcome of an auth refresh attempt.
- *
- * - `success` → new access token issued, retry the original request.
- * - `invalid` → backend rejected the refresh token (401/403); purge session.
- * - `transient` → network / timeout / 5xx; keep session, fail the current request.
- */
 export type AuthRefreshResult =
   | { kind: 'success'; accessToken: string }
   | { kind: 'invalid' }
@@ -25,18 +21,9 @@ export type AuthRefreshResult =
 type AuthRefreshHandler = () => Promise<AuthRefreshResult>;
 type TokenProvider = () => string | null;
 
-/**
- * R1 (C6) — Paywall handler shape. Invoked from the response interceptor
- * when a 402 carries `code:'QUOTA_EXCEEDED'`. The `PaywallProvider` mobile
- * component registers a closure that opens the upsell modal ; the
- * interceptor stays decoupled from React.
- */
-type PaywallHandler = (info: {
-  tier: string;
-  currentCount: number;
-  limit: number;
-  resetAt: string;
-}) => void;
+type PaywallHandler = (info: QuotaInfo) => void;
+
+type QuotaExceededError = components['schemas']['QuotaExceededError'];
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let authRefreshHandler: AuthRefreshHandler | null = null;
@@ -44,54 +31,22 @@ let inflightRefresh: Promise<AuthRefreshResult> | null = null;
 let tokenProvider: TokenProvider | null = null;
 let paywallHandler: PaywallHandler | null = null;
 
-/**
- * Registers a provider function that returns the current access token.
- * @param fn - Function returning the token string (or `null`), or `null` to unregister.
- */
 export const setTokenProvider = (fn: TokenProvider | null): void => {
   tokenProvider = fn;
 };
 
-/**
- * Registers a callback invoked once per refresh cycle when the refresh token
- * is rejected as invalid (terminal failure). All concurrent 401-bound requests
- * share a single firing — the handler runs at most once per cycle.
- * @param handler - Handler function, or `null` to unregister.
- */
 export const setUnauthorizedHandler = (handler: UnauthorizedHandler | null): void => {
   unauthorizedHandler = handler;
 };
 
-/**
- * R1 (C6) — Registers the soft-paywall handler invoked by the response
- * interceptor when a 402 + `code:'QUOTA_EXCEEDED'` is seen. Mirror of
- * `setUnauthorizedHandler` / `setAuthRefreshHandler` setter-injection
- * pattern — keeps `shared/infrastructure` decoupled from `features/paywall`.
- * Pass `null` to unregister (provider unmount).
- */
 export const setPaywallHandler = (handler: PaywallHandler | null): void => {
   paywallHandler = handler;
 };
 
-/**
- * Registers a handler that attempts to refresh the access token. It MUST
- * disambiguate terminal failures (`invalid`) from transient ones (`transient`)
- * so the http client can fire the unauthorized handler only when the backend
- * explicitly rejects the refresh token.
- * @param handler - Async function returning an {@link AuthRefreshResult}, or `null` to unregister.
- */
 export const setAuthRefreshHandler = (handler: AuthRefreshHandler | null): void => {
   authRefreshHandler = handler;
 };
 
-/**
- * Single-flight wrapper around the registered auth refresh handler. Concurrent
- * callers await the same in-flight Promise; the unauthorized handler fires
- * exactly once when the cycle resolves to `invalid`.
- *
- * @returns The shared {@link AuthRefreshResult} for the current cycle, or
- *          `{ kind: 'transient' }` when no handler is registered.
- */
 export const runAuthRefresh = async (): Promise<AuthRefreshResult> => {
   if (!authRefreshHandler) {
     return { kind: 'transient' };
@@ -111,9 +66,7 @@ export const runAuthRefresh = async (): Promise<AuthRefreshResult> => {
     if (result.kind === 'invalid') {
       try {
         unauthorizedHandler?.();
-      } catch {
-        // Never let the logout side effect crash queued waiters.
-      }
+      } catch {}
     }
     return result;
   })();
@@ -129,7 +82,6 @@ type HttpRequestConfig = {
   _retryCount?: number;
   _retriedAfterAuthRefresh?: boolean;
   _startedAt?: number;
-  /** Opt this request out of passive quality sampling (design §2.3 / US-10.2). */
   skipQualitySample?: boolean;
 } & Record<string, unknown>;
 
@@ -137,15 +89,10 @@ const API_BASE_URL = resolveInitialApiBaseUrl();
 
 let runtimeLocale = 'en';
 
-/**
- * Updates the locale sent via Accept-Language on all subsequent requests.
- * @param locale - Language code (e.g. "fr", "en").
- */
 export const setLocale = (locale: string): void => {
   runtimeLocale = locale || 'en';
 };
 
-/** Returns the current runtime locale used for Accept-Language. */
 export const getLocale = (): string => runtimeLocale;
 
 const httpClient = axios.create({
@@ -153,11 +100,11 @@ const httpClient = axios.create({
     Accept: 'application/json',
   },
   timeout: 15000,
-  // TD-AX-01 — bound request/response body size to 10 MiB (PATTERNS.md axios
-  // §3 DO). Mitigates accidental large payload DoS vs default Infinity.
   maxContentLength: 10 * 1024 * 1024,
   maxBodyLength: 10 * 1024 * 1024,
 });
+
+const requestUrlOf = (url: unknown): string => (typeof url === 'string' ? url : '');
 
 const wait = async (ms: number): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -213,14 +160,12 @@ const emitHttpBreadcrumb = (
       type: 'http',
       data: {
         method: typeof config.method === 'string' ? config.method.toUpperCase() : 'GET',
-        url: typeof config.url === 'string' ? config.url : '',
+        url: requestUrlOf(config.url),
         status_code: status,
         duration_ms: durationMs,
       },
     });
-  } catch {
-    // Never let breadcrumb recording break the request flow.
-  }
+  } catch {}
 };
 
 httpClient.interceptors.response.use(
@@ -233,8 +178,6 @@ httpClient.interceptors.response.use(
       response.status,
       'info',
     );
-    // Passive quality sample (US-10.1) — eligibility + AppState gate applied
-    // downstream; never throws (design §2.3).
     recordHttpQualitySample(response.config as typeof response.config & HttpRequestConfig, {
       ok: true,
       timedOut: false,
@@ -246,11 +189,6 @@ httpClient.interceptors.response.use(
     const config = (axiosError?.config ?? {}) as HttpRequestConfig;
     const status = axiosError?.response?.status;
 
-    // Passive quality sample (US-03.2 / design P-05): an HTTP error WITH a
-    // response (4xx/5xx) means the network worked ⇒ `ok: true`; only a timeout
-    // (`ECONNABORTED`) or a network error without response is a failure.
-    // Recorded before the 401-refresh/retry branches so every first attempt
-    // samples once (retries are excluded via `_retryCount > 0`).
     recordHttpQualitySample(
       config,
       axiosError?.response
@@ -258,36 +196,20 @@ httpClient.interceptors.response.use(
         : { ok: false, timedOut: axiosError?.code === 'ECONNABORTED' },
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- config.url is always string at runtime
-    const requestUrl = String(config.url ?? '');
+    const requestUrl = requestUrlOf(config.url);
     const isAuthRefreshRequest = requestUrl.includes('/api/auth/refresh');
     const isAuthRequired = config.requiresAuth !== false;
 
-    // R1 (C6) — Soft-paywall 402 branch. Body shape is pinned by the BE
-    // contract (`code:'QUOTA_EXCEEDED'`) ; the interceptor forwards the
-    // payload to the registered paywall handler (via `setPaywallHandler`)
-    // and STILL propagates the error so the calling code's `.catch()` can
-    // surface its own fallback (R24 — additive, not exclusive).
     if (status === 402) {
-      const body = axiosError?.response?.data as
-        | {
-            code?: string;
-            tier?: string;
-            currentCount?: number;
-            limit?: number;
-            resetAt?: string;
-          }
-        | undefined;
+      const body = axiosError?.response?.data as Partial<QuotaExceededError> | undefined;
       if (body?.code === 'QUOTA_EXCEEDED' && paywallHandler) {
         paywallHandler({
-          tier: typeof body.tier === 'string' ? body.tier : 'free',
-          currentCount: typeof body.currentCount === 'number' ? body.currentCount : 0,
-          limit: typeof body.limit === 'number' ? body.limit : 0,
-          resetAt: typeof body.resetAt === 'string' ? body.resetAt : '',
+          tier: body.tier ?? 'free',
+          currentCount: body.currentCount ?? 0,
+          limit: body.limit ?? 0,
+          resetAt: body.resetAt ?? '',
         });
       }
-      // Fall through to mapAxiosError + reject — the calling code still
-      // sees a rejected Promise.
     }
 
     if (
@@ -308,12 +230,9 @@ httpClient.interceptors.response.use(
         };
         return await httpClient.request(axiosError.config as AxiosRequestConfig);
       }
-      // `invalid` → unauthorizedHandler already fired exactly once for the
-      // shared cycle. `transient` → fall through and let the request fail.
     }
 
     const is429 = status === 429;
-    // Daily chat limit (DAILY_LIMIT_REACHED) is permanent until midnight — retrying is pointless.
     const isDailyLimit =
       is429 && getApiErrorCode(axiosError?.response?.data) === 'DAILY_LIMIT_REACHED';
     const retryable =
@@ -326,7 +245,6 @@ httpClient.interceptors.response.use(
 
       let delayMs: number;
       if (is429) {
-        // Respect Retry-After header when present, otherwise exponential backoff: 1s, 2s, 4s
         const responseHeaders = (
           axiosError.response as { headers?: Record<string, string> } | undefined
         )?.headers;
@@ -355,5 +273,4 @@ httpClient.interceptors.response.use(
 
 export { mapAxiosError };
 
-/** Pre-configured Axios instance with auth, retry, and token-refresh interceptors. */
 export { httpClient };

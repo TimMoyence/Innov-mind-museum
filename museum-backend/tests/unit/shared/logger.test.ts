@@ -87,12 +87,8 @@ describe('logger', () => {
 
     const output = JSON.parse(logSpy.mock.calls[0][0]);
     expect(output.message).toBe('no_context');
-    // Should only have default fields, no extra context keys
   });
 
-  // Kills L13 ObjectLiteral → {}: an empty defaultFields strips every literal
-  // value out of the emitted JSON. Asserting each field by exact value (not
-  // typeof) makes the mutation observable on the first log call.
   it('emits service="museum-backend" verbatim (not just a string-typed value)', () => {
     logger.info('x');
     const output = JSON.parse(logSpy.mock.calls[0][0]);
@@ -100,9 +96,6 @@ describe('logger', () => {
   });
 
   it('emits hostname matching os.hostname() exactly', () => {
-    // Lazy-require os to avoid hoisting issues; both runtime and test use the
-    // same Node binary so os.hostname() is identical.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- minimal local require, hostname is invariant across the test
     const { hostname } = require('node:os') as typeof import('node:os');
     logger.info('x');
     const output = JSON.parse(logSpy.mock.calls[0][0]);
@@ -110,28 +103,6 @@ describe('logger', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Cycle 10 (A-02 MEDIUM) — central log redaction of URLs carrying secrets.
-//
-// CONTRACT (what GREEN delivers): logger.format() MUST run the context through
-// a redaction pass BEFORE JSON.stringify → stdout. URLs with sensitive query
-// params (presigned S3 `X-Amz-Signature`/`X-Amz-Credential`/`X-Amz-Security-Token`,
-// `?token=`, `?code=`, `?access_token=`, `?secret=`, `?sig=`/`signature=`) are
-// masked to `[redacted]` while host + path + non-sensitive params survive.
-// Sensitive KEYS (password/token/secret/api_key/refresh) are redacted regardless
-// of value type. Public URLs and non-URL contexts pass through unchanged. The
-// redaction is recursive (nested objects/arrays), idempotent, and fail-safe
-// (never throws — emits a marker instead).
-//
-// HONESTY (UFR-013): these tests prove the CAPABILITY of the central logger to
-// redact a URL it is explicitly handed. They do NOT claim any current call-site
-// leaks — the spec verified the seed examples (auth reset, S3) are already sane
-// (those secrets are simply never logged). The fix is a structural guard.
-//
-// RED STATE: every redaction case below FAILS today — logger.ts:25-31 emits the
-// raw context verbatim with no scrubbing. The no-over-masking cases (T4/T5/T8/T13)
-// already pass and serve as regression locks.
-// ---------------------------------------------------------------------------
 describe('logger — URL/secret redaction (cycle 10, A-02)', () => {
   let logSpy: jest.SpyInstance;
   let warnSpy: jest.SpyInstance;
@@ -149,9 +120,6 @@ describe('logger — URL/secret redaction (cycle 10, A-02)', () => {
     errorSpy.mockRestore();
   });
 
-  // Captures the raw string handed to the spied console method and returns both
-  // the parsed JSON and the raw string (substring assertions on the raw line are
-  // the strongest "no secret leaked anywhere" check).
   const lastCall = (spy: jest.SpyInstance): { raw: string; json: Record<string, unknown> } => {
     const calls = spy.mock.calls;
     const raw = calls[calls.length - 1][0] as string;
@@ -294,17 +262,10 @@ describe('logger — URL/secret redaction (cycle 10, A-02)', () => {
     expect(json.level).toBe('error');
     expect(json.message).toBe('hostile');
     expect(json.logContextRedactionFailed).toBe(true);
-    // The raw failing payload must not leak through.
     expect(raw).not.toContain('SECRETHIDDEN');
   });
 
   it('T12b — fail-safe: a context carrying a non-serialisable BigInt never throws, emits a marker, never the raw value', () => {
-    // Distinct path from T12: the getter-throw is caught INSIDE redactValue (so
-    // redactLogContext's try/catch fires). A BigInt instead survives redactValue
-    // untouched (it is neither string/array/object → returned as-is) and only
-    // blows up later in `JSON.stringify`, which today lives OUTSIDE the fail-safe
-    // try/catch (logger.ts:82-89). R6/NFR5 requires the logger to NEVER throw and
-    // to emit the marker even for this serialisation-time failure.
     expect(() =>
       logger.error('hostile_bigint', { jobId: 'j3', balance: 9007199254740993n }),
     ).not.toThrow();
@@ -313,7 +274,6 @@ describe('logger — URL/secret redaction (cycle 10, A-02)', () => {
     expect(json.level).toBe('error');
     expect(json.message).toBe('hostile_bigint');
     expect(json.logContextRedactionFailed).toBe(true);
-    // The raw un-serialisable digits must not leak through any fallback path.
     expect(raw).not.toContain('9007199254740993');
   });
 
@@ -333,14 +293,7 @@ describe('logger — URL/secret redaction (cycle 10, A-02)', () => {
   });
 });
 
-// Kills L13 ObjectLiteral, L14 StringLiteral, L15/L16 LogicalOperator, and
-// L16 StringLiteral mutations on the static defaultFields object by
-// re-evaluating the module under controlled process.env states.
 describe('logger defaultFields under various env states', () => {
-  /**
-   * @param env
-   * @param body
-   */
   function withEnv(
     env: Record<string, string | undefined>,
     body: (out: Record<string, unknown>) => void,
@@ -352,7 +305,6 @@ describe('logger defaultFields under various env states', () => {
     }
     try {
       jest.isolateModules(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic re-import to re-evaluate the module-level defaultFields with the env override active
         const fresh = require('@shared/logger/logger') as typeof import('@shared/logger/logger');
         const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
         try {

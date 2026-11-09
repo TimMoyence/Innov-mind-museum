@@ -1,9 +1,8 @@
 import type React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/features/auth/application/AuthContext';
+import { useAudioDescriptionStore } from '@/features/settings/infrastructure/audioDescriptionStore';
 import { createAppError } from '@/shared/types/AppError';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
@@ -85,6 +84,11 @@ jest.mock('@/shared/observability/errorReporting', () => ({
   reportError: jest.fn(),
 }));
 
+const mockSaveProfilePreferences = jest.fn();
+jest.mock('@/features/settings/infrastructure/userProfileApi', () => ({
+  saveProfilePreferences: (...args: unknown[]) => mockSaveProfilePreferences(...args),
+}));
+
 const mockIsAccessTokenExpired = jest.fn();
 jest.mock('@/features/auth/domain/authLogic.pure', () => ({
   extractUserIdFromToken: jest.fn(() => 'user-123'),
@@ -96,8 +100,6 @@ jest.mock('@/features/auth/domain/authLogic.pure', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const makeSession = (overrides?: Record<string, unknown>) => ({
   accessToken: 'new-access',
   refreshToken: 'new-refresh',
@@ -108,8 +110,6 @@ const makeSession = (overrides?: Record<string, unknown>) => ({
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
 );
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('AuthProvider / useAuth', () => {
   beforeEach(() => {
@@ -143,9 +143,6 @@ describe('AuthProvider / useAuth', () => {
   });
 
   it('bootstrap hydrates expired cached access token without calling refresh (defers to interceptor)', async () => {
-    // Single-flight invariant: bootstrap MUST NOT call /auth/refresh because
-    // the response interceptor will refresh on the first 401, and any parallel
-    // refresh would race the rotation and log the user out.
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
     mockGetPersistedAccessToken.mockResolvedValue('expired-access');
     mockIsAccessTokenExpired.mockReturnValue(true);
@@ -162,9 +159,6 @@ describe('AuthProvider / useAuth', () => {
   });
 
   it('bootstrap without cached access still flips isAuthenticated when a refresh token is present', async () => {
-    // No access token in storage but a refresh token exists → mark as
-    // authenticated; the first authed request will produce 401 → interceptor
-    // refreshes via the single-flight coordinator.
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
     mockGetPersistedAccessToken.mockResolvedValue(null);
 
@@ -239,6 +233,28 @@ describe('AuthProvider / useAuth', () => {
     expect(biometricStore.clearBiometricPreference).toHaveBeenCalledTimes(1);
   });
 
+  it('M5 · après logout(), un réglage refusé revient à la valeur affichée, jamais à celle du compte précédent', async () => {
+    mockGetRefreshToken.mockResolvedValue('valid-refresh');
+    mockGetPersistedAccessToken.mockResolvedValue('cached');
+    mockIsAccessTokenExpired.mockReturnValue(false);
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(true);
+    });
+    useAudioDescriptionStore.getState().mergeFromServer({ audioDescriptionMode: true });
+
+    await act(async () => {
+      await result.current.logout();
+    });
+    useAudioDescriptionStore.setState({ enabled: false });
+    mockSaveProfilePreferences.mockResolvedValue(new Error('refus'));
+    await act(async () => {
+      await useAudioDescriptionStore.getState().setEnabled(true);
+    });
+
+    expect(useAudioDescriptionStore.getState().enabled).toBe(false);
+  });
+
   it('setUnauthorizedHandler 401 path cascades per-user feature storage cleanup', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');
     mockGetPersistedAccessToken.mockResolvedValue('cached');
@@ -253,7 +269,6 @@ describe('AuthProvider / useAuth', () => {
       expect(httpClient.setUnauthorizedHandler).toHaveBeenCalled();
     });
 
-    // Retrieve the handler registered by AuthProvider — first call, first arg.
     const registeredHandler = (httpClient.setUnauthorizedHandler as jest.Mock).mock.calls
       .map((call: unknown[]) => call[0])
       .find((arg: unknown): arg is () => void => typeof arg === 'function');
@@ -266,7 +281,6 @@ describe('AuthProvider / useAuth', () => {
 
     await act(async () => {
       registeredHandler?.();
-      // handler fires void promises; give microtasks a tick to flush
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -354,14 +368,6 @@ describe('AuthProvider / useAuth', () => {
 
     expect(result.current.isBiometricLocked).toBe(false);
   });
-
-  // ── Onboarding state ──
-  //
-  // Bootstrap no longer calls /auth/refresh, so the authoritative
-  // onboardingCompleted flag is now produced by the registered auth refresh
-  // handler (when the response interceptor refreshes on the first 401) or by
-  // loginWithSession on a fresh login. The ex-bootstrap-refresh tests have
-  // been moved to the refresh-handler path below.
 
   it('refresh handler with onboardingCompleted=false sets isFirstLaunch=true', async () => {
     mockGetRefreshToken.mockResolvedValue('valid-refresh');

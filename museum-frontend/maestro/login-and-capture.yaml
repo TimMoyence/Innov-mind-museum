@@ -1,6 +1,3 @@
-# Login and capture screenshots — run AFTER app is already open on auth screen
-# Usage: TEST_EMAIL=x TEST_PASSWORD=y maestro test maestro/login-and-capture.yaml
-
 appId: com.musaium.mobile
 
 env:
@@ -8,52 +5,42 @@ env:
   TEST_PASSWORD: ${TEST_PASSWORD}
 
 ---
-
-# --- Tap email field and type ---
 - tapOn:
-    point: "50%,37%"
+    point: '50%,37%'
 - inputText: ${TEST_EMAIL}
 
-# --- Tap password field and type ---
 - tapOn:
-    point: "50%,42%"
+    point: '50%,42%'
 - inputText: ${TEST_PASSWORD}
 
-# --- Hide keyboard and tap Se connecter ---
 - hideKeyboard
 - tapOn:
-    text: ".*Se connecter.*"
+    text: '.*Se connecter.*'
 
-# Wait for home to load
 - extendedWaitUntil:
-    visible: ".*Musaium.*|.*Bonjour.*"
+    visible: '.*Musaium.*|.*Bonjour.*'
     timeout: 20000
 
-# --- Screenshot 2: Home ---
 - takeScreenshot: 02_home
 
-# --- Tap Conversations tab ---
 - tapOn:
-    text: ".*onversation.*"
+    text: '.*onversation.*'
     optional: true
 - extendedWaitUntil:
-    visible: ".*onversation.*"
+    visible: '.*onversation.*'
     timeout: 8000
 
-# --- Screenshot 3: Conversations ---
 - takeScreenshot: 03_conversations
 
-# --- Back to home and open settings ---
 - tapOn:
-    text: ".*ccueil.*|.*ome.*"
+    text: '.*ccueil.*|.*ome.*'
     optional: true
 
 - tapOn:
-    text: ".*églages.*|.*ettings.*"
+    text: '.*églages.*|.*ettings.*'
     optional: true
 - extendedWaitUntil:
-    visible: ".*églages.*|.*ettings.*|.*ompte.*|.*rofil.*"
+    visible: '.*églages.*|.*ettings.*|.*ompte.*|.*rofil.*'
     timeout: 5000
 
-# --- Screenshot 4: Settings ---
 - takeScreenshot: 04_settings

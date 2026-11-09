@@ -11,7 +11,6 @@ describe('ImageCarouselSkeleton (C2.4 v2)', () => {
 
   it('exposes the progressbar a11y role with the localized loading label', () => {
     render(<ImageCarouselSkeleton />);
-    // i18n is mocked to return the key as-is.
     const node = screen.getByLabelText('chat.enrichment.skeleton_loading');
     expect(node).toBeTruthy();
   });

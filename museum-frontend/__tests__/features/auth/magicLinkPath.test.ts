@@ -1,19 +1,3 @@
-/**
- * RED — TD-RNAV-01 cycle 2, T1.1 (R2, R3, R11).
- *
- * Pure mapping fn `mapMagicLinkPath` extracted from `app/+native-intent.tsx`
- * (design D2). This module does NOT exist yet — the suite MUST fail on import
- * (absence of feature), then turn green once `features/auth/lib/magicLinkPath.ts`
- * is implemented in the GREEN phase.
- *
- * Contract (design §6.1 + D3):
- *  - strip an optional `/fr` | `/en` locale prefix,
- *  - map `verify-email | reset-password | confirm-email-change` to the app
- *    route `/<route>`,
- *  - PRESERVE the original query string byte-for-byte (string-slice from the
- *    first `?`, NEVER round-trip through URLSearchParams — the #1 risk),
- *  - return EVERY other path UNCHANGED (pass-through, NOT null).
- */
 import { mapMagicLinkPath } from '@/features/auth/lib/magicLinkPath';
 
 describe('mapMagicLinkPath', () => {

@@ -5,27 +5,25 @@ import {
   cleanupOfflineImages,
 } from '@/features/chat/application/offlineImageStorage';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockGetInfoAsync = jest.fn();
 const mockMakeDirectoryAsync = jest.fn().mockResolvedValue(undefined);
 const mockCopyAsync = jest.fn().mockResolvedValue(undefined);
 const mockDeleteAsync = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('expo-file-system/legacy', () => ({
-  // Must be a plain string literal — hoisted above const declarations
   documentDirectory: 'file:///data/user/0/com.musaium/files/',
   getInfoAsync: (...args: unknown[]) => mockGetInfoAsync(...args),
   makeDirectoryAsync: (...args: unknown[]) => mockMakeDirectoryAsync(...args),
   copyAsync: (...args: unknown[]) => mockCopyAsync(...args),
   deleteAsync: (...args: unknown[]) => mockDeleteAsync(...args),
+  downloadAsync: jest.fn(),
+  readDirectoryAsync: jest.fn(),
+  getFreeDiskStorageAsync: jest.fn(),
+  writeAsStringAsync: jest.fn(),
+  readAsStringAsync: jest.fn(),
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const OFFLINE_DIR = 'file:///data/user/0/com.musaium/files/offline-images/';
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('offlineImageStorage', () => {
   beforeEach(() => {
@@ -134,21 +132,10 @@ describe('offlineImageStorage', () => {
 
       await cleanupOfflineImages(uris);
 
-      // Only the persisted one should trigger getInfoAsync/deleteAsync
       expect(mockDeleteAsync).toHaveBeenCalledTimes(1);
     });
   });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// W1-D4-FE-03 — dedicated capped image cache (carnet re-download). ADDED block
-// (the original describe above is byte-frozen for green; these tests pin the
-// NEW capped-cache surface: getCachedImage / cacheRemoteImage with LRU + maxAge
-// eviction + post-wipe miss). Mocks the same `expo-file-system/legacy` module,
-// augmented at runtime with the extra FS methods the capped cache needs
-// (downloadAsync / readDirectoryAsync / getFreeDiskStorageAsync) — purely
-// additive, the original 4-method factory is untouched.
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface CappedCacheModule {
   getCachedImage(key: string): Promise<string | null>;
@@ -169,18 +156,8 @@ describe('offlineImageStorage — capped image cache (W1-D4-FE-03)', () => {
   let fs: AugmentedFs;
 
   beforeAll(() => {
-    // Augment the already-mocked module with the extra FS surface the capped
-    // cache relies on. requireMock returns the SAME mocked object the source
-    // under test imports.
-    const mockedFs = jest.requireMock('expo-file-system/legacy');
-    mockedFs.downloadAsync = jest.fn();
-    mockedFs.readDirectoryAsync = jest.fn();
-    mockedFs.getFreeDiskStorageAsync = jest.fn();
-    mockedFs.writeAsStringAsync = jest.fn();
-    mockedFs.readAsStringAsync = jest.fn();
-    fs = mockedFs as unknown as AugmentedFs;
+    fs = jest.requireMock<AugmentedFs>('expo-file-system/legacy');
 
-    // RED: these exports do not exist yet → require throws / undefined access.
     cappedCache = jest.requireActual('@/features/chat/application/offlineImageStorage');
   });
 
@@ -219,16 +196,13 @@ describe('offlineImageStorage — capped image cache (W1-D4-FE-03)', () => {
 
       await cappedCache.cacheRemoteImage('msg-new', 'https://signed.example.com/fresh.jpg');
 
-      // The freshly-downloaded file is stat'd so its size counts against the cap.
       expect(mockGetInfoAsync).toHaveBeenCalled();
       expect(fs.downloadAsync).toHaveBeenCalled();
     });
 
     it('evicts LRU files via deleteAsync when the write pushes the cache over cap', async () => {
-      // Two pre-existing large entries + a large new download → over the
-      // dedicated cap → at least one LRU file must be deleted.
       fs.readDirectoryAsync.mockResolvedValue(['old-lru.jpg', 'recent.jpg', 'index.json']);
-      const HUGE = 200 * 1024 * 1024; // 200 MB each — guaranteed over any sane cap
+      const HUGE = 200 * 1024 * 1024;
       mockGetInfoAsync.mockResolvedValue({ exists: true, size: HUGE });
 
       await cappedCache.cacheRemoteImage('msg-overflow', 'https://signed.example.com/big.jpg');

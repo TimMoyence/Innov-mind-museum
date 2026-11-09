@@ -23,11 +23,6 @@ export async function upsertMessageFeedback(
     .execute();
 }
 
-/**
- * Uses explicit `messageId` FK column (not `message` relation) — relation form
- * `{ message: { id } }` triggers faulty `distinctAlias.MessageFeedback_id`
- * projection on some TypeORM versions with `select`/`distinct`. See Phase 10 findings.
- */
 export async function deleteMessageFeedback(
   feedbackRepo: Repository<MessageFeedback>,
   messageId: string,
@@ -36,11 +31,6 @@ export async function deleteMessageFeedback(
   await feedbackRepo.delete({ messageId, userId });
 }
 
-/**
- * Uses explicit `messageId` FK column — relation `where` + `select` projection on parent
- * triggers `SELECT distinctAlias.MessageFeedback_id FROM ... distinctAlias` (column
- * never in CTE, breaks query in prod). Phase 10 findings — chat-media.service.ts:178.
- */
 export async function getMessageFeedback(
   feedbackRepo: Repository<MessageFeedback>,
   messageId: string,
@@ -55,10 +45,6 @@ export async function getMessageFeedback(
   return { value: row.value };
 }
 
-/**
- * DSAR (Art.15/20, B3 / T1.10) — the user's message feedback projected to the
- * subject-facing export DTO `{ messageId, value, createdAt }`.
- */
 export async function listMessageFeedbackForUser(
   feedbackRepo: Repository<MessageFeedback>,
   userId: number,
@@ -71,12 +57,6 @@ export async function listMessageFeedbackForUser(
   }));
 }
 
-/**
- * DSAR (Art.15/20, B3 / T1.10, design D7) — the user's message reports projected
- * to `{ messageId, reason, comment, status, createdAt }`. Third-party moderator
- * fields (`reviewedBy` / `reviewerNotes` / `reviewedAt`) are intentionally
- * excluded — they are staff data about the report, not the subject's own data.
- */
 export async function listMessageReportsForUser(
   reportRepo: Repository<MessageReport>,
   userId: number,

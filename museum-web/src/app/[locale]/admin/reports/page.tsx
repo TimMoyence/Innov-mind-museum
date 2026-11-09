@@ -14,8 +14,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { Report, ReportStatus } from '@/lib/admin-types';
-
-// -- Status badge colors ----------------------------------------------------------
+import { adminListUrl } from '@/lib/admin-list-url';
 
 const STATUS_COLORS: Record<ReportStatus, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -25,36 +24,25 @@ const STATUS_COLORS: Record<ReportStatus, string> = {
 
 const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
 
-// -- Page component ---------------------------------------------------------------
-
 export default function ReportsPage() {
   const adminDict = useAdminDict();
 
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | ''>('');
 
-  // Review modal state
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [newStatus, setNewStatus] = useState<ReportStatus>('reviewed');
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // Mutation-specific error (kept distinct from the read-only hook `error`).
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const dateLocale = useDateLocale();
 
-  // Reset page when filter changes
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
 
-  const reportsUrl = (() => {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '20');
-    if (statusFilter) params.set('status', statusFilter);
-    return `/api/admin/reports?${params.toString()}`;
-  })();
+  const reportsUrl = adminListUrl('/api/admin/reports', page, 20, { status: statusFilter });
 
   const {
     data: reportsPayload,
@@ -71,8 +59,6 @@ export default function ReportsPage() {
   const totalPages = pagination?.totalPages ?? 0;
   const total = pagination?.total ?? 0;
   const combinedError = error ?? mutationError;
-
-  // -- Review handler -------------------------------------------------------------
 
   async function handleReview() {
     if (!editingReport) return;
@@ -97,7 +83,6 @@ export default function ReportsPage() {
       <h1 className="text-2xl font-bold text-text-primary">{adminDict.reports}</h1>
       <p className="mt-1 text-text-secondary">{adminDict.reportsPage.subtitle}</p>
 
-      {/* Filter */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
           aria-label={adminDict.common.allStatuses}
@@ -116,17 +101,14 @@ export default function ReportsPage() {
         </select>
       </div>
 
-      {/* Error */}
       {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
           <div className="overflow-x-auto">
@@ -198,7 +180,6 @@ export default function ReportsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <AdminPagination
             page={page}
             totalPages={totalPages}
@@ -208,7 +189,6 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Review Modal */}
       {editingReport && (
         <BaseModal
           open

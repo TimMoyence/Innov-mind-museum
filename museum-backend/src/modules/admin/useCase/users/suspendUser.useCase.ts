@@ -11,13 +11,11 @@ interface SuspendUserInput {
   requestId?: string;
 }
 
-/** Refuses self-suspension (operator lock-out guard). */
 export class SuspendUserUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
   async execute(input: SuspendUserInput): Promise<AdminUserDTO> {
     if (input.userId === input.actorId) {
-      // Custom code so Web admin can pattern-match on 409 (see RoleGuard).
       throw new AppError({
         message: 'CANNOT_SUSPEND_SELF',
         statusCode: 409,

@@ -9,11 +9,6 @@ import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enr
 
 import { InMemoryMuseumEnrichmentQueue } from '../../helpers/museum/in-memory-museum-enrichment-queue';
 
-/**
- * Scriptable cache double — records every `findStaleRows` call and returns a
- * prewired list so tests can assert both the query shape and the processing
- * loop.
- */
 class ScriptableEnrichmentCache implements MuseumEnrichmentCachePort {
   readonly findStaleCalls: { threshold: Date; limit: number }[] = [];
   private staleRows: { museumId: number; locale: string }[] = [];
@@ -26,9 +21,7 @@ class ScriptableEnrichmentCache implements MuseumEnrichmentCachePort {
     return null;
   }
 
-  async upsert(): Promise<void> {
-    // no-op for these tests
-  }
+  async upsert(): Promise<void> {}
 
   async findStaleRows(
     thresholdDate: Date,
@@ -96,13 +89,11 @@ describe('RefreshStaleEnrichmentsUseCase', () => {
       { museumId: 2, locale: 'fr' },
       { museumId: 3, locale: 'en' },
     ]);
-    // Pre-flight: museum 2/fr already active, should be skipped.
     await queue.enqueue({ museumId: 2, locale: 'fr' });
 
     const result = await useCase.execute(now);
 
     expect(result).toEqual({ enqueued: 2, skipped: 1 });
-    // Queue holds 3 jobs: the prewired one + the 2 freshly enqueued.
     expect(queue.snapshot()).toHaveLength(3);
   });
 

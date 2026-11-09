@@ -44,7 +44,9 @@ describe('useAuthAppStateSync', () => {
 
   it('subscribes to AppState changes on mount and unsubscribes on unmount', () => {
     const refresh = jest.fn().mockResolvedValue(null);
-    const { unmount } = renderHook(() => { useAuthAppStateSync(refresh); });
+    const { unmount } = renderHook(() => {
+      useAuthAppStateSync(refresh);
+    });
 
     expect(handlers.length).toBe(1);
     unmount();
@@ -55,7 +57,9 @@ describe('useAuthAppStateSync', () => {
     const refresh = jest.fn().mockResolvedValue('new-token');
     mockGetAccessToken.mockReturnValue(buildValidJwt(60 * 60 * 1000));
 
-    renderHook(() => { useAuthAppStateSync(refresh); });
+    renderHook(() => {
+      useAuthAppStateSync(refresh);
+    });
     nonNull(handlers[0])('background');
     nonNull(handlers[0])('active');
 
@@ -66,7 +70,9 @@ describe('useAuthAppStateSync', () => {
     const refresh = jest.fn().mockResolvedValue('new-token');
     mockGetAccessToken.mockReturnValue(buildValidJwt(60 * 1000));
 
-    renderHook(() => { useAuthAppStateSync(refresh); });
+    renderHook(() => {
+      useAuthAppStateSync(refresh);
+    });
     nonNull(handlers[0])('background');
     nonNull(handlers[0])('active');
 
@@ -77,7 +83,9 @@ describe('useAuthAppStateSync', () => {
     const refresh = jest.fn().mockResolvedValue('new-token');
     mockGetAccessToken.mockReturnValue(buildValidJwt(30 * 1000));
 
-    renderHook(() => { useAuthAppStateSync(refresh); });
+    renderHook(() => {
+      useAuthAppStateSync(refresh);
+    });
     nonNull(handlers[0])('background');
     nonNull(handlers[0])('active');
     nonNull(handlers[0])('background');
@@ -92,11 +100,13 @@ describe('useAuthAppStateSync', () => {
     mockGetAccessToken.mockReturnValue(buildValidJwt(60 * 60 * 1000));
 
     const nowSpy = jest.spyOn(Date, 'now');
-    nowSpy.mockReturnValueOnce(1_000_000); // background at 1,000,000
-    nowSpy.mockReturnValueOnce(1_045_000); // active at 1,045,000 (45s later)
+    nowSpy.mockReturnValueOnce(1_000_000);
+    nowSpy.mockReturnValueOnce(1_045_000);
     nowSpy.mockReturnValue(1_045_000);
 
-    renderHook(() => { useAuthAppStateSync(refresh, { onForeground }); });
+    renderHook(() => {
+      useAuthAppStateSync(refresh, { onForeground });
+    });
     nonNull(handlers[0])('background');
     nonNull(handlers[0])('active');
 

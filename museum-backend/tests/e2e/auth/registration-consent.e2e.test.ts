@@ -1,12 +1,3 @@
-/**
- * E2E: registration must persist a `user_consents` row with scope
- * `tos_privacy` at the current POLICY_VERSION. Closes the GDPR consent
- * gap flagged by the 2026-04-26 audit — before this change, the FE
- * checkbox blocked submission client-side but no server-side proof
- * survived past the HTTP response.
- *
- * Cf docs/audit-cleanup-2026-05-12/PROGRESS_A.md A.2 / A.8
- */
 import { createE2EHarness, E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 
 import { POLICY_VERSION } from '@shared/legal/policy-version';
@@ -57,9 +48,6 @@ describeE2E('registration consent (GDPR)', () => {
       }),
     );
 
-    // S4-P0-02 — registration MUST also produce a hash-chained audit row
-    // (`CONSENT_GRANTED_TOS`) so Apple 5.1.2(i) compliance + DPO dashboards
-    // can replay the chain to prove an explicit consent step happened.
     const auditRows = await harness.dataSource.query<
       { action: string; metadata: Record<string, unknown> | null }[]
     >(
@@ -77,7 +65,6 @@ describeE2E('registration consent (GDPR)', () => {
   });
 
   it('rejects registration with dateOfBirth < 15 years and emits no user_consents row', async () => {
-    // Build a DOB exactly 14 years before now, in YYYY-MM-DD.
     const today = new Date();
     const fourteenYearsAgo = new Date(
       today.getUTCFullYear() - 14,
@@ -99,9 +86,6 @@ describeE2E('registration consent (GDPR)', () => {
     });
 
     expect(res.status).toBe(422);
-    // error.middleware.ts wraps AppError into { error: { code, message, requestId, ... } }
-    // (see src/shared/middleware/error.middleware.ts ErrorResponseShape) ; the previous
-    // assertion read body.code which never existed in that shape.
     expect((res.body as { error?: { code?: string } }).error?.code).toBe(
       'MINOR_PARENTAL_CONSENT_REQUIRED',
     );

@@ -2,10 +2,6 @@ import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entit
 import type { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import type { AuditLog } from '@shared/audit/auditLog.entity';
 
-/**
- * Creates a MessageReport entity with sensible defaults. Override any field via `overrides`.
- * @param overrides
- */
 export const makeReport = (overrides: Partial<MessageReport> = {}): MessageReport =>
   ({
     id: 'report-001',
@@ -27,10 +23,6 @@ export const makeReport = (overrides: Partial<MessageReport> = {}): MessageRepor
     ...overrides,
   }) as MessageReport;
 
-/**
- * Creates an AuditLog entity with sensible defaults. Override any field via `overrides`.
- * @param overrides
- */
 export const makeAuditLog = (overrides: Partial<AuditLog> = {}): AuditLog =>
   ({
     id: 'log-001',

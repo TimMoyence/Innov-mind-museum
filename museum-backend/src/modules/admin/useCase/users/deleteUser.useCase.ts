@@ -13,13 +13,6 @@ interface DeleteUserInput {
   requestId?: string;
 }
 
-/**
- * Soft-delete (`deleted_at = NOW()`) + revoke active refresh tokens. Hard erasure
- * (RGPD Art. 17 full erase) deferred V1.1 (ADR-052).
- *
- * Guards: refuse if target is last admin/super_admin. Self-delete is permitted
- * (matches user-side `deleteAccount.useCase`); last-admin guard still applies.
- */
 export class DeleteUserUseCase {
   constructor(
     private readonly repository: IAdminRepository,
@@ -27,7 +20,6 @@ export class DeleteUserUseCase {
   ) {}
 
   async execute(input: DeleteUserInput): Promise<AdminUserDTO> {
-    // Fetch BEFORE delete so last-privileged guard sees the target role.
     const target = await this.repository.getUserById(input.userId);
     if (!target) {
       throw notFound('User not found');
@@ -48,7 +40,6 @@ export class DeleteUserUseCase {
 
     const deleted = await this.repository.softDeleteUser(input.userId);
     if (!deleted) {
-      // Race: row vanished between the two queries. Surface 404.
       throw notFound('User not found');
     }
 

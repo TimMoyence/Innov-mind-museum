@@ -5,7 +5,6 @@ describe('extractMetadata', () => {
     const meta = extractMetadata({
       deeperContext: 'Deep.',
       openQuestion: 'See this?',
-      suggestedFollowUp: 'Why is Q1 important?',
       imageDescription: 'Oil on canvas.',
       recommendations: ['Room 5'],
       expertiseSignal: 'expert',
@@ -22,7 +21,6 @@ describe('extractMetadata', () => {
 
     expect(meta.deeperContext).toBe('Deep.');
     expect(meta.openQuestion).toBe('See this?');
-    expect(meta.suggestedFollowUp).toBe('Why is Q1 important?');
     expect(meta.imageDescription).toBe('Oil on canvas.');
     expect(meta.recommendations).toEqual(['Room 5']);
     expect(meta.expertiseSignal).toBe('expert');
@@ -30,8 +28,6 @@ describe('extractMetadata', () => {
     expect(meta.detectedArtwork?.title).toBe('Mona Lisa');
     expect(meta.detectedArtwork?.museum).toBe('Louvre');
   });
-
-  // --- Uncovered branches in extractMetadata helper functions ---
 
   it('returns undefined citations when value is not an array', () => {
     const meta = extractMetadata({ citations: 'not-an-array' });
@@ -63,23 +59,6 @@ describe('extractMetadata', () => {
       recommendations: ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7'],
     });
     expect(meta.recommendations).toHaveLength(5);
-  });
-
-  it('returns undefined suggestedFollowUp when value is empty / whitespace (B3)', () => {
-    expect(extractMetadata({ suggestedFollowUp: '' }).suggestedFollowUp).toBeUndefined();
-    expect(extractMetadata({ suggestedFollowUp: '   ' }).suggestedFollowUp).toBeUndefined();
-  });
-
-  it('rejects suggestedFollowUp strings strictly over 80 chars (B3 strict drop)', () => {
-    const meta = extractMetadata({
-      suggestedFollowUp: 'x'.repeat(81),
-    });
-    expect(meta.suggestedFollowUp).toBeUndefined();
-  });
-
-  it('ignores suggestedFollowUp when not a string (singularity invariant — array rejected)', () => {
-    const meta = extractMetadata({ suggestedFollowUp: ['array', 'forbidden'] });
-    expect(meta.suggestedFollowUp).toBeUndefined();
   });
 
   it('returns undefined for empty-string deeperContext', () => {
@@ -127,9 +106,6 @@ describe('extractMetadata', () => {
         { query: 123, description: 'wrong type' },
       ],
     });
-    // C2 v2 (R7): entries missing rationale/caption fall back gracefully —
-    // caption defaults to description, rationale to the empty-string sentinel
-    // (the FE swaps it for `chat.enrichment.rationale_fallback`).
     expect(meta.suggestedImages).toEqual([
       { query: 'valid', description: 'desc', rationale: '', caption: 'desc' },
     ]);
@@ -192,8 +168,6 @@ describe('extractMetadata', () => {
     ]);
   });
 
-  // --- detectedArtwork validation (valid + invalid) ---
-
   it('skips detectedArtwork when it is not an object', () => {
     const meta = extractMetadata({ detectedArtwork: 'not-object' });
     expect(meta.detectedArtwork).toBeUndefined();
@@ -205,13 +179,13 @@ describe('extractMetadata', () => {
   it('handles detectedArtwork with mixed valid and invalid field types', () => {
     const meta = extractMetadata({
       detectedArtwork: {
-        artworkId: 123, // non-string → dropped
+        artworkId: 123,
         title: 'Test',
-        confidence: 'high', // non-number → dropped
-        source: 42, // non-string → dropped
-        artist: ['arr'], // non-string → dropped
-        museum: true, // non-string → dropped
-        room: 5, // non-string → dropped
+        confidence: 'high',
+        source: 42,
+        artist: ['arr'],
+        museum: true,
+        room: 5,
       },
     });
     expect(meta.detectedArtwork?.title).toBe('Test');

@@ -5,7 +5,6 @@ import {
   makeBraveApiResponse,
 } from '../../helpers/search-clients/brave-search.fixture';
 
-// Silence logger
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

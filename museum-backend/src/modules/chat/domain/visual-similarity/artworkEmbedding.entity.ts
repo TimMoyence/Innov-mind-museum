@@ -11,17 +11,8 @@ import {
 
 import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
-/**
- * - `wikimedia` — Wikidata P18 / Wikimedia Commons.
- * - `museum_api` — direct museum collection API (RMN, Met, Rijksmuseum).
- * - `manual` — operator-curated upload via CLI ingest.
- */
 export type ArtworkImageSource = 'wikimedia' | 'museum_api' | 'manual';
 
-/**
- * Only permissive licenses are ingested. `unknown` is a safety bucket for
- * sources without a usable license tag — filtered out at retrieval (design §7).
- */
 export type ArtworkImageLicense = 'public-domain' | 'cc-0' | 'cc-by-sa' | 'unknown';
 
 @Entity({ name: 'artwork_embeddings' })
@@ -62,7 +53,6 @@ export class ArtworkEmbedding {
   @Column({ type: 'halfvec', length: 768, name: 'embedding' })
   embedding!: string;
 
-  /** e.g. `"siglip2-base-patch16-224@v1"`. Used to invalidate/re-encode on upgrade. */
   @Column({ type: 'text', name: 'embedding_model_version' })
   embeddingModelVersion!: string;
 

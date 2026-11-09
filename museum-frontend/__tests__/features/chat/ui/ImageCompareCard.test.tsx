@@ -1,18 +1,3 @@
-/**
- * RED tests for `ImageCompareCard` (T8.2, Phase 8 — C3 Image Comparative).
- *
- * SUT: `museum-frontend/features/chat/ui/ImageCompareCard.tsx`
- * Props: `{ match: CompareMatch; locale: 'fr'|'en'; onPress: (qid: string) => void }`.
- *
- * Visual contract:
- *   - Renders thumbnail, title, artist, rationale.
- *   - `accessibilityLabel` follows D5 template (FR/EN).
- *   - Touch target ≥ 44pt (WCAG 2.5.5).
- *   - License attribution is rendered ONLY for cc-by-sa matches (forward-compat).
- *   - Pressing fires `onPress(match.qid)`.
- *
- * The component does not exist yet — these tests must FAIL on import.
- */
 import '../../../helpers/test-utils';
 import type { ComponentType } from 'react';
 import { Image } from 'expo-image';
@@ -25,20 +10,18 @@ import {
   makeCompareMatch,
   makeCompareMatchCcBySa,
 } from '../../../helpers/factories';
+import { speakAppLanguage } from '../../../helpers/real-i18n';
 
 type CompareMatch = components['schemas']['CompareMatch'];
 
 interface ImageCompareCardProps {
   match: CompareMatch;
-  locale: 'fr' | 'en';
   onPress: (qid: string) => void;
 }
 
 type ImageCompareCardComponent = ComponentType<ImageCompareCardProps>;
 
 const loadComponent = (): ImageCompareCardComponent => {
-  // Lazy require so the missing-SUT failure surfaces as a clean per-test
-  // "Cannot find module" instead of a top-level import crash.
   const mod = require('@/features/chat/ui/ImageCompareCard') as {
     ImageCompareCard: ImageCompareCardComponent;
   };
@@ -50,9 +33,7 @@ describe('ImageCompareCard (T8.2)', () => {
     const ImageCompareCard = loadComponent();
     const match = makeCompareMatch({ imageUrl: 'https://w.example.org/dance.jpg' });
 
-    const { UNSAFE_getAllByType } = render(
-      <ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />,
-    );
+    const { UNSAFE_getAllByType } = render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
     const images = UNSAFE_getAllByType(Image);
     expect(images.length).toBeGreaterThanOrEqual(1);
@@ -70,7 +51,7 @@ describe('ImageCompareCard (T8.2)', () => {
       rationale: 'Composition cyclique et palette froide.',
     });
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
     expect(screen.queryByText('La Danse')).toBeTruthy();
     expect(screen.queryByText(/Henri Matisse/)).toBeTruthy();
@@ -85,9 +66,9 @@ describe('ImageCompareCard (T8.2)', () => {
       rationale: 'Composition cyclique.',
     });
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    speakAppLanguage('fr');
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
-    // FR template — UFR-008 a11y stable string.
     const node = screen.getByLabelText(
       'Œuvre similaire : La Danse, Henri Matisse, Composition cyclique.',
     );
@@ -102,7 +83,8 @@ describe('ImageCompareCard (T8.2)', () => {
       rationale: 'Cyclical composition.',
     });
 
-    render(<ImageCompareCard match={match} locale="en" onPress={jest.fn()} />);
+    speakAppLanguage('en');
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
     const node = screen.getByLabelText(
       'Similar artwork: The Dance, Henri Matisse, Cyclical composition.',
@@ -114,7 +96,8 @@ describe('ImageCompareCard (T8.2)', () => {
     const ImageCompareCard = loadComponent();
     const match = makeCompareMatch({ title: 'La Danse' });
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    speakAppLanguage('fr');
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
     const pressable = screen.getByLabelText(/Œuvre similaire/);
     interface FlexStyle {
@@ -150,7 +133,8 @@ describe('ImageCompareCard (T8.2)', () => {
     const match = makeCompareMatch({ qid: 'Q12345' });
     const onPress = jest.fn();
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={onPress} />);
+    speakAppLanguage('fr');
+    render(<ImageCompareCard match={match} onPress={onPress} />);
 
     fireEvent.press(screen.getByLabelText(/Œuvre similaire/));
 
@@ -162,11 +146,8 @@ describe('ImageCompareCard (T8.2)', () => {
     const ImageCompareCard = loadComponent();
     const match = makeCompareMatch({ attribution: undefined });
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
-    // Attribution is the i18n key `chat.compare.attribution`. test-utils mocks
-    // useTranslation to return the key as-is, so absence of the key in the
-    // tree implies the component did not render it.
     expect(screen.queryByText('chat.compare.attribution')).toBeNull();
   });
 
@@ -176,7 +157,7 @@ describe('ImageCompareCard (T8.2)', () => {
       attribution: 'Photo by W. Author / CC-BY-SA 4.0',
     });
 
-    render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    render(<ImageCompareCard match={match} onPress={jest.fn()} />);
 
     expect(screen.queryByText(/CC-BY-SA 4\.0/)).toBeTruthy();
   });
@@ -195,7 +176,8 @@ describe('ImageCompareCard (T8.2)', () => {
       finalScore: 0.78,
     });
 
-    const { toJSON } = render(<ImageCompareCard match={match} locale="fr" onPress={jest.fn()} />);
+    speakAppLanguage('fr');
+    const { toJSON } = render(<ImageCompareCard match={match} onPress={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
 });

@@ -1,11 +1,9 @@
-/** A single numbered section within the terms of service document. */
 interface TermsSection {
   id: string;
   title: string;
   paragraphs: string[];
 }
 
-/** Structured content of the terms of service, rendered in the legal screen. */
 interface TermsOfServiceContent {
   title: string;
   version: string;
@@ -13,7 +11,6 @@ interface TermsOfServiceContent {
   sections: TermsSection[];
 }
 
-/** Complete terms of service content for the Musaium app, structured for in-app rendering. */
 export const TERMS_OF_SERVICE_CONTENT: TermsOfServiceContent = {
   title: 'Terms of Service',
   version: '1.0.0',

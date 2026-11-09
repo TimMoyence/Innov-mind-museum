@@ -14,7 +14,6 @@ const pendingQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
-/** Closes the loop on ArtworkKnowledge entries flagged needsReview=true. */
 export function createAdminKeRouter(repo: ArtworkKnowledgeRepoPort): Router {
   const router = Router();
 

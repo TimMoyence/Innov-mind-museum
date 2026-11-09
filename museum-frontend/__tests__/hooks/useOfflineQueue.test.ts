@@ -1,9 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { OfflineQueueProvider, useOfflineQueue } from '@/features/chat/application/useOfflineQueue';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
-// In-memory fake storage
 const fakeStore: Record<string, string> = {};
 jest.mock('@/shared/infrastructure/storage', () => ({
   storage: {
@@ -12,8 +9,7 @@ jest.mock('@/shared/infrastructure/storage', () => ({
       fakeStore[key] = value;
     }),
     removeItem: jest.fn((key: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
-      delete fakeStore[key];
+      Reflect.deleteProperty(fakeStore, key);
     }),
   },
 }));
@@ -33,8 +29,6 @@ jest.mock('@/features/chat/application/offlineImageStorage', () => ({
   cleanupOfflineImages: (...args: unknown[]) => mockCleanupOfflineImages(...(args as [string[]])),
 }));
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useOfflineQueue', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -42,15 +36,12 @@ describe('useOfflineQueue', () => {
     mockPersistOfflineImage.mockImplementation((uri: string) =>
       Promise.resolve(`persistent://${uri}`),
     );
-    // Clear fake store
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- test cleanup
-    for (const key of Object.keys(fakeStore)) delete fakeStore[key];
+    for (const key of Object.keys(fakeStore)) Reflect.deleteProperty(fakeStore, key);
   });
 
   it('calls hydrate on mount', () => {
     const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
-    // After mount, queue should be empty (no persisted data)
     expect(result.current.pendingCount).toBe(0);
     expect(result.current.pendingMessages).toEqual([]);
   });
@@ -100,8 +91,6 @@ describe('useOfflineQueue', () => {
     expect(result.current.pendingMessages).toEqual([]);
   });
 
-  // ── Image persistence tests ──────────────────────────────────────────────
-
   it('enqueue with imageUri persists the image before storing', async () => {
     const { result } = renderHook(() => useOfflineQueue(), { wrapper: OfflineQueueProvider });
 
@@ -143,7 +132,6 @@ describe('useOfflineQueue', () => {
     });
 
     expect(result.current.pendingCount).toBe(1);
-    // imageUri should be cleared since persistence failed
     expect(result.current.pendingMessages[0]?.imageUri).toBeUndefined();
   });
 

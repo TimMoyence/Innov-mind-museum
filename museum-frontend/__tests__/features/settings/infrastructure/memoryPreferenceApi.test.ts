@@ -1,27 +1,8 @@
-/**
- * C1 Red — memoryPreferenceApi infra service.
- *
- * Cluster C1 (hexagonal violations, 2026-05-23-frontend-dry-audit) — the
- * settings hook `useMemoryPreference` currently imports `openApiRequest` from
- * `@/shared/api/openapiClient` directly (violation: application layer touches
- * a shared transport primitive). The fix is a façade service in
- * `features/settings/infrastructure/memoryPreferenceApi.ts` exposing `get()` /
- * `update(enabled)` that wraps `GET|PATCH /api/chat/memory/preference`.
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL because
- * `@/features/settings/infrastructure/memoryPreferenceApi` does not yet exist.
- *
- * Pattern source: `__tests__/infrastructure/authApi.test.ts` (canonical infra
- * test). Mocks `openApiRequest` and asserts each method's path/method/body
- * shape + propagates underlying transport errors.
- */
-
 const mockOpenApiRequest = jest.fn();
 jest.mock('@/shared/api/openapiClient', () => ({
   openApiRequest: (...args: unknown[]) => mockOpenApiRequest(...args),
 }));
 
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import { memoryPreferenceApi } from '@/features/settings/infrastructure/memoryPreferenceApi';
 
 describe('memoryPreferenceApi (C1 hexagonal façade)', () => {
@@ -66,7 +47,7 @@ describe('memoryPreferenceApi (C1 hexagonal façade)', () => {
       expect(mockOpenApiRequest).toHaveBeenCalledWith({
         path: '/api/chat/memory/preference',
         method: 'patch',
-        body: JSON.stringify({ enabled: false }),
+        json: { enabled: false },
       });
     });
 

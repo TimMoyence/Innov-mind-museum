@@ -29,7 +29,9 @@ const commit = async (
   options: { allowed?: boolean; routerSources?: CitationSource[] } = {},
 ) => {
   const repository = makeChatRepo({
-    persistMessage: jest.fn().mockResolvedValue(makeMessage({ id: 'assistant-1', role: 'assistant' })),
+    persistMessage: jest
+      .fn()
+      .mockResolvedValue(makeMessage({ id: 'assistant-1', role: 'assistant' })),
   });
   await commitAssistantResponse(
     { guardrail: guardrail(options.allowed ?? true), repository },
@@ -51,23 +53,34 @@ const commit = async (
 
 describe('assistant answers grounded on web pages always show their sources', () => {
   it('attaches the web pages the answer relied on when the model cited none', async () => {
-    await expect(commit(undefined, { routerSources: [routerSource] })).resolves.toEqual([routerSource]);
+    await expect(commit(undefined, { routerSources: [routerSource] })).resolves.toEqual([
+      routerSource,
+    ]);
   });
 
   it('keeps the model citations when it gave valid ones', async () => {
     const llmSource: CitationSource = { ...routerSource, title: 'Cited by the model' };
 
-    await expect(commit([llmSource], { routerSources: [routerSource] })).resolves.toEqual([llmSource]);
+    await expect(commit([llmSource], { routerSources: [routerSource] })).resolves.toEqual([
+      llmSource,
+    ]);
   });
 
   it('falls back to the web pages when every model citation was rejected', async () => {
-    const invented: CitationSource = { ...routerSource, quote: 'A sentence that appears in no fetched page.' };
+    const invented: CitationSource = {
+      ...routerSource,
+      quote: 'A sentence that appears in no fetched page.',
+    };
 
-    await expect(commit([invented], { routerSources: [routerSource] })).resolves.toEqual([routerSource]);
+    await expect(commit([invented], { routerSources: [routerSource] })).resolves.toEqual([
+      routerSource,
+    ]);
   });
 
   it('never attaches sources to a refused answer', async () => {
-    await expect(commit(undefined, { allowed: false, routerSources: [routerSource] })).resolves.toBeUndefined();
+    await expect(
+      commit(undefined, { allowed: false, routerSources: [routerSource] }),
+    ).resolves.toBeUndefined();
   });
 
   it('adds nothing when the answer was not grounded on the web', async () => {

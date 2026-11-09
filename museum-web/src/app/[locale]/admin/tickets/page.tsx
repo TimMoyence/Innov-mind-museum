@@ -15,8 +15,7 @@ import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
 import type { Ticket, TicketStatus, TicketPriority } from '@/lib/admin-types';
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@/lib/admin-types';
-
-// -- Badge colors ────────────────────────────────────────────────────────
+import { adminListUrl } from '@/lib/admin-list-url';
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-700',
@@ -31,8 +30,6 @@ const PRIORITY_COLORS: Record<TicketPriority, string> = {
   high: 'bg-red-100 text-red-700',
 };
 
-// -- Page component ──────────────────────────────────────────────────────
-
 export default function TicketsPage() {
   const adminDict = useAdminDict();
   const locale = useAdminLocale();
@@ -42,28 +39,20 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
 
-  // Update modal state
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [newStatus, setNewStatus] = useState<TicketStatus>('open');
   const [newPriority, setNewPriority] = useState<TicketPriority>('low');
   const [saving, setSaving] = useState(false);
-  // Mutation-specific error (separate from the read-only `error` returned by
-  // the hook — they have the same UX role but distinct sources).
   const [mutationError, setMutationError] = useState<string | null>(null);
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [statusFilter, priorityFilter]);
 
-  const ticketsUrl = (() => {
-    const params = new URLSearchParams();
-    params.set('page', String(page));
-    params.set('limit', '20');
-    if (statusFilter) params.set('status', statusFilter);
-    if (priorityFilter) params.set('priority', priorityFilter);
-    return `/api/admin/tickets?${params.toString()}`;
-  })();
+  const ticketsUrl = adminListUrl('/api/admin/tickets', page, 20, {
+    status: statusFilter,
+    priority: priorityFilter,
+  });
 
   const {
     data: ticketsPayload,
@@ -80,8 +69,6 @@ export default function TicketsPage() {
   const totalPages = pagination?.totalPages ?? 0;
   const total = pagination?.total ?? 0;
   const combinedError = error ?? mutationError;
-
-  // -- Update handler ──────────────────────────────────────────────────
 
   async function handleUpdate() {
     if (!editingTicket) return;
@@ -111,7 +98,6 @@ export default function TicketsPage() {
         <ExportCsvButton kind="tickets" />
       </div>
 
-      {/* Filters */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <select
           aria-label={adminDict.common.allStatuses}
@@ -146,17 +132,14 @@ export default function TicketsPage() {
         </select>
       </div>
 
-      {/* Error */}
       {combinedError && <AlertBanner variant="error" message={combinedError} className="mt-4" />}
 
-      {/* Loading */}
       {loading && (
         <div className="mt-12 flex justify-center">
           <Spinner />
         </div>
       )}
 
-      {/* Table */}
       {!loading && (
         <div className="mt-6 overflow-hidden rounded-xl border border-primary-100 bg-white">
           <div className="overflow-x-auto">
@@ -236,7 +219,6 @@ export default function TicketsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <AdminPagination
             page={page}
             totalPages={totalPages}
@@ -246,7 +228,6 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {/* Update Ticket Modal */}
       {editingTicket && (
         <BaseModal
           open

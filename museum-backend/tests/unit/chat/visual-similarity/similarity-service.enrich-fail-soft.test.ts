@@ -47,7 +47,6 @@ function makeService(
       .mockResolvedValue(neighbours),
     upsertBatch: jest.fn(),
     findByQid: jest.fn(),
-    count: jest.fn(),
   };
   const reranker: jest.Mocked<RerankerPort> = { rerank: jest.fn() };
   return new VisualSimilarityService({

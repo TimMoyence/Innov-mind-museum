@@ -1,16 +1,3 @@
-/**
- * M1 W5-C3 (RED, UFR-022) — OpenAiAudioTranscriber feeds the global LLM cost
- * circuit breaker on a successful transcription (design §D1/D2/D5, AC1/AC5).
- *
- * We mock the breaker (`{ recordCharge: jest.fn() }`) and assert the
- * INTERACTION — the FSM itself is covered by `llm-cost-circuit-breaker.test.ts`.
- * fetch + env + observability are mocked like the sibling
- * `audio-transcriber.test.ts`.
- *
- * FAILS today: `OpenAiAudioTranscriber` constructor takes no breaker argument
- * and never calls `recordCharge`.
- */
-
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

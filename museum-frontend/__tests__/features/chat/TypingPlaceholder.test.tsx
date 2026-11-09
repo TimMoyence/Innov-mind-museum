@@ -12,7 +12,6 @@ describe('TypingPlaceholder', () => {
   it('renders skeleton + label when visible', () => {
     render(<TypingPlaceholder visible testID="typing" />);
     expect(screen.getByTestId('typing')).toBeTruthy();
-    // i18n mock returns the key as text
     expect(screen.getByText('chat.typing.label')).toBeTruthy();
   });
 

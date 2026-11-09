@@ -4,20 +4,11 @@ import {
   shouldEarlyRefresh,
   type RefreshableEntry,
 } from '@shared/cache/probabilistic-refresh';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { env } from '@src/config/env';
 
 import type { CacheService } from '@shared/cache/cache.port';
-
-/**
- * Nominatim (OSM) HTTP adapter.
- *
- * Raw `geocodeWithNominatim` / `reverseGeocodeWithNominatim` enforce only transport-
- * level OSMF policy: global rate limiter (≥ `env.nominatim.minRequestIntervalMs`) +
- * required User-Agent. Production wiring SHOULD use `createCachedNominatimClient`
- * which layers OSMF mandatory caching (key shape, +/- TTLs, probabilistic refresh,
- * fail-open).
- */
 
 export interface NominatimGeocodingResult {
   lat: number;
@@ -65,11 +56,6 @@ const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
 const DEFAULT_TIMEOUT_MS = 5_000;
 const CACHE_KEY_COORD_PRECISION = 3;
 
-/**
- * Promise-chained global rate limiter — OSMF Usage Policy caps clients at 1 req/s
- * absolute. Module singleton: every exported function funnels through it, so the
- * limit holds regardless of concurrent call-site count.
- */
 class RateLimiter {
   private tail: Promise<void> = Promise.resolve();
 
@@ -94,12 +80,10 @@ class RateLimiter {
 
 const rateLimiter = new RateLimiter(env.nominatim.minRequestIntervalMs);
 
-/** OSMF bans stock UA strings — must identify app + reachable contact. */
 function buildUserAgent(): string {
   return `Musaium/${env.appVersion} (contact: ${env.nominatim.contactEmail})`;
 }
 
-/** Returns `null` on any failure (fail-open). `timeoutMs` default 5000. */
 export async function geocodeWithNominatim(
   query: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
@@ -155,7 +139,7 @@ export async function geocodeWithNominatim(
     return { lat, lng };
   } catch (error) {
     logger.warn('Nominatim geocoding failed', {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
       query,
     });
     return null;
@@ -197,7 +181,6 @@ interface ReverseFetchResult {
   value: NominatimReverseResult | null;
 }
 
-/** Core live fetch — split from the observability wrapper to keep function lengths bounded. */
 async function fetchReverseLive(
   lat: number,
   lng: number,
@@ -238,7 +221,7 @@ async function fetchReverseLive(
     return { outcome: mapped ? 'hit' : 'miss', value: mapped };
   } catch (error) {
     logger.warn('Nominatim reverse geocoding failed', {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
       lat_3dec: round3(lat),
       lng_3dec: round3(lng),
     });
@@ -246,7 +229,6 @@ async function fetchReverseLive(
   }
 }
 
-/** Returns `null` on failure/empty (fail-open). `timeoutMs` default 5000. */
 export async function reverseGeocodeWithNominatim(
   lat: number,
   lng: number,
@@ -265,30 +247,14 @@ async function reverseGeocodeOrThrow(
   return value;
 }
 
-/**
- * `value: null` is a SENTINEL (distinct from cache miss) — caches the empty live
- * response short-term to shield Nominatim from repeat misses. `storedAtMs` enables
- * probabilistic early expiration on the TTL-unaware cache port.
- *
- * Local alias of the shared `RefreshableEntry` helper so call-sites keep the
- * Nominatim-domain name while the algorithmic fingerprint lives in
- * `@shared/cache/probabilistic-refresh`.
- */
 type ReverseGeocodeCacheEntry = RefreshableEntry<NominatimReverseResult | null>;
 
-/** Rounded to ~111m precision so GPS jitter doesn't produce new keys per chat message. */
 function buildCacheKey(lat: number, lng: number): string {
   return `nominatim:rev:${lat.toFixed(CACHE_KEY_COORD_PRECISION)}:${lng.toFixed(
     CACHE_KEY_COORD_PRECISION,
   )}`;
 }
 
-/**
- * Builds the Nominatim-bound background-refresh trigger ONCE per cached client.
- * Extracted from `createCachedNominatimClient` so the returned closure stays
- * under the `max-lines-per-function` cap. `opName` / `failureMessage` are baked
- * in; per-call args (cacheKey / refresh / TTLs) supplied by the caller.
- */
 function buildNominatimBackgroundRefresh(cache: CacheService) {
   return createBackgroundRefresh<NominatimReverseResult | null>({
     cache,
@@ -299,13 +265,6 @@ function buildNominatimBackgroundRefresh(cache: CacheService) {
   });
 }
 
-/**
- * OSMF mandatory caching. Key shape `nominatim:rev:<lat.toFixed(3)>:<lng.toFixed(3)>`.
- * Positive TTL `env.nominatim.cacheTtlSeconds` (default 24h); negative TTL
- * `env.nominatim.negativeCacheTtlSeconds` (default 1h) wraps sentinel `null`
- * (cache-miss vs cached-null unambiguous). Probabilistic refresh in last 10% TTL.
- * Fail-open: cache R/W errors logged + fall through to live call.
- */
 export function createCachedNominatimClient(cache: CacheService): CachedReverseGeocodeFn {
   const positiveTtlSeconds = env.nominatim.cacheTtlSeconds;
   const negativeTtlSeconds = env.nominatim.negativeCacheTtlSeconds;
@@ -322,14 +281,12 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
       cached = await cache.get<ReverseGeocodeCacheEntry>(cacheKey);
     } catch (error) {
       logger.warn('Nominatim cache read failed, falling back to live', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         cacheKey,
       });
     }
 
     if (cached) {
-      // Cache hit — emit a lightweight span + counter so dashboards can show
-      // hit-rate. Live-call counters are emitted inside reverseGeocodeWithNominatim.
       if (shouldEarlyRefresh(cached, Date.now())) {
         triggerBackgroundRefresh({
           cacheKey,
@@ -356,7 +313,7 @@ export function createCachedNominatimClient(cache: CacheService): CachedReverseG
       await cache.set(cacheKey, entry, entry.ttlSeconds);
     } catch (error) {
       logger.warn('Nominatim cache write failed, serving live result', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
         cacheKey,
       });
     }

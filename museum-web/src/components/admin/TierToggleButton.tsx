@@ -10,25 +10,6 @@ import { apiPatch } from '@/lib/api';
 
 import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
 
-/**
- * R1 (C6) — Soft-paywall tier toggle button for the admin user-detail page.
- *
- * Visibility (R31 / R32) :
- *  - `viewerRole === 'super_admin'` → toggle button rendered, label flips
- *    between `toggleToPremium` and `toggleToFree` based on the current tier.
- *  - Anything else → read-only label (`currentFree` / `currentPremium`).
- *
- * Confirm flow (R33) :
- *  - Click → open a confirm modal (`confirmTitle` + `confirmBody` from dict).
- *  - Confirm → `apiPatch('/api/admin/users/<id>/tier', { tier: nextTier })`.
- *  - 2xx → `onUpdated(updatedUser)` callback fires + modal auto-closes.
- *  - 4xx/5xx → inline error from dict (`error` key), modal stays open so the
- *    operator can retry or cancel.
- *
- * No hard-coded UX strings — every visible literal flows through
- * `dict.admin.userDetailPage.tier.*` (R34 / N8 / AC18).
- */
-
 interface AdminUserWithTier extends AdminUserDTO {
   tier: 'free' | 'premium';
 }
@@ -53,7 +34,6 @@ export function TierToggleButton({ user, viewerRole, onUpdated }: TierToggleButt
   const currentLabel = currentTier === 'free' ? tierDict.currentFree : tierDict.currentPremium;
   const toggleLabel = currentTier === 'free' ? tierDict.toggleToPremium : tierDict.toggleToFree;
 
-  // R32 — viewer not super_admin → read-only label, no toggle.
   if (viewerRole !== 'super_admin') {
     return (
       <span className="inline-flex items-center gap-2 text-sm text-text-secondary">
@@ -94,9 +74,7 @@ export function TierToggleButton({ user, viewerRole, onUpdated }: TierToggleButt
 
       <BaseModal
         open={open}
-        onClose={() => {
-          /* non-dismissable — Escape/backdrop never fires this */
-        }}
+        onClose={() => undefined}
         title={tierDict.confirmTitle}
         size="md"
         dismissable={false}

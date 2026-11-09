@@ -9,7 +9,6 @@ import { makeAdminRepo } from '../../../helpers/admin/repo.fixtures';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 import type { IRefreshTokenRepository } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
-// Mock the audit service module so we can assert log calls without touching DB.
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_ADMIN_USER_SUSPENDED: 'ADMIN_USER_SUSPENDED',
@@ -221,15 +220,13 @@ describe('DeleteUserUseCase', () => {
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
       softDeleteUser: jest.fn().mockResolvedValue(deleted),
-      countAdmins: jest.fn().mockResolvedValue(0), // pathological but explicit
+      countAdmins: jest.fn().mockResolvedValue(0),
     });
     const sut = new DeleteUserUseCase(repo, makeRefreshTokenRepoMock());
 
     const result = await sut.execute({ userId: 5, actorId: 99 });
 
     expect(result.deletedAt).not.toBeNull();
-    // countAdmins is only consulted for privileged targets, but the mock
-    // accepts the call either way — the assertion is that no AppError fires.
     expect(repo.softDeleteUser).toHaveBeenCalledWith(5);
   });
 

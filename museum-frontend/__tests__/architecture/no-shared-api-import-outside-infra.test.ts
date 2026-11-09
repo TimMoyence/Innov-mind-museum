@@ -1,30 +1,8 @@
-/**
- * C1 Red — Hexagonal layering sentinel.
- *
- * Cluster C1 acceptance criteria §6.1-§6.4 (spec.md) machine-verified as a
- * Jest sentinel so the doctrine is enforced post-merge (not just during the
- * audit window). Mirrors the doctrine codified in `CLAUDE.md` § Architecture:
- *   - `features/<f>/application/**` and `features/<f>/ui/**` MUST NOT import
- *     `@/shared/api/openapiClient`, `@/shared/api/httpRequest`,
- *     `@/shared/infrastructure/httpClient`, or `@react-native-async-storage/async-storage`.
- *   - The infrastructure layer (`features/<f>/infrastructure/**`) is the only
- *     allowed transport-/storage-importing layer.
- *   - The composition-root auth context (`features/auth/application/AuthContext.tsx`)
- *     and paywall provider (`features/paywall/application/PaywallProvider.tsx`)
- *     are explicitly whitelisted because they REGISTER the setter handlers
- *     (setAuthRefreshHandler / setPaywallHandler) — see design.md §Q2 (c).
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL today because the 6 violations
- * are still present (cf. spec §3 background). It turns GREEN after the
- * consumer-migration tasks (T3.1-T3.13) ship.
- */
-
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const FEATURES_ROOT = path.resolve(__dirname, '..', '..', 'features');
 
-// Composition-root whitelist (design.md §Q2 decision (c)).
 const WHITELIST_SUFFIXES = [
   path.join('auth', 'application', 'AuthContext.tsx'),
   path.join('paywall', 'application', 'PaywallProvider.tsx'),

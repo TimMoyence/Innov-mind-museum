@@ -11,8 +11,6 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-// env.ts resolves accessTokenSecret from JWT_ACCESS_SECRET → JWT_SECRET → 'local-dev-jwt-secret'
-// We need to read it after the module is loaded to sign test tokens with the same secret.
 import { env } from '@src/config/env';
 
 const getAccessSecret = () => env.auth.accessTokenSecret;
@@ -23,8 +21,6 @@ const USER_DEFAULTS = {
   password: '$2b$12$hashed',
   firstname: 'Alice',
   lastname: 'Doe',
-  // login() enforces email_verified — fixture defaults to false, overridden here
-  // so the service reaches the session-issuing branch under test.
   email_verified: true,
   onboarding_completed: false,
   createdAt: new Date('2025-01-01'),
@@ -121,10 +117,7 @@ describe('GetProfileUseCase', () => {
       role: 'visitor',
       onboardingCompleted: false,
       contentPreferences: [],
-      // Spec C T2.4 — `ttsVoice` is null when the visitor has not yet picked one.
       ttsVoice: null,
-      // TD-2 — 5 NOT NULL DEFAULT profile preference columns.
-      defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       dataMode: 'auto',

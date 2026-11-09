@@ -1,159 +1,110 @@
 appId: com.musaium.mobile.preview
 ---
-# Onboarding — Full 4-slide carousel walkthrough
-#
-# Validates the V2 Spec B onboarding carousel:
-#   1. Greeting:      "Bienvenue sur Musaium" / "Welcome to Musaium"
-#   2. Museum mode:   "Mode musée" / "Museum mode"
-#   3. Camera intent: "Photographier des œuvres" / "Photograph artworks"
-#   4. Walk intent:   "Visites guidées" / "Guided walks"
-#
-# Flow:
-#   - Fresh install (clearState).
-#   - Login via helper to get an authenticated session
-#     (so handleComplete -> markOnboardingComplete hits the server path).
-#   - Re-trigger onboarding from Settings → "Onboarding Help" (settings
-#     route '/(stack)/onboarding') — the only deterministic way to reach the
-#     carousel for a seeded account whose hasSeenOnboarding flag may be true.
-#   - Walk forward via "Next" 3 times → on slide 4 the button flips to
-#     "Get Started" → tap → expect home.
-#
-# App runs in FRENCH — all text selectors use FR|EN alternation.
-# screen: AuthScreen
-
 - launchApp:
     clearState: true
     stopApp: true
 
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Phase 1: Authenticate
-# ──────────────────────────────────────────────
 - runFlow:
     when:
       visible:
-        text: "Welcome back|Bon retour"
+        text: 'Welcome back|Bon retour'
     file: helpers/quick-login.yaml
 
-# iOS native "Save Password?" dialog after login submit
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
     text: "Skip onboarding|Passer l'introduction"
     optional: true
 
-# Helper may have already dismissed onboarding via Skip.
-# We force the carousel via Settings for determinism.
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Reach the carousel via Settings → Onboarding Help
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
     visible:
-      text: "Settings|Paramètres"
+      text: 'Settings|Paramètres'
     timeout: 10000
 
-# Settings row uses accessibilityLabel a11y.settings.onboarding_link (collapses
-# the visible "Aide à l'utilisation" Text) — match the label.
 - scrollUntilVisible:
     element:
-      text: "Replay onboarding guide|Revoir le guide de démarrage"
+      text: 'Replay onboarding guide|Revoir le guide de démarrage'
     direction: DOWN
     visibilityPercentage: 40
 
 - tapOn:
-    text: "Replay onboarding guide|Revoir le guide de démarrage"
+    text: 'Replay onboarding guide|Revoir le guide de démarrage'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Slide 1 — Greeting
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Welcome to Musaium|Bienvenue sur Musaium"
+      text: 'Welcome to Musaium|Bienvenue sur Musaium'
     timeout: 10000
 
 - assertVisible:
     text: "Skip onboarding|Passer l'introduction"
 - assertVisible:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 4: Slide 2 — Museum mode
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Museum mode|Mode musée"
+      text: 'Museum mode|Mode musée'
     timeout: 5000
 
 - assertVisible:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 5: Slide 3 — Camera intent
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Photograph artworks|Photographier des œuvres"
+      text: 'Photograph artworks|Photographier des œuvres'
     timeout: 5000
 
 - assertVisible:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - tapOn:
-    text: "Next slide|Diapositive suivante"
+    text: 'Next slide|Diapositive suivante'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 6: Slide 4 — Walk intent (last slide, Get Started CTA)
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Guided walks|Visites guidées"
+      text: 'Guided walks|Visites guidées'
     timeout: 5000
 
-# On the last slide the primary button MUST switch label from "Next" to
-# "Get Started". This is the isLast assertion contract.
 - assertVisible:
-    text: "Get started|Commencer"
+    text: 'Get started|Commencer'
 
 - tapOn:
-    text: "Get started|Commencer"
+    text: 'Get started|Commencer'
 - waitForAnimationToEnd:
     timeout: 8000
 
-# ──────────────────────────────────────────────
-# Phase 7: Verify we land on home
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
 - assertNotVisible:
-    text: "Welcome to Musaium|Bienvenue sur Musaium"
+    text: 'Welcome to Musaium|Bienvenue sur Musaium'

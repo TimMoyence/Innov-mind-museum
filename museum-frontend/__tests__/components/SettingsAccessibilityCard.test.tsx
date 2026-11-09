@@ -1,19 +1,6 @@
 import '../helpers/test-utils';
 import { render, screen } from '@testing-library/react-native';
 
-/**
- * I-CMP3(3) / R6 — the audio-description `<Switch>` is the very control that
- * turns on the accessibility feature, yet pre-fix it exposes only
- * `value` / `onValueChange` / `trackColor` — no `accessibilityRole`,
- * no `accessibilityLabel`, no `accessibilityState`. A screen-reader user
- * therefore cannot discover or operate it. R6 requires:
- *   - accessibilityRole="switch"
- *   - accessibilityLabel === t('settings.audio_description')
- *   - accessibilityState.checked tracks `enabled`
- *
- * In-repo precedent: SettingsAiConsentCard.tsx:169 (PATTERNS.md react-native §7).
- */
-
 const mockToggle = jest.fn<Promise<void>, []>();
 let mockEnabled = false;
 const mockIsLoading = false;
@@ -36,7 +23,6 @@ describe('SettingsAccessibilityCard (I-CMP3(3) / R6)', () => {
 
   it('exposes the audio-description Switch with role="switch"', () => {
     render(<SettingsAccessibilityCard />);
-    // getByRole('switch') only resolves when accessibilityRole="switch" is set.
     expect(screen.getByRole('switch')).toBeTruthy();
   });
 

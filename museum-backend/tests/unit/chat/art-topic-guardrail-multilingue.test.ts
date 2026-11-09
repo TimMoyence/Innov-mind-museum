@@ -1,16 +1,7 @@
-/**
- * F4 (2026-04-30) — multilingual insult coverage.
- *
- * Closes the asymmetry where INSULT_KEYWORDS only covered FR + EN while
- * INJECTION_PATTERNS covered 8 languages. Adds DE / ES / IT / JA / ZH / AR
- * representative entries (>=3 per language) and validates negative controls
- * (legit art questions in same languages) still pass.
- */
 import { evaluateUserInputGuardrail } from '@modules/chat/useCase/guardrail/art-topic-guardrail';
 
 describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () => {
   describe('blocks insults in 8 languages', () => {
-    // English — already covered, sanity check
     it.each([['idiot'], ['stupid'], ['fuck']])('blocks EN insult %s', (text) => {
       expect(evaluateUserInputGuardrail({ text })).toEqual({
         allow: false,
@@ -18,7 +9,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       });
     });
 
-    // French — already covered, sanity check
     it.each([['connard'], ['salope'], ['ta gueule']])('blocks FR insult %s', (text) => {
       expect(evaluateUserInputGuardrail({ text })).toEqual({
         allow: false,
@@ -26,7 +16,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       });
     });
 
-    // German
     it.each([
       ['Du bist ein Arschloch'],
       ['So eine Scheisse, dieses Bild'],
@@ -38,7 +27,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       });
     });
 
-    // Spanish
     it.each([['eres un pendejo'], ['vete a la mierda'], ['callate gilipollas'], ['hijo de puta']])(
       'blocks ES insult %s',
       (text) => {
@@ -49,7 +37,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       },
     );
 
-    // Italian
     it.each([
       ['sei uno stronzo'],
       ['vaffanculo a chi te morto'],
@@ -62,7 +49,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       });
     });
 
-    // Japanese
     it.each([['お前はバカだ'], ['クソくらえ'], ['死ねよ'], ['くたばれクソ野郎']])(
       'blocks JA insult %s',
       (text) => {
@@ -73,7 +59,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       },
     );
 
-    // Chinese
     it.each([['你是个傻逼'], ['操你妈'], ['白痴东西'], ['去死吧']])(
       'blocks ZH insult %s',
       (text) => {
@@ -84,7 +69,6 @@ describe('evaluateUserInputGuardrail — multilingual insult coverage (F4)', () 
       },
     );
 
-    // Arabic
     it.each([['انت احمق'], ['يا غبي'], ['تبا لك'], ['اخرس يا كلب']])(
       'blocks AR insult %s',
       (text) => {

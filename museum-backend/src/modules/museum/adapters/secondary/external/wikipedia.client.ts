@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 const USER_AGENT = 'Musaium/1.0 (https://musaium.com; contact@musaium.com)';
@@ -33,9 +34,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   }
 }
 
-/** Fail-open on every error path. */
 export class HttpWikipediaClient implements WikipediaClient {
-  /** Returns null on any failure (bad locale, 404, timeout, malformed JSON). */
   async fetchSummary(input: { title: string; locale: string }): Promise<WikipediaSummary | null> {
     if (!input.title.trim()) return null;
     const language = isValidLanguageCode(input.locale) ? input.locale.toLowerCase() : 'en';
@@ -61,7 +60,7 @@ export class HttpWikipediaClient implements WikipediaClient {
     } catch (err) {
       logger.warn('wikipedia_summary_error', {
         title: input.title,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     }

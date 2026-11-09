@@ -1,7 +1,6 @@
 const EARTH_RADIUS_M = 6_371_000;
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
 
-/** Haversine great-circle distance. Inputs degrees, output meters. */
 export function haversineDistanceMeters(
   lat1: number,
   lon1: number,

@@ -1,24 +1,9 @@
 import { assertPgVectorAvailable } from '@data/db/pgvector-preflight';
 
-/**
- * I-OPS6 — pgvector >= 0.7.0 pre-flight guard.
- *
- * `AddArtworkEmbeddings` installs the `vector` extension and immediately uses
- * the FP16 `halfvec(768)` type, which only exists on pgvector >= 0.7.0. On a
- * 0.6.x host the extension installs but the `halfvec` DDL fails with an opaque
- * error and the migration reverts on the first `migration:run`.
- *
- * `assertPgVectorAvailable` queries `pg_available_extension_versions` (the
- * AVAILABLE versions, since on a fresh DB the extension is not yet created) and
- * fail-fasts with an actionable error naming the required version BEFORE any
- * DDL runs. This unit test mocks the query runner — no live DB required.
- */
-
 interface VersionRow {
   version: string;
 }
 
-// DRY builder for the `pg_available_extension_versions` query result rows.
 const makeVersionRows = (...versions: string[]): VersionRow[] =>
   versions.map((version) => ({ version }));
 

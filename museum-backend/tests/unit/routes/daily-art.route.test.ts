@@ -8,11 +8,6 @@ import {
 import { userToken } from '../../helpers/auth/token.helpers';
 import { artworks } from '@modules/daily-art';
 
-/**
- * Daily Art route integration tests — auth enforcement + response shape.
- * No DB required — the endpoint serves from a curated in-memory list.
- */
-
 const { app } = createRouteTestApp();
 
 describe('Daily Art Routes — HTTP Layer', () => {
@@ -23,8 +18,6 @@ describe('Daily Art Routes — HTTP Layer', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {
     it('GET /api/daily-art returns 401 without token', async () => {
@@ -42,8 +35,6 @@ describe('Daily Art Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
   });
-
-  // ── Authenticated access returns artwork ───────────────────────
 
   describe('Authenticated access returns artwork', () => {
     it('GET /api/daily-art returns 200 with valid artwork shape', async () => {
@@ -89,8 +80,6 @@ describe('Daily Art Routes — HTTP Layer', () => {
     });
   });
 
-  // ── QA-08: locale-aware funFact ────────────────────────────────
-
   describe('Locale-aware funFact (QA-08)', () => {
     it('returns a French funFact when ?locale=fr', async () => {
       const res = await request(app)
@@ -113,8 +102,6 @@ describe('Daily Art Routes — HTTP Layer', () => {
       expect(enFunFacts).toContain(res.body.artwork.funFact);
     });
   });
-
-  // ── Error response format ──────────────────────────────────────
 
   describe('Error response format', () => {
     it('401 returns structured JSON with error field', async () => {

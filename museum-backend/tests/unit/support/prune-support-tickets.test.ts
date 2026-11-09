@@ -2,14 +2,6 @@ import { pruneSupportTickets } from '@modules/support/useCase/retention/prune-su
 
 import type { DataSource } from 'typeorm';
 
-/**
- * TypeORM 0.3.x `dataSource.query()` returns `[rows, rowCount]` for DELETE/UPDATE
- * (see node_modules/typeorm/driver/postgres/PostgresQueryRunner.js raw.command switch).
- * Earlier mocks here returned a plain rows array which masked the production bug
- * where `result.length` (always 2 for the tuple) was treated as the chunk size,
- * causing an infinite loop. Every mock below now mirrors the real driver shape.
- * @param rows
- */
 const tupleResult = (rows: { id: string }[]): [{ id: string }[], number] => [rows, rows.length];
 
 describe('pruneSupportTickets', () => {

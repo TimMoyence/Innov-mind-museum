@@ -2,7 +2,6 @@ export const locales = ['fr', 'en'] as const;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = 'fr';
 
-// Dictionaries are loaded on the server only — never shipped to the client bundle.
 const dictionaries: Record<Locale, () => Promise<Dictionary>> = {
   fr: () => import('@/dictionaries/fr.json').then((m) => m.default),
   en: () => import('@/dictionaries/en.json').then((m) => m.default),
@@ -12,10 +11,7 @@ export async function getDictionary(locale: Locale): Promise<Dictionary> {
   return dictionaries[locale]();
 }
 
-/** Shape of a dictionary file — extend as pages are built out. */
 export interface Dictionary {
-  // I-CMP5(a) / R9 — accessibility-only copy. Grouped under its own namespace
-  // so a11y strings (skip-link, etc.) stay distinct from the marketing nav.
   a11y: {
     skipToContent: string;
   };
@@ -107,7 +103,6 @@ export interface Dictionary {
       accessibility: string;
       security: string;
       b2b: string;
-      // P0 GDPR — R12 / R16 / R17
       terms: string;
       subprocessors: string;
       cookies: string;
@@ -416,17 +411,8 @@ export interface Dictionary {
       distribution: string;
       chartAriaLabel: string;
       allMuseums: string;
-      // F6 — shown when the NPS read 403s because the signed-in manager has no
-      // museum assigned (NULL museumId claim). Actionable copy instead of the
-      // raw backend "No museum assigned" / "Museum scope required" text.
       noMuseumAssigned: string;
     };
-    /**
-     * R2 W3.4 — admin CSV export i18n namespace. One sub-object per kind
-     * so the FE button can be wired with a single `kind` prop. CSV column
-     * headers themselves stay English-only (parser stability) — only the
-     * button copy is localised.
-     */
     export: {
       sessions: { label: string; downloading: string; error: string };
       reviews: { label: string; downloading: string; error: string };

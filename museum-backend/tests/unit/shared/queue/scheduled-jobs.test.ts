@@ -7,8 +7,6 @@ import { registerScheduledJob } from '@shared/queue/scheduled-jobs';
 
 import type { ScheduledJobConfig, ScheduledJobResult } from '@shared/queue/scheduled-jobs';
 
-// ─── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
@@ -49,8 +47,6 @@ jest.mock('bullmq', () => ({
     ),
 }));
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
 const CONNECTION = { host: 'localhost', port: 6379 } as const;
 
 function makeConfig(overrides: Partial<ScheduledJobConfig> = {}): ScheduledJobConfig {
@@ -62,8 +58,6 @@ function makeConfig(overrides: Partial<ScheduledJobConfig> = {}): ScheduledJobCo
     ...overrides,
   };
 }
-
-// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('registerScheduledJob', () => {
   beforeEach(() => {
@@ -247,7 +241,6 @@ describe('registerScheduledJob', () => {
     expect(err).toBe(error);
     expect(sinks.log).toBeInstanceOf(Function);
     expect(sinks.capture).toBe(captureExceptionWithContext);
-    // sinks.log must proxy to logger.warn (kills BlockStatement / log identity mutants)
     sinks.log('proxied_event', { foo: 'bar' });
     expect(logger.warn).toHaveBeenCalledWith('proxied_event', { foo: 'bar' });
     expect(opts).toEqual(
@@ -256,9 +249,7 @@ describe('registerScheduledJob', () => {
         treatNoAttemptsAsFinal: true,
       }),
     );
-    // summarize falls back to cfg.name when data has no jobName
     expect(opts.summarize({})).toEqual({ jobName: 'prune-sf' });
-    // summarize uses data.jobName when present
     expect(opts.summarize({ jobName: 'override' })).toEqual({ jobName: 'override' });
   });
 
@@ -321,7 +312,6 @@ describe('registerScheduledJob', () => {
     expect(logger.warn).toHaveBeenCalledWith('prune-c1_scheduler_remove_failed', {
       error: 'redis-rm',
     });
-    // queue.close still attempted
     expect(mockQueueClose).toHaveBeenCalledTimes(1);
   });
 
@@ -354,9 +344,6 @@ describe('registerScheduledJob', () => {
 
     await expect(handle.close()).resolves.toBeUndefined();
 
-    // Worker was never spawned, so worker.close() must NOT be invoked and
-    // safeClose must NOT log the worker_close_failed warn (kills the
-    // `if (worker !== undefined)` → `if (true)` mutant).
     expect(mockWorkerClose).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalledWith(
       'prune-noworker_worker_close_failed',

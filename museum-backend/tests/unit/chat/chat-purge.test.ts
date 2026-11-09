@@ -8,16 +8,6 @@ import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import type { ChatMediaPurger } from '@modules/chat/jobs/chat-media-purger';
 import type { DataSource } from 'typeorm';
 
-// ─── Mock harness ─────────────────────────────────────────────────────
-//
-// The purge job reaches into TypeORM via three distinct paths:
-//   1. `sessionRepo.createQueryBuilder('session')` — candidate lookup
-//   2. `manager.getRepository(ChatMessage).createQueryBuilder().delete()…` — purge
-//   3. `manager.getRepository(ChatSession).createQueryBuilder().update()…` — flag
-//
-// We build one reusable query-builder per concern and wire `getRepository` to
-// return the matching mock based on the entity class handed to it.
-
 interface PurgeMocks {
   dataSource: DataSource;
   selectQb: ReturnType<typeof makeMockQb>;
@@ -29,7 +19,6 @@ interface PurgeMocks {
 interface BuildMocksOpts {
   candidateIds?: string[];
   deleteAffected?: number;
-  /** Rows returned by the imageRef/audioUrl SELECT query for each session. */
   mediaRefsBySession?: Record<string, { imageRef?: string | null; audioUrl?: string | null }[]>;
 }
 
@@ -42,8 +31,6 @@ function buildMocks(opts: BuildMocksOpts = {}): PurgeMocks {
     getRawMany: jest.fn().mockResolvedValue(candidateIds.map((id) => ({ id }))),
   });
   const mediaQb = makeMockQb();
-  // The media query calls .where('msg.sessionId = :id', { id }) — capture the
-  // id and serve the matching seed rows (or [] when none registered).
   let lastSessionId: string | undefined;
   mediaQb.where.mockImplementation((..._args: unknown[]) => {
     const arg = _args[1] as { id?: string } | undefined;
@@ -86,8 +73,6 @@ function buildMocks(opts: BuildMocksOpts = {}): PurgeMocks {
   return { dataSource, selectQb, mediaQb, deleteQb, updateQb };
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────
-
 describe('runChatPurge', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -96,8 +81,6 @@ describe('runChatPurge', () => {
       id: 'stale-session-id',
       updatedAt: new Date('2024-01-01T00:00:00.000Z'),
     });
-    // Factory reference kept to document the scenario — the delete path is
-    // asserted through the mocked query builder.
     void makeMessage({ session: staleSession });
 
     const { dataSource, selectQb, deleteQb, updateQb } = buildMocks({
@@ -107,19 +90,16 @@ describe('runChatPurge', () => {
 
     const result = await runChatPurge(dataSource, { retentionDays: 180, batchSize: 50 });
 
-    // Candidate query honours the retention window + purged-at filter.
     expect(selectQb.where).toHaveBeenCalledWith('session.purgedAt IS NULL');
     expect(selectQb.andWhere).toHaveBeenCalledWith(
       expect.stringContaining("session.updatedAt < NOW() - INTERVAL '180 days'"),
     );
     expect(selectQb.limit).toHaveBeenCalledWith(50);
 
-    // Messages purged for the stale session.
     expect(deleteQb.delete).toHaveBeenCalled();
     expect(deleteQb.where).toHaveBeenCalledWith('sessionId = :id', { id: staleSession.id });
     expect(deleteQb.execute).toHaveBeenCalledTimes(1);
 
-    // Session flagged as purged.
     expect(updateQb.update).toHaveBeenCalled();
     expect(updateQb.set).toHaveBeenCalledWith(
       expect.objectContaining({ purgedAt: expect.any(Function) as unknown }),
@@ -165,7 +145,6 @@ describe('runChatPurge', () => {
     });
     void alreadyPurgedSession;
 
-    // The candidate query lists zero rows because `purgedAt IS NULL` is false.
     const { dataSource, selectQb, deleteQb, updateQb } = buildMocks({ candidateIds: [] });
 
     const result = await runChatPurge(dataSource);
@@ -187,7 +166,6 @@ describe('runChatPurge', () => {
       id: 'media-session',
       updatedAt: new Date('2024-01-01T00:00:00.000Z'),
     });
-    // Just to document intent — factory call, not asserted.
     void makeMessage({
       session: staleSession,
       imageRef: 's3://chat-images/user-1/2026/04/foo.jpg',
@@ -297,7 +275,7 @@ describe('runChatPurge', () => {
       candidateIds: [staleSession.id],
       deleteAffected: 1,
       mediaRefsBySession: {
-        [staleSession.id]: [], // no rows with imageRef/audioUrl
+        [staleSession.id]: [],
       },
     });
 
@@ -310,11 +288,6 @@ describe('runChatPurge', () => {
     expect(result.purgedSessions).toBe(1);
     expect(result.purgedMedia).toBe(0);
   });
-
-  // ─── Mutation kills (chat-purge.job.ts L64-65) ────────────────────
-  // 3 first-pass survivors documented in commit 155a62ea on the
-  // collectMediaRefs() select+where chain. The behavioural tests above
-  // exercise the path but don't pin the exact SQL fragment strings.
 
   it('collectMediaRefs uses exact [imageRef AS, audioUrl AS] select pair and msg.sessionId = :id where', async () => {
     const staleSession = makeSession({
@@ -337,15 +310,11 @@ describe('runChatPurge', () => {
 
     await runChatPurge(dataSource, { mediaPurger: purger });
 
-    // Kills the 2× StringLiteral mutants on the .select([...]) array
-    // (L64:14 'msg.imageRef AS "imageRef"' → "" and L64:44 'msg.audioUrl AS "audioUrl"' → "").
     expect(mediaQb.select).toHaveBeenCalledWith([
       'msg.imageRef AS "imageRef"',
       'msg.audioUrl AS "audioUrl"',
     ]);
-    // Kills the StringLiteral mutant on L65:12 'msg.sessionId = :id' → "".
     expect(mediaQb.where).toHaveBeenCalledWith('msg.sessionId = :id', { id: staleSession.id });
-    // Defence: the IS NOT NULL andWhere also survives literally.
     expect(mediaQb.andWhere).toHaveBeenCalledWith(
       '(msg.imageRef IS NOT NULL OR msg.audioUrl IS NOT NULL)',
     );

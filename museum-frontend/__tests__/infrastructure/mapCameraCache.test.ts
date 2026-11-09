@@ -1,10 +1,3 @@
-/**
- * Unit tests for mapCameraCache — the persistence layer that remembers the
- * user's last explicit map camera view across sessions. These guard the P0
- * fix: only user-driven moves persist, writes debounce to avoid AsyncStorage
- * thrash, and a stale cache (>30d) is dropped so returning users don't land
- * on a region they'd expect to be re-centered.
- */
 import { mapCameraCache } from '@/features/museum/infrastructure/mapCameraCache';
 import { storage } from '@/shared/infrastructure/storage';
 import { nonNull } from '@/__tests__/helpers/nonNull';
@@ -17,8 +10,6 @@ const sampleView = { centerLng: 2.3522, centerLat: 48.8566, zoom: 14 };
 
 describe('mapCameraCache', () => {
   beforeEach(async () => {
-    // Real timers + clean storage between tests. The debounce timer is
-    // module-level so leaving fake timers active leaks state across tests.
     jest.useRealTimers();
     await mapCameraCache.clear();
     jest.restoreAllMocks();
@@ -36,7 +27,6 @@ describe('mapCameraCache', () => {
 
       mapCameraCache.save(sampleView, true);
       jest.advanceTimersByTime(SAVE_DEBOUNCE_MS);
-      // setTimeout callback kicks the (real) storage; flush the pending promise.
       await Promise.resolve();
 
       expect(setJSONSpy).toHaveBeenCalledTimes(1);
@@ -69,7 +59,6 @@ describe('mapCameraCache', () => {
       mapCameraCache.save({ centerLng: 2.1, centerLat: 48.1, zoom: 11 }, true);
       mapCameraCache.save({ centerLng: 2.2, centerLat: 48.2, zoom: 12 }, true);
 
-      // Before the debounce window elapses, nothing is written.
       jest.advanceTimersByTime(SAVE_DEBOUNCE_MS - 1);
       expect(setJSONSpy).not.toHaveBeenCalled();
 
@@ -77,7 +66,6 @@ describe('mapCameraCache', () => {
       await Promise.resolve();
 
       expect(setJSONSpy).toHaveBeenCalledTimes(1);
-      // Only the latest view is persisted — earlier calls are coalesced away.
       const [, payload] = nonNull(setJSONSpy.mock.calls[0]);
       expect(payload).toMatchObject({ centerLng: 2.2, centerLat: 48.2, zoom: 12 });
     });
@@ -90,7 +78,6 @@ describe('mapCameraCache', () => {
     });
 
     it('returns null when the stored payload is older than the 30-day TTL', async () => {
-      // Seed storage directly with a stale timestamp to bypass save() debounce.
       const stale = {
         ...sampleView,
         storedAt: Date.now() - TTL_MS - 1_000,

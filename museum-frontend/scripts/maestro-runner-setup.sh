@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Phase 2 — Maestro runner setup.
-# Boots a Postgres instance (via docker-compose by default, or native if
-# SKIP_DOCKER_COMPOSE=1 — used in CI on macos-latest where Colima/VZ can't
-# spin a nested VM) and the BE API, then waits for /api/health.
-#
-# Env overrides (CI E37bis):
-#   SKIP_DOCKER_COMPOSE=1 — caller pre-provisioned Postgres natively
-#   DB_PORT (default 5433 for compose, 5432 for native)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,7 +19,6 @@ else
 fi
 cd "$REPO_ROOT/museum-backend"
 
-# Install backend deps + run migrations (Phase 2 requires real schema for flows that hit /api/auth/register)
 echo "[setup] installing backend deps…"
 corepack enable
 pnpm install --frozen-lockfile
@@ -36,11 +27,6 @@ echo "[setup] running migrations…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   pnpm migration:run
 
-# Seed the demo museums (idempotent upsert ON CONFLICT slug). ROOT CAUSE of the
-# "Maestro full never green" history: museums were never seeded in CI, so every
-# museum-shard / picker flow ran against an empty `museums` table. This single
-# site covers ALL three Maestro boot paths (Android shard matrix, netshape
-# nightly, iOS nightly) since each calls this script — no per-job inline seed.
 echo "[setup] seeding demo museums…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   pnpm seed:museums
@@ -62,7 +48,6 @@ fi
 echo "[setup] starting SearXNG stub…"
 node "$SCRIPT_DIR/maestro-searxng-stub.mjs" > /tmp/searxng-stub.log 2>&1 &
 
-# Start the backend API in the background, log to /tmp/backend.log
 echo "[setup] starting backend API…"
 DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" PGDATABASE="$PGDATABASE" \
   PORT=3000 \
@@ -72,7 +57,6 @@ DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWO
   CORS_ORIGINS=http://localhost:8081 \
   pnpm dev > /tmp/backend.log 2>&1 &
 
-# Wait for /api/health up to 120s
 echo "[setup] waiting for /api/health…"
 for i in $(seq 1 120); do
   if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then

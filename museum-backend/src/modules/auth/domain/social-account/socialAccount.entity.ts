@@ -27,7 +27,6 @@ export class SocialAccount {
   @Column({ type: 'integer' })
   userId!: number;
 
-  /** `"apple"` | `"google"`. */
   @Column({ type: 'varchar', length: 20 })
   provider!: string;
 

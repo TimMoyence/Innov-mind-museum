@@ -1,12 +1,6 @@
 import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
 import { TicketMessage } from '@modules/support/domain/ticket/ticketMessage.entity';
 
-/**
- * Test factory for a SupportTicket entity. Override fields via the
- * `overrides` parameter; defaults reflect a typical "open / medium-priority
- * help" ticket.
- * @param overrides
- */
 export function makeTicket(overrides: Partial<SupportTicket> = {}): SupportTicket {
   return {
     id: 'ticket-001',
@@ -23,12 +17,6 @@ export function makeTicket(overrides: Partial<SupportTicket> = {}): SupportTicke
   } as SupportTicket;
 }
 
-/**
- * Test factory for a TicketMessage entity. Override fields via the
- * `overrides` parameter; defaults reflect a visitor-authored message
- * on `ticket-001`.
- * @param overrides
- */
 export function makeTicketMessage(overrides: Partial<TicketMessage> = {}): TicketMessage {
   return {
     id: 'msg-001',

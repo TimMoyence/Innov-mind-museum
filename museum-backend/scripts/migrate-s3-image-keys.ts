@@ -1,21 +1,3 @@
-/**
- * One-shot ops migration: rewrites legacy S3 image keys from
- * `chat-images/YYYY/MM/<uuid>.ext` to the user-scoped GDPR-friendly
- * `chat-images/user-<userId>/YYYY/MM/<uuid>.ext`.
- *
- * Pipeline per row:
- *   1. Resolve owning userId via session join.
- *   2. Compute new key.
- *   3. S3 CopyObject old -> new (skip if already exists at target).
- *   4. UPDATE chat_messages.imageRef (same transaction as siblings in the batch).
- *   5. DeleteObject on the legacy key.
- *
- * Modes:
- *   - DRY-RUN by default (no --apply flag): plan + log, zero writes.
- *   - --apply: execute copy + DB update + legacy delete.
- *
- * Exit codes: 0 success | 1 fatal | 2 partial (some rows failed).
- */
 import 'dotenv/config';
 import 'reflect-metadata';
 
@@ -34,14 +16,11 @@ import {
   normalizeEndpoint,
 } from '@modules/chat/adapters/secondary/s3-path-utils';
 import { sha256Hex } from '@modules/chat/adapters/secondary/s3-signing';
+import { errorMessage } from '@shared/errors/error-message';
 import { env } from '@src/config/env';
 
 import http from 'node:http';
 import https from 'node:https';
-
-// -----------------------------------------------------------------------------
-// Types + CLI parsing
-// -----------------------------------------------------------------------------
 
 interface CliOptions {
   apply: boolean;
@@ -104,10 +83,6 @@ const log = (entry: JsonLog): void => {
     process.stdout.write(`${line}\n`);
   }
 };
-
-// -----------------------------------------------------------------------------
-// S3 config + low-level helpers (CopyObject + HeadObject)
-// -----------------------------------------------------------------------------
 
 const buildS3Config = (): S3ImageStorageConfig => {
   const s3 = env.storage.s3;
@@ -188,9 +163,6 @@ const buildKeyPath = (config: S3ImageStorageConfig, key: string): { url: URL; pa
   return { url, path: objectPath };
 };
 
-/**
- * HEAD request. Returns true if object exists (2xx), false on 404, throws on other errors.
- */
 const objectExists = async (config: S3ImageStorageConfig, key: string): Promise<boolean> => {
   const { url, path } = buildKeyPath(config, key);
   const endpoint = normalizeEndpoint(config.endpoint);
@@ -214,9 +186,6 @@ const objectExists = async (config: S3ImageStorageConfig, key: string): Promise<
   throw new Error(`S3 HEAD failed (${statusCode}): ${body.slice(0, 500)}`);
 };
 
-/**
- * S3 CopyObject API. The copy-source header is bucket+key URL-encoded per SigV4 rules.
- */
 const copyObject = async (
   config: S3ImageStorageConfig,
   srcKey: string,
@@ -252,21 +221,13 @@ const copyObject = async (
   if (statusCode < 200 || statusCode >= 300) {
     throw new Error(`S3 CopyObject failed (${statusCode}): ${body.slice(0, 500)}`);
   }
-  // CopyObject returns 200 even on internal failure — check body for <Error>.
   if (body.includes('<Error>')) {
     throw new Error(`S3 CopyObject error payload: ${body.slice(0, 500)}`);
   }
 };
 
-// -----------------------------------------------------------------------------
-// Key rewrite logic
-// -----------------------------------------------------------------------------
-
 const LEGACY_KEY_REGEX = /^(chat-images)\/(\d{4})\/(\d{2})\/([^/]+)$/;
 
-/**
- * Parses an `s3://` reference into its key.
- */
 const extractKey = (imageRef: string): string | null => {
   const m = /^s3:\/\/(.+)$/.exec(imageRef);
   return m ? m[1] : null;
@@ -277,10 +238,6 @@ interface KeyRewrite {
   newKey: string;
 }
 
-/**
- * Transforms a legacy key into a user-scoped one. Returns null when the key
- * is not in the legacy format or already user-scoped.
- */
 const rewriteKey = (key: string, userId: number): KeyRewrite | null => {
   if (key.includes('/user-')) return null;
   const m = LEGACY_KEY_REGEX.exec(key);
@@ -291,10 +248,6 @@ const rewriteKey = (key: string, userId: number): KeyRewrite | null => {
     newKey: `${prefix}/user-${String(userId)}/${year}/${month}/${file}`,
   };
 };
-
-// -----------------------------------------------------------------------------
-// Main migration loop
-// -----------------------------------------------------------------------------
 
 interface RowOutcome {
   id: string;
@@ -344,17 +297,14 @@ const processRow = async (params: {
     return { id: row.id, status: 'planned' };
   }
 
-  // 1. Copy (skip if target already exists, e.g. partial prior run).
   const alreadyAtTarget = await objectExists(config, rewrite.newKey);
   if (!alreadyAtTarget) {
     await copyObject(config, rewrite.oldKey, rewrite.newKey);
   }
 
-  // 2. DB update inside the caller's transaction.
   const newRef = `s3://${rewrite.newKey}`;
   await params.txManagerUpdate(row.id, newRef);
 
-  // 3. Delete legacy key (best-effort: not fatal if it fails — target is authoritative).
   try {
     await deleteObjectsBatch(config, [rewrite.oldKey]);
   } catch (err) {
@@ -363,7 +313,7 @@ const processRow = async (params: {
       msg: 'legacy delete failed (non-fatal; rerun required)',
       messageId: row.id,
       key: rewrite.oldKey,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
   }
 
@@ -383,7 +333,6 @@ const run = async (opts: CliOptions): Promise<number> => {
 
   await AppDataSource.initialize();
   try {
-    // Count total to give a meaningful progress denominator.
     const repo = AppDataSource.getRepository(ChatMessage);
     const baseQb = repo
       .createQueryBuilder('m')
@@ -403,9 +352,6 @@ const run = async (opts: CliOptions): Promise<number> => {
       const remaining = totalToProcess - processed;
       const take = Math.min(opts.batchSize, remaining);
 
-      // Fetch the next page. We use offset-based pagination because we may mutate
-      // imageRef for some rows but leave others skipped (orphan session etc.), so
-      // simple "WHERE legacy" re-reads could either miss rows or spin forever.
       const rows = await AppDataSource.query<
         { id: string; sessionId: string; imageRef: string; userId: number | null }[]
       >(
@@ -421,8 +367,6 @@ const run = async (opts: CliOptions): Promise<number> => {
 
       if (rows.length === 0) break;
 
-      // Run the batch inside a single DB transaction — all imageRef updates
-      // commit together, matching the S3 state at transaction commit time.
       await AppDataSource.transaction(async (tx) => {
         const updateRef = async (id: string, newRef: string): Promise<void> => {
           await tx
@@ -459,7 +403,7 @@ const run = async (opts: CliOptions): Promise<number> => {
               level: 'error',
               msg: 'row failed',
               messageId: row.id,
-              error: err instanceof Error ? err.message : String(err),
+              error: errorMessage(err),
             });
           } finally {
             processed += 1;
@@ -476,10 +420,6 @@ const run = async (opts: CliOptions): Promise<number> => {
         }
       });
 
-      // When not applying, we didn't mutate rows, so advance offset by the page size.
-      // When applying, the rows we processed either moved out of the scan window
-      // (imageRef rewritten) or stayed (skipped). We still advance by the raw
-      // page length to guarantee forward progress on skipped rows.
       offset += rows.length;
     }
 
@@ -501,10 +441,6 @@ const run = async (opts: CliOptions): Promise<number> => {
   }
 };
 
-// -----------------------------------------------------------------------------
-// Entrypoint
-// -----------------------------------------------------------------------------
-
 const main = async (): Promise<void> => {
   let opts: CliOptions;
   try {
@@ -513,7 +449,7 @@ const main = async (): Promise<void> => {
     log({
       level: 'error',
       msg: 'cli parse error',
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     process.exit(1);
     return;
@@ -526,7 +462,7 @@ const main = async (): Promise<void> => {
     log({
       level: 'error',
       msg: 'fatal',
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
       stack: err instanceof Error ? err.stack : undefined,
     });
     process.exit(1);

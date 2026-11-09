@@ -1,26 +1,6 @@
-/**
- * chatApi.postAudioMessage — explicit multipart Content-Type header.
- *
- * On-device (React Native), axios does not recognise RN's FormData polyfill, so
- * without an explicit `Content-Type: multipart/form-data` header it defaults a
- * POST body to `application/x-www-form-urlencoded`. RN's native NetworkingModule
- * then builds a MultipartBody from the FormData and `MultipartBody.setType`
- * throws (`multipart != application/x-www-form-urlencoded`) — the voice upload
- * fails on-device with a "Network unavailable" error. The image-compare upload
- * already sets this same header for the same reason.
- *
- * RED (without the fix — audio.ts sets no `headers`): the second assertion sees
- * an empty header object → fails → jest exits ≠ 0.
- * GREEN (with the fix — audio.ts sets headers:{'Content-Type':'multipart/form-data'}):
- * both assertions pass.
- *
- * Run scope (FE): npx jest chatApi.audio.contentType
- */
 import '@/__tests__/helpers/test-utils';
 
 import { makePostMessageResponse } from '@/__tests__/helpers/factories';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockHttpRequest = jest.fn<Promise<unknown>, [string, Record<string, unknown>?]>();
 
@@ -39,14 +19,10 @@ jest.mock('@/shared/infrastructure/httpClient', () => ({
 
 import { chatApi } from '@/features/chat/infrastructure/chatApi';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const headersOf = (callIndex = 0): Record<string, string> => {
   const options = mockHttpRequest.mock.calls[callIndex]?.[1];
   return (options?.headers as Record<string, string> | undefined) ?? {};
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('chatApi.postAudioMessage — multipart Content-Type header', () => {
   beforeEach(() => {

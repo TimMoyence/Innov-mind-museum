@@ -8,7 +8,6 @@ export interface SessionInfo {
   museumName?: string | null;
   createdAt: string;
   updatedAt: string;
-  /** Drives prompt strategy + walk-mode UX. */
   intent: ChatSessionIntent;
 }
 
@@ -36,11 +35,6 @@ export interface VisitorContext {
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
-  /** Cached from /me by FE; source of truth = users.content_preferences col. */
   contentPreferences?: ContentPreference[];
-  /**
-   * C9.10 (2026-05-17) — set by the FE STT path. When true, the LLM is
-   * constrained to a 60-80w prose-only answer for TTS playback.
-   */
   voiceMode?: boolean;
 }

@@ -1,25 +1,8 @@
-/**
- * Property-based tests for sanitizePromptInput.
- *
- * V12 W6: complements example-based unit tests with fast-check generated inputs.
- * Catches edge cases (Unicode boundaries, control-char interleaving, idempotence
- * under repeated application) that the curated test suite misses.
- *
- * Properties asserted:
- *   P1 — idempotent : sanitize(sanitize(x)) === sanitize(x)
- *   P2 — bounded    : sanitize(x).length <= maxLength (default 200)
- *   P3 — no zero-width : sanitize(x) excludes U+200B-D, U+FEFF, U+2060, U+00AD
- *   P4 — no control char : sanitize(x) excludes \x00-\x08, \x0B, \x0C, \x0E-\x1F, \x7F
- *   P5 — NFC-normalized : sanitize(x) === sanitize(x).normalize('NFC')
- *   P6 — preserves printable text   : sanitize("museum") === "museum"
- */
-
 import * as fc from 'fast-check';
 
 import { sanitizePromptInput } from '@shared/validation/input';
 
 const ZERO_WIDTH = /[​-‍﻿⁠­]/;
-// eslint-disable-next-line no-control-regex -- mirror of production regex; test asserts stripping
 const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 
 describe('sanitizePromptInput — property tests (fast-check)', () => {
@@ -83,7 +66,6 @@ describe('sanitizePromptInput — property tests (fast-check)', () => {
       fc.property(
         fc
           .stringMatching(/^[a-zA-Z0-9 .,!?'-]{1,50}$/)
-          // Trim leading/trailing whitespace to avoid the .trim() step shrinking length.
           .map((s) => s.trim())
           .filter((s) => s.length > 0),
         (input) => {

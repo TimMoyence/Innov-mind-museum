@@ -3,8 +3,6 @@ import {
   maybeRequestReview,
 } from '@/shared/infrastructure/inAppReview';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -21,8 +19,6 @@ jest.mock('expo-store-review', () => ({
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const COMPLETED_SESSIONS_KEY = '@musaium/completed_sessions';
 const REVIEW_PROMPTS_KEY = '@musaium/review_prompts';
 
@@ -33,8 +29,6 @@ const setupSessionCount = (count: number) => {
     return Promise.resolve(null);
   });
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('inAppReview', () => {
   beforeEach(() => {
@@ -61,7 +55,7 @@ describe('inAppReview', () => {
     });
 
     it('does NOT trigger review when count is below threshold (< 3)', async () => {
-      setupSessionCount(0); // will become 1
+      setupSessionCount(0);
 
       await incrementCompletedSessions();
 
@@ -70,7 +64,7 @@ describe('inAppReview', () => {
     });
 
     it('triggers review when count reaches threshold (= 3)', async () => {
-      setupSessionCount(2); // will become 3
+      setupSessionCount(2);
 
       await incrementCompletedSessions();
 
@@ -79,7 +73,7 @@ describe('inAppReview', () => {
     });
 
     it('triggers review when count exceeds threshold (> 3)', async () => {
-      setupSessionCount(4); // will become 5
+      setupSessionCount(4);
 
       await incrementCompletedSessions();
 
@@ -101,7 +95,6 @@ describe('inAppReview', () => {
 
       expect(mockRequestReview).toHaveBeenCalledTimes(1);
 
-      // Should have saved a timestamp record
       const setItemCalls = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
         ([key]: [string]) => key === REVIEW_PROMPTS_KEY,
       );
@@ -115,9 +108,9 @@ describe('inAppReview', () => {
     it('respects MAX_PROMPTS_PER_YEAR (3) — blocks 4th prompt', async () => {
       const now = Date.now();
       const recentTimestamps = [
-        now - 30 * 24 * 60 * 60 * 1000, // 30 days ago
-        now - 60 * 24 * 60 * 60 * 1000, // 60 days ago
-        now - 90 * 24 * 60 * 60 * 1000, // 90 days ago
+        now - 30 * 24 * 60 * 60 * 1000,
+        now - 60 * 24 * 60 * 60 * 1000,
+        now - 90 * 24 * 60 * 60 * 1000,
       ];
 
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
@@ -129,16 +122,15 @@ describe('inAppReview', () => {
 
       await maybeRequestReview();
 
-      // Should NOT have requested review — already at 3 prompts this year
       expect(mockRequestReview).not.toHaveBeenCalled();
     });
 
     it('allows review if old timestamps are beyond one year', async () => {
       const now = Date.now();
       const oldTimestamps = [
-        now - 400 * 24 * 60 * 60 * 1000, // 400 days ago (outside 1-year window)
-        now - 500 * 24 * 60 * 60 * 1000, // 500 days ago
-        now - 600 * 24 * 60 * 60 * 1000, // 600 days ago
+        now - 400 * 24 * 60 * 60 * 1000,
+        now - 500 * 24 * 60 * 60 * 1000,
+        now - 600 * 24 * 60 * 60 * 1000,
       ];
 
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
@@ -150,12 +142,10 @@ describe('inAppReview', () => {
 
       await maybeRequestReview();
 
-      // All timestamps are older than 1 year, so review should be allowed
       expect(mockRequestReview).toHaveBeenCalledTimes(1);
     });
 
     it('handles null/missing review prompt record gracefully', async () => {
-      // AsyncStorage returns null (no prior record)
       (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 
       await maybeRequestReview();
@@ -166,17 +156,14 @@ describe('inAppReview', () => {
     it('handles storage failure gracefully — throws but does not crash incrementCompletedSessions', async () => {
       (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage read error'));
 
-      // maybeRequestReview will throw because storage.getJSON will throw
       await expect(maybeRequestReview()).rejects.toThrow();
     });
 
     it('records timestamp only after successful review request', async () => {
       mockRequestReview.mockRejectedValue(new Error('Review API failure'));
 
-      // Should propagate the error
       await expect(maybeRequestReview()).rejects.toThrow('Review API failure');
 
-      // Timestamp should NOT have been saved since requestReview failed
       const setItemCalls = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
         ([key]: [string]) => key === REVIEW_PROMPTS_KEY,
       );
@@ -186,9 +173,9 @@ describe('inAppReview', () => {
     it('filters timestamps correctly with mixed old and recent entries', async () => {
       const now = Date.now();
       const mixedTimestamps = [
-        now - 400 * 24 * 60 * 60 * 1000, // old (outside window)
-        now - 100 * 24 * 60 * 60 * 1000, // recent
-        now - 200 * 24 * 60 * 60 * 1000, // recent
+        now - 400 * 24 * 60 * 60 * 1000,
+        now - 100 * 24 * 60 * 60 * 1000,
+        now - 200 * 24 * 60 * 60 * 1000,
       ];
 
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
@@ -200,17 +187,15 @@ describe('inAppReview', () => {
 
       await maybeRequestReview();
 
-      // Only 2 recent timestamps (under the 3 limit), so review should happen
       expect(mockRequestReview).toHaveBeenCalledTimes(1);
 
-      // Stored timestamps should contain the 2 recent ones + the new one (old one filtered out)
       const setItemCalls = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
         ([key]: [string]) => key === REVIEW_PROMPTS_KEY,
       );
       expect(setItemCalls).toHaveLength(1);
 
       const stored = JSON.parse(setItemCalls[0][1] as string) as { timestamps: number[] };
-      expect(stored.timestamps).toHaveLength(3); // 2 recent + 1 new
+      expect(stored.timestamps).toHaveLength(3);
     });
   });
 });

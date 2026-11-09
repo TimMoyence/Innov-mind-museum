@@ -1,34 +1,9 @@
-/**
- * RED-2 — `useBrandedTheme(appTheme, branding)` (C4 co-branding,
- * run 2026-05-26-kr-product).
- *
- * Phase: RED (UFR-022). MUST FAIL — the hook
- * `features/museum/application/useBrandedTheme` does not exist yet.
- *
- * Asserts (spec-c4 R6/R7 + dispatcher override on contrast):
- *   - branded primaryColor overrides `theme.primary` + derived
- *     `primaryTint`/`primaryBorderSubtle`;
- *   - `primaryContrast` is the LUMINANCE-picked CTA text color (dispatcher
- *     override: EXIGÉ, not the app theme value) → black on light brand,
- *     white on dark brand;
- *   - all other palette fields (textPrimary, cardBackground, pageGradient)
- *     stay at app-theme values;
- *   - empty branding → identity (returns the unmodified app theme);
- *   - override applies on top of BOTH light and dark app themes;
- *   - secondary/accent are NEVER added to the palette (no channel — D2 override).
- *
- * lib-docs consulted: react-native/PATTERNS.md (renderHook from
- * @testing-library/react-native), react/PATTERNS.md (useMemo, purity).
- */
-
 import { renderHook } from '@testing-library/react-native';
 
 import { lightTheme, darkTheme, type ThemePalette } from '@/shared/ui/themes';
 import { makeMuseumBranding } from '../../helpers/factories';
 import type { MuseumBranding } from '@/features/museum/domain/museum-branding';
 
-// Lazy require so the missing-module failure is a per-test RED, not an import
-// crash that hides the assertions GREEN must satisfy.
 const useBrandedTheme = (appTheme: ThemePalette, branding: MuseumBranding): ThemePalette => {
   const mod = require('@/features/museum/application/useBrandedTheme') as {
     useBrandedTheme: (appTheme: ThemePalette, branding: MuseumBranding) => ThemePalette;
@@ -59,19 +34,15 @@ describe('useBrandedTheme — branded override (R6)', () => {
 
 describe('useBrandedTheme — luminance contrast for CTA text (dispatcher override, EXIGÉ)', () => {
   it('uses black contrast text on a dark brand primary', () => {
-    const branding = makeMuseumBranding({ primaryColor: '#6B46C1' }); // dark violet
+    const branding = makeMuseumBranding({ primaryColor: '#6B46C1' });
     const { result } = renderHook(() => useBrandedTheme(lightTheme, branding));
-    // Dark background → white CTA text.
     expect(result.current.primaryContrast).toBe('#FFFFFF');
   });
 
   it('uses black contrast text on a light brand primary', () => {
-    const branding = makeMuseumBranding({ primaryColor: '#FFEB3B' }); // bright yellow
+    const branding = makeMuseumBranding({ primaryColor: '#FFEB3B' });
     const { result } = renderHook(() => useBrandedTheme(lightTheme, branding));
-    // Light background → black CTA text (so the label stays legible — WCAG AA).
     expect(result.current.primaryContrast).toBe('#000000');
-    // The override drives primaryContrast, so it must NOT equal the app theme's
-    // default white contrast for a light brand color.
     expect(result.current.primaryContrast).not.toBe(lightTheme.primaryContrast);
   });
 });
@@ -108,7 +79,6 @@ describe('useBrandedTheme — no secondary/accent channel (D2 override)', () => 
 
     expect(result.current).not.toHaveProperty('secondary');
     expect(result.current).not.toHaveProperty('accent');
-    // The palette key-set is exactly the app theme's key-set.
     expect(Object.keys(result.current).sort()).toEqual(Object.keys(lightTheme).sort());
   });
 });

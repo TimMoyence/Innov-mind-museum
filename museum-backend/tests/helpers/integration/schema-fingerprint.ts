@@ -1,38 +1,17 @@
 import type { DataSource } from 'typeorm';
 
-/**
- * Test utility: deeply-comparable structural fingerprint of the public schema.
- *
- * Captures: tables, columns (name/type/nullable/default), indexes
- * (name/definition/unique), CHECK constraints, FK constraint names.
- *
- * Known gaps (acceptable for Phase 1):
- *   - Sequences and their current values
- *   - Custom enum / domain types
- *   - Materialised views
- *   - Trigger definitions
- *
- * If a migration round-trip breaks because of one of these gaps, extend the
- * fingerprint shape AND the test will catch the regression that prompted
- * the extension.
- */
 export interface SchemaFingerprint {
   tables: Record<
     string,
     {
       columns: Array<{ name: string; type: string; nullable: boolean; default: string | null }>;
       indexes: Array<{ name: string; definition: string; unique: boolean }>;
-      checks: string[]; // sorted list of check_clause strings
-      foreignKeys: string[]; // constraint names, sorted
+      checks: string[];
+      foreignKeys: string[];
     }
   >;
 }
 
-/**
- * Test utility: capture a normalised, deeply-comparable structural fingerprint
- * of the public schema. Excludes TypeORM's own `migrations` table (which has
- * row data that differs per up/down round trip).
- */
 export async function dumpSchemaFingerprint(ds: DataSource): Promise<SchemaFingerprint> {
   const tablesRaw = await ds.query<Array<{ table_name: string }>>(
     `SELECT table_name FROM information_schema.tables
@@ -57,12 +36,6 @@ export async function dumpSchemaFingerprint(ds: DataSource): Promise<SchemaFinge
       [table_name],
     );
 
-    // Use pg_index + pg_get_indexdef instead of parsing pg_indexes.indexdef via
-    // regex. The regex approach (`/\(([^)]+)\)/`) is broken for functional indexes
-    // like `lower((email)::text)` because it stops at the first `)`, yielding a
-    // truncated result. pg_get_indexdef returns the full, Postgres-normalised
-    // CREATE INDEX statement which is round-trip-stable regardless of how the
-    // original statement was written.
     const indexes = await ds.query<
       Array<{
         indexname: string;
@@ -111,9 +84,6 @@ export async function dumpSchemaFingerprint(ds: DataSource): Promise<SchemaFinge
       })),
       indexes: indexes.map((i) => ({
         name: i.indexname,
-        // Use the full pg_get_indexdef output as a stable canonical form.
-        // Postgres normalises this regardless of how the original CREATE INDEX
-        // statement was written, so it is round-trip-safe.
         definition: i.column_repr,
         unique: i.is_unique,
       })),

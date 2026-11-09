@@ -9,13 +9,11 @@ import {
   type ScrubbableEvent,
 } from './sentry-scrubber';
 
-/** Factory — fake Sentry event with overridable sections. */
 const makeFakeEvent = (overrides: Partial<ScrubbableEvent> = {}): ScrubbableEvent => ({
   request: { headers: {}, data: {}, url: 'https://app.musaium.example/' },
   ...overrides,
 });
 
-/** Factory — fake Sentry breadcrumb defaulting to category:http. */
 const makeFakeBreadcrumb = (
   overrides: Partial<ScrubbableBreadcrumb> = {},
 ): ScrubbableBreadcrumb => ({

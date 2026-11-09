@@ -3,8 +3,6 @@ import { render, screen } from '@testing-library/react-native';
 
 import { makeAssistantMessage, makeEnrichedImage } from '../../../helpers/factories';
 
-// Mock heavy sub-components — keep the test focused on the
-// skeleton-vs-carousel swap behaviour (C2.4 / Q1 option (b)).
 jest.mock('@/features/chat/ui/MarkdownBubble', () => {
   const { Text } = require('react-native');
   return {
@@ -86,8 +84,6 @@ describe('ChatMessageBubble — C2.4 skeleton ↔ carousel transition', () => {
 
     render(<ChatMessageBubble {...defaultProps} message={message} isStreaming />);
 
-    // While streaming with already-hydrated images, the skeleton hides.
-    // The real carousel only renders once isStreaming flips to false (post-T12.2 gate).
     expect(screen.queryByTestId('image-carousel-skeleton')).toBeNull();
   });
 

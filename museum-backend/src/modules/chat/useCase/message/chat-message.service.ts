@@ -9,8 +9,10 @@ import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/mes
 import { PrepareMessagePipeline } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
 import { ensureSessionAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, countedRefusal, serviceUnavailable } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { deriveTier } from '@shared/observability/derive-tier';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import type { PostAudioMessageInput, PostMessageInput } from '@modules/chat/domain/chat.types';
@@ -55,10 +57,6 @@ import type { DbLookupService } from '@modules/knowledge-extraction/useCase/look
 import type { AuditService } from '@shared/audit/audit.service';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * SEC — AppError + {statusCode,code} shape preserved verbatim; everything else
- * becomes 503 LLM_UNAVAILABLE (no 500 leak, no provider-name leak).
- */
 const mapOrchestratorError = (err: unknown, requestId?: string): Error => {
   if (err instanceof AppError) return err;
   const candidate = err as { statusCode?: unknown; code?: unknown } | undefined;
@@ -71,7 +69,7 @@ const mapOrchestratorError = (err: unknown, requestId?: string): Error => {
   }
   logger.warn('orchestrator_error_mapped_to_503', {
     requestId,
-    error: err instanceof Error ? err.message : String(err),
+    error: errorMessage(err),
   });
   return serviceUnavailable('LLM provider unavailable', { code: 'LLM_UNAVAILABLE' });
 };
@@ -83,17 +81,6 @@ interface LlmCacheCtx {
   orchestratorInput: { image?: unknown };
   sessionId: string;
   requestId: string | undefined;
-  /**
-   * PR-P0-1 (2026-05-23) — exact `llm:{KEY_VERSION}:*` Redis key emitted by
-   * `LlmCacheServiceImpl.computeKey()` on the lookup OR store path.
-   * Threaded into `commitAssistantResponse` so the assistant `ChatMessage`
-   * row is stamped with the key for later feedback-driven invalidation.
-   * Populated on both cache-MISS-then-store and cache-HIT branches (a hit
-   * still writes a NEW assistant row — that row gets the SAME key as the
-   * cached entry, so feedback on either copy invalidates the shared entry).
-   * Undefined when the cache is bypassed (image w/o visual signature, no
-   * llmCache configured, image-only path with empty sanitizedText).
-   */
   cacheKey?: string;
 }
 
@@ -106,22 +93,14 @@ export interface ChatEnrichmentDeps {
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
-  /** GDPR — gates whether location reaches LLM at all. */
   locationConsentChecker?: LocationConsentChecker;
-  /**
-   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
-   * `third_party_ai_<text|image>_<provider>` scopes (R2/R3). Without checker
-   * the legacy always-allow path is preserved (pre-launch migration window).
-   */
   thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
-  /** W3 (T5.4) — looked up by pipeline for the `[CURRENT ARTWORK]` prompt section. */
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
 
 export interface ChatSafetyDeps {
   audit?: AuditService;
   llmJudge?: LlmJudgeFn;
-  /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
   frictionStore?: IGuardrailFrictionStore;
   frictionSessionThreshold?: number;
@@ -129,22 +108,19 @@ export interface ChatSafetyDeps {
 }
 
 export interface ChatMessageServiceDeps {
-  repository: ChatRepository; // 1 — session + message persistence
-  orchestrator: ChatOrchestrator; // 2 — LLM call
-  imageStorage: ImageStorage; // 3 — upload / ref resolution
-  audioTranscriber?: AudioTranscriber; // 4 — STT (postAudioMessage path)
-  cache?: CacheService; // 5 — response caching
-  ocr?: OcrService; // 6 — OCR text extraction from images
+  repository: ChatRepository;
+  orchestrator: ChatOrchestrator;
+  imageStorage: ImageStorage;
+  audioTranscriber?: AudioTranscriber;
+  cache?: CacheService;
+  ocr?: OcrService;
   enrichment?: ChatEnrichmentDeps;
   safety?: ChatSafetyDeps;
-  /** GDPR Art. 5(1)(c) EXIF/metadata stripper. */
   imageProcessor?: ImageProcessorPort;
-  /** Bypass: streaming path, env.llm.cacheEnabled=false, image present. */
   llmCache?: LlmCacheService;
   urlHeadProbe?: UrlHeadProbe;
 }
 
-/** Delegates pre-LLM to PrepareMessagePipeline, then orchestrator + commit. */
 export class ChatMessageService {
   private readonly repository: ChatRepository;
   private readonly orchestrator: ChatOrchestrator;
@@ -155,7 +131,6 @@ export class ChatMessageService {
   private readonly userMemory?: UserMemoryService;
   private readonly llmCache?: LlmCacheService;
   private readonly urlHeadProbe?: UrlHeadProbe;
-  /** Hybrid-gravity (2026-06-01) — friction policy collaborator (design §5). */
   private readonly friction: FrictionEscalationService;
 
   constructor(deps: ChatMessageServiceDeps) {
@@ -234,8 +209,6 @@ export class ChatMessageService {
         ip: auditCtx?.ip,
         routerFacts: prep.routerFacts,
         routerSources: prep.routerSources,
-        // PR-P0-1 (2026-05-23) — stamp the LLM-cache-invalidation cookie
-        // on the assistant row so feedback can purge the exact entry.
         cacheKey: auditCtx?.cacheKey ?? null,
       },
     );
@@ -272,10 +245,6 @@ export class ChatMessageService {
     };
     const cached = await this.tryLlmCacheLookup(cacheCtx);
     if (cached) {
-      // PR-P0-1 (2026-05-23) — cache-HIT path still writes a NEW assistant
-      // row ; stamp the SAME `cacheKey` as the cached entry so feedback on
-      // either copy invalidates the shared cache line. `cacheCtx.cacheKey`
-      // is populated by `tryLlmCacheLookup` (mirror of `tryLlmCacheStore`).
       return await this.commitResponse(sessionId, prep, cached, {
         requestId,
         ip,
@@ -301,10 +270,6 @@ export class ChatMessageService {
       throw mapOrchestratorError(err, requestId);
     }
 
-    // Off-topic crossed a threshold → SUPPRESS the generated answer and return
-    // the cool-down (the generation's tokens are already paid — abort is an
-    // unwired optimisation, see design §0). Skip the LLM cache store: a refusal
-    // must never be cached.
     if (friction.kind === 'cooldown') {
       return await this.buildCoolDownResult(sessionId, prep);
     }
@@ -312,9 +277,6 @@ export class ChatMessageService {
     const aiResult = friction.aiResult;
     await this.tryLlmCacheStore(cacheCtx, aiResult);
 
-    // PR-P0-1 (2026-05-23) — stamp the cookie on the persisted assistant row
-    // so feedback can purge the exact entry. `cacheCtx.cacheKey` is null when
-    // the cache was bypassed (image w/o signature, no llmCache, empty text).
     return await this.commitResponse(sessionId, prep, aiResult, {
       requestId,
       ip,
@@ -322,13 +284,6 @@ export class ChatMessageService {
     });
   }
 
-  /**
-   * Hybrid-gravity (2026-06-01) — on a SECURITY hard-block (V1 keyword / sidecar
-   * block, non-off_topic reason) records a SECURITY-weight strike (2) on session
-   * + principal so a repeat injection / PII spammer escalates into the global
-   * cool-down (design §5 / spec R2). FAIL-SOFT: NEVER alters the hard-block
-   * already encoded in `prep.result`.
-   */
   private async recordSecurityStrikeOnRefusal(
     prep: PrepareRefused,
     sessionId: string,
@@ -346,11 +301,6 @@ export class ChatMessageService {
     });
   }
 
-  /**
-   * Persists the assistant cool-down refusal (warm `refocus` copy,
-   * `policy:off_topic` citation). The user message was ALREADY persisted by
-   * `prepare`, so only the refusal is written here (no double-persist).
-   */
   private async buildCoolDownResult(
     sessionId: string,
     prep: PrepareReady,
@@ -361,23 +311,14 @@ export class ChatMessageService {
     });
   }
 
-  /** G — Attempts cache lookup; returns the cached result on hit, null on miss/bypass. */
   private async tryLlmCacheLookup(ctx: LlmCacheCtx): Promise<OrchestratorOutput | null> {
     const llmCache = this.llmCache;
     if (!llmCache) return null;
-    // C3 (R11/R12) — image presence alone is no longer a bypass condition.
-    // Bypass only when an image is present BUT no visual signature was
-    // computable (url-source, or image processing failed). Text-only paths
-    // fall through identically to today (R8 — legacy keys preserved).
     const hasImage = Boolean(ctx.input.image ?? ctx.orchestratorInput.image);
     const hasVisualSignature = Boolean(ctx.prep.imageContentHash);
     if (hasImage && !hasVisualSignature) return null;
     const cacheInput = buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return null;
-    // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
-    // lookup so the cache-HIT branch can stamp the persisted assistant row
-    // with the same cookie used by `LlmCacheServiceImpl.lookup`. Pure (no
-    // I/O) — identical derivation to `lookup`/`store` internals.
     ctx.cacheKey = llmCache.computeKey(cacheInput);
     const result = await llmCache.lookup<OrchestratorOutput>(cacheInput);
     if (result.hit && result.value) {
@@ -393,7 +334,6 @@ export class ChatMessageService {
     return null;
   }
 
-  /** Bypass mirrors lookup (invariant: miss→store→hit). */
   private async tryLlmCacheStore(ctx: LlmCacheCtx, aiResult: OrchestratorOutput): Promise<void> {
     const llmCache = this.llmCache;
     if (!llmCache || aiResult.degraded) return;
@@ -402,10 +342,6 @@ export class ChatMessageService {
     if (hasImage && !hasVisualSignature) return;
     const cacheInput = buildLlmCacheInput(ctx.prep, ctx.sanitizedText, ctx.input);
     if (!cacheInput) return;
-    // PR-P0-1 (2026-05-23) — stash the exact byte-string key BEFORE the
-    // store so the assistant row gets stamped with the SAME cookie that
-    // hits Redis. Idempotent if `tryLlmCacheLookup` already populated it
-    // (same `cacheInput` → same key — derivation is pure).
     ctx.cacheKey = llmCache.computeKey(cacheInput);
     await llmCache.store(cacheInput, aiResult);
     logger.info('llm_cache_miss', {
@@ -417,7 +353,6 @@ export class ChatMessageService {
     });
   }
 
-  /** Transcribes an audio message then delegates to postMessage for LLM processing. */
   async postAudioMessage(
     sessionId: string,
     input: PostAudioMessageInput,
@@ -429,8 +364,6 @@ export class ChatMessageService {
 
     validateAudioInput(input.audio);
 
-    // W7.4 (2026-05-17) — bias STT toward the artist/title proper nouns
-    // already discussed in this session. Public museum data only — no PII.
     const sttPromptBias = buildSttPromptBiasFromVisitContext(session.visitContext);
 
     let transcription: AudioTranscriptionResult;
@@ -438,13 +371,9 @@ export class ChatMessageService {
       transcription = await this.audioTranscriber.transcribe({
         base64: input.audio.base64,
         mimeType: input.audio.mimeType,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-        locale: input.context?.locale || session.locale || undefined,
+        locale: nonEmpty(input.context?.locale) ?? nonEmpty(session.locale),
         requestId,
         prompt: sttPromptBias,
-        // TD-20 (R13b/R12) — per-tenant scope for the STT cost path. `museumId`
-        // spread-omit (absent => key omitted, never `null`); `tier` derived from
-        // the requesting user via the shared `deriveTier`.
         ...(session.museumId != null ? { museumId: session.museumId } : {}),
         tier: deriveTier(currentUserId),
       });
@@ -452,7 +381,7 @@ export class ChatMessageService {
       if (err instanceof AppError) throw err;
       throw badRequest('audio_transcription_failed', {
         requestId,
-        cause: err instanceof Error ? err.message : String(err),
+        cause: errorMessage(err),
       });
     }
 

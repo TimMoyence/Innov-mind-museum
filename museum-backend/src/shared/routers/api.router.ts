@@ -53,7 +53,6 @@ export interface HealthPayload {
     llmConfigured?: boolean;
     redis?: 'up' | 'down' | 'skipped';
     llmCircuitBreaker?: CircuitBreakerHealthState;
-    /** Additive 2026-05-12 ; same redaction posture as llmCircuitBreaker — non-prod only. */
     llmGuard?: CircuitBreakerHealthState;
   };
   environment?: string;
@@ -63,7 +62,6 @@ export interface HealthPayload {
   responseTimeMs?: number;
 }
 
-/** SEC L4: production redacts commitSha/environment/version/llmConfigured/circuit-breakers/redis. */
 export const buildHealthPayload = (params: {
   checks: {
     database: 'up' | 'down';
@@ -159,7 +157,6 @@ export const createApiRouter = ({
       },
       llmConfigured,
     });
-    // SEC L4: responseTimeMs is a side-channel — non-prod only.
     if (env.nodeEnv !== 'production') {
       payload.responseTimeMs = responseTimeMs;
     }
@@ -168,23 +165,11 @@ export const createApiRouter = ({
     res.status(httpStatus).json(payload);
   });
 
-  // Semantic deep-health (Phase 1 perennial). Exercises decision paths (sidecar /scan,
-  // DB SELECT, Redis PING), aggregates qualitative verdict. Distinct from TCP-up — a
-  // sidecar accepting connections but blocking every probe = `degraded`, not `up`.
-  // Returns 200 even on down — body IS the status report.
-
   mountDomainRouters(router, chatService, cacheService);
 
   return router;
 };
 
-/**
- * Lazy singleton — tests injecting own chatService skip Redis connect cost; missing
- * Redis config degrades to 503 rather than crashing boot.
- * Gated by `env.extractionWorkerEnabled`: false → BullMQ adapter NEVER instantiated
- * (no ioredis client, no ECONNREFUSED floods). /museums/:id/enrichment degrades to
- * "no use case" — same fail-open path as Redis-down prod.
- */
 let cachedEnrichUseCase: EnrichMuseumUseCase | null | undefined;
 
 function resolveEnrichMuseumUseCase(): EnrichMuseumUseCase | undefined {
@@ -218,20 +203,17 @@ function mountDomainRouters(
 ): void {
   router.use(
     '/chat',
-    createChatRouter(
-      chatService,
-      getArtKeywordRepository(),
-      getUserMemoryService(),
-      getCompareImageUseCase(),
-      getCompareSessionAccessVerifier(),
-      getMessageExplanationUseCase(),
-      getUpdateSessionContextUseCase(),
-    ),
+    createChatRouter(chatService, {
+      artKeywordRepo: getArtKeywordRepository(),
+      userMemoryService: getUserMemoryService(),
+      compareImageUseCase: getCompareImageUseCase(),
+      compareSessionAccessVerifier: getCompareSessionAccessVerifier(),
+      getMessageExplanationUseCase: getMessageExplanationUseCase(),
+      updateSessionContextUseCase: getUpdateSessionContextUseCase(),
+    }),
   );
   router.use('/auth/consent', consentRouter);
   router.use('/auth', authRouter);
-  // GDPR DSAR Art 15+20 — `GET /api/users/me/export`. Always uses `req.user.id`,
-  // never a path param (anti-IDOR per security audit § 3 T2).
   router.use('/users', meRouter);
   router.use('/daily-art', createDailyArtRouter(cacheService));
   router.use(
@@ -245,23 +227,17 @@ function mountDomainRouters(
 
   const resolvedCache = cacheService ?? new NoopCacheService();
   const lowDataPackService = buildLowDataPackService(resolvedCache);
-  // Stryker disable next-line StringLiteral: Express normalizes router.use('', X) to router.use('/', X) at mount time — the mount-path literal '' is therefore observationally identical to '/' for the low-data-pack root mount.
   router.use('/', createLowDataPackRouter(lowDataPackService));
 
-  // Stryker disable StringLiteral: Express normalizes the empty string mount path to '/' but the admin sub-routers expose their own /<path> routes, making the '/admin' prefix literal unobservable from black-box supertest hits that go through the parent /api mount — both mutations leave the admin probe reachable in the test harness even though the production routing intent differs.
   router.use('/admin', adminRouter);
-  // R2 W3.4 — admin CSV export (sessions / reviews / tickets).
   router.use('/admin', adminExportRouter);
   router.use('/admin', createCachePurgeRouter(resolvedCache));
-  // Stryker restore StringLiteral
   const artworkKnowledgeRepo = getArtworkKnowledgeRepo();
   if (artworkKnowledgeRepo) {
     router.use('/admin', createAdminKeRouter(artworkKnowledgeRepo));
   }
   router.use('/support', supportRouter);
   router.use('/reviews', reviewRouter);
-  // R4 W4.3 — B2B leads endpoint (POST /api/leads/b2b).
   router.use('/leads', leadsRouter);
-  // Wave C5 / T-C55 — Plausible funnel proxy (POST /api/telemetry/funnel).
   router.use('/telemetry', telemetryRouter);
 }

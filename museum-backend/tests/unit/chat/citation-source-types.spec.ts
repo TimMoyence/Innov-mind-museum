@@ -1,16 +1,3 @@
-/**
- * T2.1 — CitationSource + CitationSourceSchema + ChatAssistantMetadata.sources?
- *
- * Spec: `team-state/2026-05-11-c4-anti-hallucination/spec.md#R1`
- * Design: `team-state/2026-05-11-c4-anti-hallucination/design.md#4`
- *
- * Backward-compat (NFR8): legacy `citations?: string[]` MUST coexist with new
- * `sources?: CitationSource[]` for at least one release cycle.
- *
- * String-match clamp (NG2): `quote.min(10).max(500)` mitigates trivial-match
- * false positives without resorting to fuzzy matching.
- */
-
 import {
   CitationSourceSchema,
   type CitationSource,

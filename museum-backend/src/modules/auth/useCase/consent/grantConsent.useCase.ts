@@ -7,7 +7,6 @@ import type { UserConsent } from '@modules/auth/domain/consent/userConsent.entit
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type { AuditLogEntry } from '@shared/audit';
 
-/** Subset of AuditService (decoupled for tests). */
 export interface ConsentAuditSink {
   log(entry: AuditLogEntry): Promise<void>;
 }
@@ -23,11 +22,6 @@ export class GrantConsentUseCase {
     private readonly auditSink?: ConsentAuditSink,
   ) {}
 
-  /**
-   * Emits an `AUDIT_CONSENT_GRANTED_*` hash-chained audit row on success.
-   * Audit emission is awaited but never throws — a failing audit pipeline
-   * must not break registration/revocation (the consent row is already durable).
-   */
   async execute(
     userId: number,
     scope: string,

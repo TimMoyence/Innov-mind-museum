@@ -35,7 +35,6 @@ import type { CacheService } from '@shared/cache/cache.port';
 import type { LlmJudgeFn } from '@modules/chat/useCase/guardrail/guardrail-evaluation.types';
 import type { IGuardrailFrictionStore } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 
-/** Test utility: in-memory ChatRepository implementation that stores sessions and messages in Maps. */
 class InMemoryChatRepository implements ChatRepository {
   private readonly sessions = new Map<string, ChatSession>();
   private readonly messages = new Map<string, ChatMessage[]>();
@@ -179,10 +178,6 @@ class InMemoryChatRepository implements ChatRepository {
     return { userMessage: userMsg, refusal };
   }
 
-  /**
-   * @param input
-   * @deprecated Use artworkMatch field in persistMessage
-   */
   async persistArtworkMatch(input: PersistArtworkMatchInput): Promise<void> {
     this.artworkMatches.push(input);
   }
@@ -242,8 +237,6 @@ class InMemoryChatRepository implements ChatRepository {
             imageRef: msg.imageRef,
             createdAt: msg.createdAt.toISOString(),
             metadata: msg.metadata,
-            // Cycle 4 (DSAR Art.15/20 — B-03) — allow-list per field (D-2);
-            // `[]` when none (EARS-3). Mirrors the real TypeORM mapping.
             artworkMatches: msg.artworkMatches.map((m) => ({
               artworkId: m.artworkId ?? null,
               title: m.title ?? null,
@@ -414,7 +407,6 @@ class InMemoryChatRepository implements ChatRepository {
   }
 }
 
-/** Test utility: stub ChatOrchestrator that returns a deterministic synthetic response. */
 class FakeOrchestrator implements ChatOrchestrator {
   private readonly fakeOutput: OrchestratorOutput = {
     text: 'Synthetic assistant response',
@@ -449,67 +441,17 @@ interface BuildChatTestServiceOptions {
   tts?: TextToSpeechService;
   cache?: CacheService;
   ocr?: OcrService;
-  /**
-   * C4.1 T6.2 — optional `KnowledgeRouterPort` stub. When set, threads through
-   * to `ChatService` so integration tests can exercise the prepare-pipeline →
-   * router → orchestrator wiring without instantiating the full
-   * `ChatModule.build()` adapter graph (Wikidata / WebSearch / judge clients).
-   */
   knowledgeRouter?: KnowledgeRouterPort;
-  /**
-   * Geo wiring (opt-in). When set, the prepare-message pipeline resolves
-   * `context.location` ("lat:X,lng:Y") into a `<visitor_context>` line for the
-   * LLM prompt — in-museum anchoring + outdoor reverse-geocode + nearby-museum
-   * proximity suggestions. Real-LLM geo tests inject a deterministic
-   * `LocationResolver` (in-memory museum repo + stubbed reverse-geocode) so the
-   * model is exercised end-to-end without hitting Nominatim. See
-   * `buildAiTestServiceWithGeo` in tests/ai/setup/ai-test-helpers.ts.
-   */
   locationResolver?: LocationResolver;
-  /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
-  /** Museum repository — source of truth for nearby-museum proximity lookups. */
   museumRepository?: IMuseumRepository;
-  /**
-   * V2 LLM-Guard sidecar provider (ADR-047/048). Pass-through to
-   * `ChatService` (`guardrailProvider` dep). Real-LLM ai-tests inject a REAL
-   * adapter (live sidecar) to exercise enforce-mode blocking end-to-end; the
-   * helper performs NO defaulting (NFR-NOMOCK-1).
-   */
-  /**
-   * Provider observe-vs-enforce mode. Forwarded verbatim — including `false`.
-   * Downstream default is `?? true` (observe-only) in
-   * `GuardrailEvaluationService` (guardrail-evaluation.service.ts:54), so a test
-   * MUST set `false` here to reach enforce-mode blocking. Helper does NOT coerce.
-   */
-  /**
-   * V2 LLM-judge callable (F4). Pass-through to `ChatService` (`llmJudge` dep).
-   * Gated downstream by `llmJudgeEnabled` + the `judgeMinMessageLength` (default
-   * 50) threshold (eval/v2-layers.helper.ts:38-39).
-   */
   llmJudge?: LlmJudgeFn;
-  /**
-   * Judge enable toggle. Forwarded verbatim — including `true`. Downstream
-   * default is `?? false` (disabled) (guardrail-evaluation.service.ts:56), so a
-   * test MUST set `true` here for the judge layer to run. Helper does NOT coerce.
-   */
   llmJudgeEnabled?: boolean;
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — friction store seam + config.
-   * Forwarded verbatim to `ChatService`. When `frictionStore` is omitted the
-   * model degrades to plain soft-redirect (no escalation).
-   */
   frictionStore?: IGuardrailFrictionStore;
   frictionSessionThreshold?: number;
   frictionUserThreshold?: number;
 }
 
-/**
- * Test utility: builds a ChatService wired with in-memory repository, local image storage, and optional fake orchestrator.
- * Supports legacy positional args and new options object.
- * @param orchestrator
- * @param audioTranscriber
- */
 export function buildChatTestService(
   orchestrator?: ChatOrchestrator,
   audioTranscriber?: AudioTranscriber,

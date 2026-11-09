@@ -1,35 +1,27 @@
 import type { JSX } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
+import { HorizontalStrip } from './HorizontalStrip';
 import { useTheme } from './ThemeContext';
 import { semantic, space } from './tokens';
 
-/** Describes a single action item rendered inside a FloatingContextMenu. */
 export interface ContextMenuAction {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress?: () => void;
-  /** When true the button is visually highlighted (e.g. active toggle). */
   active?: boolean;
-  /** When true, only the icon is rendered; label is kept as accessibilityLabel. */
   iconOnly?: boolean;
 }
 
 interface FloatingContextMenuProps {
   actions: ContextMenuAction[];
-  /**
-   * When true, the pill is wrapped in a horizontal ScrollView so its content
-   * can scroll horizontally if it exceeds the available width. Defaults to false
-   * to preserve the existing layout for callers that rely on the static pill.
-   */
   scrollable?: boolean;
 }
 
-/** Renders a blurred floating pill-shaped menu bar with icon-labeled action buttons. */
 export const FloatingContextMenu = ({
   actions,
   scrollable = false,
@@ -95,15 +87,7 @@ export const FloatingContextMenu = ({
   );
 
   if (scrollable) {
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {pill}
-      </ScrollView>
-    );
+    return <HorizontalStrip contentContainerStyle={styles.scrollContent}>{pill}</HorizontalStrip>;
   }
 
   return pill;

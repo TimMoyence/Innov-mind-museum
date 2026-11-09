@@ -1,6 +1,3 @@
-/**
- * Admin dashboard page tests — loading state, stats rendering, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -8,8 +5,6 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from '@/app/[locale]/admin/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import type { AdminStats } from '@/lib/admin-types';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin',
@@ -32,8 +27,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 
 vi.mock('@/lib/api', () => ({
@@ -42,8 +35,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -51,8 +42,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 const mockStats: AdminStats = {
   totalUsers: 1250,
@@ -63,21 +52,13 @@ const mockStats: AdminStats = {
   recentSessions: 3200,
 };
 
-// ============================================================================
-// Dashboard page
-// ============================================================================
-
 describe('AdminDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders the dashboard heading', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending forever */
-      }),
-    ); // never resolves — stays in loading
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -89,11 +70,7 @@ describe('AdminDashboardPage', () => {
   });
 
   it('shows loading spinner while fetching stats', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending forever */
-      }),
-    ); // never resolves
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -101,7 +78,6 @@ describe('AdminDashboardPage', () => {
       </Providers>,
     );
 
-    // The spinner has animate-spin class
     const spinner = document.querySelector('.animate-spin');
     expect(spinner).toBeInTheDocument();
   });
@@ -115,18 +91,15 @@ describe('AdminDashboardPage', () => {
       </Providers>,
     );
 
-    // toLocaleString() formatting varies by environment — match flexibly
     await waitFor(() => {
       expect(screen.getByText('Total Users')).toBeInTheDocument();
     });
 
-    // Verify stat labels are rendered
     expect(screen.getByText('Total Sessions')).toBeInTheDocument();
     expect(screen.getByText('Total Messages')).toBeInTheDocument();
     expect(screen.getByText('New This Week')).toBeInTheDocument();
     expect(screen.getByText('Recent Sessions')).toBeInTheDocument();
 
-    // Verify numeric values are present (use regex to handle locale-specific separators)
     expect(screen.getByText(/1.?250/)).toBeInTheDocument();
     expect(screen.getByText(/8.?920/)).toBeInTheDocument();
     expect(screen.getByText(/45.?000/)).toBeInTheDocument();
@@ -147,7 +120,6 @@ describe('AdminDashboardPage', () => {
       expect(screen.getByText('Total Users')).toBeInTheDocument();
     });
 
-    // Spinner should be gone
     const spinner = document.querySelector('.animate-spin');
     expect(spinner).not.toBeInTheDocument();
   });
@@ -165,7 +137,6 @@ describe('AdminDashboardPage', () => {
       expect(screen.getByText('Network error')).toBeInTheDocument();
     });
 
-    // Stat cards should NOT be rendered
     expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
   });
 
@@ -193,8 +164,6 @@ describe('AdminDashboardPage', () => {
     );
 
     await waitFor(() => {
-      // Phase 3 web refactor: apiGet now accepts an optional `{signal}` 2nd
-      // arg propagated by `useFetchData`. Assertion stays at first-arg level.
       expect(mockApiGet).toHaveBeenCalled();
       expect(mockApiGet.mock.calls[0]?.[0]).toBe('/api/admin/stats');
     });

@@ -1,25 +1,3 @@
-/**
- * RUN_ID 2026-06-01-weak-net-idempotency — phase RED (UFR-022).
- *
- * W1-IDEM-01 — unit tests for the new idempotency dedup store (design §
- * "Architecture / BE store"). `remember(key, fn)`:
- *   - first call (miss)  → runs `fn` once, stores the result under a short TTL;
- *   - second call (hit)  → returns the STORED result WITHOUT re-running `fn`;
- *   - distinct keys      → `fn` runs once per key (no cross-key collision);
- *   - TTL expired        → the key is treated as new and `fn` runs again;
- *   - cache outage       → FAIL-OPEN: `fn` runs (the first send is NEVER
- *                          blocked), the store NEVER throws (spec R3).
- *
- * Modelled on `guardrail-friction.store.test.ts` (same in-process / redis
- * adapter split, same `InMemoryCacheService` stub, same DRY-fixture rule), but
- * the dedup store FAILS OPEN: a Redis outage must degrade to "treat as new"
- * (one extra create is acceptable; a 500 / a blocked first send is NOT).
- *
- * RED expectation: `@modules/chat/useCase/message/idempotency.store` does not
- * exist yet, so this file fails to compile/import → scoped run exits ≠ 0.
- *
- * Run scope: pnpm test -- --testPathPattern="idempotency"
- */
 import { type CacheService } from '@shared/cache/cache.port';
 
 import {
@@ -30,7 +8,6 @@ import {
 
 import { InMemoryCacheService } from '../../helpers/cache/inMemoryCacheService';
 
-// Shared key fixtures (DRY — no inline literals, docs/TEST_FACTORIES.md).
 const KEY_A = 'idem-key:user-42:sess-abc:k1';
 const KEY_B = 'idem-key:user-42:sess-abc:k2';
 
@@ -73,7 +50,6 @@ describe('idempotency.store — remember() (in-memory cache backend)', () => {
     const first = await remember(KEY_A, fn);
     const second = await remember(KEY_A, fn);
 
-    // Producer ran exactly once across both calls; second call replayed.
     expect(fn).toHaveBeenCalledTimes(1);
     expect(first).toEqual(RESULT_ONE);
     expect(second).toEqual(RESULT_ONE);
@@ -93,8 +69,6 @@ describe('idempotency.store — remember() (in-memory cache backend)', () => {
   });
 
   it('treats the key as new (re-runs the producer) once the stored result has TTL-expired', async () => {
-    // First call stores the result. We then evict it from the cache to model
-    // the short-TTL window having elapsed; the next call must re-run `fn`.
     const fn = jest
       .fn<Promise<StoredResult>, []>()
       .mockResolvedValueOnce(RESULT_ONE)
@@ -103,7 +77,6 @@ describe('idempotency.store — remember() (in-memory cache backend)', () => {
     const first = await remember(KEY_A, fn);
     expect(first).toEqual(RESULT_ONE);
 
-    // Simulate TTL expiry by clearing every entry the store wrote for this key.
     cache.clear();
 
     const second = await remember(KEY_A, fn);
@@ -171,7 +144,6 @@ describe('idempotency.store — FAIL-OPEN on cache outage (spec R3)', () => {
 
 describe('idempotency.store — in-process adapter null-result is a MISS (parity with Redis)', () => {
   beforeEach(() => {
-    // No CacheService → in-process adapter (dev / test / single-instance).
     __setIdempotencyStoreForTest(null);
     configureIdempotency({});
   });
@@ -181,9 +153,6 @@ describe('idempotency.store — in-process adapter null-result is a MISS (parity
   });
 
   it('re-runs the producer when the previously stored result was null (not a replay HIT)', async () => {
-    // A producer that yielded null/non-2xx (e.g. a transient failure path) must
-    // NOT be cached as a replay HIT: the in-process adapter must treat a stored
-    // null as a MISS and re-run, exactly like the Redis adapter (stored !== null).
     const fn = jest
       .fn<Promise<StoredResult | null>, []>()
       .mockResolvedValueOnce(null)

@@ -1,20 +1,3 @@
-// Cycle 1.5 (RUN_ID 2026-05-26-chat-pipeline-hardening) — 3-level geo consent.
-//
-// buildVisitorContextLine must branch on the resolver's `consentGranularity`:
-//   - `coarse` (location_coarse_to_llm only) → ship CITY only, never the quartier.
-//   - `full`   (location_to_llm)             → ship the QUARTIER (neighbourhood + city),
-//                                              degrading to city when no quartier (REQ-4a).
-// In-museum stays prioritary (museum name only, REQ-7). Non-geocoded → no city/quartier
-// (REQ-8). The Cycle 1 GPS barrier (`isCoordinateString`) stays intact (REQ-9/M14).
-//
-// These exercise `buildOrchestratorMessages` as a pure function over `OrchestratorInput`
-// (which carries `resolvedLocation?` already bearing `consentGranularity`). The NEW
-// behaviours (coarse-only → city, full → quartier, negative leak assertions) FAIL today
-// because the builder currently emits `reverseGeocodeCoarse` unconditionally and the
-// `consentGranularity` / `reverseGeocodeNeighbourhood` fields do not exist yet.
-//
-// Spec/Design: spec-cycle1_5.md (matrix M1-M15), design-cycle1_5.md (§ prompt-builder).
-
 import { buildOrchestratorMessages } from '@modules/chat/useCase/llm/llm-prompt-builder';
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
@@ -36,7 +19,6 @@ const userText = (result: ReturnType<typeof buildOrchestratorMessages>): string 
   return textPart?.text ?? '';
 };
 
-/** A `full`-granularity outdoor location with a quartier (Le Marais, Paris). */
 const fullWithQuartier = () =>
   makeResolvedLocation({
     consentGranularity: 'full',
@@ -60,7 +42,6 @@ describe('buildVisitorContextLine — 3-level geo consent granularity (cycle 1.5
       const text = userText(result);
       expect(text).toContain('visitor_context');
       expect(text).toContain('Paris, France');
-      // Coarse must NOT escalate to the quartier even when it is resolved.
       expect(text).not.toContain('Le Marais');
     });
 
@@ -131,7 +112,6 @@ describe('buildVisitorContextLine — 3-level geo consent granularity (cycle 1.5
         makeGeoInput({
           resolvedLocation: makeResolvedLocation({
             consentGranularity: 'full',
-            // REQ-4a: when no quartier, neighbourhood field already degraded to city.
             reverseGeocodeNeighbourhood: 'Bordeaux, France',
             reverseGeocodeCoarse: 'Bordeaux, France',
           }),
@@ -140,7 +120,6 @@ describe('buildVisitorContextLine — 3-level geo consent granularity (cycle 1.5
       const text = userText(result);
       expect(text).toContain('visitor_context');
       expect(text).toContain('Bordeaux');
-      // No empty quartier / dangling separator artefact.
       expect(text).not.toMatch(/outdoors in:\s*,/);
     });
 
@@ -180,7 +159,6 @@ describe('buildVisitorContextLine — 3-level geo consent granularity (cycle 1.5
     });
 
     it('M11: both scopes granted (full dominates, REQ-1) → ships QUARTIER + city', () => {
-      // A `full` ResolvedLocation models "both granted" — full wins per REQ-1.
       const result = buildOrchestratorMessages(
         makeGeoInput({ resolvedLocation: fullWithQuartier() }),
       );
@@ -196,14 +174,12 @@ describe('buildVisitorContextLine — 3-level geo consent granularity (cycle 1.5
             consentGranularity: 'full',
             reverseGeocodeNeighbourhood: 'Le Marais, Paris',
             reverseGeocodeCoarse: 'Paris, France',
-            // Fine analytics value carries street/postcode — must NEVER ship.
             reverseGeocode: '12 Rue de Rivoli, 75001 Paris, France',
           }),
         }),
       );
       const text = userText(result);
       expect(text).toContain('Le Marais');
-      // Negative assertions: no road, no house number, no postcode, no GPS marker.
       expect(text).not.toContain('Rue de Rivoli');
       expect(text).not.toContain('75001');
       expect(text).not.toContain('lat:');

@@ -1,56 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { useTranslation } from 'react-i18next';
 
 import { trackFunnelEvent } from '@/shared/analytics/plausible';
+import type { QuotaInfo } from '@/shared/types/quota-info';
+import { formatAppDate } from '@/shared/lib/formatDate';
 import { leadsApi } from '@/features/paywall/infrastructure/leadsApi';
-
-/**
- * Safe breadcrumb shim — handles the case where the test-utils Sentry mock
- * (which omits `addBreadcrumb`) overrides a per-file mock. Production Sentry
- * exposes the method ; the shim no-ops only in tests that don't re-mock.
- */
-const safeAddBreadcrumb = (breadcrumb: {
-  category: string;
-  type?: string;
-  message: string;
-  data?: unknown;
-}): void => {
-  const sentry = Sentry as unknown as { addBreadcrumb?: (b: unknown) => void };
-  if (typeof sentry.addBreadcrumb === 'function') {
-    sentry.addBreadcrumb(breadcrumb);
-  }
-};
-
-/**
- * R1 (C6) — Soft-paywall upsell modal. Strictly RN `<Modal>` native ; the
- * chat-ux bottom-sheet router is OFF-LIMITS per N2 / AC13 (its name is
- * never referenced here so the module-boundary sentinel stays green).
- * Dismissible via the close button + `onRequestClose` (hardware-back on
- * Android + swipe-down on iOS) per Q7 no-dark-pattern doctrine.
- *
- * Submission path :
- *  - email field + explicit consent checkbox (N6 — RGPD Art. 7) + hidden
- *    honeypot (`website`) forwarded to the BE for silent-drop policing.
- *  - submit fires `httpClient.post('/api/leads/paywall-interest', payload)`.
- *  - 202 → `paywall.success` shown + breadcrumb `paywall_email_captured`.
- *  - non-2xx → `paywall.error` inline, modal stays open (R28).
- *
- * No hardcoded UX strings — every visible literal comes from `t('paywall.*')`
- * (R29 / N8). Forbidden list enforced by the sentinel grep test.
- */
-
-interface QuotaReason {
-  tier: string;
-  currentCount: number;
-  limit: number;
-  resetAt: string;
-}
 
 interface QuotaUpsellModalProps {
   visible: boolean;
-  reason: QuotaReason | null;
+  reason: QuotaInfo | null;
   onClose: () => void;
 }
 
@@ -60,86 +20,34 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
-  // Honeypot — invisible to humans, hidden via `display: 'none'`. Bots that
-  // auto-fill every field forward a non-empty value → BE silent-drops (R23).
   const [website, setWebsite] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
 
-  // F2 corrective (2026-05-16, ultrareview bug_005) — Reset modal-local state on
-  // every visible→false transition. The modal subtree stays mounted across the
-  // app session (PaywallModalHost in _layout.tsx renders unconditionally), so
-  // RN <Modal visible={false}> only hides the native chrome — useState slots
-  // would otherwise persist into the next open with stale email + ticked consent
-  // + stale success/error banner.
-  //
-  // GDPR Art. 7 (consent renewal) is the non-negotiable driver : a consent tick
-  // inherited from a prior submission is NOT "specific + freely given" for the
-  // NEW operation. The email + banner resets are justified separately by UX
-  // trust (no zombie success/error on reopen) and KR4 funnel signal cleanliness
-  // (one paywall_email_captured per actual submit, not phantom-inherited UX).
-  //
-  // Justification (eslint-disable react-hooks/set-state-in-effect) : the rule's
-  // "you-might-not-need-an-effect" guidance does not apply here — `visible` is
-  // a parent-owned prop driven by an out-of-tree event (axios 402 interceptor
-  // → PaywallProvider.open). The reset is precisely the "synchronize React
-  // state with an external system boundary event" pattern the rule's docs
-  // exempt. Options (b) conditional mount and (c) key={openCounter} were
-  // rejected per F2.md §3.1 (iOS RN Modal unmount-mid-animation race + late
-  // setState warnings + TextInput focus loss). F2.md is the spec gate.
-  // Approved-by: docs/roadmap-night/specs/F2.md §5 T2 (D1 option (a)).
-  useEffect(() => {
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (wasVisible !== visible) {
+    setWasVisible(visible);
     if (!visible) {
-      /* eslint-disable react-hooks/set-state-in-effect */
       setEmail('');
       setConsent(false);
       setWebsite('');
       setState('idle');
-      /* eslint-enable react-hooks/set-state-in-effect */
     }
-  }, [visible]);
+  }
 
-  // F3 corrective (2026-05-16, ultrareview bug_010) — Format the BE-supplied
-  // ISO `resetAt` via Intl.DateTimeFormat. R1 §3.4 D4 explicitly mandated this
-  // but the original R1 green-agent shipped raw ISO interpolation, so users saw
-  // "Resets on 2026-06-01T00:00:00.000Z" verbatim. The memoized formatter keys
-  // on [resetAt, i18n.language] to avoid re-format thrash. Defensive fallback
-  // returns raw ISO on parse or Intl failure (NOT empty string — surfaces BE
-  // drift to QA rather than silently degrading).
-  //
-  // Dep extraction (resetAtIso primitive) — the React Compiler's
-  // preserve-manual-memoization rule rejects the `reason?.resetAt` optional
-  // chain in a deps array because it infers `reason` as the broader dep
-  // (object-level). Lifting `resetAt` to a primitive const lets the compiler
-  // and our memo agree on the same granular key, satisfying F3.N5 (per-tuple
-  // memo) without weakening to `[reason, i18n.language]` reference instability.
   const resetAtIso = reason?.resetAt ?? '';
-  const formattedReset = useMemo(() => {
-    if (!resetAtIso) return '';
-    try {
-      const date = new Date(resetAtIso);
-      if (Number.isNaN(date.getTime())) {
-        // Defensive : invalid ISO → fall back to raw so a BE drift is visible
-        // to QA rather than rendering "Invalid Date" or empty string.
-        return resetAtIso;
-      }
-      return new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' }).format(date);
-    } catch {
-      // Hermes Intl shouldn't throw on supported locales, but defensive fallback
-      // keeps the modal usable if Intl is unexpectedly stripped (R1 §3.5 N3).
-      return resetAtIso;
-    }
-  }, [resetAtIso, i18n.language]);
+  const formattedReset = useMemo(
+    () => formatAppDate(resetAtIso, i18n.language, { dateStyle: 'long' }),
+    [resetAtIso, i18n.language],
+  );
 
   const onSubmit = async (): Promise<void> => {
-    if (!consent) return; // N6 — submit disabled until explicit consent.
+    if (!consent) return;
     setState('sending');
-    safeAddBreadcrumb({
+    Sentry.addBreadcrumb({
       category: 'paywall',
       type: 'user',
       message: 'paywall_cta_clicked',
     });
-    // Wave C5 / T-C54 — Plausible funnel emit (tier only ; NO email — PII strip
-    // is defense-in-depth in both FE and BE adapters per PATTERNS.md §5 anti-1).
     void trackFunnelEvent('paywall_cta_clicked', {
       tier: reason?.tier ?? 'unknown',
     });
@@ -150,14 +58,11 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
         website,
       });
       setState('success');
-      safeAddBreadcrumb({
+      Sentry.addBreadcrumb({
         category: 'paywall',
         type: 'info',
         message: 'paywall_email_captured',
       });
-      // Wave C5 / T-C54 — second funnel event after successful capture.
-      // Caller MUST NOT pass `email` ; the adapter would strip it anyway,
-      // but we keep the call site clean as a code-review signal.
       void trackFunnelEvent('paywall_email_captured', {
         tier: reason?.tier ?? 'unknown',
       });
@@ -184,11 +89,9 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
           </View>
 
           <Text style={styles.body}>{t('paywall.modalBody')}</Text>
-          {reason !== null && (
-            <Text style={styles.meta}>
-              {t('paywall.resetsOn')} {formattedReset}
-            </Text>
-          )}
+          {formattedReset ? (
+            <Text style={styles.meta}>{t('paywall.resetsOn', { date: formattedReset })}</Text>
+          ) : null}
 
           <Text style={styles.label}>{t('paywall.fieldEmail')}</Text>
           <TextInput
@@ -202,7 +105,6 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
             testID="quota-upsell-email"
           />
 
-          {/* Honeypot — `display:'none'` per StyleSheet ; never rendered to a11y. */}
           <TextInput
             value={website}
             onChangeText={setWebsite}
@@ -246,9 +148,6 @@ export function QuotaUpsellModal({ visible, reason, onClose }: QuotaUpsellModalP
   );
 }
 
-// R1 (C6) — palette pinned at the module level so the StyleSheet stays
-// free of inline color literals (react-native/no-color-literals). V1.1
-// will move these to the shared theme tokens once the modal is themed.
 const palette = {
   backdrop: 'rgba(0,0,0,0.4)',
   cardBg: '#fff',

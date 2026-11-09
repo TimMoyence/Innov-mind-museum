@@ -78,7 +78,6 @@ describe('AdminRepositoryPg', () => {
     sut = new AdminRepositoryPg(dataSource);
   });
 
-  // ─── listUsers ───
   describe('listUsers', () => {
     it('returns paginated users without filters', async () => {
       const users = [makeUser({ id: 1 }), makeUser({ id: 2 })];
@@ -165,7 +164,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── changeUserRole ───
   describe('changeUserRole', () => {
     it('updates role and returns user DTO', async () => {
       const user = makeUser({ role: 'visitor' });
@@ -191,7 +189,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── countAdmins (admin + super_admin since C1 PR-G) ───
   describe('countAdmins', () => {
     it('returns combined count of admin + super_admin users', async () => {
       userRepo.countBy.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
@@ -212,7 +209,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── listAuditLogs ───
   describe('listAuditLogs', () => {
     it('returns paginated audit logs without filters', async () => {
       const logs = [makeAuditLog()];
@@ -282,17 +278,13 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── getStats ───
   describe('getStats', () => {
     it('returns aggregated stats from all tables', async () => {
-      // Users by role
       userQb.getRawMany.mockResolvedValue([
         { role: 'visitor', total: '100', recent: '10' },
         { role: 'admin', total: '5', recent: '1' },
       ]);
-      // Sessions
       sessionQb.getRawOne.mockResolvedValue({ total: '500', recent: '50' });
-      // Messages
       messageQb.getRawOne.mockResolvedValue({ total: '2000' });
 
       const result = await sut.getStats();
@@ -320,7 +312,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── listReports ───
   describe('listReports', () => {
     it('returns paginated reports with message data', async () => {
       const reports = [makeReport()];
@@ -381,7 +372,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── resolveReport ───
   describe('resolveReport', () => {
     it('updates report status and reviewer info', async () => {
       const report = makeReport();
@@ -429,7 +419,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── getUsageAnalytics ───
   describe('getUsageAnalytics', () => {
     it('returns time-series data with daily granularity', async () => {
       sessionQb.getRawMany
@@ -471,32 +460,24 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── getContentAnalytics ───
   describe('getContentAnalytics', () => {
     it('returns top artworks, museums, and guardrail rate', async () => {
-      // The method uses this.dataSource.getRepository(ArtworkMatch) directly
-      // which returns a repo with its own query builder
       const artworkQb = makeMockQb();
       artworkQb.getRawMany.mockResolvedValue([
         { title: 'Mona Lisa', artist: 'Da Vinci', c: '100' },
       ]);
 
-      // Museum query uses sessionQb
       sessionQb.getRawMany.mockResolvedValue([{ name: 'Louvre', c: '50' }]);
 
-      // Guardrail queries use auditQb
-      // Two separate createQueryBuilder calls: total and blocked
       const totalQb = makeMockQb();
       totalQb.getRawOne.mockResolvedValue({ total: '1000' });
       const blockedQb = makeMockQb();
       blockedQb.getRawOne.mockResolvedValue({ total: '10' });
 
-      // Override auditRepo to return different qbs
       auditRepo.createQueryBuilder
         .mockReturnValueOnce(totalQb as never)
         .mockReturnValueOnce(blockedQb as never);
 
-      // Override dataSource.getRepository for ArtworkMatch
       const origGetRepo = dataSource.getRepository as jest.Mock;
       origGetRepo.mockImplementation((entity: unknown) => {
         if (entity === User) return { createQueryBuilder: jest.fn(() => userQb) };
@@ -504,11 +485,9 @@ describe('AdminRepositoryPg', () => {
         if (entity === MessageReport) return { createQueryBuilder: jest.fn(() => reportQb) };
         if (entity === ChatSession) return { createQueryBuilder: jest.fn(() => sessionQb) };
         if (entity === ChatMessage) return { createQueryBuilder: jest.fn(() => messageQb) };
-        // ArtworkMatch or anything else
         return { createQueryBuilder: jest.fn(() => artworkQb) };
       });
 
-      // Re-instantiate to pick up new getRepository behavior
       sut = new AdminRepositoryPg(dataSource);
 
       const result = await sut.getContentAnalytics({});
@@ -553,7 +532,6 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  // ─── getEngagementAnalytics ───
   describe('getEngagementAnalytics', () => {
     it('returns engagement metrics', async () => {
       sessionQb.getRawOne
@@ -561,10 +539,8 @@ describe('AdminRepositoryPg', () => {
         .mockResolvedValueOnce({ avg_dur: '12.5' })
         .mockResolvedValueOnce({ total_unique: '100' });
 
-      // Raw query for returning users
       (dataSource.query as jest.Mock).mockResolvedValue([{ returning_users: '30' }]);
 
-      // Need fresh qbs for the subquery-based calls
       const freshSessionQb1 = makeMockQb();
       freshSessionQb1.getRawOne.mockResolvedValue({ avg_msg: '3.5' });
       freshSessionQb1.from.mockReturnValue(freshSessionQb1);
@@ -621,7 +597,6 @@ describe('AdminRepositoryPg', () => {
         to: '2025-06-30',
       });
 
-      // The raw query should include date parameters
       const queryCall = (dataSource.query as jest.Mock).mock.calls[0];
       expect(queryCall[1]).toContain('2025-01-01');
       expect(queryCall[1]).toContain('2025-06-30');

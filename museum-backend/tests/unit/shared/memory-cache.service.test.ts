@@ -40,7 +40,7 @@ describe('MemoryCacheService', () => {
       cache = new MemoryCacheService({ maxEntries: 2 });
       await cache.set('a', 1);
       await cache.set('b', 2);
-      await cache.set('c', 3); // evicts 'a'
+      await cache.set('c', 3);
       expect(await cache.get('a')).toBeNull();
       expect(await cache.get('b')).toBe(2);
       expect(await cache.get('c')).toBe(3);
@@ -50,7 +50,7 @@ describe('MemoryCacheService', () => {
       cache = new MemoryCacheService({ maxEntries: 2 });
       await cache.set('a', 1);
       await cache.set('b', 2);
-      await cache.set('a', 11); // overwrite
+      await cache.set('a', 11);
       expect(await cache.get('a')).toBe(11);
       expect(await cache.get('b')).toBe(2);
     });
@@ -135,7 +135,7 @@ describe('MemoryCacheService', () => {
       await cache.set('a', 1);
       await cache.destroy();
       expect(await cache.get('a')).toBeNull();
-      await cache.destroy(); // second call must not throw
+      await cache.destroy();
     });
   });
 
@@ -145,8 +145,8 @@ describe('MemoryCacheService', () => {
       cache = new MemoryCacheService();
       await cache.set('short', 'x', 1);
       await cache.set('long', 'y', 3600);
-      jest.advanceTimersByTime(2_000); // past short TTL
-      jest.advanceTimersByTime(60_000); // trigger the GC interval
+      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(60_000);
       expect(await cache.get('short')).toBeNull();
       expect(await cache.get('long')).toBe('y');
     });

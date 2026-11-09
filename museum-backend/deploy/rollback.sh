@@ -1,26 +1,5 @@
 #!/usr/bin/env bash
-#
-# Auto-rollback script invoked by the CI deploy workflow on smoke-test failure.
-#
-# Reverses both the container image AND any migrations applied during the
-# failing deploy. Called with:
-#   rollback.sh <compose-file> <service-name> <image-ref>
-#
-# State directory ${HOME}/.museum-rollback/<service> holds:
-#   - pre-count.txt              # migration count captured before this deploy
-#   - applied-count.txt          # number of migrations newly applied by this deploy
-#   - previous-image-tag.txt     # IMAGE_TAG (commit SHA) live before this deploy —
-#                                # the SHA-pinned rollback target restored into .env
-#
-# Exit codes:
-#   0  rollback succeeded
-#   42 migration revert failed
-#   43 image-tag restore / restart failed
-#   44 post-rollback healthcheck failed
-#
 set -u
-# NOTE: do NOT use `set -e` here — we want to capture partial failures and
-# report a precise exit code so the CI workflow can surface the right runbook link.
 
 COMPOSE_FILE="${1:?compose file path required}"
 SERVICE="${2:?service name required}"
@@ -35,12 +14,6 @@ if [ ! -d "${STATE_DIR}" ]; then
   exit 0
 fi
 
-# Source of truth = the migrations table itself.
-# Read pre-count.txt (baseline written before migration:run) and query
-# the DB right now for the current count, then revert the delta. This is
-# resilient to a stale or missing applied-count.txt (e.g., deploy crashed
-# between migration:run and the file write) which previously made rollback
-# silently revert 0 migrations.
 APPLIED_COUNT=0
 PRE_COUNT=""
 CURRENT_COUNT=""
@@ -60,7 +33,6 @@ if [ -n "${PRE_COUNT}" ] && [ -n "${CURRENT_COUNT}" ] \
   APPLIED_COUNT="${DELTA}"
   echo "[rollback] db-derived count: pre=${PRE_COUNT} current=${CURRENT_COUNT} → revert ${APPLIED_COUNT}"
 elif [ -f "${APPLIED_FILE}" ]; then
-  # Fallback: trust the file written by CI after migration:run.
   APPLIED_COUNT="$(cat "${APPLIED_FILE}" | tr -d '[:space:]')"
   APPLIED_COUNT="${APPLIED_COUNT:-0}"
   echo "[rollback] db-query failed; falling back to applied-count.txt = ${APPLIED_COUNT}"
@@ -70,7 +42,6 @@ fi
 
 echo "[rollback] starting for service=${SERVICE} (applied migrations this deploy: ${APPLIED_COUNT})"
 
-# ─── 1. Revert migrations (newest first) ────────────────────────────────────
 if [ "${APPLIED_COUNT}" -gt 0 ]; then
   echo "[rollback] reverting ${APPLIED_COUNT} migration(s)"
   i=0
@@ -89,13 +60,6 @@ else
   echo "[rollback] no new migrations to revert (code-only rollback)"
 fi
 
-# ─── 2. Restore the previous IMAGE_TAG and restart the service ─────────────
-# SHA-pinned scheme: the prod compose references ...museum-backend:${IMAGE_TAG}
-# from /srv/museum/.env (NEVER :latest). The pre-deploy step captured the tag
-# that was live before this deploy into previous-image-tag.txt. Restore it into
-# .env and recreate the container so it boots the previous SHA. (The old
-# :previous→:latest retag never worked under SHA-pinning — it FATAL-ed on
-# 2026-06-05 because :latest is never present locally.)
 ENV_FILE=/srv/museum/.env
 PREV_TAG_FILE="${STATE_DIR}/previous-image-tag.txt"
 PREV_TAG=""
@@ -123,7 +87,6 @@ if [ "${rc}" -ne 0 ]; then
   exit 43
 fi
 
-# ─── 3. Healthcheck loop against the rolled-back container ─────────────────
 echo "[rollback] waiting for ${SERVICE} healthcheck..."
 TRIES=0
 MAX_TRIES=20
@@ -140,6 +103,5 @@ do
 done
 
 echo "[rollback] ${SERVICE} rolled back successfully — code + migrations restored"
-# Clear state so a subsequent successful deploy starts clean.
 rm -f "${APPLIED_FILE}" "${PRE_FILE}"
 exit 0

@@ -2,10 +2,6 @@ import { deriveLastArtworkTitle } from '@modules/chat/useCase/session/chat-sessi
 
 import type { VisitContext, VisitedArtwork } from '@modules/chat/domain/chat.types';
 
-// Minimal-overhead fixture: build a VisitContext with the given artworks tail.
-// Cast through `unknown` because tests intentionally inject jsonb-drift shapes
-// (undefined / null / missing / wrong-type `title`) that the runtime DB column
-// can serve but the static `VisitedArtwork` type does not allow.
 const makeVisitContext = (artworksDiscussed: Partial<VisitedArtwork>[]): VisitContext =>
   ({
     museumName: 'Louvre',
@@ -23,8 +19,6 @@ const baseArtwork = {
 };
 
 describe('deriveLastArtworkTitle — jsonb data drift defence', () => {
-  // ── Drift cases (the bug) ──────────────────────────────────────────────
-
   it('returns null when last artwork title is undefined (explicit)', () => {
     const ctx = makeVisitContext([{ ...baseArtwork, title: undefined }]);
     expect(deriveLastArtworkTitle(ctx)).toBeNull();
@@ -44,8 +38,6 @@ describe('deriveLastArtworkTitle — jsonb data drift defence', () => {
     const ctx = makeVisitContext([{ ...baseArtwork, title: 123 as unknown as string }]);
     expect(deriveLastArtworkTitle(ctx)).toBeNull();
   });
-
-  // ── Backwards-compatible cases ────────────────────────────────────────
 
   it('returns null when last artwork title is whitespace-only', () => {
     const ctx = makeVisitContext([{ ...baseArtwork, title: '  ' }]);

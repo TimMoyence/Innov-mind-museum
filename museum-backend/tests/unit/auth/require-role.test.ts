@@ -83,8 +83,6 @@ describe('requireRole middleware', () => {
     expect(body.error.message).toBe('Insufficient permissions');
   });
 
-  // super_admin = platform owner tier (see user-role.ts hierarchy).
-  // Centralized escalation so a new admin endpoint cannot lock Tim out.
   describe('super_admin escalation', () => {
     it('passes a requireRole(admin) check', () => {
       const middleware = requireRole('admin');

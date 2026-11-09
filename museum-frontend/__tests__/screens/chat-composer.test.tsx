@@ -1,27 +1,9 @@
-/**
- * Screen integration tests for A1 — unified composer wiring.
- *
- * Confirms that:
- *   - ChatSessionScreen renders the new <Composer> (not the legacy
- *     <MediaAttachmentPanel>, which A1 burrys per doctrine).
- *   - Tapping the composer's `+` button calls
- *     `bottomSheetRouter.open('attachment-picker', { … })` with the audio +
- *     media handles wired through from the screen's hooks.
- *
- * Mirrors the C4 / A2 pattern: we mock the bottom-sheet-router barrel and
- * inspect captured `router.open()` calls. Heavy child components are mocked
- * to keep the screen tree shallow.
- *
- * Spec: docs/chat-ux-refonte/specs/A1.md §1.4, AC22-AC23.
- */
-
 import type * as ReactTypes from 'react';
 import React from 'react';
 import { render, fireEvent, act } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 
-// ── expo-router param override ──────────────────────────────────────────────
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => ({ sessionId: 'session-a1' });
 
@@ -37,14 +19,11 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// ── useChatSession ──────────────────────────────────────────────────────────
 const mockUseChatSession = jest.fn();
 jest.mock('@/features/chat/application/useChatSession', () => ({
   useChatSession: (...args: unknown[]) => mockUseChatSession(...args),
 }));
 
-// ── Audio recorder + image picker hooks (state captured so we can assert
-// they were wired through into the router.open params) ─────────────────────
 const mockAudioRecorderState = {
   isRecording: false,
   recordedAudioUri: null as string | null,
@@ -110,7 +89,6 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── Bottom-sheet router mock ────────────────────────────────────────────────
 const mockRouterOpen = jest.fn();
 const mockRouterClose = jest.fn();
 jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
@@ -122,7 +100,6 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-// ── Child mocks so the screen tree stays shallow ────────────────────────────
 jest.mock('@/features/chat/ui/ChatMessageList', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -143,11 +120,6 @@ jest.mock('@/features/chat/ui/ChatInput', () => {
   return { ChatInput: () => ReactNS.createElement(RN.View, { testID: 'chat-input' }) };
 });
 
-// MediaAttachmentPanel was deleted as part of A1 (doctrine `feedback_bury_dead_code`).
-// The `queryByTestId('media-attachment-panel')` assertion below verifies the
-// absence of the legacy surface — no mock needed since the module no longer
-// exists. The screen renders the new <Composer> instead.
-
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -162,8 +134,6 @@ jest.mock('@/shared/ui/SkeletonChatBubble', () => {
   };
 });
 
-// Capture the Composer props so we can both render a button to drive the
-// behaviour AND assert the wiring of the prop bag from the screen.
 const composerLastProps: Record<string, unknown>[] = [];
 jest.mock('@/features/chat/ui/Composer', () => {
   const RN = require('react-native');

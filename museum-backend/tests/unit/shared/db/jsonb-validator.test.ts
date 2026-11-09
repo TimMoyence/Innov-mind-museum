@@ -56,8 +56,6 @@ describe('jsonbValidator transformer', () => {
     expect(transformer.from(value)).toBe(value);
   });
 
-  // Joins nested issue paths with "." (kills the L31 StringLiteral mutant
-  // that replaces the dot separator with "").
   it('joins nested issue paths with a dot separator', () => {
     const NestedSchema = z.object({ inner: z.object({ x: z.string() }) });
     const t = jsonbValidator(NestedSchema, 'nested.col');
@@ -71,14 +69,10 @@ describe('jsonbValidator transformer', () => {
     }
   });
 
-  // Logger event name + payload shape (kills the L34 StringLiteral and
-  // ObjectLiteral mutants on logger.warn(...)).
   it('logs jsonb_validation_failed with field + issues meta on invalid value', () => {
     try {
       transformer.to({ name: 'bad', age: -1 });
-    } catch {
-      // expected throw
-    }
+    } catch {}
     expect(logger.warn).toHaveBeenCalledWith(
       'jsonb_validation_failed',
       expect.objectContaining({
@@ -88,8 +82,6 @@ describe('jsonbValidator transformer', () => {
     );
   });
 
-  // AppError message embeds the field name (kills the L36 StringLiteral
-  // template-literal mutant that empties the message).
   it('throws AppError with a message naming the offending field', () => {
     try {
       transformer.to({ name: 'bad', age: -1 });

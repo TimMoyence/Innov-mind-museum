@@ -2,10 +2,6 @@ import { pruneReviews } from '@modules/review/useCase/moderation/prune-reviews';
 
 import type { DataSource } from 'typeorm';
 
-/**
- * TypeORM 0.3.x DELETE returns `[rows, rowCount]` — see prune-support-tickets.test.ts header.
- * @param rows
- */
 const tupleResult = (rows: { id: string }[]): [{ id: string }[], number] => [rows, rows.length];
 
 describe('pruneReviews', () => {
@@ -57,6 +53,6 @@ describe('pruneReviews', () => {
     });
 
     expect(result.rowsAffected).toBe(0);
-    expect(i).toBe(2); // one pass for rejected, one for pending
+    expect(i).toBe(2);
   });
 });

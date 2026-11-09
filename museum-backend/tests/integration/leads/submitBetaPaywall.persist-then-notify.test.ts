@@ -1,28 +1,3 @@
-/**
- * T3.2 (RED — Cycle B « Aucun lead perdu » — UFR-022 fresh-context red phase).
- *
- * Mirror of T3.1 for the beta-signup + paywall-interest use-cases (no B2B
- * dedup → `dedupKey` null). Pins the persist-then-notify invariant against a
- * REAL Postgres + REAL `LeadRepositoryPg`, Brevo notifier mocked:
- *
- *   (R1) persist `pending` BEFORE `subscribe` is called (order proven).
- *   (R2) subscribe resolves → row delivered, deliveredAt set, attempts ≥ 1.
- *   (R3) subscribe THROWS → lead NEVER lost: row failed, attempts = 1, no
- *        rethrow.
- *   (R7) honeypot → 0 row, 0 notify.
- *   Paywall additionally persists `source: 'paywall_premium_interest'` inside
- *   the jsonb payload.
- *
- * RED reason at baseline: both use-cases are stateless — they take only a
- * notifier and never persist (`submitBetaSignup.useCase.ts:30,67`,
- * `submitPaywallInterest.useCase.ts:29,61`). Green (T3.4) injects the repo.
- *
- * Constructor invoked via the GREEN 2-arg `(notifier, repo)` signature, bridged
- * with a constructor-type cast (keeps tsc green; runtime persistence assertions
- * fail red). Mirror `tests/integration/support/ticket-museum-scope.test.ts`.
- *
- * Maps: R1, R2, R3, R7.
- */
 import { SubmitBetaSignupUseCase } from '@modules/leads/useCase/submitBetaSignup.useCase';
 import { SubmitPaywallInterestUseCase } from '@modules/leads/useCase/submitPaywallInterest.useCase';
 import {
@@ -41,7 +16,6 @@ import type { Repository } from 'typeorm';
 const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
-/** GREEN ctor surface `(notifier, repo)`; baseline only declares `(notifier)`. */
 type BetaCtor = new (
   notifier: BetaSignupNotifier,
   repo: ILeadRepository,
@@ -54,7 +28,6 @@ type PaywallCtor = new (
 describeIntegration(
   'SubmitBetaSignup / SubmitPaywallInterest — persist-then-notify [integration, real PG]',
   () => {
-
     let harness: IntegrationHarness;
     let repo: ILeadRepository;
     let leadRepo: Repository<Lead>;

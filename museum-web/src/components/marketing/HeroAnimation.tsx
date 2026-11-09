@@ -9,16 +9,6 @@ const BEZEL = 7;
 const OUTER_R = 50;
 const INNER_R = 43;
 
-/**
- * Animated hero iPhone mockup with ambient glow orbs.
- * Framer Motion replacement for the former Remotion HeroComposition.
- *
- * Animations reproduced from the original 300-frame / 30fps loop:
- *  - Entrance spring (scale 0.8→1, opacity 0→1)
- *  - Continuous float Y (±15 px, ~3.3 s period)
- *  - Subtle rotateY drift (±3 deg, ~5 s) + rotateX drift (±2 deg, ~6.7 s)
- *  - 3 ambient orbs with independent drift cycles
- */
 export default function HeroAnimation() {
   const shouldReduceMotion = useReducedMotion();
 
@@ -35,9 +25,6 @@ export default function HeroAnimation() {
           overflow: 'hidden',
         }}
       >
-        {/* ── Ambient glow orbs ── */}
-
-        {/* Orb 1 — blue, top-left */}
         <motion.div
           animate={shouldReduceMotion ? undefined : { x: [-30, 30], y: [-20, 20] }}
           transition={{
@@ -56,7 +43,6 @@ export default function HeroAnimation() {
           }}
         />
 
-        {/* Orb 2 — cyan, bottom-right */}
         <motion.div
           animate={shouldReduceMotion ? undefined : { x: [-25, 25], y: [-30, 30] }}
           transition={{
@@ -75,7 +61,6 @@ export default function HeroAnimation() {
           }}
         />
 
-        {/* Orb 3 — gold, center */}
         <motion.div
           animate={shouldReduceMotion ? undefined : { x: [-20, 20], y: [-15, 15] }}
           transition={{
@@ -96,16 +81,12 @@ export default function HeroAnimation() {
           }}
         />
 
-        {/* ── Phone mockup ── */}
-
-        {/* Entrance spring */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 80, stiffness: 100, mass: 1 }}
           style={{ perspective: 1000 }}
         >
-          {/* Continuous float + rotation */}
           <motion.div
             animate={
               shouldReduceMotion ? undefined : { y: [-15, 15], rotateY: [-3, 3], rotateX: [-2, 2] }
@@ -136,7 +117,6 @@ export default function HeroAnimation() {
               zIndex: 1,
             }}
           >
-            {/* Ambient glow behind the device */}
             <div
               style={{
                 position: 'absolute',
@@ -149,7 +129,6 @@ export default function HeroAnimation() {
               }}
             />
 
-            {/* Phone body — titanium bezel */}
             <div
               style={{
                 width: PHONE_WIDTH,
@@ -162,7 +141,6 @@ export default function HeroAnimation() {
                 position: 'relative',
               }}
             >
-              {/* Screen */}
               <div
                 style={{
                   width: '100%',
@@ -181,7 +159,6 @@ export default function HeroAnimation() {
                   priority
                 />
 
-                {/* Dynamic Island */}
                 <div
                   style={{
                     position: 'absolute',
@@ -197,7 +174,6 @@ export default function HeroAnimation() {
                 />
               </div>
 
-              {/* Glass shine */}
               <div
                 style={{
                   position: 'absolute',
@@ -209,7 +185,6 @@ export default function HeroAnimation() {
                 }}
               />
 
-              {/* Top edge highlight */}
               <div
                 style={{
                   position: 'absolute',

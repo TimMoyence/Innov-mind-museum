@@ -12,7 +12,6 @@ export interface AddTicketMessageInput {
   text: string;
 }
 
-/** Auto-transitions 'open' → 'in_progress' when an admin/moderator replies. */
 export class AddTicketMessageUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
@@ -29,7 +28,6 @@ export class AddTicketMessageUseCase {
       throw notFound('Ticket not found');
     }
 
-    // SEC: ownership check — non-admins can only post on their own tickets.
     if (!isAdminOrMod && ticket.userId !== input.senderId) {
       throw forbidden('You do not have access to this ticket');
     }

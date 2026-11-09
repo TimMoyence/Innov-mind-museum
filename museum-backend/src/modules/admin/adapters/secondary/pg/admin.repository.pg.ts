@@ -42,7 +42,7 @@ function mapUser(user: User): AdminUserDTO {
     emailVerified: user.email_verified,
     suspended: user.suspended,
     deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
-    tier: user.tier, // R1 (C6)
+    tier: user.tier,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
@@ -96,7 +96,6 @@ export class AdminRepositoryPg implements IAdminRepository {
   }
 
   async listUsers(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
-    // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), breaks raw SQL.
     const qb = this.userRepo.createQueryBuilder('u');
 
     if (filters.search) {
@@ -110,7 +109,6 @@ export class AdminRepositoryPg implements IAdminRepository {
       qb.andWhere('u.role = :role', { role: filters.role });
     }
 
-    // Soft-deleted reachable via getUserById for forensics.
     qb.andWhere('u.deleted_at IS NULL');
 
     qb.orderBy('u.createdAt', 'DESC');
@@ -118,7 +116,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return await paginate(qb, filters.pagination, mapUser);
   }
 
-  /** Includes soft-deleted rows. */
   async getUserById(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     return user ? mapUser(user) : null;
@@ -133,7 +130,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** R1 (C6) — only mutates `tier`. R17 — `sessionsMonthCount`/`sessionsMonthStart` preserved. */
   async changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -142,7 +138,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Idempotent. */
   async suspendUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -151,7 +146,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Idempotent. */
   async unsuspendUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -160,7 +154,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /** Idempotent — re-deleting refreshes the timestamp. */
   async softDeleteUser(userId: number): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
@@ -169,12 +162,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  /**
-   * Counts admin + super_admin together for the last-admin guard. Demoting
-   * the only `admin` while `super_admin` exists is safe; the inverse too.
-   * V1 has Tim as super_admin only, no B2B admin yet — counting both
-   * prevents a false "last admin" conflict.
-   */
   async countAdmins(): Promise<number> {
     return (
       (await this.userRepo.countBy({ role: 'admin' })) +
@@ -211,10 +198,6 @@ export class AdminRepositoryPg implements IAdminRepository {
   }
 
   async getStats(museumId?: number): Promise<AdminStats> {
-    // Tenant-scoped session aggregate (C1A D4). `museum_id` lives on
-    // chat_sessions (index IDX_chat_sessions_museum_id); when scoped we filter
-    // on it. Aggregate COUNTs come back as strings from pg (precision-safe) —
-    // parse with Number.parseInt (lib-docs/pg/PATTERNS.md §"NUMERIC as string").
     const sessionsQb = this.sessionRepo
       .createQueryBuilder('session')
       .select('COUNT(*)', 'total')
@@ -223,15 +206,8 @@ export class AdminRepositoryPg implements IAdminRepository {
         'recent',
       );
 
-    // chat_messages has NO museum_id — scope via the ChatMessage.session
-    // relation (innerJoin filters without selecting, lib-docs/typeorm/PATTERNS.md
-    // §3.5; parameterised andWhere §4.3/§4.12). Uses IDX_chat_messages_sessionId
-    // + IDX_chat_sessions_museum_id.
     const messagesQb = this.messageRepo.createQueryBuilder('message').select('COUNT(*)', 'total');
 
-    // Tenant-scoped (manager) view: filter both aggregates on museum_id and
-    // omit the platform user census entirely (C1A D2) — saves a query and
-    // never exposes the operator headcount.
     if (museumId !== undefined) {
       sessionsQb.andWhere('session.museum_id = :scope', { scope: museumId });
       messagesQb
@@ -250,10 +226,8 @@ export class AdminRepositoryPg implements IAdminRepository {
       };
     }
 
-    // Global (admin / super_admin) view — full platform census, unchanged.
     const [usersResult, sessionsResult, messagesResult] = await Promise.all([
       this.userRepo
-        // Alias `u` — `user` is a PG reserved keyword (= CURRENT_USER), raw SQL breaks.
         .createQueryBuilder('u')
         .select('u.role', 'role')
         .addSelect('COUNT(*)', 'total')
@@ -286,7 +260,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     };
   }
 
-  // S4-03 Content Moderation
   async listReports(filters: ListReportsFilters): Promise<PaginatedResult<AdminReportDTO>> {
     const qb = this.reportRepo
       .createQueryBuilder('report')
@@ -330,7 +303,6 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapReport(saved, saved.message);
   }
 
-  // S4-04 Analytics
   async getUsageAnalytics(filters: UsageAnalyticsFilters): Promise<UsageAnalytics> {
     return await queryUsageAnalytics(
       {

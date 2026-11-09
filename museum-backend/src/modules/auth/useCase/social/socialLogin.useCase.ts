@@ -1,4 +1,5 @@
 import { AppError, invalidInput } from '@shared/errors/app.error';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import type { NonceStore } from '@modules/auth/domain/ports/nonce-store.port';
@@ -31,33 +32,18 @@ export class SocialLoginUseCase {
     private readonly nonceStore?: NonceStore,
   ) {}
 
-  /** F3 — atomic consume; fail fast when enforcement on but none provided. */
   private async assertNonce(nonce: string | undefined): Promise<void> {
     if (nonce === undefined) {
       if (env.auth.oidcNonceEnforce) throw invalidNonce();
       return;
     }
     if (!this.nonceStore) {
-      // Wiring error: nonce sent but no store to validate it.
       throw invalidNonce();
     }
     const consumed = await this.nonceStore.consume(nonce);
     if (!consumed) throw invalidNonce();
   }
 
-  /**
-   * Flow: verify → find link → link by email → create. Apple private-relay
-   * emails are NOT used for account linking.
-   *
-   * F3 — `nonce` (when set) is atomically consumed BEFORE verifier invocation
-   * (single-use revocation, ID-token replay defence) and threaded through to
-   * {@link SocialTokenVerifier.verify} so the JWT-claim check runs against the
-   * same value (defence-in-depth). Absent + `oidcNonceEnforce=true` → fail fast
-   * INVALID_NONCE before hitting verifier.
-   *
-   * @throws {AppError} 400 missing idToken, 401 USER_NOT_FOUND on linked user,
-   *   401 INVALID_NONCE on replay/missing-when-enforced.
-   */
   async execute(
     provider: SocialProvider,
     idToken: string,
@@ -88,7 +74,6 @@ export class SocialLoginUseCase {
       return await this.authSessionService.socialLogin(user);
     }
 
-    // Email match → link to existing user.
     const normalizedEmail = payload.email?.trim().toLowerCase();
     const isApplePrivateRelay =
       provider === 'apple' && normalizedEmail?.endsWith(APPLE_PRIVATE_RELAY_SUFFIX);
@@ -106,9 +91,7 @@ export class SocialLoginUseCase {
       }
     }
 
-    // Create new user + social account.
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    const email = normalizedEmail || `${payload.providerUserId}@${provider}.social`;
+    const email = nonEmpty(normalizedEmail) ?? `${payload.providerUserId}@${provider}.social`;
     const newUser = await this.userRepository.registerSocialUser(
       email,
       payload.firstname,

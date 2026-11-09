@@ -1,22 +1,3 @@
-/**
- * W2-03 (RED) — failure-counter store unit.
- *
- * spec.md §EARS R2: WHEN X-Net-Fail-Count:N THE mw SHALL fail the next N
- *   requests then succeed, keyed on sessionId+userId+path (a Zod-400 must NOT
- *   burn the key — but that ordering concern lives in the middleware; here we
- *   test the pure store contract).
- * design.md §Architecture: `failure-counter.store.ts` = in-memory Map
- *   (single-instance CI). `failNext(N)` keyed; `shouldFail(key)` decrements;
- *   distinct keys independent; `reset()` clears.
- *
- * RED state: `@shared/net-shaping/failure-counter.store` does not exist yet →
- * the import throws (module not found) → every assertion fails.
- *
- * lib-docs: none — in-memory Map, stdlib only. No inline test entities; the
- *   store keys are plain composite strings, not domain entities.
- *
- * Frozen-test invariant: byte-immutable once manifested (phase=green).
- */
 import {
   failureCounterKey,
   failNext,
@@ -41,7 +22,6 @@ describe('failure-counter store (W2-03)', () => {
     const anon1 = failureCounterKey({ sessionId: undefined, userId: undefined, path: '/api/z' });
     const anon2 = failureCounterKey({ sessionId: undefined, userId: undefined, path: '/api/z' });
     expect(anon1).toBe(anon2);
-    // Different path → different anon key (no collapse into a single anon bucket).
     const anon3 = failureCounterKey({ sessionId: undefined, userId: undefined, path: '/api/w' });
     expect(anon1).not.toBe(anon3);
   });
@@ -74,10 +54,10 @@ describe('failure-counter store (W2-03)', () => {
     failNext(b, 1);
 
     expect(shouldFail(a)).toBe(true);
-    expect(shouldFail(b)).toBe(true); // b consumed independently
-    expect(shouldFail(b)).toBe(false); // b exhausted
-    expect(shouldFail(a)).toBe(true); // a still has 1 left
-    expect(shouldFail(a)).toBe(false); // a exhausted
+    expect(shouldFail(b)).toBe(true);
+    expect(shouldFail(b)).toBe(false);
+    expect(shouldFail(a)).toBe(true);
+    expect(shouldFail(a)).toBe(false);
   });
 
   it('failNext re-arms a key to the new count (latest call wins, not additive)', () => {

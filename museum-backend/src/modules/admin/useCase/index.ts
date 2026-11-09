@@ -27,7 +27,6 @@ import {
 } from '@modules/support/useCase';
 
 const adminRepository = new AdminRepositoryPg(AppDataSource);
-// Re-instantiated locally to avoid exporting an internal auth-module singleton.
 const adminRefreshTokenRepository = new RefreshTokenRepositoryPg(AppDataSource);
 
 export const listUsersUseCase = new ListUsersUseCase(adminRepository);
@@ -56,7 +55,3 @@ export const adminSupportFacade = new AdminSupportFacade(
   peerListAllTicketsUseCase,
   peerUpdateTicketStatusUseCase,
 );
-
-// R2 W3.4 corrective loop 1 (2026-05-15) — admin CSV export composition lives in
-// `@modules/admin/useCase/export/composition.ts` (lazy getters defer AppDataSource
-// + auditService until first request). Doctrine `feedback_bury_dead_code`.

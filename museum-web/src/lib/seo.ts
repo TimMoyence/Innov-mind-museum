@@ -1,4 +1,5 @@
-import { locales, defaultLocale } from '@/lib/i18n';
+import { locales, defaultLocale, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
+import type { Metadata } from 'next';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://musaium.com';
 
@@ -21,3 +22,15 @@ export function getOpenGraph(locale: string) {
     images: [{ url: '/images/logo.png', width: 1024, height: 1024, alt: 'Musaium' }],
   };
 }
+
+export const footerPageMetadata =
+  (link: keyof Dictionary['footer']['links'], path: string) =>
+  async ({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> => {
+    const { locale } = await params;
+    const dict = await getDictionary(locale as Locale);
+    return {
+      title: dict.footer.links[link],
+      alternates: getAlternates(locale, path),
+      openGraph: getOpenGraph(locale),
+    };
+  };

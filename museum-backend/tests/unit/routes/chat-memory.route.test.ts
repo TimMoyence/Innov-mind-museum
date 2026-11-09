@@ -16,9 +16,7 @@ const buildApp = (service: UserMemoryService) => {
   return app;
 };
 
-const makeServiceMock = (
-  overrides: Partial<UserMemoryService> = {},
-): UserMemoryService =>
+const makeServiceMock = (overrides: Partial<UserMemoryService> = {}): UserMemoryService =>
   ({
     isDisabledByUser: jest.fn().mockResolvedValue(false),
     setDisabledByUser: jest.fn().mockResolvedValue(undefined),

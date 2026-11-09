@@ -32,6 +32,5 @@ export const makeCapturingEmbeddingRepo = (): ArtworkEmbeddingRepository & {
     },
     findNearest: async () => [],
     findByQid: async () => null,
-    count: async () => captured.length,
   };
 };

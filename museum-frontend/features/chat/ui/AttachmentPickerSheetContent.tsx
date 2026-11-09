@@ -7,55 +7,19 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface AttachmentPickerSheetContentProps {
-  /** Audio recorder state — drives the preview block visibility. */
   readonly recordedAudioUri: string | null;
-  /** Audio playback state — flips the play button label. */
   readonly isPlayingAudio: boolean;
-  /** Recording state — flips the record action between record/stop. */
   readonly isRecording: boolean;
-  /** Open the system gallery picker. Closes the sheet. */
   readonly onPickImage: () => void;
-  /** Open the camera capture flow. Closes the sheet. */
   readonly onTakePicture: () => void;
-  /**
-   * Toggle the audio recording session (wrapped upstream behind the EU AI
-   * Act voice gate). The sheet stays open so the user gets visual feedback.
-   */
   readonly toggleRecording: () => Promise<void> | void;
-  /** Play the recorded audio preview. The sheet stays open. */
   readonly playRecordedAudio: () => Promise<void> | void;
-  /** Clear all attached media (audio + image). Closes the sheet. */
   readonly clearMedia: () => void;
-  /**
-   * Open the QR-cartel scanner (B4 — 9th C4 route `cartel-scanner`). The
-   * screen wires it to `bottomSheetRouter.open('cartel-scanner', ...)`. The
-   * picker sheet closes itself when the user taps the action.
-   */
   readonly onOpenScanner: () => void;
-  /**
-   * Trigger the visual-compare flow (Cycle D, Option C). The screen wires this
-   * to `useCompareTrigger` (picks an image → `POST /chat/compare` → reload to
-   * surface the persisted carousel). Optional so legacy mounts/tests that
-   * predate the compare action stay valid; the picker sheet closes itself when
-   * the user taps the action (parity camera/gallery).
-   */
   readonly onCompareImage?: () => void;
-  /** Dismiss the bottom sheet — supplied by the C4 router. */
   readonly close: () => void;
 }
 
-/**
- * Bottom-sheet content (slide-up presentation) hosting the chat attachment
- * actions: camera, gallery, record-audio, plus an inline audio preview block
- * (play / clear) when an audio message has been recorded. Mounted by the C4
- * `<BottomSheetRouter>` for the `attachment-picker` route (A1 — 8th route).
- *
- * Doctrine: keeps the user-facing copy from the legacy `<MediaAttachmentPanel>`
- * audio block (`chat.voice_ready` / `chat.play` / `chat.playing` / `chat.clear`)
- * for parity, surfaces the new picker labels under `chat.attachmentPicker.*`.
- *
- * Spec: docs/chat-ux-refonte/specs/A1.md §1.3, §2.4.
- */
 export function AttachmentPickerSheetContent({
   recordedAudioUri,
   isPlayingAudio,
@@ -247,8 +211,6 @@ const styles = StyleSheet.create({
     gap: semantic.chat.gap,
   },
   actionButton: {
-    // WhatsApp-style grid tile: icon stacked above the label, every tile the
-    // same fixed cross-axis size (~3 columns; flexWrap handles 4 or 5 actions).
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',

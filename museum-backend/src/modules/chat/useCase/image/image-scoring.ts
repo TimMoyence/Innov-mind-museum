@@ -1,6 +1,3 @@
-// C2 v2 (2026-05): adds Wikimedia Commons + Musaium catalogue sources, and
-// alias-aware title matching (FR/EN alt-labels from Wikidata SPARQL).
-
 import type { EnrichedImageSource } from '@modules/chat/domain/chat.types';
 
 export interface ImageCandidate {
@@ -9,11 +6,6 @@ export interface ImageCandidate {
   width?: number;
   height?: number;
   apiPosition: number;
-  /**
-   * Optional alias labels (FR/EN alt-names from Wikidata `schema:alternateName`
-   * / `skos:altLabel`). Folded into the captionWords set so e.g. searching
-   * "La Joconde" matches a caption "Mona Lisa" when the alias is present.
-   */
   aliases?: string[];
 }
 
@@ -49,12 +41,6 @@ const resolutionScore = (width?: number, height?: number): number => {
   return 0.2;
 };
 
-/**
- * Per-source quality weight (0..1.2). Decision D4 (design.md):
- * `musaium=1.0` is intentionally NOT bumped to `1.2` — the museum-priority
- * pin (R13) handles "always preferred" at the sort level, so the score range
- * stays in 0..1 to keep FE rendering consistent.
- */
 const sourceScore = (source: EnrichedImageSource): number => {
   switch (source) {
     case 'musaium':

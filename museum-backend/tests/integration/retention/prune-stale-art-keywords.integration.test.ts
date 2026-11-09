@@ -1,15 +1,3 @@
-/**
- * TD-4 — real-PG integration test for `pruneStaleArtKeywords`.
- *
- * Pins the driver-tuple contract against a real Postgres testcontainer so the
- * incident-2026-05-08 busy-loop class of bugs cannot reach prod again.
- * See `museum-backend/src/modules/chat/useCase/prune-stale-art-keywords.ts`
- * and ADR-020.
- *
- * Run with:
- *   RUN_INTEGRATION=true pnpm test:integration -- \
- *     --testPathPattern=tests/integration/retention/prune-stale-art-keywords
- */
 import type { Repository } from 'typeorm';
 
 import { pruneStaleArtKeywords } from '@modules/chat/useCase/prune-stale-art-keywords';
@@ -27,7 +15,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number): Date => new Date(Date.now() - n * DAY_MS);
 
 describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
-
   let harness: IntegrationHarness;
   let keywordRepo: Repository<ArtKeyword>;
 
@@ -41,16 +28,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
     await harness.reset();
   });
 
-  /**
-   * Insert a single ArtKeyword and (optionally) force its `updatedAt` to a
-   * past timestamp. `(keyword, locale)` is UNIQUE — caller MUST supply a
-   * unique `keyword` per insert in the same test.
-   * @param params
-   * @param params.keyword
-   * @param params.hitCount
-   * @param params.locale
-   * @param params.updatedAt
-   */
   async function insertKeyword(params: {
     keyword: string;
     hitCount: number;
@@ -80,7 +57,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
   }
 
   it('R1+R4: deletes 50 stale low-hit keywords, leaves 50 active or recent untouched', async () => {
-    // 25 stale hitCount=1
     for (let i = 0; i < 25; i += 1) {
       await insertKeyword({
         keyword: `stale-low-${i}`,
@@ -88,7 +64,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
         updatedAt: daysAgo(120),
       });
     }
-    // 25 stale hitCount=0
     for (let i = 0; i < 25; i += 1) {
       await insertKeyword({
         keyword: `stale-zero-${i}`,
@@ -96,7 +71,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
         updatedAt: daysAgo(120),
       });
     }
-    // 25 stale but high-hit (NOT eligible)
     for (let i = 0; i < 25; i += 1) {
       await insertKeyword({
         keyword: `popular-${i}`,
@@ -104,7 +78,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
         updatedAt: daysAgo(120),
       });
     }
-    // 25 recent low-hit (NOT eligible — updatedAt too recent)
     for (let i = 0; i < 25; i += 1) {
       await insertKeyword({
         keyword: `recent-${i}`,
@@ -123,7 +96,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
 
     expect(result.rowsAffected).toBe(50);
     expect(await keywordRepo.count()).toBe(50);
-    // Survivors: 25 popular (hitCount>1) + 25 recent (updatedAt within 90d)
     const survivors = await keywordRepo.find();
     expect(survivors.filter((k) => k.hitCount > 1)).toHaveLength(25);
     expect(survivors.filter((k) => k.hitCount <= 1)).toHaveLength(25);
@@ -153,7 +125,6 @@ describeIntegration('pruneStaleArtKeywords (real PG) [integration]', () => {
         updatedAt: daysAgo(120),
       });
     }
-    // 10 non-eligible sentinels (popular)
     for (let i = 0; i < 10; i += 1) {
       await insertKeyword({
         keyword: `chunk-popular-${i}`,

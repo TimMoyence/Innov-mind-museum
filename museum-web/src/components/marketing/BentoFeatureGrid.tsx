@@ -45,7 +45,6 @@ export default function BentoFeatureGrid({ features, icons }: BentoFeatureGridPr
             viewport={{ once: true, margin: '-40px' }}
             custom={i}
           >
-            {/* Icon */}
             <div
               className="relative flex h-12 w-12 items-center justify-center rounded-xl text-primary-500 shadow-sm transition-all duration-300 group-hover:shadow-md"
               style={{
@@ -58,13 +57,11 @@ export default function BentoFeatureGrid({ features, icons }: BentoFeatureGridPr
               {icons[i]}
             </div>
 
-            {/* Text */}
             <h3 className="mt-4 text-lg font-semibold text-text-primary">{feature.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               {feature.description}
             </p>
 
-            {/* Large card: scan animation visual */}
             {isLarge && (
               <div
                 className="mt-4 flex flex-1 items-center justify-center overflow-hidden rounded-2xl"

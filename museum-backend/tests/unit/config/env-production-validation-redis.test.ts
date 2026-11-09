@@ -1,15 +1,3 @@
-/**
- * P3.1 — Redis production hardening tests.
- *
- * Enforces:
- *   - REDIS_PASSWORD >= 32 chars in production (same floor as JWT secrets).
- *   - REDIS_PASSWORD distinct from JWT_ACCESS_SECRET / JWT_REFRESH_SECRET /
- *     MEDIA_SIGNING_SECRET (no cross-service secret reuse).
- *
- * Drives `validateProductionEnv` directly with a synthesized AppEnv object,
- * matching the pattern in env-production-validation-secret-length.test.ts.
- */
-
 import { validateProductionEnv } from '@src/config/env.production-validation';
 import type { AppEnv } from '@src/config/env.types';
 import {
@@ -26,7 +14,7 @@ const makeEnvWithCache = (cacheOverrides: Partial<NonNullable<AppEnv['cache']>> 
   ({
     nodeEnv: 'production',
     brevoApiKey: 'brevo',
-    llm: { provider: 'openai', openAiApiKey: 'sk-test' },
+    llm: { costGuard: { userDailyCapUsd: 0 }, provider: 'openai', openAiApiKey: 'sk-test' },
     storage: { driver: 'local', s3: {} },
     exportPseudonymSalt: VALID_EXPORT_PSEUDONYM_SALT,
     cache: {

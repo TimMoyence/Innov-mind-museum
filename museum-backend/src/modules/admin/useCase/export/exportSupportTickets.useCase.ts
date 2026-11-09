@@ -6,9 +6,6 @@ import type { ExportTicketsRepository } from '@modules/admin/domain/export/expor
 import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-// Re-exported (identity-preserving, spec R5) — `ExportTicketsRepository` moved
-// to `domain/export/export-repositories.port.ts` (C1 close, run
-// 2026-06-04-hexagonal-boundaries-enforcement).
 export type { ExportTicketsRepository };
 
 export interface ExportAuditService {
@@ -16,16 +13,6 @@ export interface ExportAuditService {
   logActorAction(input: LogActorActionInput): Promise<void>;
 }
 
-/**
- * Admin CSV export — support tickets (R2 R3/R4/R19 + Q1 BLOCKER + Q7).
- *
- * super_admin only ; every other role → 403 BEFORE any repo call.
- * `user_email_pseudonym` pseudonymised for ALL roles incl. super_admin (R19/D6/Q7
- * — CSVs are screenshot-able, raw emails leak too easily vs in-app reads).
- *
- * Ordering: audit awaited BEFORE first row yields (N6/AC10). Metadata never
- * includes subject/description text (N9).
- */
 export class ExportSupportTicketsUseCase {
   constructor(
     private readonly repository: ExportTicketsRepository,

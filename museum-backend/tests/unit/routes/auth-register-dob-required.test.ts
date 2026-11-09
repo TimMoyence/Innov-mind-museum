@@ -6,14 +6,10 @@ import {
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
 
-// ── Mock use cases so the register handler executes without a DB ─────────────
-
 const mockRegister = jest.fn();
 
 jest.mock('@modules/auth/useCase', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const { env: envConfig } = require('@src/config/env');
 
   return {
@@ -58,14 +54,6 @@ jest.mock('@modules/auth/useCase', () => {
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
-
-/**
- * RED (UFR-022) — A2 / spec R3.
- * `POST /api/auth/register` MUST reject a body that omits `dateOfBirth` with HTTP
- * 400 (Zod validation) and MUST NOT invoke the register use case. Today the Zod
- * `registerSchema` marks `dateOfBirth` `.optional()`, so the request returns 201
- * and the use case runs — making this suite RED until the schema fix.
- */
 
 const { app } = createRouteTestApp();
 

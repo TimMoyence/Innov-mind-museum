@@ -22,10 +22,6 @@ export function isSupportedLocale(code: string): code is SupportedLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(code);
 }
 
-/**
- * Maps a full locale tag (e.g. "fr-FR") or bare code ("fr") to a SupportedLocale.
- * Returns "en" when the code is not recognized.
- */
 export function toSupportedLocale(raw: string): SupportedLocale {
   const code = raw.toLowerCase().split(/[-_]/)[0] ?? '';
   return isSupportedLocale(code) ? code : 'en';

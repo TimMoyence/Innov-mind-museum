@@ -8,46 +8,19 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, radius, space } from '@/shared/ui/tokens';
 
 interface ComposerProps {
-  /** Current text value forwarded to the embedded <ChatInput>. */
   readonly text: string;
-  /** Text change handler forwarded to the embedded <ChatInput>. */
   readonly onChangeText: (text: string) => void;
-  /** Send handler forwarded to the embedded <ChatInput>. */
   readonly onSend: () => void;
-  /** In-flight flag forwarded to the embedded <ChatInput>. */
   readonly isSending: boolean;
-  /** Disabled flag forwarded to the embedded <ChatInput>. */
   readonly disabled?: boolean;
-  /** URI of the attached image thumbnail forwarded to <ChatInput>. */
   readonly imageUri?: string | null;
-  /** Clear-image handler forwarded to <ChatInput>. */
   readonly onClearImage?: () => void;
-  /** Audio recorder state — drives the optional mini-pill and mic icon. */
   readonly recordedAudioUri: string | null;
-  /** Recording state — flips the mic icon + accessibility busy state. */
   readonly isRecording: boolean;
-  /** Tap-to-toggle the recording session. Wrapped by the screen behind the EU AI Act voice gate. */
   readonly toggleRecording: () => Promise<void> | void;
-  /** Opens the `attachment-picker` bottom sheet route (C4 router). */
   readonly onOpenAttachments: () => void;
 }
 
-/**
- * Unified composer (A1) — minimalist 1-line surface that hosts the leading
- * vertical column (mic stacked above `+`), the existing `<ChatInput>` building
- * block (text + send), and an optional audio mini-pill when an audio message
- * has been recorded.
- *
- * Doctrine reuse: `<ChatInput>` is consumed as-is (R7 — non-regression). The
- * row introduces no new container token, no animation, no internal state. The
- * EU AI Act gate is preserved upstream via the screen's wrapped
- * `toggleRecording` (the composer receives the wrapped version).
- *
- * a11y: all a11y props live on the `<Pressable>` per
- * `lib-docs/react-native/PATTERNS.md` §7. No `accessibilityRole='button'` on
- * any inner View — VoiceOver / TalkBack discover the surrounding Pressable
- * only, no double-announce.
- */
 export const Composer = React.memo(function Composer({
   text,
   onChangeText,

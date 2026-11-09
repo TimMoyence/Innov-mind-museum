@@ -1,48 +1,8 @@
-/**
- * Cost-based circuit breaker for LLM API spend (perennial design §11 D9 — RE2, ADR-047).
- *
- * UFR-013 doc-honesty correction — RUN_ID 2026-05-21-p0-c2-cost-breaker.
- * Prior preamble fabricated three assertions: (1) that the primitive was a
- * "phase-2" stub not yet wired in V1, (2) that no production caller invoked
- * `recordCharge()`, (3) that fail-CLOSED was enforced by callers. (1) and (2)
- * were FALSE — `langchain.orchestrator.ts:recordSectionCost()` had been
- * calling `recordCharge()` live since C9.4. (3) was an unfulfilled contract
- * (no caller checked `canAttempt()`). This run wires the missing guards at
- * the orchestrator entry points and rewrites this preamble to reflect the
- * actual call graph. Removal of the verbatim false strings is enforced by
- * `tasks.md` verification grep contract.
- *
- * PR-13 (RUN_ID 2026-05-23-pr-13-threeStateCircuit) refactor — FSM extracted
- * to `@shared/circuit-breaker/three-state-circuit`; cost-specific trip
- * predicate (hourly window OR daily UTC cap) lives in `CostTripStrategy`.
- * Public API (canAttempt, recordCharge, recordFailure, getState, reset,
- * state getter, onStateChange option) preserved byte-identical.
- *
- * Image cost accounting — `estimatePayloadBytes()` in `llm-prompt-builder.ts`
- * substitutes `VISION_BYTES_EQUIVALENT` (`llm-cost-pricing.ts`, default 4000
- * bytes = 1000 vision tokens × 4 bytes/token) for any `image_url` content
- * item, INDEPENDENT of `url` source (base64 data-URL vs https). The literal
- * base64 byte length of an inline image is NOT a realistic input-token proxy
- * (providers bill 85–1105 tokens per image at `detail:high`). Without this
- * override the breaker tripped on the first legitimate single-image request
- * (×100–1000 inflation on data-URL payloads).
- *
- * Distinct from latency `LLMCircuitBreaker`: latency CB trips on failures in
- * window, cost CB trips on spikes (scraping/DDoS amplification) OR daily cap
- * breach. Two conditions ORed: hourly threshold (burst guard) + daily budget
- * (global cap, wider than `guardrail-budget` LLM-judge cap — wraps ANY costed
- * LLM call).
- *
- * Storage in-process (rolling 1h window + UTC daily counter). V1
- * single-instance KISS trade-off — Phase 3 promotes to Redis on horizontal
- * scale.
- */
-
 import { CostTripStrategy } from '@shared/circuit-breaker/strategies/cost-trip-strategy';
 import { ThreeStateCircuit, type CircuitState } from '@shared/circuit-breaker/three-state-circuit';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
-/** Mirrors `GuardrailCircuitBreaker` taxonomy. */
 export type LlmCostCircuitState = CircuitState;
 
 export interface LlmCostCircuitBreakerSnapshot {
@@ -57,20 +17,14 @@ export interface LlmCostCircuitBreakerOptions {
   hourlyThresholdCents?: number;
   dailyBudgetCents?: number;
   openDurationMs?: number;
-  /** Wired by composition root for metrics. */
   onStateChange?: (next: LlmCostCircuitState, prev: LlmCostCircuitState) => void;
-  /** Test seam — defaults to `Date.now()`. */
   now?: () => number;
 }
 
-const DEFAULT_HOURLY_THRESHOLD_CENTS = 5_000; // $50/h spike alarm
-const DEFAULT_DAILY_BUDGET_CENTS = 50_000; // $500/day hard cap
-const DEFAULT_OPEN_DURATION_MS = 300_000; // 5 min cooldown
+const DEFAULT_HOURLY_THRESHOLD_CENTS = 5_000;
+const DEFAULT_DAILY_BUDGET_CENTS = 50_000;
+const DEFAULT_OPEN_DURATION_MS = 300_000;
 
-/**
- * CLOSED → OPEN on cost anomaly or daily cap breach. OPEN → HALF_OPEN after cooldown.
- * HALF_OPEN admits ONE probe; failure returns to OPEN, success returns to CLOSED.
- */
 export class LlmCostCircuitBreaker {
   private readonly hourlyThresholdCents: number;
   private readonly dailyBudgetCents: number;
@@ -119,65 +73,41 @@ export class LlmCostCircuitBreaker {
     });
   }
 
-  /** Transitions OPEN → HALF_OPEN lazily once cooldown elapses. Cheap, no I/O. */
   get state(): LlmCostCircuitState {
     return this.circuit.state;
   }
 
-  /**
-   * CLOSED → always true. OPEN → false. HALF_OPEN → true ONLY for the first caller
-   * (single probe slot, race-safe via sync mutation).
-   */
   canAttempt(): boolean {
     return this.circuit.canAttempt();
   }
 
-  /** Recovers HALF_OPEN → CLOSED. Pure cost accumulation otherwise. */
   recordCharge(cents: number): void {
     if (!Number.isFinite(cents) || cents <= 0) return;
-    const stateBefore = this.circuit.state; // triggers lazy OPEN → HALF_OPEN
+    const stateBefore = this.circuit.state;
 
     if (stateBefore === 'HALF_OPEN') {
-      // W1-C1 transition fidelity. Decide whether THIS probe breaches a cap BEFORE
-      // committing to a recovery — a breaching probe never recovered, so it must NOT
-      // flicker HALF_OPEN → CLOSED → OPEN (which would emit a spurious
-      // `llm_cost_circuit_breaker_close` "recovery succeeded" log and mislabel the
-      // re-trip origin as `from:'closed'`). We project the probe onto the current
-      // spend WITHOUT mutating the strategy: `getHourlySpendCents`/`getDailySpendCents`
-      // prune then read, so adding `cents` mirrors exactly what `shouldTrip` would see
-      // after the charge. The daily accumulator is durable, so a breaker tripped on the
-      // daily cap (still over for this UTC day) re-trips here — correct money behaviour.
       const now = this.nowFn();
       const wouldBreach =
         this.strategy.getHourlySpendCents(now) + cents > this.hourlyThresholdCents ||
         this.strategy.getDailySpendCents(now) + cents > this.dailyBudgetCents;
 
       if (wouldBreach) {
-        // Single HALF_OPEN → OPEN transition (from:'half_open', no close log). Count the
-        // breaching probe so the durable daily accumulator includes it.
         this.strategy.recordCharge(cents);
         this.circuit.trip('HALF_OPEN');
         return;
       }
 
-      // Healthy probe → recover. `recordOutcome('success')` transitions HALF_OPEN →
-      // CLOSED and calls `CostTripStrategy.resetTransient()`, clearing any stale hourly
-      // spike window while PRESERVING the durable daily accumulator. THEN record the
-      // probe into the now-fresh window so the recovered breaker's hourly spend reflects
-      // ONLY this probe — counted exactly once against both hourly and daily.
       this.circuit.recordOutcome('success');
       this.strategy.recordCharge(cents);
       return;
     }
 
     this.strategy.recordCharge(cents);
-    // Trip on a cap breach (CLOSED, or a re-evaluation that should re-OPEN).
     if (this.strategy.shouldTrip(this.nowFn())) {
       this.circuit.trip(stateBefore);
     }
   }
 
-  /** Probe attempt consumed (no cost charged). HALF_OPEN → re-trips OPEN. */
   recordFailure(): void {
     if (this.circuit.state === 'HALF_OPEN') {
       this.circuit.recordOutcome('failure');
@@ -186,7 +116,7 @@ export class LlmCostCircuitBreaker {
 
   getState(): LlmCostCircuitBreakerSnapshot {
     const now = this.nowFn();
-    const state = this.circuit.state; // triggers lazy OPEN → HALF_OPEN if cooldown elapsed
+    const state = this.circuit.state;
     return {
       state,
       hourlySpendCents: this.strategy.getHourlySpendCents(now),
@@ -196,8 +126,21 @@ export class LlmCostCircuitBreaker {
     };
   }
 
-  /** Test-only. */
   reset(): void {
     this.circuit.reset();
   }
 }
+
+export const chargeFailOpen = (
+  breaker: LlmCostCircuitBreaker | null,
+  estimateCents: () => number,
+  failureEvent: string,
+  context: Record<string, unknown> = {},
+): void => {
+  if (!breaker) return;
+  try {
+    breaker.recordCharge(estimateCents());
+  } catch (err) {
+    logger.warn(failureEvent, { ...context, err: errorMessage(err) });
+  }
+};

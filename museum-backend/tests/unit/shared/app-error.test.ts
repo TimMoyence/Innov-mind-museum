@@ -90,8 +90,6 @@ describe('error factory functions', () => {
     expect(err.code).toBe('TOO_MANY_REQUESTS');
   });
 
-  // Kills L118 ConditionalExpression + L121 EqualityOperator/ConditionalExpression
-  // pairs on the retryAfterSec headers/details branches.
   it('tooManyRequests sets Retry-After header when retryAfterSec is provided', () => {
     const err = tooManyRequests('Slow down', { retryAfterSec: 5 });
     expect(err.headers).toEqual({ 'Retry-After': '5' });
@@ -122,8 +120,6 @@ describe('error factory functions', () => {
     expect(err.code).toBe('CUSTOM_THROTTLE');
   });
 
-  // Kills L148 MethodExpression (Math.max → Math.min): the boundary case
-  // retryAfterSec=5 distinguishes max(1, 5)=5 from min(1, 5)=1.
   it('tooManyRequests passes through retryAfterSec values above 1 without flooring to 1', () => {
     const err = tooManyRequests('Slow down', { retryAfterSec: 5 });
     expect(err.headers).toEqual({ 'Retry-After': '5' });
@@ -134,8 +130,6 @@ describe('error factory functions', () => {
     expect(tooManyRequests('s', { retryAfterSec: 1.3 }).headers).toEqual({ 'Retry-After': '2' });
   });
 
-  // Kills L145 / L147 / L153 / L154 OptionalChaining + ConditionalExpression
-  // mutations on serviceUnavailable.
   describe('serviceUnavailable (503)', () => {
     it('creates a 503 error with default code and no headers/details', () => {
       const err = serviceUnavailable('Down for maintenance');
@@ -175,10 +169,6 @@ describe('error factory functions', () => {
     expect(err.message).toBe('Sign in required');
   });
 
-  // PR-1 / UFR-022 RED — `unauthorized()` MUST accept an optional second
-  // `code` argument so the 6 local copies in src/ can be removed. The current
-  // mono-arg signature ignores anything beyond `message`, so the assertions
-  // below FAIL until the GREEN phase extends the factory.
   describe('unauthorized 2-arg signature (PR-1)', () => {
     it('mono-arg call defaults code to UNAUTHORIZED (backward-compat regression guard)', () => {
       const err = unauthorized('Token required');
@@ -206,8 +196,6 @@ describe('error factory functions', () => {
   });
 });
 
-// Kills L37 ObjectLiteral + StringLiteral and L38 StringLiteral mutations on
-// the ValidationError subclass constructor (statusCode / code / name).
 describe('ValidationError', () => {
   it('sets statusCode=400, code=VALIDATION_ERROR, name=ValidationError', () => {
     const err = new ValidationError('bad input');

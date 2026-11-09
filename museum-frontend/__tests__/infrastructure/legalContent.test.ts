@@ -4,9 +4,6 @@ import {
 } from '@/features/legal/privacyPolicyContent';
 import { TERMS_OF_SERVICE_CONTENT } from '@/features/legal/termsOfServiceContent';
 
-// Conformité email RGPD — RED phase (UFR-022,
-// RUN_ID 2026-06-13-conformite-email-subprocessors).
-// OLD must be eliminated from the legal content; NEW is the brand mailbox.
 const OLD_CONTACT_EMAIL = 'tim.moyence@gmail.com';
 const NEW_CONTACT_EMAIL = 'contact@musaium.com';
 
@@ -16,7 +13,6 @@ describe('PRIVACY_POLICY_CONTENT', () => {
     expect(PRIVACY_POLICY_CONTENT.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(PRIVACY_POLICY_CONTENT.lastUpdated).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(PRIVACY_POLICY_CONTENT.controllerName).toBeDefined();
-    // UC-A16 (regression): byte-exact NEW, no longer the weak `.toContain('@')`.
     expect(PRIVACY_POLICY_CONTENT.contactEmail).toBe(NEW_CONTACT_EMAIL);
   });
 
@@ -72,9 +68,6 @@ describe('TERMS_OF_SERVICE_CONTENT', () => {
   });
 
   it('UC-A23 (edge): terms is hand-maintained — has no contactEmail field', () => {
-    // Unlike PRIVACY_POLICY_CONTENT, terms exposes no `contactEmail` field;
-    // the codegen never touches terms, so the email lives inline in the
-    // contact section. Asserting the absence of the field documents NFR-2.
     expect(
       (TERMS_OF_SERVICE_CONTENT as unknown as Record<string, unknown>).contactEmail,
     ).toBeUndefined();

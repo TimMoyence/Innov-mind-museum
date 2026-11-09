@@ -65,7 +65,6 @@ export interface ChatServiceDeps {
   repository: ChatRepository;
   orchestrator: ChatOrchestrator;
   imageStorage: ImageStorage;
-  /** GDPR Art. 5(1)(c) — EXIF stripper. Omitting disables strip (legacy tests only). */
   imageProcessor?: ImageProcessorPort;
   audioTranscriber?: AudioTranscriber;
   audioStorage?: AudioStorage;
@@ -79,41 +78,20 @@ export interface ChatServiceDeps {
   imageEnrichment?: ImageEnrichmentService;
   webSearch?: WebSearchService;
   llmJudge?: LlmJudgeFn;
-  /** True when env.guardrails.budgetCentsPerDay > 0 (judge layer enabled). */
   llmJudgeEnabled?: boolean;
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — 2-level friction counter store +
-   * config. When omitted, the friction model degrades to plain soft-redirect
-   * (no escalation). See {@link ChatSafetyDeps}.
-   */
   frictionStore?: IGuardrailFrictionStore;
   frictionSessionThreshold?: number;
   frictionUserThreshold?: number;
   museumRepository?: IMuseumRepository;
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
-  /**
-   * W3 (T5.4) — used by the pipeline to look up `artwork_knowledge` rows for
-   * the LLM prompt `[CURRENT ARTWORK]` section when a cartel deeplink was
-   * scanned and `chatSession.currentArtworkId` is populated.
-   */
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
   locationResolver?: LocationResolver;
-  /** GDPR consent port — gates whether the LLM prompt receives any location. */
   locationConsentChecker?: LocationConsentChecker;
-  /**
-   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
-   * `third_party_ai_<text|image>_<provider>` scopes (cluster A R2/R3). When
-   * omitted, the legacy always-allow path is preserved.
-   */
   thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
   urlHeadProbe?: UrlHeadProbe;
 }
 
-/**
- * Facade delegating to {@link ChatSessionService} (CRUD),
- * {@link ChatMessageService} (posting/streaming), {@link ChatMediaService} (refs/TTS).
- */
 export class ChatService {
   private readonly sessions: ChatSessionService;
   private readonly messages: ChatMessageService;
@@ -169,15 +147,11 @@ export class ChatService {
     });
   }
 
-  // ── Session CRUD ──
-
-  /** @throws {AppError} 400 if userId is not a positive integer. */
   async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     logger.info('chat_service_call', { method: 'createSession', userId: input.userId });
     return await this.sessions.createSession(input);
   }
 
-  /** @throws {AppError} 400 on invalid id, 404 if not found or not owned. */
   async getSession(
     sessionId: string,
     page: MessagePageQuery,
@@ -186,16 +160,10 @@ export class ChatService {
     return await this.sessions.getSession(sessionId, page, currentUserId);
   }
 
-  /** @throws {AppError} 400 if userId missing/invalid or cursor malformed. */
   async listSessions(page: MessagePageQuery, currentUserId?: number): Promise<ListSessionsResult> {
     return await this.sessions.listSessions(page, currentUserId);
   }
 
-  /**
-   * Deletes session only if it contains no messages.
-   *
-   * @throws {AppError} 400 on invalid id, 404 if not found or not owned.
-   */
   async deleteSessionIfEmpty(
     sessionId: string,
     currentUserId?: number,
@@ -208,13 +176,6 @@ export class ChatService {
     return await this.sessions.deleteSessionIfEmpty(sessionId, currentUserId);
   }
 
-  // ── Message posting ──
-
-  /**
-   * Input guardrail → persist user → LLM → output guardrail → persist assistant.
-   *
-   * @throws {AppError} 400 invalid, 404 not found, 409 optimistic lock conflict.
-   */
   async postMessage(
     sessionId: string,
     input: PostMessageInput,
@@ -231,7 +192,6 @@ export class ChatService {
     return await this.messages.postMessage(sessionId, input, requestId, currentUserId, ip);
   }
 
-  /** Transcribes audio → delegates to {@link postMessage}. */
   async postAudioMessage(
     sessionId: string,
     input: PostAudioMessageInput,
@@ -241,8 +201,6 @@ export class ChatService {
   ): Promise<PostAudioMessageResult> {
     return await this.messages.postAudioMessage(sessionId, input, requestId, currentUserId, ip);
   }
-
-  // ── Media & reporting ──
 
   async getMessageImageRef(
     messageId: string,
@@ -255,10 +213,6 @@ export class ChatService {
     return await this.media.getMessageImageRef(messageId, currentUserId);
   }
 
-  /**
-   * Bypasses session-ownership: the signed HMAC token IS the authorization.
-   * MUST only be called after `verifySignedChatImageReadUrl` returns ok.
-   */
   async getMessageImageRefBySignedToken(messageId: string): Promise<{
     imageRef: string;
     fileName?: string;
@@ -276,7 +230,6 @@ export class ChatService {
     return await this.media.reportMessage(messageId, reason, currentUserId, comment);
   }
 
-  /** @returns 'created' | 'updated' | 'removed'. */
   async setMessageFeedback(
     messageId: string,
     currentUserId: number,
@@ -285,10 +238,6 @@ export class ChatService {
     return await this.media.setMessageFeedback(messageId, currentUserId, value);
   }
 
-  /**
-   * @returns Audio buffer or null when message has no text.
-   * @throws {AppError} 400 not assistant, 501 TTS unavailable, 404 not found/owned.
-   */
   async synthesizeSpeech(
     messageId: string,
     currentUserId?: number,
@@ -303,4 +252,3 @@ export class ChatService {
     return await this.media.getMessageAudioUrl(messageId, currentUserId);
   }
 }
-

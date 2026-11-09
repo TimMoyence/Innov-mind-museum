@@ -1,18 +1,3 @@
-/**
- * C5 Step 5.2 — End-to-end wiring of the Wikidata resilience chain.
- *
- * Stack under test (no mocks above the WikidataBreakerClient seam) :
- *
- *   KnowledgeBaseService
- *     → WikidataBreakerClient (real opossum)
- *       → WikidataClient (real ; we mock global `fetch`)
- *     → cascade { breakerState, dumpRepo }
- *
- * Drives the full live path until the breaker trips, then verifies the cascade
- * falls back to the dump repository once the soak window has elapsed and
- * resolves to `null` cleanly when the dump misses (Phase 7.1 DoD scenario).
- */
-
 import {
   WikidataBreakerClient,
   type WikidataBreakerConfig,
@@ -25,7 +10,6 @@ import type { WikidataKbDumpRepositoryPort } from '@modules/chat/domain/ports/wi
 
 const MONA: ArtworkFacts = { qid: 'Q12418', title: 'Mona Lisa (dump)' };
 
-// Small breaker timings to keep the test fast.
 const BREAKER_CFG: WikidataBreakerConfig = {
   timeoutMs: 5000,
   errorThresholdPercentage: 50,
@@ -45,12 +29,10 @@ class StubDumpRepo implements WikidataKbDumpRepositoryPort {
   public calls = 0;
   public upsertCalls = 0;
   constructor(private readonly facts: ArtworkFacts | null) {}
-  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract
   async findFactsBySearchTerm(): Promise<ArtworkFacts | null> {
     this.calls++;
     return this.facts;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await -- interface contract; the integration test does not exercise the write-through path
   async upsert(): Promise<void> {
     this.upsertCalls++;
   }
@@ -121,25 +103,21 @@ describe('C5 wiring — KnowledgeBaseService → WikidataBreakerClient → Wikid
   });
 
   it('5xx storm trips breaker → cascade hits dump after soak → returns dump facts', async () => {
-    // Every call returns 500 so each lookupOrThrow throws WikidataTransientError.
     fetchSpy.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as Response);
 
     const dump = new StubDumpRepo(MONA);
     const { service, breaker } = buildChain(dump);
 
-    // 5 failed lookups → breaker OPEN.
     for (let i = 0; i < 5; i++) {
       await service.lookupFacts(`probe-${i}`);
     }
     expect(breaker.getState().name).toBe('OPEN');
 
-    // Within the soak window (100ms) → dump NOT consulted yet.
     fetchSpy.mockClear();
     const withinSoak = await service.lookupFacts('Mona Lisa');
     expect(withinSoak).toBeNull();
     expect(dump.calls).toBe(0);
 
-    // After the soak elapses → cascade triggers dump.
     await wait(KB_CFG.localDumpFallbackAfterMs + 20);
     const afterSoak = await service.lookupFacts('Mona Lisa');
     expect(afterSoak?.title).toBe('Mona Lisa (dump)');
@@ -165,7 +143,6 @@ describe('C5 wiring — KnowledgeBaseService → WikidataBreakerClient → Wikid
   });
 
   it('HALF_OPEN recovery: success after reset window → breaker CLOSED, live path resumes', async () => {
-    // Trip the breaker.
     fetchSpy.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as Response);
     const dump = new StubDumpRepo(null);
     const { service, breaker } = buildChain(dump);
@@ -175,11 +152,9 @@ describe('C5 wiring — KnowledgeBaseService → WikidataBreakerClient → Wikid
     }
     expect(breaker.getState().name).toBe('OPEN');
 
-    // Wait past resetTimeout → HALF_OPEN.
     await wait(BREAKER_CFG.resetTimeoutMs + 20);
     expect(breaker.getState().name).toBe('HALF_OPEN');
 
-    // Next call succeeds → CLOSED + facts returned via live.
     fetchSpy.mockReset();
     fetchSpy
       .mockResolvedValueOnce({

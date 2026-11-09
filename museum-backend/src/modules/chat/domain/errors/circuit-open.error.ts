@@ -1,6 +1,5 @@
 import { AppError } from '@shared/errors/app.error';
 
-/** Extends `AppError` → 503 via global error middleware. */
 export class CircuitOpenError extends AppError {
   constructor() {
     super({

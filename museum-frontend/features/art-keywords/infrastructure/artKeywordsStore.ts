@@ -10,17 +10,11 @@ import type {
 } from '../domain/contracts';
 
 interface ArtKeywordsStoreActions {
-  /** Merges newly synced keywords into the store for the given locale. */
   mergeKeywords: (locale: string, keywords: ArtKeywordDTO[], syncedAt: string) => void;
-  /** Returns stored keywords for a locale (empty array if none). */
   getKeywords: (locale: string) => ArtKeywordDTO[];
-  /** Returns the last sync timestamp for a locale (undefined if never synced). */
   getLastSyncedAt: (locale: string) => string | undefined;
-  /** Records a sync failure for a locale — increments the attempt counter. */
   recordSyncFailure: (locale: string, failedAt: string) => void;
-  /** Clears the failure state for a locale (called after a successful sync). */
   clearSyncFailure: (locale: string) => void;
-  /** Returns the current failure state for a locale (undefined if none). */
   getSyncFailure: (locale: string) => ArtKeywordsSyncFailure | undefined;
 }
 
@@ -40,7 +34,6 @@ export const useArtKeywordsStore = create<ArtKeywordsStore>()(
           for (const kw of keywords) {
             byId.set(kw.id, kw);
           }
-          // Successful merge clears any recorded failure for this locale.
           const nextFailures = Object.fromEntries(
             Object.entries(state.failuresByLocale).filter(([key]) => key !== locale),
           );
@@ -99,8 +92,6 @@ export const useArtKeywordsStore = create<ArtKeywordsStore>()(
       storage: createJSONStorage(() => storage),
       version: 2,
       migrate: (persisted, version) => {
-        // v1 → v2 adds failuresByLocale. Any previously persisted state becomes
-        // a plain base; we just default the new field.
         const base = (persisted ?? {}) as Partial<ArtKeywordsSyncState>;
         if (version < 2) {
           return {

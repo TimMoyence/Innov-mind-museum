@@ -1,6 +1,7 @@
 import { Queue, Worker } from 'bullmq';
 
 import { canonicalizeUrl } from '@modules/knowledge-extraction/domain/extracted-content/canonical-url';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 import {
@@ -15,7 +16,6 @@ import type {
 } from '@modules/knowledge-extraction/domain/ports/extraction-queue.port';
 import type { ExtractionJobService } from '@modules/knowledge-extraction/useCase/extraction/extraction-job.service';
 
-// Re-export shared types so existing unit tests importing them from this module keep working.
 export type { FailedJobSnapshot, JobFailureSinks };
 export { handleJobFailure };
 
@@ -28,14 +28,11 @@ interface ExtractionWorkerConfig {
     host: string;
     port: number;
     password?: string;
-    /** BullMQ Worker requires this to be null (per BullMQ docs). */
     maxRetriesPerRequest?: number | null;
-    /** Fail fast instead of buffering commands when Redis is unreachable. */
     enableOfflineQueue?: boolean;
   };
 }
 
-/** BullMQ-based extraction queue + worker. Implements {@link ExtractionQueuePort}. */
 export class ExtractionWorker implements ExtractionQueuePort {
   private readonly queue: Queue<ExtractionJobPayload>;
   private worker?: Worker<ExtractionJobPayload>;
@@ -55,14 +52,10 @@ export class ExtractionWorker implements ExtractionQueuePort {
     });
   }
 
-  /** Starts the BullMQ worker. Call once at app startup. */
   start(): void {
     this.worker = new Worker<ExtractionJobPayload>(
       QUEUE_NAME,
       async (job) => {
-        // R10 — destructure tolerantly. In-flight legacy jobs may still carry
-        // a leftover `searchTerm` field; JS object-destructure ignores extras
-        // by default, so the deploy-window backward-compat is automatic.
         const { url, locale } = job.data;
         logger.info('extraction_job_start', { url, jobId: job.id });
         await this.jobService.processUrl(url, locale);
@@ -115,7 +108,6 @@ export class ExtractionWorker implements ExtractionQueuePort {
     });
   }
 
-  /** Enqueues URLs for background extraction. Fire-and-forget — never blocks the chat. */
   async enqueueUrls(jobs: ExtractionJobPayload[]): Promise<void> {
     try {
       await this.queue.addBulk(
@@ -128,13 +120,12 @@ export class ExtractionWorker implements ExtractionQueuePort {
       logger.info('extraction_urls_enqueued', { count: jobs.length });
     } catch (err) {
       logger.warn('extraction_enqueue_error', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
         count: jobs.length,
       });
     }
   }
 
-  /** Gracefully shuts down the worker and queue. */
   async close(): Promise<void> {
     await this.worker?.close();
     await this.queue.close();

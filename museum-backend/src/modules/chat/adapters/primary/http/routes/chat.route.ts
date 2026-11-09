@@ -20,22 +20,28 @@ import type { UpdateSessionContextUseCase } from '@modules/chat/useCase/session/
 export type CompareImageUseCase = CompareRouterDeps['compareImageUseCase'];
 export type CompareSessionAccessVerifier = CompareRouterDeps['verifySessionAccess'];
 
-/* eslint-disable max-params -- backward-compat: 8 positional args; options-object
-   refactor tracked in TECH_DEBT (post-merge).
-   Justification: ≥20 chars — keeping positional args avoids cross-PR churn.
-   Approved-by: tim@2026-05-12 */
+export interface ChatRouterDeps {
+  artKeywordRepo?: ArtKeywordRepository;
+  userMemoryService?: UserMemoryService;
+  compareImageUseCase?: CompareImageUseCase;
+  compareSessionAccessVerifier?: CompareSessionAccessVerifier;
+  getMessageExplanationUseCase?: GetMessageExplanationUseCase;
+  updateSessionContextUseCase?: UpdateSessionContextUseCase;
+}
+
 export const createChatRouter = (
   chatService: ChatService,
-  artKeywordRepo?: ArtKeywordRepository,
-  userMemoryService?: UserMemoryService,
-  compareImageUseCase?: CompareImageUseCase,
-  compareSessionAccessVerifier?: CompareSessionAccessVerifier,
-  getMessageExplanationUseCase?: GetMessageExplanationUseCase,
-  updateSessionContextUseCase?: UpdateSessionContextUseCase,
+  {
+    artKeywordRepo,
+    userMemoryService,
+    compareImageUseCase,
+    compareSessionAccessVerifier,
+    getMessageExplanationUseCase,
+    updateSessionContextUseCase,
+  }: ChatRouterDeps = {},
 ): Router => {
   const router = Router();
 
-  // Shared instance so concurrency counter is consistent across message/media/compare.
   const uploadAdmission = createUploadAdmissionMiddleware();
 
   router.use('/', createSessionRouter(chatService, updateSessionContextUseCase));
@@ -45,7 +51,6 @@ export const createChatRouter = (
     router.use('/', createMemoryRouter(userMemoryService));
   }
   if (getMessageExplanationUseCase) {
-    // GDPR Art. 22 + AI Act Art. 14/50 — see docs/GDPR_ART22_SCOPE.md.
     router.get(
       '/messages/:id/explanation',
       isAuthenticated,
@@ -54,7 +59,6 @@ export const createChatRouter = (
   }
 
   if (compareImageUseCase && compareSessionAccessVerifier) {
-    // SEC 2026-05-10 — BOTH required; without verifier = cross-tenant write surface.
     router.use(
       '/',
       createCompareRouter({

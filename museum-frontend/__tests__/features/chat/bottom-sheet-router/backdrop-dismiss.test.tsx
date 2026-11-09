@@ -1,25 +1,3 @@
-/**
- * Red tests for `<BottomSheetContainer />` backdrop dismiss + pointer-events
- * routing (UFR-022 run `2026-05-23-chat-composer-buttons-modal-dismiss`).
- *
- * Covers R5, R6, R8, R9, R12 from spec.md.
- *
- * - T2.2 — R5 reducer-wiring guard (regression-guard, PASSES on current code).
- * - T2.3 — Structural pointer-events assertion (FAILS on current code: the
- *   `Animated.View` wrap currently has `pointerEvents="auto"`; the green
- *   phase changes it to `"box-none"` so taps outside the visible slab reach
- *   the backdrop).
- * - T2.4 — Parameterised over 4-of-6 non-blocking routes
- *   (`attachment-picker`, `browser`, `context-menu`, `summary`). The
- *   structural assertion is the same across all (same shared container).
- * - T2.6 — R9 accessibilityViewIsModal + role=dialog regression-guard.
- * - T2.7 — R12 backdrop accessibilityLabel != sheet announce label
- *   (FAILS on current code: backdrop label is currently the sheet label).
- *
- * Test discipline: mock content via factory-built mock route registry from
- * `dismiss-test-harness.tsx`. No inline test entities.
- */
-
 import React from 'react';
 import { Animated } from 'react-native';
 import { act, render } from '@testing-library/react-native';
@@ -133,10 +111,6 @@ describe('<BottomSheetContainer /> — backdrop dismiss + pointer-events (R5, R6
         jest.runAllTimers();
       });
 
-      // Walk all rendered nodes and find Animated.View instances. We accept
-      // either: (a) a node typed `AnimatedComponent(View)` or any host node
-      // carrying `pointerEvents` AND a `transform` style — the sheet wrap is
-      // the Animated.View carrying the opacity/translateY transform.
       const candidates: MinimalNode[] = [];
       const root = view.toJSON() as unknown as MinimalNode;
       walkAll(root, (node) => {
@@ -146,11 +120,7 @@ describe('<BottomSheetContainer /> — backdrop dismiss + pointer-events (R5, R6
         }
       });
 
-      // Must find at least one such node (the sheet wrap with the slide-up
-      // translateY + opacity animation).
       expect(candidates.length).toBeGreaterThan(0);
-      // ALL such wraps must declare pointerEvents="box-none" so taps outside
-      // the inner slab fall through to the sibling backdrop.
       for (const node of candidates) {
         expect(node.props?.pointerEvents).toBe('box-none');
       }
@@ -251,13 +221,9 @@ describe('<BottomSheetContainer /> — backdrop dismiss + pointer-events (R5, R6
         jest.runAllTimers();
       });
 
-      // The dismiss key registered for the backdrop in green phase = the
-      // i18n key `a11y.bottomSheet.dismiss`. Tests use the mock i18n
-      // identity transform (t(key) => key) per `helpers/test-utils.tsx`.
       const dismissKey = 'a11y.bottomSheet.dismiss';
       const sheetAnnounceKey = 'a11y.attachmentPicker.opened';
 
-      // Walk tree, collect Pressables inside the backdrop subtree.
       const backdrop = view.getByTestId('bottom-sheet-backdrop') as unknown as MinimalNode;
       let foundDismissLabel = false;
       let foundSheetLabelOnBackdropPressable = false;
@@ -265,9 +231,6 @@ describe('<BottomSheetContainer /> — backdrop dismiss + pointer-events (R5, R6
         const label = node.props?.accessibilityLabel;
         if (label === dismissKey) foundDismissLabel = true;
         if (label === sheetAnnounceKey && node.props?.accessibilityRole === 'button') {
-          // Pressables typed as buttons inside the backdrop subtree carrying
-          // the sheet announce label = the current bug; would be the failing
-          // condition (current code passes the sheet announce label through).
           foundSheetLabelOnBackdropPressable = true;
         }
       });
@@ -275,9 +238,6 @@ describe('<BottomSheetContainer /> — backdrop dismiss + pointer-events (R5, R6
       expect(foundDismissLabel).toBe(true);
       expect(foundSheetLabelOnBackdropPressable).toBe(false);
 
-      // Animated.timing in the entrance is non-blocking; clear any lingering
-      // timers so the test does not leak. Animated import is referenced to
-      // keep the symbol live (linters flag unused imports).
       void Animated;
       jest.useRealTimers();
     });

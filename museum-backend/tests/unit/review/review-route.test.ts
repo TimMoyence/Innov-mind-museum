@@ -7,8 +7,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
-// ── Mock use cases so handlers execute without DB ────────────────────
-
 const mockCreateReview = jest.fn();
 const mockListApprovedReviews = jest.fn();
 const mockGetReviewStats = jest.fn();
@@ -17,13 +15,9 @@ jest.mock('@modules/review/useCase', () => ({
   createReviewUseCase: { execute: (...args: unknown[]) => mockCreateReview(...args) },
   listApprovedReviewsUseCase: { execute: (...args: unknown[]) => mockListApprovedReviews(...args) },
   getReviewStatsUseCase: { execute: () => mockGetReviewStats() },
-  // Admin use cases needed by admin.route barrel
   listAllReviewsUseCase: { execute: jest.fn() },
   moderateReviewUseCase: { execute: jest.fn() },
 }));
-
-// ── Mock PG user repository so the default author resolver can resolve
-//    the authenticated user without a live database.
 
 const mockGetUserById = jest.fn();
 
@@ -52,8 +46,6 @@ describe('Review Routes — Unit', () => {
     stopRateLimitSweep();
   });
 
-  // ── POST /api/reviews ─────────────────────────────────────────
-
   describe('POST /api/reviews', () => {
     const validBody = {
       rating: 5,
@@ -79,17 +71,12 @@ describe('Review Routes — Unit', () => {
 
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ review: mockReview });
-      // C2 / R1-R4 — route threads the VISITED `sessionId` (NPS attribution),
-      // NOT the author's tenant claim. This body sends no sessionId →
-      // `sessionId: undefined`; the use-case derives museum scope (NULL here =
-      // global). `authedUser.museumId` is deliberately never read (R4).
       expect(mockCreateReview).toHaveBeenCalledWith({
         user: expect.objectContaining({ id: 1, firstname: 'Ada', lastname: 'Lovelace' }),
         rating: 5,
         comment: 'An absolutely wonderful museum experience!',
         sessionId: undefined,
       });
-      // R4 — the tenant claim must never be threaded as museumId.
       const createArg = mockCreateReview.mock.calls[0][0] as Record<string, unknown>;
       expect(createArg).not.toHaveProperty('museumId');
     });
@@ -102,8 +89,6 @@ describe('Review Routes — Unit', () => {
         .set('Authorization', `Bearer ${userToken()}`)
         .send({ ...validBody, userName: 'Spoofed Identity' });
 
-      // Schema should be permissive to extra keys (zod .object default strips),
-      // but userName must never reach the use-case payload.
       expect(res.status).toBe(201);
       const call = mockCreateReview.mock.calls[0][0] as Record<string, unknown>;
       expect(call).not.toHaveProperty('userName');
@@ -128,10 +113,6 @@ describe('Review Routes — Unit', () => {
     });
 
     it('401 (author unresolved) carries the literal "User authentication required" message', async () => {
-      // Kills L67:28 StringLiteral survivor — message mutated to "" would
-      // still produce a 401 (handled by errorHandler) but FE relies on the
-      // human-readable text to drive the i18n fallback when no `code` mapping
-      // exists. Asserts the body, not just the status.
       mockGetUserById.mockResolvedValueOnce(null);
       const res = await request(app)
         .post('/api/reviews')
@@ -165,8 +146,6 @@ describe('Review Routes — Unit', () => {
       expect(res.status).toBe(400);
     });
 
-    // Wave B C7 / R-C7b — rating range widened to 0-10 (NPS). Use 11 (now
-    // above ceiling) instead of 6 (now valid as NPS passive).
     it('returns 400 for rating out of range (11, above NPS ceiling)', async () => {
       const res = await request(app)
         .post('/api/reviews')
@@ -185,8 +164,6 @@ describe('Review Routes — Unit', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── GET /api/reviews ──────────────────────────────────────────
 
   describe('GET /api/reviews', () => {
     it('returns paginated approved reviews with default params', async () => {
@@ -243,8 +220,6 @@ describe('Review Routes — Unit', () => {
       expect(res.status).not.toBe(401);
     });
   });
-
-  // ── GET /api/reviews/stats ────────────────────────────────────
 
   describe('GET /api/reviews/stats', () => {
     it('returns stats object', async () => {

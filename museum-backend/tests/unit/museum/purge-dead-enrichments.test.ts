@@ -3,10 +3,6 @@ import { PurgeDeadEnrichmentsUseCase } from '@modules/museum/useCase/enrichment/
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 import type { MuseumEnrichmentView } from '@modules/museum/domain/enrichment/enrichment.types';
 
-/**
- * Scriptable cache double — records every `deleteStaleSince` call and returns
- * a prewired count so tests can assert both the query shape and the result.
- */
 class ScriptableEnrichmentCache implements MuseumEnrichmentCachePort {
   readonly deleteCalls: { threshold: Date }[] = [];
   private deletedCount = 0;
@@ -24,9 +20,7 @@ class ScriptableEnrichmentCache implements MuseumEnrichmentCachePort {
     return null;
   }
 
-  async upsert(): Promise<void> {
-    // no-op for these tests
-  }
+  async upsert(): Promise<void> {}
 
   async findStaleRows(): Promise<{ museumId: number; locale: string }[]> {
     return [];
@@ -102,7 +96,6 @@ describe('PurgeDeadEnrichmentsUseCase', () => {
 
     const call = cache.deleteCalls[0];
     const thresholdMs = call.threshold.getTime();
-    // threshold must be exactly 180 days before a timestamp between before/after
     expect(thresholdMs).toBeGreaterThanOrEqual(before - 180 * MS_PER_DAY);
     expect(thresholdMs).toBeLessThanOrEqual(after - 180 * MS_PER_DAY);
   });

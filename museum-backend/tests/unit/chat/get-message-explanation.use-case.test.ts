@@ -9,10 +9,6 @@ import { makeMessage, makeSession, makeSessionUser } from 'tests/helpers/chat/me
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test doubles
-// ─────────────────────────────────────────────────────────────────────────────
-
 function makeRepository(returnValue: { message: ChatMessage; session: ChatSession } | null): {
   repository: ExplanationChatRepository;
   getMessageById: jest.Mock;
@@ -69,10 +65,6 @@ function buildUserMessage(): ChatMessage {
     createdAt: decisionAt,
   });
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe('GetMessageExplanationUseCase', () => {
   it('returns the localised blocked explanation when message metadata flags a guardrail block', async () => {

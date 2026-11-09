@@ -1,21 +1,3 @@
-/**
- * P6 — BiometricGate auto-prompt behaviour (TDD).
- *
- * The user opens the app → Face ID / Touch ID prompt fires automatically.
- * Tap-to-unlock button is the fallback path, shown only after a failure
- * or cancellation. This is the desired UX:
- *
- *   "j'aimerais juste j'ouvre l'app, face id se déclenche, et j'arrive
- *    sur l'app"
- *
- * Red-first: every test in this suite fails on the current implementation
- * because BiometricGate (currently inline in app/_layout.tsx) only fires
- * `authenticate()` from a button onPress.
- *
- * Uses `@testing-library/react-native` and the existing AuthContext +
- * useBiometricAuth mocking pattern (UFR-002 — no inline ad-hoc mocks).
- */
-
 import React from 'react';
 import { Text } from 'react-native';
 import { render, waitFor, act, screen, fireEvent } from '@testing-library/react-native';
@@ -51,8 +33,6 @@ jest.mock('@/features/auth/application/AuthContext', () => ({
   }),
 }));
 
-// C1 hexagonal (2026-05-23) — BiometricGate now calls
-// `authSessionService.refresh()` instead of `runAuthRefresh()` direct.
 jest.mock('@/features/auth/infrastructure/authSessionService', () => ({
   authSessionService: {
     refresh: () => mockRunAuthRefresh(),
@@ -88,8 +68,6 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
     mockAuthenticate.mockReset();
     mockUnlockBiometric.mockReset();
     mockRunAuthRefresh.mockReset();
-    // Default: refresh succeeds. Tests that exercise alternate refresh
-    // outcomes (invalid / transient) override per-case.
     mockRunAuthRefresh.mockResolvedValue({ kind: 'success', accessToken: 'tok' });
     authState.locked = true;
   });
@@ -124,7 +102,7 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
     });
 
     it('does not render protected children before unlock succeeds', () => {
-      mockAuthenticate.mockReturnValueOnce(new Promise(() => {})); // never resolves
+      mockAuthenticate.mockReturnValueOnce(new Promise(() => {}));
 
       render(
         <BiometricGate>
@@ -148,7 +126,6 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
         expect(mockAuthenticate).toHaveBeenCalledTimes(1);
       });
 
-      // Fallback retry surface visible after the user dismissed Face ID.
       const retry = await screen.findByLabelText('biometric.unlock');
       expect(retry).toBeTruthy();
       expect(mockUnlockBiometric).not.toHaveBeenCalled();
@@ -190,8 +167,6 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
         </BiometricGate>,
       );
 
-      // Force a re-render while still in the locked state — the effect
-      // must NOT spawn a second prompt.
       rerender(
         <BiometricGate>
           <TestChild />
@@ -215,7 +190,6 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
         expect(mockAuthenticate).toHaveBeenCalledTimes(1);
       });
 
-      // Unlock — autoPromptedRef must reset so the next lock cycle re-fires.
       authState.locked = false;
       rerender(
         <BiometricGate>
@@ -223,8 +197,6 @@ describe('BiometricGate (P6 — auto-prompt UX)', () => {
         </BiometricGate>,
       );
 
-      // Re-lock (user backgrounded the app and returned, or another path
-      // in AuthContext flipped isBiometricLocked back to true).
       authState.locked = true;
       rerender(
         <BiometricGate>

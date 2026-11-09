@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 
 import type { DashboardSessionCard } from '@/features/chat';
 
-/** Manages bulk edit mode: toggle, selection, select-all. */
 export function useConversationsBulkMode(visibleItemsDeps: {
   items: DashboardSessionCard[];
   isSavedOnly: boolean;
@@ -37,17 +36,11 @@ export function useConversationsBulkMode(visibleItemsDeps: {
     });
   }, []);
 
+  const { getVisibleItems } = visibleItemsDeps;
   const selectAll = useCallback(() => {
     void Haptics.selectionAsync();
-    setSelectedIds(new Set(visibleItemsDeps.getVisibleItems().map((item) => item.id)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleItems reference intentionally excluded to avoid re-creating on each filter
-  }, [
-    visibleItemsDeps.items,
-    visibleItemsDeps.isSavedOnly,
-    visibleItemsDeps.savedSessionIds,
-    visibleItemsDeps.sortMode,
-    visibleItemsDeps.searchQuery,
-  ]);
+    setSelectedIds(new Set(getVisibleItems().map((item) => item.id)));
+  }, [getVisibleItems]);
 
   const resetSelection = useCallback(() => {
     setSelectedIds(new Set());

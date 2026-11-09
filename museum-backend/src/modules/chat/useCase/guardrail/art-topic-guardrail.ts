@@ -1,12 +1,6 @@
 import { GUARDRAIL_REFUSALS } from '@shared/i18n/guardrail-refusals';
 import { resolveLocale } from '@shared/i18n/locale';
 
-/**
- * ADR-047 — `service_unavailable` distinct from `unsafe_output`: signals
- * sidecar could not produce a verdict (timeout/non-OK/breaker/semaphore).
- * User-facing copy is honest ("Service unavailable, retry") instead of
- * misleading "your content was flagged".
- */
 export type GuardrailBlockReason =
   | 'insult'
   | 'prompt_injection'
@@ -19,21 +13,9 @@ export interface GuardrailDecision {
   reason?: GuardrailBlockReason;
 }
 
-// H10 \u2014 adversarial obfuscation hardening (homoglyph / base64 / zero-width).
-//
-// Zero-width / invisible separators an attacker can splice INTO a keyword
-// (e.g. "ign\u200bore previous") so the plaintext substring never matches.
-// Stripped first so the fold + keyword scan see the contiguous word.
 const ZERO_WIDTH_RE = /[\u200b-\u200d\u2060\ufeff]/g;
 
-// Curated Cyrillic + Greek \u2192 Latin homoglyph fold. ONLY the look-alike letters
-// an attacker substitutes to defeat the Latin keyword list (Cyrillic '\u043e'/Greek
-// omicron in "ignore", etc.). Deliberately NOT a full transliteration: a real
-// Cyrillic word (Russian art question) folds to Latin gibberish, never into an
-// injection pattern \u2014 that keeps the multilingual allow-cases green. CJK and
-// Arabic ranges are intentionally absent (their keywords match via includes()).
 const HOMOGLYPH_FOLD: Record<string, string> = {
-  // Cyrillic (U+04xx) look-alikes
   а: 'a',
   в: 'b',
   е: 'e',
@@ -49,7 +31,6 @@ const HOMOGLYPH_FOLD: Record<string, string> = {
   ѕ: 's',
   і: 'i',
   ј: 'j',
-  // Greek (U+03xx) look-alikes
   α: 'a',
   β: 'b',
   ε: 'e',
@@ -67,17 +48,11 @@ const HOMOGLYPH_FOLD: Record<string, string> = {
 const foldHomoglyphs = (value: string): string =>
   value.replace(/[\u0370-\u03ff\u0400-\u04ff]/g, (ch) => HOMOGLYPH_FOLD[ch] ?? ch);
 
-/**
- * True when a decoded blob looks like genuine printable prose: mostly printable
- * ASCII (rejects hex-hash / random-token binary garbage) AND contains at least
- * one ASCII letter (so a numeric/punctuation blob can't masquerade as prose).
- */
 const looksLikePrintableProse = (text: string): boolean => {
   let printable = 0;
   let hasLetter = false;
   for (const ch of text) {
     const code = ch.charCodeAt(0);
-    // printable ASCII range + common whitespace (tab / LF / CR)
     const isPrintable =
       (code >= 0x20 && code <= 0x7e) || code === 0x09 || code === 0x0a || code === 0x0d;
     if (isPrintable) printable += 1;
@@ -96,17 +71,6 @@ const decodeBase64Candidate = (candidate: string): string | null => {
   return text && looksLikePrintableProse(text) ? text : null;
 };
 
-/**
- * Base64-candidate decode (H10). Adversaries hide an injection inside an
- * encoded blob ("Please decode this: SWdub3Jl\u2026"). We scan the RAW,
- * case-preserved text for base64-alphabet runs (>=16 chars so short artwork /
- * inventory tokens are ignored), decode each, and keep ONLY decodes that look
- * like genuine printable prose. Hex hashes and base64-shaped artwork tokens
- * decode to binary garbage and are dropped here, so the keyword scan never
- * sees them \u2014 that conjunction is what keeps the false-positive guards green.
- * Decoded prose is appended so the existing INJECTION_PATTERNS catch any
- * injection it carries.
- */
 const decodeBase64Candidates = (rawValue: string): string => {
   const candidates = rawValue.match(/[A-Za-z0-9+/]{16,}={0,2}/g);
   if (!candidates) return '';
@@ -118,10 +82,6 @@ const decodeBase64Candidates = (rawValue: string): string => {
 };
 
 export const normalize = (value: string): string => {
-  // Decode base64 candidates from the RAW, case-preserved text BEFORE
-  // lower-casing/stripping \u2014 base64 is case-sensitive (INV-5/INV-6). The decoded
-  // prose is folded through the same normalization below so an injection inside
-  // the blob matches the keyword list.
   const decodedPayloads = decodeBase64Candidates(value);
 
   return foldHomoglyphs(`${value}${decodedPayloads}`.replace(ZERO_WIDTH_RE, ''))
@@ -132,11 +92,7 @@ export const normalize = (value: string): string => {
     .trim();
 };
 
-// F4 — 8-language coverage matches INJECTION_PATTERNS reach (closes asymmetry
-// where DE/ES/IT/JA/ZH/AR insults bypassed pre-filter while injection didn't).
-// CJK/Arabic matched via includes().
 const INSULT_KEYWORDS = [
-  // English
   'idiot',
   'stupid',
   'moron',
@@ -144,7 +100,6 @@ const INSULT_KEYWORDS = [
   'shit',
   'bitch',
   'asshole',
-  // French
   'connard',
   'salope',
   'pute',
@@ -152,37 +107,31 @@ const INSULT_KEYWORDS = [
   'fdp',
   'nique ta mere',
   'ta gueule',
-  // German
   'arschloch',
   'scheisse',
   'hurensohn',
   'wichser',
   'verpiss dich',
-  // Spanish
   'pendejo',
   'gilipollas',
   'cabron',
   'hijo de puta',
   'mierda',
-  // Italian
   'stronzo',
   'coglione',
   'vaffanculo',
   'figlio di puttana',
   'cazzo',
-  // Japanese (CJK — matched via includes())
   'バカ',
   '馬鹿',
   'クソ',
   'くたばれ',
   '死ね',
-  // Chinese (CJK — matched via includes())
   '傻逼',
   '混蛋',
   '操你',
   '去死',
   '白痴',
-  // Arabic (matched via includes())
   'احمق',
   'غبي',
   'كلب',
@@ -191,7 +140,6 @@ const INSULT_KEYWORDS = [
 ];
 
 const INJECTION_PATTERNS = [
-  // English
   'ignore previous',
   'ignore all instructions',
   'ignore above',
@@ -216,7 +164,6 @@ const INJECTION_PATTERNS = [
   'roleplay as',
   'do anything now',
   'dan mode',
-  // French
   'ignore les instructions',
   'ignore tout ce qui precede',
   'oublie les instructions',
@@ -225,7 +172,6 @@ const INJECTION_PATTERNS = [
   'contourne les regles',
   'tu es maintenant',
   'agis comme si',
-  // German
   'ignoriere die vorherigen',
   'ignoriere alle anweisungen',
   'vergiss alle anweisungen',
@@ -234,7 +180,6 @@ const INJECTION_PATTERNS = [
   'tu so als ob',
   'entwicklermodus',
   'systemaufforderung',
-  // Spanish
   'ignora las instrucciones anteriores',
   'ignora todas las instrucciones',
   'olvida todas las reglas',
@@ -242,7 +187,6 @@ const INJECTION_PATTERNS = [
   'ahora eres',
   'actua como si',
   'modo desarrollador',
-  // Italian
   'ignora le istruzioni precedenti',
   'ignora tutte le istruzioni',
   'dimentica tutte le regole',
@@ -250,17 +194,14 @@ const INJECTION_PATTERNS = [
   'ora sei',
   'fai finta di essere',
   'modalita sviluppatore',
-  // Japanese (CJK — matched via includes())
   '前の指示を無視',
   'すべての指示を無視',
   'すべてのルールを忘れて',
   '指示を忘れて',
   '開発者モード',
   'システムプロンプト',
-  // Japanese romaji fallback
   'mae no shiji wo mushi',
   'kaihatsusha mode',
-  // Chinese (CJK — matched via includes())
   '忽略之前的指令',
   '忽略所有指令',
   '忘记所有规则',
@@ -268,7 +209,6 @@ const INJECTION_PATTERNS = [
   '开发者模式',
   '系统提示',
   '你现在是',
-  // Arabic (matched via includes())
   'تجاهل التعليمات السابقة',
   'تجاهل جميع التعليمات',
   'انسى كل القواعد',
@@ -277,29 +217,37 @@ const INJECTION_PATTERNS = [
   'أنت الآن',
 ];
 
-const escapeRegExp = (value: string): string => {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
-
 const isCjk = (s: string): boolean => /[\u3000-\u9fff\uf900-\ufaff]/.test(s);
 const isArabic = (s: string): boolean =>
   /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/.test(s);
 
+const WORD_CHAR = /\w/;
+
+const isWordChar = (char: string | undefined): boolean =>
+  char !== undefined && WORD_CHAR.test(char);
+
+const isBoundary = (left: string | undefined, right: string | undefined): boolean =>
+  isWordChar(left) !== isWordChar(right);
+
+const containsWholeWord = (text: string, word: string): boolean => {
+  for (let at = text.indexOf(word); at !== -1; at = text.indexOf(word, at + 1)) {
+    const end = at + word.length;
+    const before = at === 0 || isBoundary(text[at - 1], word[0]);
+    const after = end === text.length || isBoundary(word[word.length - 1], text[end]);
+    if (before && after) return true;
+  }
+  return false;
+};
+
 const containsKeyword = (normalizedText: string, keyword: string): boolean => {
-  // NFD on both sides: consistent decomposition (dakuten, Latin accents).
   const normalizedKeyword = normalize(keyword);
 
-  // CJK and Arabic scripts don't have ASCII word boundaries — always use includes().
-  // Arabic combining marks are stripped by normalize() via the \u0300-\u036f range, but
-  // Arabic diacritics (\u064b-\u0652) remain — includes() stays safe either way.
   if (isCjk(normalizedKeyword) || isArabic(normalizedKeyword)) {
     return normalizedText.includes(normalizedKeyword);
   }
 
   if (normalizedKeyword.includes(' ') || normalizedKeyword.length <= 3) {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- keyword is escaped via escapeRegExp; bounded by \b anchors
-    const pattern = new RegExp(`(^|\\b)${escapeRegExp(normalizedKeyword)}(\\b|$)`); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-    return pattern.test(normalizedText);
+    return containsWholeWord(normalizedText, normalizedKeyword);
   }
 
   return normalizedText.includes(normalizedKeyword);
@@ -317,7 +265,6 @@ export const hasPromptInjectionSignal = (normalizedText: string): boolean => {
   return includesAny(normalizedText, INJECTION_PATTERNS);
 };
 
-/** Hard-blocks insults + prompt injections; everything else allowed. */
 export const evaluateUserInputGuardrail = ({ text }: { text?: string }): GuardrailDecision => {
   const normalizedText = normalize(text ?? '');
   if (!normalizedText) return { allow: true };
@@ -328,7 +275,6 @@ export const evaluateUserInputGuardrail = ({ text }: { text?: string }): Guardra
   return { allow: true };
 };
 
-/** Blocks empty / insult / injection leaks in LLM output. */
 export const evaluateAssistantOutputGuardrail = ({ text }: { text: string }): GuardrailDecision => {
   const normalizedText = normalize(text);
   if (!normalizedText) {
@@ -346,12 +292,6 @@ export const evaluateAssistantOutputGuardrail = ({ text }: { text: string }): Gu
 export const buildGuardrailRefusal = (
   locale: string | undefined,
   reason?: GuardrailBlockReason,
-  /**
-   * Hybrid-gravity guardrail (2026-06-01) — when true, an off-topic block uses
-   * the warmer `refocus` cool-down copy instead of the flat `default`. Set by
-   * the friction escalation path; the legacy inline off-topic block leaves it
-   * false so its wording is unchanged.
-   */
   useRefocus = false,
 ): string => {
   const resolved = resolveLocale([locale]);

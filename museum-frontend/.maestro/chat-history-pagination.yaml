@@ -1,175 +1,112 @@
 appId: com.musaium.mobile.preview
 ---
-# Chat — multi-turn with scroll-up history pagination
-#
-# Validates:
-#   1. open a chat session, send 3 messages
-#   2. assert all 3 user messages appear in the thread
-#   3. scroll up to load older messages
-#   4. close chat, return home
-#
-# Prerequisites: seeded test account, backend /chat endpoints healthy
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 1: Open a new chat session
-# ──────────────────────────────────────────────
-# The home default-conversation CTA ("Commencer une nouvelle conversation") sits
-# half-under the bottom tab bar on this binary, so a tap on it lands on the
-# "Musées" tab and routes to the nearby-museums directory (hybrid companion model
-# hands off to a context picker before chatting). Exercise the home affordance
-# best-effort, then make the directory deterministic via the "Musées" tab, pick a
-# museum card -> sheet -> "Démarrer un chat ici" -> chat.
-# Navigate straight to the Museums tab (the passing museum-chat-flow does exactly
-# this). The old best-effort "Start a new conversation" tap actually opened a chat
-# on this binary and the AI-disclosure sheet mounted OVER the screen, covering the
-# "Musées" bottom tab so the deterministic tap below failed. The Museums tab is
-# reachable directly from home — no CTA detour needed.
 - tapOn:
-    text: ".*(Musées|Museums).*"
+    text: '.*(Musées|Museums).*'
 - extendedWaitUntil:
     visible:
-      id: "museum-card"
+      id: 'museum-card'
     timeout: 40000
 - tapOn:
-    id: "museum-card"
+    id: 'museum-card'
     index: 0
 - extendedWaitUntil:
     visible:
-      id: "museum-sheet-start-chat"
+      id: 'museum-sheet-start-chat'
     timeout: 40000
 - tapOn:
-    id: "museum-sheet-start-chat"
-# AI-disclosure consent sheet mounts OVER the chat & covers chat-input — it
-# MUST be accepted BEFORE the composer is reachable. First-session-only, so
-# the wait is bounded and the tap is the deterministic dismissal.
+    id: 'museum-sheet-start-chat'
 - extendedWaitUntil:
     visible:
-      text: "Accepter tout|Accept all"
+      text: 'Accepter tout|Accept all'
     timeout: 20000
 - tapOn:
-    text: "Accepter tout|Accept all"
+    text: 'Accepter tout|Accept all'
 - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "chat-input"
+      id: 'chat-input'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Send message #1
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "chat-input"
-- inputText: "Tell me about the Mona Lisa."
+    id: 'chat-input'
+- inputText: 'Tell me about the Mona Lisa.'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
-- assertVisible: "Tell me about the Mona Lisa."
+    id: 'send-button'
+- assertVisible: 'Tell me about the Mona Lisa.'
 - extendedWaitUntil:
     visible:
-      id: "chat-bubble-assistant"
+      id: 'chat-bubble-assistant'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 3: Send message #2
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "chat-input"
-- inputText: "Who painted it?"
+    id: 'chat-input'
+- inputText: 'Who painted it?'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
-- assertVisible: "Who painted it?"
+    id: 'send-button'
+- assertVisible: 'Who painted it?'
 - waitForAnimationToEnd:
     timeout: 30000
 
-# ──────────────────────────────────────────────
-# Phase 4: Send message #3
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "chat-input"
-- inputText: "In which museum is it kept?"
+    id: 'chat-input'
+- inputText: 'In which museum is it kept?'
 - hideKeyboard
 - tapOn:
-    id: "send-button"
-- assertVisible: "In which museum is it kept?"
+    id: 'send-button'
+- assertVisible: 'In which museum is it kept?'
 - waitForAnimationToEnd:
     timeout: 30000
 
-# ──────────────────────────────────────────────
-# Phase 5: Scroll up the thread to reach the oldest message
-# ──────────────────────────────────────────────
-# The chat list (ChatMessageList.tsx) is a NON-inverted FlashList that
-# auto-scrolls to the newest message on every send. After 3 turns with real
-# (long) LLM answers the first USER bubble is several viewports up, so a single
-# swipe only reveals ~one screen of older content — not the top bubble. Keep
-# scrolling toward the top until the earliest user bubble is on screen.
-# NOTE: `scrollUntilVisible.direction` is the CONTENT-scroll direction (opposite
-# to `swipe.direction`, which is the gesture) — UP scrolls toward the oldest
-# message. Maestro matches a `text:` selector as a FULL-match regex against an
-# element's whole text, so this targets the user bubble ("Tell me about the Mona
-# Lisa.") specifically — the assistant's "Quick summary: Tell me about the Mona
-# Lisa. …" echo does not match.
 - scrollUntilVisible:
     element:
-      text: "Tell me about the Mona Lisa."
+      text: 'Tell me about the Mona Lisa.'
     direction: UP
     timeout: 25000
     visibilityPercentage: 40
 
-# ──────────────────────────────────────────────
-# Phase 6: Close chat and return
-# ──────────────────────────────────────────────
-# The close button (ChatHeader.tsx:137) carries accessibilityLabel
-# a11y.chat.close ("Fermer la conversation" / "Close conversation"). Maestro
-# matches an iOS accessibilityLabel via the `text` selector (a bare `label:`
-# under tapOn is only a log label, NOT a target → it taps nothing).
 - tapOn:
-    text: "Fermer la conversation|Close conversation"
+    text: 'Fermer la conversation|Close conversation'
 - waitForAnimationToEnd
-# Closing the chat returns to wherever it was opened from — here the nearby-
-# museums directory (the chat was created from a museum card). Assert we left
-# the chat composer (back on the directory), which proves the close worked.
 - extendedWaitUntil:
     visible:
-      text: "Musées à proximité|Nearby museums|Votre compagnon de musée|Your museum companion"
+      text: 'Musées à proximité|Nearby museums|Votre compagnon de musée|Your museum companion'
     timeout: 40000
 - assertNotVisible:
-    id: "chat-input"
+    id: 'chat-input'

@@ -11,19 +11,6 @@ import type { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-st
 
 import { makeCountedUnit } from '../../helpers/rate-limit/counted-unit.fixtures';
 
-/**
- * RED (UFR-022) — I-SEC6 / spec R8.
- * The sliding-window Redis key MUST be derived by hashing the normalized email
- * (same approach as the already-hardened lockout key), so raw email PII never
- * lands in the Redis keyspace. Today `slidingRedisKey` interpolates the raw email
- * (`login-attempts:<email>`, login-rate-limiter.ts:96), so the assertions below
- * are RED until the GREEN phase hashes the key.
- *
- * `slidingRedisKey` is module-private; per design D4 we observe the derived key
- * indirectly via the first argument passed to the injected store's `increment`
- * (recordFailedLogin) and `reset` (clearLoginAttempts).
- */
-
 const KEY_PREFIX = 'login-attempts:';
 const VICTIM_EMAIL = 'victim@example.com';
 const EXPECTED_HASH = createHash('sha1').update(VICTIM_EMAIL).digest('hex');

@@ -1,17 +1,3 @@
-/**
- * Mutation-coverage tests for CreateReviewUseCase.
- *
- * Targets 5 Stryker survivors in `src/modules/review/useCase/public/createReview.useCase.ts`:
- *  - L47 MethodExpression `input.comment.trim()` → `input.comment`
- *  - L48 EqualityOperator `comment.length < 10` → `<= 10`
- *  - L48 ConditionalExpression `comment.length > 2000` → `false`
- *  - L48 EqualityOperator `comment.length > 2000` → `>= 2000`
- *  - L52 MethodExpression `buildReviewDisplayName(input.user).slice(0, 128)` → `buildReviewDisplayName(input.user)`
- *
- * Strategy: full-payload `toHaveBeenCalledWith`, exact boundary lengths, and
- * a 130-char display name to lock truncation at 128.
- */
-
 import { CreateReviewUseCase } from '@modules/review/useCase/public/createReview.useCase';
 
 import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
@@ -29,7 +15,6 @@ const persistedReview: ReviewDTO = {
   createdAt: '2026-03-26T12:00:00.000Z',
 };
 
-/** No-op session-lookup stub (these cases never thread a sessionId). */
 function makeLookup(): jest.Mocked<IReviewSessionLookup> {
   return { findSessionMuseum: jest.fn().mockResolvedValue(null) };
 }
@@ -65,28 +50,22 @@ describe('CreateReviewUseCase — mutation coverage', () => {
         comment: '   A valid comment.   ',
       });
 
-      // If trim() were dropped, the call would receive the padded string.
       expect(repo.createReview).toHaveBeenCalledTimes(1);
       expect(repo.createReview).toHaveBeenCalledWith({
         userId: 1,
         userName: 'Ada L.',
         rating: 5,
         comment: 'A valid comment.',
-        // C2 — attribution: no sessionId threaded → museum scope NULL (global).
         museumId: null,
         sessionId: null,
       });
     });
 
     it('rejects whitespace-padded short comment whose trimmed length is < 10', async () => {
-      // "  hi  " has length 6 trimmed; without trim() it would be 6 too but the
-      // pure-whitespace fast-path `!comment` would not fire.  This test specifically
-      // catches the trim() removal mutant because the padded version has length 16
-      // and would slip past the length check if trim() were absent.
       const repo = makeRepo();
       const uc = new CreateReviewUseCase(repo, makeLookup());
 
-      const padded = '   short!!   '; // raw length 13, trimmed length 8
+      const padded = '   short!!   ';
       await expect(
         uc.execute({
           user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
@@ -103,7 +82,7 @@ describe('CreateReviewUseCase — mutation coverage', () => {
     it('accepts a comment of exactly 10 characters (boundary)', async () => {
       const repo = makeRepo();
       const uc = new CreateReviewUseCase(repo, makeLookup());
-      const tenChars = 'abcdefghij'; // length === 10
+      const tenChars = 'abcdefghij';
 
       await uc.execute({
         user: { id: 1, firstname: 'Ada', lastname: 'Lovelace' },
@@ -177,7 +156,6 @@ describe('CreateReviewUseCase — mutation coverage', () => {
       const repo = makeRepo();
       const uc = new CreateReviewUseCase(repo, makeLookup());
 
-      // firstname (130 chars) + " " + last-initial "." = 133 chars → trimmed to 128.
       const longFirstname = 'A'.repeat(130);
 
       await uc.execute({
@@ -190,7 +168,6 @@ describe('CreateReviewUseCase — mutation coverage', () => {
       const callArg = repo.createReview.mock.calls[0]?.[0];
       expect(callArg).toBeDefined();
       expect(callArg?.userName.length).toBe(128);
-      // First 128 chars of "AAAA…(130)… L." → "A" * 128.
       expect(callArg?.userName).toBe('A'.repeat(128));
     });
 

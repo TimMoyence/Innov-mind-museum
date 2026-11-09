@@ -12,13 +12,8 @@ interface MockRedis {
   on: jest.Mock;
 }
 
-/**
- * Exposes the mock in the Redis shape expected by RedisRateLimitStore. Single cast.
- * @param m
- */
 const asRedis = (m: MockRedis): Redis => m as unknown as Redis;
 
-/** Creates a mock ioredis client exposing the minimal surface the store uses. */
 const createMockRedis = (): MockRedis => {
   return {
     eval: jest.fn(async () => [1, 60_000]),
@@ -95,7 +90,7 @@ describe('RedisRateLimitStore', () => {
       jest.advanceTimersByTime(1001);
 
       const r2 = await store.increment('ip:expire', 1000);
-      expect(r2.count).toBe(1); // reset
+      expect(r2.count).toBe(1);
 
       jest.useRealTimers();
     });
@@ -178,7 +173,6 @@ describe('RedisRateLimitStore — integration with rate-limit middleware', () =>
 
     mw(req, res, next);
 
-    // Wait for the async Redis path
     await new Promise(process.nextTick);
 
     expect(next).toHaveBeenCalledWith();

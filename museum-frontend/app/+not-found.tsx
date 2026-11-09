@@ -8,7 +8,6 @@ import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-/** Displays a 404-style screen with a link to navigate back to the home page. */
 export default function NotFoundScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();

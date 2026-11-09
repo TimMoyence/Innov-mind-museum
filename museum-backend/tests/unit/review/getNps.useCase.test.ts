@@ -1,20 +1,3 @@
-/**
- * T-API-3 (RED — S-BE-API, UFR-022 fresh-context red phase 2026-05-26).
- *
- * Proves the future `GetNpsUseCase` threads the (already RBAC-resolved) scope
- * through to `repo.aggregateNps`:
- *   - `execute({ museumId: 42 })` → `repo.aggregateNps(42)`
- *   - `execute({})`              → `repo.aggregateNps(undefined)` (global, R13)
- * The use-case is scope-AGNOSTIC: the route owns the RBAC decision and hands it
- * a resolved `museumId | undefined` (design-c2.md §3, mirrors C1 `/stats`).
- *
- * Baseline FAILS (success of red phase per UFR-022): `getNps.useCase.ts` does
- * NOT exist yet (created in green T-API-9), so this suite fails to resolve the
- * import — failure mode = `missing-schema` (Cannot find module). After green the
- * import resolves and the assertions hold.
- *
- * lib-docs/typeorm/PATTERNS.md §9.1 (UC depends on IReviewRepository interface).
- */
 import { GetNpsUseCase } from '@modules/review/useCase/public/getNps.useCase';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';

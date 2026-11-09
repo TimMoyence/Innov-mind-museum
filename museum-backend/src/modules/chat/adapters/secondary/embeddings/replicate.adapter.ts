@@ -1,20 +1,10 @@
-/**
- * Replicate-hosted SigLIP embeddings (R8 fallback, ADR-037).
- * Activated via `EMBEDDINGS_PROVIDER=replicate` when local ONNX is unavailable.
- *
- * Flow: POST /v1/predictions → poll urls.get until terminal → L2-normalise (IP==cosine).
- * All failures (4xx/5xx, status='failed'|'canceled', timeout) → EncoderUnavailableError.
- *
- * Native fetch (not `replicate` npm) so tests can mock global.fetch + the
- * package stays in optionalDependencies.
- */
-
 import {
   EncoderUnavailableError,
   type EmbeddingsPort,
   type EncodeInput,
   type EncodeOutput,
 } from '@modules/chat/domain/ports/embeddings.port';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 const REPLICATE_PREDICTIONS_URL = 'https://api.replicate.com/v1/predictions';
@@ -23,9 +13,7 @@ const EXPECTED_VECTOR_LEN = 768;
 
 export interface ReplicateEmbeddingsAdapterOptions {
   apiToken: string;
-  /** `<owner>/<name>` or `<owner>/<name>:<sha>`. */
   model: string;
-  /** Hard deadline in ms for create + polling. */
   timeoutMs: number;
 }
 
@@ -42,18 +30,13 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
   private readonly model: string;
   private readonly timeoutMs: number;
 
-  /** SEC: apiToken held in memory only, never logged. */
   public constructor(opts: ReplicateEmbeddingsAdapterOptions) {
     this.apiToken = opts.apiToken;
     this.model = opts.model;
     this.timeoutMs = opts.timeoutMs;
   }
 
-  /** @throws {EncoderUnavailableError} 4xx/5xx/terminal/timeout */
   public async encode(input: EncodeInput): Promise<EncodeOutput> {
-    // PR-14: does NOT use `fetchWithTimeout` — single budget shared across
-    // multi-fetch flow (createPrediction + awaitTerminal polling). The helper
-    // arms a per-call timer; here the same `controller` must span N fetches.
     const controller = new AbortController();
     const timeoutHandle = setTimeout(() => {
       controller.abort();
@@ -79,10 +62,7 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
           err,
         );
       }
-      throw new EncoderUnavailableError(
-        `Replicate prediction failed: ${err instanceof Error ? err.message : String(err)}`,
-        err,
-      );
+      throw new EncoderUnavailableError(`Replicate prediction failed: ${errorMessage(err)}`, err);
     } finally {
       clearTimeout(timeoutHandle);
     }
@@ -95,7 +75,6 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
     const body: Record<string, unknown> = {
       input: { image: dataUri },
     };
-    // `version` (sha-pinned) vs `model` (owner/name).
     if (this.model.includes(':')) {
       body.version = this.model.split(':')[1];
     } else {
@@ -116,7 +95,6 @@ export class ReplicateEmbeddingsAdapter implements EmbeddingsPort {
     return await parseResponseOrFail(response, 'create');
   }
 
-  /** Returns immediately if initial is 'succeeded'; else polls `urls.get`. */
   private async awaitTerminal(
     initial: ReplicatePrediction,
     signal: AbortSignal,
@@ -167,7 +145,6 @@ function bufferToDataUri(buffer: Buffer, mimeType: string): string {
   return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }
 
-/** Non-2xx (both 4xx + 5xx) → EncoderUnavailableError. */
 async function parseResponseOrFail(
   response: Response,
   stage: 'create' | 'poll',
@@ -177,9 +154,7 @@ async function parseResponseOrFail(
     try {
       const body = (await response.json()) as { detail?: string } | undefined;
       detail = body?.detail ? ` (${body.detail})` : '';
-    } catch {
-      // ignore — body may not be JSON
-    }
+    } catch {}
     logger.warn('replicate_embeddings_http_error', {
       stage,
       status: response.status,
@@ -192,7 +167,6 @@ async function parseResponseOrFail(
   return (await response.json()) as ReplicatePrediction;
 }
 
-/** Accepts both `number[]` and `number[][]` (single-batch) output shapes. */
 function extractVector(prediction: ReplicatePrediction): number[] {
   const { output } = prediction;
   if (output == null) {
@@ -231,12 +205,6 @@ function l2Normalise(vec: number[]): Float32Array {
   return out;
 }
 
-/**
- * Output shape: `siglip-base-patch16-224@replicate-v1` (owner+sha stripped).
- * Stays at SigLIP v1: Replicate had no SigLIP-2 model at the C9.14 upgrade
- * (2026-05-18) so the hosted fallback lags one generation; the distinct
- * `modelVersion` keeps stale-row detection honest in `artwork_embeddings`.
- */
 function buildModelVersion(model: string): string {
   const noOwner = model.includes('/') ? (model.split('/')[1] ?? model) : model;
   const noSha = noOwner.includes(':') ? (noOwner.split(':')[0] ?? noOwner) : noOwner;
@@ -261,7 +229,6 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-/** Cross-realm-safe AbortError detection. */
 function isAbortError(err: unknown): boolean {
   if (err instanceof Error && err.name === 'AbortError') return true;
   if (

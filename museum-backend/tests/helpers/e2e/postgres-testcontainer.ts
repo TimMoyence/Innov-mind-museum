@@ -75,7 +75,6 @@ const waitForPostgres = (params: {
     'Postgres test container was not ready in time',
   );
 
-/** Test utility: handle for a running ephemeral Postgres Docker container with connection details and cleanup methods. */
 export interface StartedPostgresTestContainer {
   containerName: string;
   host: string;
@@ -87,10 +86,6 @@ export interface StartedPostgresTestContainer {
   scheduleStop: () => void;
 }
 
-/**
- * Test utility: starts an ephemeral Postgres 16 Docker container on a random port and waits until it accepts connections.
- * @returns Handle with connection details and stop/scheduleStop methods.
- */
 export const startPostgresTestContainer = async (): Promise<StartedPostgresTestContainer> => {
   const suffix = randomUUID().replace(/-/g, '').slice(0, 12);
   const containerName = `museum-ia-e2e-${suffix}`;

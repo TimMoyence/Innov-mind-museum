@@ -1,4 +1,3 @@
-/** "lat:48.8606,lng:2.3376" → coords; null on invalid/out-of-range. */
 export function parseLocationString(raw?: string): { lat: number; lng: number } | null {
   if (!raw) return null;
   const match = /^lat:([-\d.]+),lng:([-\d.]+)$/.exec(raw.trim());
@@ -10,12 +9,6 @@ export function parseLocationString(raw?: string): { lat: number; lng: number } 
   return { lat, lng };
 }
 
-/**
- * True when `raw` is parseable as raw GPS coordinates (`"lat:X,lng:Y"`).
- * Single source of truth derived from `parseLocationString` so any coordinate
- * format change is covered everywhere at once (no duplicated regex). Used by
- * the chat prompt-injection points to never interpolate raw coordinates.
- */
 export function isCoordinateString(raw?: string): boolean {
   return parseLocationString(raw) !== null;
 }

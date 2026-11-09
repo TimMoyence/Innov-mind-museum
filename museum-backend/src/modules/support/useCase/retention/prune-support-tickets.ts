@@ -4,11 +4,6 @@ import { logger } from '@shared/logger/logger';
 
 import type { DataSource } from 'typeorm';
 
-/**
- * Throttle between non-empty chunks so a runaway purge cannot monopolise
- * pgbouncer (incident 2026-05-08 hardening — /team run `2026-05-08-prune-hardening`).
- * ~10× a nominal PG query so other traffic gets a clear window.
- */
 const CHUNK_THROTTLE_MS = 50;
 
 export interface PruneResult {
@@ -17,19 +12,10 @@ export interface PruneResult {
 }
 
 export interface PruneSupportTicketsConfig {
-  /** Default 365. */
   daysClosed: number;
-  /** Rows per chunk (single transaction). Default 1000. */
   batchLimit: number;
 }
 
-/**
- * Hard-deletes support_tickets where status IN ('closed', 'resolved')
- * AND updatedAt < NOW() - daysClosed. Cascades to ticket_messages via FK.
- * Idempotent — re-running deletes only newly eligible rows.
- *
- * ADR: docs/adr/ADR-018-support-tickets-retention.md
- */
 export async function pruneSupportTickets(
   dataSource: DataSource,
   cfg: PruneSupportTicketsConfig,
@@ -39,10 +25,6 @@ export async function pruneSupportTickets(
   let chunkDeleted = -1;
 
   while (chunkDeleted !== 0) {
-    // WHY: TypeORM 0.3.x normalizes DELETE/UPDATE results to `[rows, rowCount]`
-    // (PostgresQueryRunner.js, raw.command switch). Reading `result.length` is
-    // always 2 → infinite loop + prod DB saturation (incident 2026-05-08).
-    // Same shape handling as shared/audit/audit-ip-anonymizer.job.ts.
     const result = await dataSource.query<[unknown[], number] | undefined>(
       `DELETE FROM "support_tickets"
        WHERE id IN (

@@ -2,7 +2,7 @@ import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
+jest.mock('i18next', () => ({ __esModule: true, default: { language: 'en' } }));
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: { createSession: jest.fn() },
@@ -42,7 +42,6 @@ describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'en-US',
       defaultMuseumMode: false,
       guideLevel: 'beginner',
       _hydrated: true,
@@ -120,7 +119,7 @@ describe('HomeScreen', () => {
     fireEvent.press(screen.getByLabelText('a11y.home.start_conversation'));
     await waitFor(() => {
       expect(mockCreateSession).toHaveBeenCalledWith(
-        expect.objectContaining({ locale: 'en-US', museumMode: false }),
+        expect.objectContaining({ locale: 'en', museumMode: false }),
       );
     });
   });

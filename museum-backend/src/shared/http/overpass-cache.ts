@@ -8,27 +8,12 @@ import { logger } from '@shared/logger/logger';
 import type { OverpassMuseumResult, OverpassSearchParams } from './overpass-types';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/**
- * `value: []` means Overpass answered with no museum; it gets the short negative TTL
- * to shield Overpass from quiet-region hammering. An outage is held one minute only
- * (`OUTAGE_CACHE_TTL_SECONDS`) and never overwrites a stored list on background refresh.
- * Distinct from cache miss (entry exists in store). `storedAtMs` enables probabilistic
- * refresh on TTL-unaware cache port.
- *
- * Compat alias — kept so the rest of the codebase (and the existing tests in
- * `tests/unit/shared/overpass-cache.test.ts`) can keep importing
- * `OverpassCacheEntry` without coupling to the shared helper's generic.
- */
 export type OverpassCacheEntry = RefreshableEntry<OverpassMuseumResult[]>;
 
 const CACHE_KEY_COORD_PRECISION = 3;
 const CACHE_KEY_BBOX_PRECISION = 2;
 const CACHE_KEY_RADIUS_KM_PRECISION = 1;
 
-/**
- * Radius-mode: lat/lng to 3dp (~111m) + radius to 0.1km — absorbs GPS jitter.
- * Bbox-mode: corners to 2dp. `q` filter is part of the key (no collision with unfiltered).
- */
 export function buildOverpassCacheKey(params: OverpassSearchParams): string | null {
   const qSuffix = params.q ? `:q=${params.q.toLowerCase()}` : '';
   if (params.bbox) {
@@ -64,12 +49,6 @@ export interface OverpassBackgroundRefreshArgs {
   refresh: (params: OverpassSearchParams) => Promise<OverpassMuseumResult[]>;
 }
 
-/**
- * Fire-and-forget. Never throws. Delegates the actual orchestration (refresh
- * → empty-bucket TTL selection → cache.set → fail-soft logging) to the shared
- * `createBackgroundRefresh` factory — local code only carries the
- * Overpass-shaped `params` capture.
- */
 export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArgs): void {
   const { cache, params, cacheKey, positiveTtlSeconds, negativeTtlSeconds, refresh } = args;
   const trigger = createBackgroundRefresh<OverpassMuseumResult[]>({
@@ -87,9 +66,4 @@ export function fireOverpassBackgroundRefresh(args: OverpassBackgroundRefreshArg
   });
 }
 
-/**
- * Smooths thundering-herd at TTL expiry. Probabilistic refresh in last 10% TTL.
- * Const-alias of the shared helper so callers can keep the Overpass-domain name
- * at the call site.
- */
 export const shouldOverpassEarlyRefresh = shouldEarlyRefresh<OverpassMuseumResult[]>;

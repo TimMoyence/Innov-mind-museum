@@ -1,28 +1,6 @@
-/**
- * RED test — T1.1 (run 2026-05-21-connectivity-offline-first).
- *
- * Proves the absence of the canonical `isOnline(state)` pure predicate +
- * `ConnectivityState` type in `shared/infrastructure/connectivity/isOnline.ts`.
- *
- * Spec R1/R2, design §D1 truth table. The 10-row table below is copied
- * verbatim from design.md §D1 (load-bearing — covers spec R2's 8 rows plus the
- * two explicit-unreachable rows).
- *
- * Semantics: online iff `isConnected === true && isInternetReachable !== false`.
- * `null`/`undefined` on either field is online-optimistic (predicate true) UNLESS
- * `isInternetReachable === false` (explicit unreachability wins).
- *
- * lib-docs cited: @react-native-community/netinfo PATTERNS.md:142 (treat both
- * fields as `boolean|null`, never cast), PATTERNS.md:173 (DON'T trust
- * `isConnected:true` alone — must AND reachability).
- *
- * RED contract: FAILS before T1.1 because the module/function does not exist
- * (import resolution error / `isOnline is not a function`).
- */
 import { isOnline, type ConnectivityState } from '@/shared/infrastructure/connectivity/isOnline';
 
 describe('isOnline (canonical connectivity predicate) — T1.1 / spec R1+R2 / design D1', () => {
-  // [isConnected, isInternetReachable, expected, rationale]
   const TRUTH_TABLE: readonly [
     ConnectivityState['isConnected'],
     ConnectivityState['isInternetReachable'],
@@ -54,7 +32,6 @@ describe('isOnline (canonical connectivity predicate) — T1.1 / spec R1+R2 / de
     const second = isOnline(state);
     expect(first).toBe(second);
     expect(first).toBe(true);
-    // The input object must not be mutated by the predicate.
     expect(state).toEqual({ isConnected: true, isInternetReachable: true });
   });
 });

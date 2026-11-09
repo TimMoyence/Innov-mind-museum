@@ -1,36 +1,11 @@
 FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
 WORKDIR /app
 
-# pnpm
 RUN corepack enable && corepack prepare pnpm@9.15.3 --activate
 
-# Bake-key carried by the image so `scripts/dev-stack.sh` can decide whether a
-# rebuild is needed without inspecting host files (worktree-safe, branch-safe).
-# Computed by the wrapper as sha256 of the set of files COPY'd below (Dockerfile
-# + manifests + file:-dep packages). `unknown` default = forces rebuild when the
-# image was built without the arg (legacy / hand-built). DEV-ONLY label — the
-# prod image (museum-backend/deploy/Dockerfile.prod) doesn't carry this.
 ARG BAKE_KEY=unknown
 LABEL musaium.dev-bake-key="$BAKE_KEY"
 
-# museum-backend's package.json declares TWO `file:` deps that point outside
-# the museum-backend dir (see CLAUDE.md "Pièges connus" — workspace was
-# reverted to file: in commit 641968ea4) :
-#   "@musaium/shared": "file:../packages/musaium-shared"
-#   "eslint-plugin-musaium-test-discipline": "file:../tools/eslint-plugin-musaium-test-discipline"
-#
-# The build context for this image is the repo root (`context: ..` in
-# museum-backend/docker-compose.dev.yml), so the workspace package layout
-# INSIDE the container mirrors the host repo : /app/museum-backend,
-# /app/packages/musaium-shared, and /app/tools/eslint-plugin-musaium-test-discipline
-# all coexist, and pnpm resolves the `file:` symlink targets during
-# `pnpm install --frozen-lockfile`.
-#
-# Copy the file: deps FIRST (their committed `dist/` is the consumed artefact —
-# see packages/musaium-shared/package.json `main`/`exports`), then the backend
-# manifests, then install. The compose volume mount (`.:/app/museum-backend`)
-# overlays source-code edits at runtime but preserves /app/museum-backend/node_modules
-# and /app/packages + /app/tools from the image.
 COPY packages/musaium-shared /app/packages/musaium-shared
 COPY tools/eslint-plugin-musaium-test-discipline /app/tools/eslint-plugin-musaium-test-discipline
 COPY museum-backend/package.json museum-backend/pnpm-lock.yaml /app/museum-backend/
@@ -39,8 +14,6 @@ WORKDIR /app/museum-backend
 
 RUN pnpm install --frozen-lockfile
 
-# Copy the remaining backend sources. Overridden by the bind mount at
-# runtime, useful only for `docker build` standalone consumers / cache layers.
 COPY museum-backend/ /app/museum-backend/
 
 EXPOSE 3000

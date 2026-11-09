@@ -27,19 +27,11 @@ describe('resolveCorsOrigin — CORS policy matrix', () => {
   });
 
   it('treats an empty-string element as populated (explicit wildcard intent by operator)', () => {
-    // `toList()` in config/env.ts already drops empty strings — this is the
-    // defense-in-depth layer: even if a single '' slipped through, we treat
-    // it as an intentional entry (not "empty"), preserving the principle of
-    // "origins.length > 0 → allow list is authoritative".
     const result = resolveCorsOrigin([''], true);
     expect(result).toEqual(['']);
   });
 
   it('never returns a true wildcard in production even with malformed input', () => {
-    // Regression guard: the audit flagged a perceived "CORS self-DoS in prod
-    // when origins is empty". That behaviour is intentional — `false` is
-    // strictly safer than `true`. This test pins the contract so future
-    // refactors cannot flip it.
     expect(resolveCorsOrigin([], true)).not.toBe(true);
   });
 });

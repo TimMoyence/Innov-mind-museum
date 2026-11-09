@@ -1,35 +1,9 @@
-/**
- * Red tests for A2 — screen integration of `<ArtworkHeroCard>`.
- *
- * Asserts that `ChatSessionScreen`:
- *   1. Mounts `<ArtworkHeroCard>` once when `useArtworkHero(messages)` returns
- *      a non-null model (AC16).
- *   2. Does NOT mount `<ArtworkHeroCard>` when there is no user-image (AC16
- *      negative — hero is gated by data presence, not a flag).
- *   3. Mounts `<ArtworkHeroModal>` at the screen level (sibling of the message
- *      surface) so it can host the pinch-zoom expanded view (R16-R22 wire).
- *
- * At baseline (A2 not yet implemented) :
- *   - `<ArtworkHeroCard>` / `<ArtworkHeroModal>` are never imported by the
- *     screen. The `jest.mock` factories below register spy mocks, but the
- *     spies are never invoked because the components are not (yet) in the
- *     screen's JSX. Assertions on the spies fail with `not.toHaveBeenCalled`.
- *
- * Why a dedicated file (not merged into chat-session-deep) :
- *   - chat-session-deep is already 1k+ lines with global mocks tuned to its
- *     own assertions ; mixing A2 mocks risks side-effects.
- *   - Independent green/red lifecycle (A2 is a leaf feature on the screen).
- *
- * Spec: `docs/chat-ux-refonte/specs/A2.md` §1.2 R8-R12 ; §2.5 wire ; §4 AC16.
- */
-
 import type * as ReactTypes from 'react';
 import React from 'react';
 import { render } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 
-// ── Mock A2 components so we can spy on their render contract ──────────────
 const mockArtworkHeroCard = jest.fn();
 jest.mock(
   '@/features/chat/ui/ArtworkHeroCard',
@@ -62,7 +36,6 @@ jest.mock(
   { virtual: true },
 );
 
-// ── Stub heavy children before importing the screen ────────────────────────
 jest.mock('@/features/chat/ui/ChatMessageList', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -110,11 +83,9 @@ jest.mock('@/features/chat/ui/WalkSuggestionChips', () => {
   };
 });
 
-// ── expo-router params ──────────────────────────────────────────────────────
 const mockExpoRouterMock = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouterMock.useLocalSearchParams = () => ({ sessionId: 'session-A2' });
 
-// ── @react-navigation/native ────────────────────────────────────────────────
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     setOptions: jest.fn(),
@@ -127,7 +98,6 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// ── chatApi (avoid network) ─────────────────────────────────────────────────
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
     createSession: jest.fn(),
@@ -136,13 +106,11 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── useChatSession (drives `messages`) ─────────────────────────────────────
 const mockUseChatSession = jest.fn();
 jest.mock('@/features/chat/application/useChatSession', () => ({
   useChatSession: (...args: unknown[]) => mockUseChatSession(...args),
 }));
 
-// ── Side hooks (no-op) ──────────────────────────────────────────────────────
 const mockImagePickerState = {
   selectedImage: null as string | null,
   onPickImage: jest.fn(),
@@ -204,7 +172,6 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-// ── Import AFTER mocks ──────────────────────────────────────────────────────
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 
 function defaultSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -295,9 +262,6 @@ describe('ChatSessionScreen — A2 ArtworkHeroCard wiring', () => {
 
     render(<ChatSessionScreen />);
 
-    // The component is always mounted (it returns null internally per R8) ;
-    // the spec gates the visible card by model presence, not by conditional
-    // mount. We assert that the model prop is null in this branch.
     expect(mockArtworkHeroCard).toHaveBeenCalled();
     const lastCallProps = mockArtworkHeroCard.mock.calls.at(-1)?.[0] as {
       model?: { imageUrl?: string } | null;
@@ -328,7 +292,6 @@ describe('ChatSessionScreen — A2 ArtworkHeroCard wiring', () => {
       model?: { imageUrl?: string } | null;
       onClose?: () => void;
     };
-    // Modal initially hidden — opens on hero card tap.
     expect(lastCallProps?.visible).toBe(false);
     expect(typeof lastCallProps?.onClose).toBe('function');
     expect(lastCallProps?.model?.imageUrl).toBe('https://signed.example.com/mona.jpg');

@@ -107,7 +107,6 @@ describe('TypeOrmArtKeywordRepository', () => {
 
     await repository.bulkUpsert(['mosaic', 'fresco', 'mosaic'], 'en');
 
-    // Deduplicated: mosaic + fresco = 2 unique
     expect(repo.query).toHaveBeenCalledTimes(1);
     const [sql, params] = (repo.query as jest.Mock).mock.calls[0];
     expect(sql).toContain('INSERT INTO "art_keywords"');

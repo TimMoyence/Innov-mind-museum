@@ -1,118 +1,44 @@
 appId: com.musaium.mobile.preview
 ---
-# KNOWN-BLOCKED (local sim Release) — RE-DIAGNOSED 2026-06-01. The previously
-# recorded cause ("simctl addmedia hangs, fixture not selectable, no /chat/compare
-# request reaches the backend") was WRONG. Verified on iPhone 17 / iOS 26.5:
-#   - `xcrun simctl addmedia booted .maestro/fixtures/test-artwork.jpg` returns
-#     exit 0 instantly on a settled sim (the earlier "hang" was transient
-#     post-boot MediaServices/Photos daemon state).
-#   - The fixture IS selectable: the top-left PHPicker cell (point 15%,30%) picks
-#     it, and `useCompareTrigger` DOES fire POST /api/chat/compare (confirmed in
-#     backend logs: compare_request with a queryEmbeddingHash, userId 38).
-# The REAL blocker is backend-side: the SigLIP ONNX encoder model
-# (`./models/siglip2-base-patch16-224.onnx`, ~354MB) must be present in the
-# backend, else every compare returns HTTP 503 "Visual similarity encoder is
-# temporarily unavailable" (log: siglip_onnx_session_create_failed → fallbackReason
-# encoder_unavailable). As of 2026-06-14 (P0.C1) the model is OWNED + baked into
-# the prod image via a pinned GHCR base image (museum-backend/deploy/Dockerfile.prod
-# `COPY --from museum-backend-base:siglip-v1`) — the old GCS-bucket blocker is gone.
-# A local dev-stack backend still needs the file (run `bash scripts/pull-siglip-
-# model.sh`), and /chat/compare additionally needs seeded artwork_embeddings to
-# return matches. Both are backend-infra prerequisites that CI/nightly provisions,
-# so this stays a NIGHTLY/CI-only flow against a prod-image backend. The UI wiring (chat
-# entry → attachment picker → Compare → pick → POST /chat/compare) is fully
-# exercised locally and the app degrades gracefully (an "Unexpected server error"
-# banner, no crash). NOTE: the image-DESCRIBE path (chat-image-describe.yaml) uses
-# the vision LLM (no SigLIP) and IS runtime-green locally.
-# Chat Compare Flow (C3 Image Comparative — Cycle D Option C).
-#
-# Validates visual similarity matching via the REAL trigger: the "Compare"
-# action inside the attachment-picker bottom sheet.
-#   open chat → open attachments (composer-attach-button) → "Compare"
-#   (attachment-picker-compare) → pick a gallery photo → useCompareTrigger fires
-#   POST /chat/compare → reload() surfaces the persisted assistant message →
-#   ImageCompareCarousel renders → assert "Similar artworks" / "Œuvres similaires".
-#
-# Status: NIGHTLY (backend SigLIP/ONNX-dependent), NOT PR-blocking.
-#
-# Prerequisites (ALL load-bearing now that Phase 5 hard-asserts a real card):
-#   - SigLIP ONNX encoder live (model file present backend-side) AND at least
-#     one ingested artwork_embeddings row with a public-domain image — both are
-#     provisioned by scripts/maestro-runner-setup.sh (pull-siglip-model.sh +
-#     catalog:ingest). Without a real match the carousel renders header-only and
-#     Phase 5 fails RED (by design — that is the whole point of the per-card
-#     assert vs the old header-only check).
-#   - Fixture .maestro/fixtures/test-artwork.jpg in the sim photo library
-#     (CI / local: `xcrun simctl addmedia booted ...` before the run).
-
-# ──────────────────────────────────────────────
-# Phase 0-1: Fresh launch, login, open a chat session
-# ──────────────────────────────────────────────
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ──────────────────────────────────────────────
-# Phase 2: Open the attachment picker → tap "Compare" (Option C trigger)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "composer-attach-button"
+    id: 'composer-attach-button'
 - waitForAnimationToEnd
 - tapOn:
-    id: "attachment-picker-compare"
+    id: 'attachment-picker-compare'
 - waitForAnimationToEnd
 
-# expo-image-picker requests media-library permission on first use; accept it.
 - tapOn:
-    text: "Allow|Allow Access to All Photos|Autoriser|Tout autoriser"
+    text: 'Allow|Allow Access to All Photos|Autoriser|Tout autoriser'
     optional: true
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Pick the seeded test image from the system gallery picker.
-# Native PHPicker shows a thumbnail grid (no filenames) → tap the top-left cell
-# (most-recent asset = the fixture CI/local just added). Filename tap is a
-# fallback for documents-style pickers.
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "test-artwork.jpg"
+    text: 'test-artwork.jpg'
     optional: true
 - tapOn:
-    point: "15%,30%"
+    point: '15%,30%'
     optional: true
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 4: Wait for the compare round-trip → carousel render
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Similar artworks|Œuvres similaires"
+      text: 'Similar artworks|Œuvres similaires'
     timeout: 60000
 - assertVisible:
-    text: "Similar artworks|Œuvres similaires"
+    text: 'Similar artworks|Œuvres similaires'
 
-# ──────────────────────────────────────────────
-# Phase 5: REQUIRED — assert at least one real match CARD rendered, not just the
-# carousel header. The header (chat.compare.title "Similar artworks" /
-# "Œuvres similaires", asserted in Phase 4) renders in BOTH the empty-state and
-# populated branches of ImageCompareCarousel.tsx (line 46, before the
-# matches.length===0 ternary), so a zero-match carousel would pass Phase 4
-# vacuously. The per-card accessibilityLabel prefix below
-# (ImageCompareCard.tsx:40-43 — "Similar artwork: …" / "Œuvre similaire : …",
-# hardcoded, NOT i18n) renders ONLY when a real CompareMatch card exists, so
-# this hard assert fails RED on an empty/header-only carousel AND on a dead
-# encoder (no carousel at all). NOTE the FR label has a space before the colon
-# ("Œuvre similaire :"). This is the load-bearing assert of the flow.
-# ──────────────────────────────────────────────
 - assertVisible:
-    text: "Similar artwork:.*|Œuvre similaire :.*"
+    text: 'Similar artwork:.*|Œuvre similaire :.*'
 - tapOn:
-    text: "Similar artwork:.*|Œuvre similaire :.*"
+    text: 'Similar artwork:.*|Œuvre similaire :.*'
 - waitForAnimationToEnd
 - assertVisible:
-    id: "image-fullscreen-modal-close"
+    id: 'image-fullscreen-modal-close'
 - tapOn:
-    id: "image-fullscreen-modal-close"
+    id: 'image-fullscreen-modal-close'
 - waitForAnimationToEnd
 - assertVisible:
-    text: "Similar artwork:.*|Œuvre similaire :.*"
+    text: 'Similar artwork:.*|Œuvre similaire :.*'

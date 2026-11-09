@@ -1,13 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Validates that all translation files have the same keys as the English reference
- * and that no values are empty strings.
- *
- * Usage: node scripts/check-i18n-completeness.js
- * Exit code 0 = all OK, 1 = missing/empty keys found.
- */
-
 const fs = require('fs');
 const path = require('path');
 

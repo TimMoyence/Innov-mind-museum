@@ -13,14 +13,12 @@ jest.mock('@src/config/env', () => ({
   },
 }));
 
-// Generate a real RSA key pair for JWT signing/verification
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 });
 
-// Derive JWK components from the public key
 const publicKeyObject = crypto.createPublicKey(publicKey);
 const jwkExport = publicKeyObject.export({ format: 'jwk' }) as {
   n: string;
@@ -42,11 +40,6 @@ const mockJwksResponse = {
   ],
 };
 
-/**
- * Signs a JWT with the test RSA private key. Claims like iss/aud go ONLY
- * in the payload (not duplicated in options) to avoid the jsonwebtoken library
- * "Bad options" error.
- */
 const signToken = (
   payload: Record<string, unknown>,
   options: Omit<jwt.SignOptions, 'issuer' | 'audience'> = {},
@@ -59,7 +52,6 @@ const signToken = (
   });
 };
 
-// Mock global fetch for JWKS endpoint
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
@@ -70,7 +62,6 @@ describe('social-token-verifier', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    // Re-import module each time to reset JWKS cache (module-level Map)
     jest.resetModules();
     const mod = await import('@modules/auth/adapters/secondary/social/social-token-verifier');
     verifyAppleIdToken = mod.verifyAppleIdToken;
@@ -116,9 +107,6 @@ describe('social-token-verifier', () => {
         aud: 'wrong-client-id',
       });
 
-      // safeJwtVerify wraps `jsonwebtoken`'s "jwt audience invalid" library
-      // error as AppError 401/TOKEN_INVALID so the route emits a 401 instead
-      // of leaking a 500. Without this the social-login e2e tests fail.
       await expect(verifyAppleIdToken(token)).rejects.toMatchObject({
         statusCode: 401,
         code: 'TOKEN_INVALID',
@@ -126,7 +114,6 @@ describe('social-token-verifier', () => {
     });
 
     it('rejects an expired token as 401 TOKEN_EXPIRED', async () => {
-      // Create a token that expired 1 hour ago
       const now = Math.floor(Date.now() / 1000);
       const token = jwt.sign(
         {
@@ -268,7 +255,6 @@ describe('social-token-verifier', () => {
       await verifyAppleIdToken(token1);
       await verifyAppleIdToken(token2);
 
-      // JWKS should be fetched only once due to caching
       const appleCalls = mockFetch.mock.calls.filter(
         (call: [string]) => typeof call[0] === 'string' && call[0].includes('apple'),
       );
@@ -287,7 +273,7 @@ describe('social-token-verifier', () => {
 
       mockFetch.mockResolvedValue({
         ok: true,
-        json: async () => mockJwksResponse, // does not contain unknown-kid
+        json: async () => mockJwksResponse,
       });
 
       await expect(verifyAppleIdToken(fakeToken)).rejects.toThrow('No matching key found');
@@ -296,7 +282,6 @@ describe('social-token-verifier', () => {
 
   describe('JWKS fetch failure', () => {
     it('throws when JWKS endpoint returns non-OK response', async () => {
-      // Override mock and re-import with fresh cache
       mockFetch.mockReset();
       mockFetch.mockResolvedValue({ ok: false, status: 500 });
       jest.resetModules();

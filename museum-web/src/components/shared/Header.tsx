@@ -14,22 +14,9 @@ interface HeaderProps {
 }
 
 export default function Header({ dict, locale }: HeaderProps) {
-  // All hooks first — admin-route bail-out happens after hook ordering is
-  // locked in, to satisfy `react-hooks/rules-of-hooks`.
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
-  // At scrollY=0 the header sits over different page contexts:
-  //   /<locale>            — dark hero gradient (#0a0a0b)
-  //   /<locale>/support    — light bg
-  //   /<locale>/privacy    — light bg
-  // axe-core composites whatever's actually rendered, so a translucent
-  // backdrop turns into mid-gray on light routes and fails 4.5:1 against
-  // text-white. A 90%-opaque deep-slate keeps the "soft glass" feel
-  // (composite still hints at the page below) but is solid-enough that
-  // axe sees a near-solid dark backdrop on every public route.
-  // Composite math vs white: 0.9*#0F172A + 0.1*#FFFFFF ≈ #272A3E
-  // (12.6:1 vs white text). Vs hero #0a0a0b: ≈ #0e1024 (16:1). Both pass.
   const headerBg = useTransform(
     scrollY,
     [0, 100],
@@ -53,11 +40,6 @@ export default function Header({ dict, locale }: HeaderProps) {
     { href: `/${locale}/privacy`, label: dict.nav.privacy },
   ];
 
-  // Marketing nav must not render on the admin shell — admin routes mount
-  // their own AdminShell chrome (sidebar + auth) and the marketing header
-  // both clashes visually and trips axe color-contrast on the white admin
-  // background. Locale-prefix-tolerant: matches `/<locale>/admin` and
-  // `/<locale>/admin/...`.
   if (/\/[a-z]{2}\/admin(\/|$)/.test(pathname)) return null;
 
   return (
@@ -71,7 +53,6 @@ export default function Header({ dict, locale }: HeaderProps) {
       }}
     >
       <div className="relative mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">
-        {/* Logo */}
         <Link
           href={`/${locale}`}
           className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
@@ -90,7 +71,6 @@ export default function Header({ dict, locale }: HeaderProps) {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
           {navLinks.map((link) => (
             <Link
@@ -110,7 +90,6 @@ export default function Header({ dict, locale }: HeaderProps) {
           </Link>
         </nav>
 
-        {/* Mobile hamburger */}
         <button
           type="button"
           className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors duration-300 md:hidden ${isDarkHeader ? 'text-white/70 hover:bg-white/10' : 'text-text-secondary hover:bg-white/50'}`}
@@ -148,7 +127,6 @@ export default function Header({ dict, locale }: HeaderProps) {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {menuOpen && (
         <nav
           className="border-t border-white/15 bg-white/60 px-4 pb-4 pt-2 backdrop-blur-xl md:hidden"

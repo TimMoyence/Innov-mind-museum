@@ -20,7 +20,6 @@ describe('UserMemoryService.mergeSessionDurationP90', () => {
 
   it('computes p90 over 10 sessions', async () => {
     const repo = makeUserMemoryRepoStub({ sessionDurationP90Minutes: null });
-    // durations 5..50 minutes (10 values, p90 index = ceil(0.9*10)-1 = 8 -> 45)
     repo.recentSessions = Array.from({ length: 10 }, (_, i) => session(i + 1, (i + 1) * 5));
     const svc = new UserMemoryService(repo);
     await svc.updateAfterSession(1, null, 'sess-x');
@@ -38,13 +37,12 @@ describe('UserMemoryService.mergeSessionDurationP90', () => {
     ];
     const svc = new UserMemoryService(repo);
     await svc.updateAfterSession(1, null, 'sess-x');
-    // Sorted clamped durations: [1, 1, 5, 7, 10]; p90 index = ceil(4.5)-1 = 4 -> 10
     expect(repo.upsertCalls[0][1].sessionDurationP90Minutes).toBe(10);
   });
 
   it('caps at 240 minutes', async () => {
     const repo = makeUserMemoryRepoStub({ sessionDurationP90Minutes: null });
-    repo.recentSessions = Array.from({ length: 5 }, (_, i) => session(i + 1, 600)); // 10h each
+    repo.recentSessions = Array.from({ length: 5 }, (_, i) => session(i + 1, 600));
     const svc = new UserMemoryService(repo);
     await svc.updateAfterSession(1, null, 'sess-x');
     expect(repo.upsertCalls[0][1].sessionDurationP90Minutes).toBe(240);

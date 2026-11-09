@@ -1,6 +1,3 @@
-/**
- * Admin users page tests — user list, role change, pagination.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/lib/auth';
@@ -9,8 +6,6 @@ import UsersPage from '@/app/[locale]/admin/users/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 import type { PaginatedResponse, AdminUserDTO } from '@/lib/admin-types';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/users',
@@ -33,8 +28,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 const mockApiPost = vi.fn();
@@ -45,8 +38,6 @@ vi.mock('@/lib/api', () => ({
   apiPost: (...args: unknown[]) => mockApiPost(...args) as Promise<unknown>,
   registerLogoutHandler: vi.fn(),
 }));
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 function makeUser(overrides: Partial<AdminUserDTO> = {}): AdminUserDTO {
   return {
@@ -89,16 +80,9 @@ const mockUsersPage1: PaginatedResponse<AdminUserDTO> = {
   totalPages: 3,
 };
 
-// ── Helper: wrap with providers and pre-authenticate as admin ─────────────
-
-/**
- * UsersPage requires useAuth().user to render the Actions column.
- * We need to login first, then render the page.
- */
 function AuthenticatedUsersPage() {
   const { login, isAuthenticated } = useAuth();
 
-  // Auto-login on mount
   if (!isAuthenticated) {
     void login('admin@test.com', 'pass');
   }
@@ -114,22 +98,12 @@ function Providers({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ============================================================================
-// Users page
-// ============================================================================
-
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Wipe the admin-authz cookie that a previous test's login() may have
-    // set on `document.cookie`. AuthProvider keys its mount-time
-    // /api/auth/me hydration on this cookie — leaving it set leaks into
-    // the next test and consumes the `mockApiGet.mockResolvedValueOnce`
-    // queued for the users-list call.
     document.cookie = 'admin-authz=; Path=/; Max-Age=0; SameSite=Lax';
 
-    // Default: apiPost resolves for login (admin user) — AuthSessionResponse shape
     mockApiPost.mockResolvedValue({
       accessToken: 'at',
       refreshToken: 'rt',
@@ -192,7 +166,6 @@ describe('UsersPage', () => {
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
     });
 
-    // Role badges — roles also appear in the filter dropdown, so use getAllByText
     expect(screen.getAllByText('visitor').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('admin').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('moderator').length).toBeGreaterThanOrEqual(1);
@@ -211,7 +184,6 @@ describe('UsersPage', () => {
       expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument();
     });
 
-    // Role filter dropdown
     expect(screen.getByDisplayValue('All roles')).toBeInTheDocument();
   });
 
@@ -228,7 +200,6 @@ describe('UsersPage', () => {
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
     });
 
-    // Pagination controls
     expect(screen.getByText('Previous')).toBeInTheDocument();
     expect(screen.getByText('Next')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 3 (25 total)')).toBeInTheDocument();
@@ -264,9 +235,8 @@ describe('UsersPage', () => {
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
     });
 
-    // Admin sees "Change Role" buttons
     const changeRoleButtons = screen.getAllByText('Change Role');
-    expect(changeRoleButtons.length).toBe(3); // one per user
+    expect(changeRoleButtons.length).toBe(3);
   });
 
   it('opens role change modal on click', async () => {
@@ -282,19 +252,15 @@ describe('UsersPage', () => {
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
     });
 
-    // Click the first "Change Role" button
     const changeRoleButtons = screen.getAllByText('Change Role');
     fireEvent.click(requireIndex(changeRoleButtons, 0, 'changeRoleButtons'));
 
-    // Modal should appear with role select
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    // Modal shows user info
     expect(screen.getByText('Alice Martin (alice@test.com)')).toBeInTheDocument();
 
-    // Confirm button should be disabled when role hasn't changed
     expect(screen.getByText('Confirm')).toBeDisabled();
   });
 
@@ -333,7 +299,6 @@ describe('UsersPage', () => {
   });
 
   it('calls API with search parameter when searching', async () => {
-    // First call: initial load
     mockApiGet.mockResolvedValueOnce(mockUsersPage1);
 
     render(
@@ -346,7 +311,6 @@ describe('UsersPage', () => {
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
     });
 
-    // Second call after search: return filtered results
     mockApiGet.mockResolvedValueOnce({
       data: [makeUser({ id: 1, firstname: 'Alice', lastname: 'Martin', email: 'alice@test.com' })],
       page: 1,
@@ -355,15 +319,12 @@ describe('UsersPage', () => {
       totalPages: 1,
     });
 
-    // Type in search
     fireEvent.change(screen.getByPlaceholderText('Search...'), {
       target: { value: 'alice' },
     });
 
-    // Wait for debounce + API call
     await waitFor(
       () => {
-        // Check that apiGet was called with search param
         const lastCall = mockApiGet.mock.calls.at(-1)?.[0] as string;
         expect(lastCall).toContain('search=alice');
       },

@@ -4,18 +4,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import '../helpers/test-utils';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
 
-/**
- * Red tests for B4 — `attachment-picker-scan-cartel` button added to the
- * existing AttachmentPickerSheetContent (post-A1) as the 4th picker action.
- *
- * Adds a required prop `onOpenScanner: () => void`. The button renders an
- * Ionicons `qr-code-outline` glyph + the i18n label
- * `chat.attachmentPicker.scan_cartel`. Pressing it invokes `onOpenScanner()`
- * AND `close()` (the picker collapses, the C4 router opens the scanner
- * fullscreen route — see `cartel-scanner-route.test.ts`).
- *
- * Spec: docs/chat-ux-refonte/specs/B4.md §1.1 (R1-R4), AC12-AC14.
- */
 describe('AttachmentPickerSheetContent — scan cartel button (B4)', () => {
   const defaultProps = {
     recordedAudioUri: null as string | null,

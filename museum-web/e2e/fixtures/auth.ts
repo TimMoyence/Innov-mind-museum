@@ -1,8 +1,3 @@
-/**
- * Phase 3 e2e — admin auth fixtures.
- *
- * `globalSetup` populates these env vars; specs read them via `getAdminCreds()`.
- */
 export interface AdminCreds {
   email: string;
   password: string;

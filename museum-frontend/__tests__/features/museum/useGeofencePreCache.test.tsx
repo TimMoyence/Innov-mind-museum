@@ -35,7 +35,6 @@ beforeEach(() => {
 describe('useGeofencePreCache', () => {
   it('no-ops when the auto pre-cache preference is disabled', () => {
     mockedPref.mockReturnValue({ enabled: false, isLoading: false, setEnabled: jest.fn() });
-    // Coordinates in central Paris — but the preference is off, so we skip.
     renderHook(() => {
       useGeofencePreCache({ latitude: 48.8566, longitude: 2.3522 });
     });
@@ -86,11 +85,9 @@ describe('useGeofencePreCache', () => {
   it('does not trigger for cities further than 500m away', async () => {
     mockedPref.mockReturnValue({ enabled: true, isLoading: false, setEnabled: jest.fn() });
     mockedHasPack.mockResolvedValue(false);
-    // Coordinates offshore — no city centroid is within 500m.
     renderHook(() => {
       useGeofencePreCache({ latitude: 35.0, longitude: -40.0 });
     });
-    // Give the async loop a microtask to settle — no city should match.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockedDownload).not.toHaveBeenCalled();
   });
@@ -135,7 +132,6 @@ describe('useGeofencePreCache', () => {
       expect(mockedDownload).toHaveBeenCalledTimes(1);
     });
 
-    // Simulate GPS jitter — same city, slightly different coordinates.
     rerender({ lat: 48.8567, lng: 2.3523 });
     await new Promise((resolve) => setTimeout(resolve, 0));
 

@@ -5,14 +5,6 @@ import type { AuthSessionService } from '@modules/auth/useCase/session/authSessi
 import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
 import type { User } from '@modules/auth/domain/user/user.entity';
 
-/**
- * Creates a fully mocked IUserRepository.
- *
- * By default, `getUserById` and `getUserByEmail` return the given user
- * (with email matching for `getUserByEmail`). Every method is a jest.fn().
- * @param user - The user to return from finder methods (null = not found).
- * @param overrides - Override specific method mocks.
- */
 export const makeUserRepo = (
   user: User | null = null,
   overrides: Partial<Record<keyof IUserRepository, jest.Mock>> = {},
@@ -41,12 +33,6 @@ export const makeUserRepo = (
   return repo;
 };
 
-/**
- * Creates a fully mocked IRefreshTokenRepository.
- *
- * All methods are jest.fn() with sensible defaults.
- * @param overrides - Override specific method mocks.
- */
 export const makeRefreshTokenRepo = (
   overrides: Partial<Record<keyof IRefreshTokenRepository, jest.Mock>> = {},
 ): jest.Mocked<IRefreshTokenRepository> => {

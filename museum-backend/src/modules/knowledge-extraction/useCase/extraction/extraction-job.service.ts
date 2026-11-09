@@ -1,4 +1,5 @@
 import { ExtractedContentStatus } from '@modules/knowledge-extraction/domain/extracted-content/extracted-content.entity';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
@@ -11,11 +12,8 @@ import type { MuseumEnrichmentRepoPort } from '@modules/knowledge-extraction/dom
 import type { ScraperPort } from '@modules/knowledge-extraction/domain/ports/scraper.port';
 
 interface ExtractionJobConfig {
-  /** Min confidence to auto-accept without review. */
   confidenceThreshold: number;
-  /** Min confidence to store; below = discarded. */
   reviewThreshold: number;
-  /** Days before a scraped URL is eligible for re-scraping. */
   refetchAfterDays: number;
 }
 
@@ -27,7 +25,6 @@ interface ExtractionJobDeps {
   museumRepo: MuseumEnrichmentRepoPort;
 }
 
-/** Pipeline for a single URL: dedup → scrape → classify → store. */
 export class ExtractionJobService {
   private readonly scraper: ScraperPort;
   private readonly classifier: ContentClassifierPort;
@@ -48,7 +45,6 @@ export class ExtractionJobService {
 
   async processUrl(url: string, locale: string): Promise<void> {
     try {
-      // Dedup: skip if recently scraped
       const existing = await this.contentRepo.findByUrl(url);
       if (existing) {
         const ageMs = Date.now() - existing.scrapedAt.getTime();
@@ -90,15 +86,11 @@ export class ExtractionJobService {
     } catch (err) {
       logger.error('extraction_job_error', {
         url,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     }
   }
 
-  /**
-   * Exhaustive on discriminant `type`. `irrelevant` stamps content row
-   * LOW_CONFIDENCE (not CLASSIFIED) so it isn't misreported as success.
-   */
   private async storeClassification(
     url: string,
     locale: string,
@@ -134,9 +126,6 @@ export class ExtractionJobService {
             confidence: classification.confidence,
             needsReview,
             locale,
-            // Hybrid-enrichment fields populated by `museum-enrichment` BullMQ
-            // pipeline only; classification flow leaves them null so the
-            // dedicated worker overwrites on first run.
             summary: null,
             wikidataQid: null,
             phone: null,
@@ -158,7 +147,6 @@ export class ExtractionJobService {
         logger.info('extraction_irrelevant', { url, confidence: classification.confidence });
         return;
       default: {
-        // Exhaustiveness guard — fails to compile if a new ClassificationResult variant is added.
         const _exhaustive: never = classification;
         return _exhaustive;
       }

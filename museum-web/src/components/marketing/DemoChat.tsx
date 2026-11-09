@@ -42,7 +42,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
           'linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%)',
       }}
     >
-      {/* Header — glass card (matches Expo ChatHeader) */}
       <div
         className="flex items-center justify-between px-3.5 py-3"
         style={{
@@ -66,7 +65,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Header action buttons (decorative) */}
           {[headsetIcon, docIcon, closeIcon].map((icon, i) => (
             <div
               key={i}
@@ -85,7 +83,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
         </div>
       </div>
 
-      {/* Messages area */}
       <div ref={ref} className="flex-1 overflow-hidden px-2.5 py-2.5" style={{ gap: 10 }}>
         {shouldReduceMotion ? (
           <div className="flex flex-col gap-2.5">{renderMessages(messages)}</div>
@@ -105,7 +102,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
         )}
       </div>
 
-      {/* Attachment buttons — Gallery, Camera, Audio (matches Expo MediaAttachmentPanel) */}
       <div className="flex gap-2 px-2.5 pb-1">
         {attachmentButtons.map((btn) => (
           <div
@@ -127,7 +123,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
         ))}
       </div>
 
-      {/* Input bar — glass card (matches Expo ChatInput) */}
       <div
         className="flex items-end gap-2 px-2.5 py-2"
         style={{
@@ -177,8 +172,6 @@ export default function DemoChat({ messages }: DemoChatProps) {
   );
 }
 
-/* ── Message Bubble ── */
-
 function MessageBubble({ message, isLast }: { message: Message; isLast: boolean }) {
   const isUser = message.role === 'user';
 
@@ -198,7 +191,6 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
       >
         <p>{message.text}</p>
       </div>
-      {/* Meta row — timestamp + actions (assistant only) */}
       {!isUser && (
         <div
           className="mt-1 flex items-center gap-2.5"
@@ -220,8 +212,6 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
     </div>
   );
 }
-
-/* ── Tiny SVG icons (matching Expo Ionicons) ── */
 
 function ThumbIcon({ down }: { down?: boolean }) {
   return (

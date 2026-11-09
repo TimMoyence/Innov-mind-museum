@@ -125,6 +125,7 @@
     "session_unsaved": "会话已取消收藏",
     "session_saved": "会话已收藏",
     "empty_title": "暂无对话",
+    "untitled": "暂无消息",
     "empty_saved": "暂无已收藏的会话。长按会话可收藏。",
     "empty_body": "从首页开始新对话，创建您的第一个会话。",
     "message_count": "消息数：{{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "关闭",
       "noQuote": "此来源无可用摘录。"
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "博物馆目录",
-        "reference-db": "参考数据库",
-        "web": "网络结果",
-        "ai-knowledge": "AI 知识"
-      },
-      "confidence": {
-        "high": "高置信度",
-        "medium": "中等置信度",
-        "low": "低 — 仅AI"
-      },
-      "chip": {
-        "a11y_hint": "点击查看来源详情"
-      },
-      "ai_only": {
-        "disclosure_title": "仅AI回答",
-        "disclosure_body": "此回答基于AI的常识，未检索到支持具体事实的来源。请在依赖详情前自行核实。"
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "打开附件",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "无题作品",
       "a11y_label": "作品：{{artist}}的{{title}}，点击放大",
+      "a11y_label_no_artist": "作品：{{title}}，点击放大",
       "a11y_label_untitled": "无题作品，点击放大",
       "a11y_hint": "全屏打开，捏合缩放",
       "expand": "放大",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "识别中"
       },
@@ -569,6 +550,7 @@
       "empty": "未找到相似作品 — 请尝试更清晰的照片",
       "viewArtist": "查看艺术家",
       "attribution": "来源：Wikimedia Commons",
+      "card_a11y": "相似作品：{{credit}}，{{rationale}}",
       "rationale": {
         "fallback": "相似作品"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "导览游",
       "suggestionsLabel": "导览建议",
       "suggestionHint": "将该建议作为您的下一条消息发送"
-    },
-    "askMore": {
-      "a11y_label": "后续问题：{{text}}",
-      "a11y_hint": "点击提出此问题"
     },
     "sottoVoce": {
       "a11y_label": "轻声模式",
@@ -648,7 +626,7 @@
     "placeholder": "询问关于艺术品、古迹的问题，或发送语音/照片...",
     "send": "发送"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "初学者",
     "intermediate": "中级",
     "expert": "专家"
@@ -1059,6 +1037,7 @@
     },
     "carnet": {
       "session_card": "{{title}}，{{museum}}，{{date}}，打开参观",
+      "session_card_no_date": "{{title}}，{{museum}}，打开参观",
       "continue_hint": "以只读方式打开此过往参观"
     },
     "bottomSheet": {
@@ -1114,7 +1093,7 @@
     "save": "收藏",
     "skip": "跳过",
     "saved": "已收藏！",
-    "by": "作者",
+    "by": "作者：{{artist}}",
     "fun_fact": "你知道吗？",
     "swipeToSave": "保存"
   },
@@ -1125,7 +1104,7 @@
     "description": "描述",
     "priority": "优先级",
     "status": "状态",
-    "messages": "消息",
+    "messageCount": "{{count}} 条消息",
     "noTickets": "暂无工单",
     "noTicketsDesc": "创建工单以获取支持团队的帮助。",
     "createFirst": "创建您的第一个工单",
@@ -1134,7 +1113,7 @@
     "replyPlaceholder": "输入您的消息...",
     "send": "发送",
     "sending": "发送中...",
-    "created": "创建时间",
+    "createdOn": "创建时间：{{date}}",
     "noMessages": "暂无消息",
     "submitTicket": "提交工单",
     "subjectPlaceholder": "简要描述您的问题",
@@ -1174,7 +1153,14 @@
     "alreadyReviewed": "你已经提交过评价",
     "empty": "暂无评价，快来写第一条吧！",
     "reviewCount": "{{count}}条评价",
-    "submitFailed": "提交失败，请重试。"
+    "submitFailed": "提交失败，请重试。",
+    "age": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "days": "{{count}}天前",
+      "months": "{{count}}个月前",
+      "years": "{{count}}年前"
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1218,7 @@
     "error": "出现错误。请稍后再试。",
     "dismiss": "关闭",
     "consent": "我同意在高级版上线时接收电子邮件。",
-    "resetsOn": "重置日期",
+    "resetsOn": "重置日期：{{date}}",
     "analyticsConsent": {
       "title": "帮助我们改进 Musaium",
       "description": "在您同意的情况下,我们会匿名统计应用的使用情况(浏览的页面、使用的功能)。没有任何个人数据,也没有广告追踪器 — 只有聚合的计数,帮助我们了解什么是有效的。",

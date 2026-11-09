@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- OpenTelemetry conditional loading requires CJS require() */
 import { env } from '@src/config/env';
 
 interface OtelSdkLike {
@@ -8,16 +7,12 @@ interface OtelSdkLike {
 
 let sdkInstance: OtelSdkLike | null = null;
 
-/** Dynamic `require()` so OTel packages only load when enabled. */
 export function initOpenTelemetry(): void {
   if (!env.otel?.enabled) return;
 
   const { NodeSDK } = require('@opentelemetry/sdk-node');
   const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
   const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-  // `@opentelemetry/resources` v2 removed `Resource` constructor — use
-  // `resourceFromAttributes()` factory (Renovate PR #224 hotfix 2026-05-12,
-  // "Resource is not a constructor" crashed every container start in prod).
   const { resourceFromAttributes } = require('@opentelemetry/resources');
   const {
     ATTR_SERVICE_NAME,
@@ -40,11 +35,6 @@ export function initOpenTelemetry(): void {
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },
         '@opentelemetry/instrumentation-dns': { enabled: false },
-        // Disabled: RouterInstrumentation attaches `prependListener('finish')` PER router
-        // layer → with ~15 middlewares stacks 11+ finish listeners on ServerResponse,
-        // tripping MaxListenersExceededWarning (2026-05-12). instrumentation-http (1 span/
-        // request) + instrumentation-express (chain span) cover our needs. DO NOT re-enable;
-        // bumping setMaxListeners is NOT the fix.
         '@opentelemetry/instrumentation-router': { enabled: false },
         '@opentelemetry/instrumentation-openai': { enabled: false },
       }),
@@ -65,8 +55,6 @@ export async function shutdownOpenTelemetry(): Promise<void> {
   if (sdkInstance) {
     try {
       await sdkInstance.shutdown();
-    } catch {
-      // swallow shutdown errors
-    }
+    } catch {}
   }
 }

@@ -1,6 +1,3 @@
-/**
- * Admin audit logs page tests — log list, action filter, pagination, empty state, error handling.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AuthProvider } from '@/lib/auth';
@@ -8,8 +5,6 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AuditLogsPage from '@/app/[locale]/admin/audit-logs/page';
 import type { AdminAuditLogDTO, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
-
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/audit-logs',
@@ -32,8 +27,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ────────────────────────────────────────────────────────────────
-
 const mockApiGet = vi.fn();
 
 vi.mock('@/lib/api', () => ({
@@ -42,8 +35,6 @@ vi.mock('@/lib/api', () => ({
   registerLogoutHandler: vi.fn(),
 }));
 
-// ── Helper: wrap with required providers ─────────────────────────────────────
-
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AdminDictProvider dict={mockAdminDict} locale="en">
@@ -51,8 +42,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </AdminDictProvider>
   );
 }
-
-// ── Test data ───────────────────────────────────────────────────────────────
 
 function makeAuditLog(overrides: Partial<AdminAuditLogDTO> = {}): AdminAuditLogDTO {
   return {
@@ -87,10 +76,6 @@ const mockLogsPage1: PaginatedResponse<AdminAuditLogDTO> = {
   totalPages: 3,
 };
 
-// ============================================================================
-// Audit Logs page
-// ============================================================================
-
 describe('AuditLogsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,11 +94,7 @@ describe('AuditLogsPage', () => {
   });
 
   it('shows loading spinner while fetching logs', () => {
-    mockApiGet.mockReturnValue(
-      new Promise(() => {
-        /* pending */
-      }),
-    );
+    mockApiGet.mockReturnValue(new Promise(() => {}));
 
     render(
       <Providers>
@@ -175,8 +156,6 @@ describe('AuditLogsPage', () => {
       expect(screen.getByText('USER_ROLE_CHANGE')).toBeInTheDocument();
     });
 
-    // targetId "res-abc123def" truncated to first 8 chars: "res-abc1"
-    // Two logs share the same targetId, so use getAllByText
     const resourceCells = screen.getAllByText('user #res-abc1');
     expect(resourceCells.length).toBe(2);
   });
@@ -194,7 +173,6 @@ describe('AuditLogsPage', () => {
       expect(screen.getByText('REPORT_REVIEW')).toBeInTheDocument();
     });
 
-    // Null values render as dashes
     const dashes = screen.getAllByText('—');
     expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
@@ -337,7 +315,6 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      // Phase 3 web refactor: `useFetchData` propagates a 2nd `{signal}` arg.
       expect(mockApiGet).toHaveBeenCalled();
       expect(mockApiGet.mock.calls[0]?.[0]).toEqual(
         expect.stringContaining('/api/admin/audit-logs'),

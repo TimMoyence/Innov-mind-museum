@@ -85,7 +85,6 @@ describeE2E('auth e2e (full lifecycle)', () => {
       password: oldPassword,
     });
 
-    // Change password
     const changeRes = await harness.request(
       '/api/auth/change-password',
       {
@@ -99,14 +98,12 @@ describeE2E('auth e2e (full lifecycle)', () => {
     );
     expect(changeRes.status).toBe(200);
 
-    // Login with new password succeeds
     const loginNew = await harness.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password: newPassword }),
     });
     expect(loginNew.status).toBe(200);
 
-    // Login with old password fails
     const loginOld = await harness.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password: oldPassword }),
@@ -134,12 +131,10 @@ describeE2E('auth e2e (full lifecycle)', () => {
     const password = 'Password123!';
     const { token, email } = await registerAndLogin(harness, { password });
 
-    // Delete account
     const deleteRes = await harness.request('/api/auth/account', { method: 'DELETE' }, token);
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.body).toEqual(expect.objectContaining({ deleted: true }));
 
-    // Login after delete should fail
     const loginRes = await harness.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),

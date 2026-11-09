@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import {
+  accountPreference,
+  settleWrite,
+} from '@/features/settings/infrastructure/accountPreference';
 import { memoryPreferenceApi } from '@/features/settings/infrastructure/memoryPreferenceApi';
 
-/**
- * Manages the AI memory (personalization) toggle state with backend API calls.
- * Reads current preference on mount and provides a toggle callback.
- *
- * C1 hexagonal (2026-05-23) — wire calls go through
- * `features/settings/infrastructure/memoryPreferenceApi` ; this application
- * hook no longer reaches into the shared transport primitives directly.
- */
+const memoryOnAccount = accountPreference<boolean>((value) =>
+  settleWrite(memoryPreferenceApi.update(value), 'memoryPreference.save'),
+);
+
 export const useMemoryPreference = () => {
   const [enabled, setEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +19,7 @@ export const useMemoryPreference = () => {
     void memoryPreferenceApi
       .get()
       .then((res) => {
+        memoryOnAccount.accept(res.enabled);
         if (!cancelled) {
           setEnabled(res.enabled);
           setIsLoading(false);
@@ -35,16 +36,7 @@ export const useMemoryPreference = () => {
   }, []);
 
   const toggle = useCallback(
-    async (value: boolean) => {
-      const previous = enabled;
-      setEnabled(value);
-      try {
-        const res = await memoryPreferenceApi.update(value);
-        setEnabled(res.enabled);
-      } catch {
-        setEnabled(previous);
-      }
-    },
+    (value: boolean): Promise<Error | null> => memoryOnAccount.write(value, enabled, setEnabled),
     [enabled],
   );
 

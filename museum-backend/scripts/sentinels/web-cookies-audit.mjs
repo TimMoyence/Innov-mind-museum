@@ -1,48 +1,10 @@
 #!/usr/bin/env node
-// @ts-check
-/**
- * R18 — web-cookies-audit sentinel.
- *
- * Scans `museum-web/package.json` (dependencies + devDependencies) plus
- * `instrumentation-client.ts`, `sentry.*.config.ts`, and `src/app/layout.tsx`
- * for any forbidden tracking / behavioural-analytics / cookie-setting SDK
- * that would push museum-web beyond the strictly-necessary ePrivacy posture.
- *
- * **Doctrine amendment 2026-05-22 (PR #295 squash)** — `plausible` /
- * `next-plausible` removed from the forbidden list. Plausible is cookieless
- * by design (no `document.cookie` writes, no localStorage tracking IDs); the
- * P0 feature-gates lot shipped a paired consent banner (`museum-web/src/
- * components/marketing/ConsentBanner.tsx`-equivalent on mobile via
- * `museum-frontend/shared/analytics/ConsentBanner.tsx`) gating any Plausible
- * call via the `useAnalyticsConsent` hook. This combination keeps the
- * strictly-necessary ePrivacy posture intact (no PII / no cross-site
- * profiling) while permitting opt-in product analytics. If the consent
- * gating ever regresses, the analytics test suite
- * (`museum-frontend/__tests__/analytics/`) catches it.
- *
- * Forbidden tokens (any substring match against dep names, case-insensitive):
- *   @vercel/analytics  @sentry/replay  posthog  amplitude  gtag
- *   google-analytics   hotjar          matomo   umami
- *   fathom             segment         mixpanel
- *
- * Also flags any non-zero numeric `replaysSessionSampleRate` set in a
- * Sentry config file (a zero/missing rate is fine; an enabled session
- * replay drops 3rd-party cookies for replay correlation).
- *
- * Usage: `node web-cookies-audit.mjs [--root <repoRoot>]`
- * Exit codes:
- *   0 → museum-web stays cookie-clean
- *   1 → ≥1 forbidden dep or non-zero replaysSessionSampleRate detected
- *
- * CI output: `## Sentinel report` block on failure.
- */
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** @type {string[]} — substring-match against dep names (case-insensitive). */
 const FORBIDDEN_DEPS = [
   '@vercel/analytics',
   '@sentry/replay',
@@ -52,7 +14,6 @@ const FORBIDDEN_DEPS = [
   'google-analytics',
   'hotjar',
   'matomo',
-  // 'plausible' — REMOVED 2026-05-22 (PR #295 squash). See docstring.
   'umami',
   'fathom',
   'segment',
@@ -74,10 +35,6 @@ function parseArgs(argv) {
   return { root };
 }
 
-/**
- * Scan the merged dependency map for forbidden substrings.
- * Returns the list of (matched-name, source) tuples flagged.
- */
 function scanDeps(pkg) {
   const issues = [];
   const merged = {
@@ -97,13 +54,6 @@ function scanDeps(pkg) {
   return issues;
 }
 
-/**
- * Scan a Sentry config file for `replaysSessionSampleRate: <non-zero>`.
- * Returns the list of issues (empty if rate absent or explicitly 0).
- *
- * Detection accepts numeric (`0.1`, `1`, `0.05`) or any non-zero literal.
- * A `replaysSessionSampleRate: 0` (or absent) is permitted.
- */
 function scanSentryConfig(path, text) {
   const issues = [];
   const match = text.match(/replaysSessionSampleRate\s*:\s*([0-9.eE+-]+)/);
@@ -149,8 +99,6 @@ function main() {
 
   allIssues.push(...scanDeps(pkg));
 
-  // Scan Sentry / instrumentation config surfaces for forbidden tokens AND
-  // for non-zero replaysSessionSampleRate.
   const scanPaths = [
     join(webRoot, 'instrumentation-client.ts'),
     join(webRoot, 'sentry.client.config.ts'),
@@ -167,8 +115,6 @@ function main() {
     } catch {
       continue;
     }
-    // Substring scan for forbidden tokens within config files (catches direct
-    // imports of e.g. `@vercel/analytics/react` that don't appear in deps yet).
     const lowerCfg = cfgText.toLowerCase();
     for (const forbidden of FORBIDDEN_DEPS) {
       if (lowerCfg.includes(forbidden.toLowerCase())) {

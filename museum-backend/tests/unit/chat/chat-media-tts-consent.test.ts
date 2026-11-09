@@ -1,48 +1,6 @@
-/**
- * RED — UFR-022 phase=red, Cycle 3 (B1), RUN_ID=2026-05-26-chat-pipeline-hardening.
- *
- * Specifies the TTS-route consent gate on
- * `POST /api/chat/messages/:messageId/tts`
- * (`museum-backend/src/modules/chat/adapters/primary/http/routes/chat-media.route.ts:271-279`,
- * handler `createTtsHandler` ~202).
- *
- * Defect proven (B1, HIGH — GDPR Art. 7 third-party sharing without consent):
- *  - The STT route (`/sessions/:id/audio`) correctly gates on
- *    `third_party_ai_audio_openai` (`chat-media.route.ts:61-71`,
- *    `createAudioHandler(chatService, consentChecker)`).
- *  - The TTS route does NOT: `createTtsHandler(chatService)` receives no
- *    `consentChecker`, and `chatService.synthesizeSpeech` calls OpenAI TTS
- *    (`chat-media.service.ts:253`) without ever checking
- *    `third_party_ai_audio_openai`. Same provider (OpenAI), same scope as STT.
- *
- * Acceptance shape (mirrors STT gate — gate at ROUTE level, refusal shape
- * `403 { error: 'consent_required', scope }`):
- *  - denied/absent scope `third_party_ai_audio_openai` → HTTP 403
- *    body `{ error: 'consent_required', scope: 'third_party_ai_audio_openai' }`,
- *    `chatService.synthesizeSpeech` invoked ZERO times (gate short-circuits
- *    BEFORE any external OpenAI TTS call).
- *  - granted scope → existing happy path (200 + audio buffer) preserved.
- *  - revoked grant → treated as denial (403).
- *  - no token → 401 from `isAuthenticated` BEFORE the gate (ordering preserved).
- *
- * RED rationale: today the route runs `isAuthenticated → userLimiter →
- * sessionLimiter → costGuard → handler`; there is NO consent step. The 403
- * assertions fail (route returns 200 / 204) and `synthesizeSpeech` is invoked
- * once when it must be zero. These cases stay RED until the gate lands.
- *
- * The userConsentRepository is mocked at the `@modules/auth/useCase` barrel
- * (identical to `chat-media-audio-consent.test.ts`) so the
- * `buildThirdPartyAiConsentChecker()` factory — which lazy-imports the barrel —
- * consults this in-memory store.
- */
-
-// ─── 1. Mock the auth barrel BEFORE any imports that transitively touch chat ──
 jest.mock('@modules/auth/useCase', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory hoist
   const { env: envConfig } = require('@src/config/env');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoist
   const { makeUserConsentRepo: makeRepo } = require('../../helpers/auth/userConsent-repo.mock');
 
   const sharedRepo = makeRepo();
@@ -112,7 +70,6 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-// ─── 2. Imports (top-level — Jest hoists jest.mock above these) ──────────────
 import request from 'supertest';
 
 import { createApp } from '@src/app';
@@ -122,14 +79,12 @@ import { makeConsentGranted, applyConsentGrantSpec } from 'tests/helpers/auth/co
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoist
 const { userConsentRepository: sharedRepo } = require('@modules/auth/useCase') as {
   userConsentRepository: ReturnType<
     typeof import('../../helpers/auth/userConsent-repo.mock').makeUserConsentRepo
   >;
 };
 
-// ─── 3. Mock ChatService — we only care whether synthesizeSpeech is invoked ──
 const mockSynthesizeSpeech = jest.fn();
 const mockChatService: Partial<ChatService> = {
   synthesizeSpeech: mockSynthesizeSpeech,
@@ -140,7 +95,7 @@ const app = createApp({
   healthCheck: async () => ({ database: 'up' }),
 });
 
-const TEST_USER_ID = 1; // userToken() default sub
+const TEST_USER_ID = 1;
 const AUDIO_SCOPE = 'third_party_ai_audio_openai';
 
 const successTtsReply = {
@@ -160,8 +115,7 @@ describe('POST /api/chat/messages/:messageId/tts — third_party_ai_audio_openai
   });
 
   it('returns 403 { error: "consent_required", scope: "third_party_ai_audio_openai" } when scope NOT granted', async () => {
-    // No grant applied — denial path.
-    mockSynthesizeSpeech.mockResolvedValue(successTtsReply); // would succeed if invoked
+    mockSynthesizeSpeech.mockResolvedValue(successTtsReply);
 
     const res = await request(app)
       .post('/api/chat/messages/msg-uuid/tts')

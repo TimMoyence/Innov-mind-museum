@@ -1,76 +1,44 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: ImageFullscreenModal
-#
-# C2 — ImageFullscreenModal happy path (UFR-021 modal coverage).
-#
-# Trigger (prod): tap an image thumbnail inside an assistant bubble that carries
-# `metadata.images` / compare matches, which sets `fullscreenIndex`
-# (ChatMessageBubble.tsx). The enriched-image response comes from a live backend,
-# so this flow is NIGHTLY (backend-dependent), NOT PR-blocking — same class as
-# chat-compare.yaml.
-#
-# Anchors (contract — see .maestro/MODAL_FLOWS_NOTES.md):
-#   image-fullscreen-modal-close   (assert open + dismiss)
-#   image-fullscreen-modal-next    (next image, optional — needs >=2 images)
-#   image-fullscreen-modal-prev    (prev image)
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-#   - Fixture .maestro/fixtures/test-artwork.jpg in the simulator photo library
-#     + backend that returns an assistant message with >=1 enriched image.
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ──────────────────────────────────────────────
-# Phase 2: Compare the fixture (yields the enriched-image carousel)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "composer-attach-button"
+    id: 'composer-attach-button'
 - extendedWaitUntil:
     visible:
-      id: "attachment-picker-compare"
+      id: 'attachment-picker-compare'
     timeout: 40000
 - tapOn:
-    id: "attachment-picker-compare"
+    id: 'attachment-picker-compare'
 - tapOn:
-    text: "Allow|Allow Access to All Photos|Autoriser"
+    text: 'Allow|Allow Access to All Photos|Autoriser'
     optional: true
 - waitForAnimationToEnd
 - tapOn:
-    text: "test-artwork.jpg"
+    text: 'test-artwork.jpg'
     optional: true
 - tapOn:
-    point: "15%,30%"
+    point: '15%,30%'
     optional: true
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Wait for the carousel, tap a match thumbnail -> fullscreen modal
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Œuvres similaires|Similar artworks"
+      text: 'Œuvres similaires|Similar artworks'
     timeout: 60000
 - tapOn:
-    text: "(Œuvre similaire :|Similar artwork:).*"
+    text: '(Œuvre similaire :|Similar artwork:).*'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 4: Assert the fullscreen modal opened, page once, dismiss
-# ──────────────────────────────────────────────
 - assertVisible:
-    id: "image-fullscreen-modal-close"
+    id: 'image-fullscreen-modal-close'
 - tapOn:
-    id: "image-fullscreen-modal-next"
+    id: 'image-fullscreen-modal-next'
     optional: true
 - waitForAnimationToEnd
 - tapOn:
-    id: "image-fullscreen-modal-close"
+    id: 'image-fullscreen-modal-close'
 - waitForAnimationToEnd
 - assertNotVisible:
-    id: "image-fullscreen-modal-close"
+    id: 'image-fullscreen-modal-close'

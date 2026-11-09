@@ -12,7 +12,6 @@ interface ConversationsBulkBarProps {
   isDeleting: boolean;
 }
 
-/** Bulk action footer bar shown during edit mode. */
 export const ConversationsBulkBar = ({
   selectedCount,
   onSelectAll,

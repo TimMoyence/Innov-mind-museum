@@ -1,7 +1,5 @@
 import '@/__tests__/helpers/test-utils';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 jest.mock('@/shared/infrastructure/requestId', () => ({
   generateRequestId: () => 'mock-request-id',
 }));
@@ -30,12 +28,6 @@ import {
 import { reportError } from '@/shared/observability/errorReporting';
 import type { AppError } from '@/shared/types/AppError';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Makes a request using httpClient with a custom adapter that captures the
- * config after interceptors have run and resolves with a mock response.
- */
 const captureRequestConfig = async (): Promise<Record<string, unknown>> => {
   let capturedConfig: Record<string, unknown> = {};
 
@@ -58,8 +50,6 @@ const captureRequestConfig = async (): Promise<Record<string, unknown>> => {
   return capturedConfig;
 };
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('httpClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -68,8 +58,6 @@ describe('httpClient', () => {
     setUnauthorizedHandler(null);
     setLocale('en');
   });
-
-  // ── Locale ─────────────────────────────────────────────────────────────────
 
   describe('setLocale / getLocale', () => {
     it('defaults to "en"', () => {
@@ -90,8 +78,6 @@ describe('httpClient', () => {
     });
   });
 
-  // ── Request interceptor ────────────────────────────────────────────────────
-
   describe('request interceptor', () => {
     it('attaches Authorization header when tokenProvider is set', async () => {
       setTokenProvider(() => 'my-jwt-token');
@@ -108,7 +94,6 @@ describe('httpClient', () => {
       const config = await captureRequestConfig();
       const headers = config.headers as { get: (name: string) => string | undefined };
 
-      // No auth header should be set (tokenProvider returned null)
       expect(headers.get('Authorization')).toBeUndefined();
     });
 
@@ -143,8 +128,6 @@ describe('httpClient', () => {
       expect(config.baseURL).toBe('https://api.test.com');
     });
   });
-
-  // ── mapAxiosError ──────────────────────────────────────────────────────────
 
   describe('mapAxiosError', () => {
     it('maps timeout errors to Timeout kind', () => {
@@ -291,8 +274,6 @@ describe('httpClient', () => {
     });
   });
 
-  // ── Response interceptor — error reporting ─────────────────────────────────
-
   describe('response interceptor — error reporting', () => {
     it('reports errors via reportError on final failure', async () => {
       try {
@@ -314,15 +295,11 @@ describe('httpClient', () => {
             return Promise.reject(err);
           },
         } as never);
-      } catch {
-        // Expected
-      }
+      } catch {}
 
       expect(reportError).toHaveBeenCalled();
     });
   });
-
-  // ── httpClient instance ────────────────────────────────────────────────────
 
   describe('httpClient instance', () => {
     it('is an Axios instance with default Accept header including application/json', () => {
@@ -336,7 +313,6 @@ describe('httpClient', () => {
     });
 
     it('has request interceptors configured', () => {
-      // Axios interceptors.request.handlers is internal but we can verify they exist
       expect(httpClient.interceptors.request).toBeDefined();
     });
 

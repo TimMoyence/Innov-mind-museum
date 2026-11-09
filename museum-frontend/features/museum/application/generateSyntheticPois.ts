@@ -6,9 +6,7 @@ export interface SyntheticPoiOptions {
   centerLat: number;
   centerLng: number;
   count: number;
-  /** Half-side of the bbox in degrees. 0.075° ≈ 8 km at Paris latitude. */
   spreadDegrees?: number;
-  /** faker seed so the same call always produces the same set. */
   seed?: string;
 }
 
@@ -29,16 +27,6 @@ const hashSeed = (value: string): number => {
   return hash;
 };
 
-/**
- * Produces a deterministic set of fake POIs used only by the development perf
- * HUD to stress-test clustering on a target device (Pixel 6a, iPhone 15). The
- * output matches the production `MuseumWithDistance` shape so it can be piped
- * into `MuseumMapView` without any branching.
- *
- * Never call this from production code paths — the `__DEV__` guard lives in
- * the caller so a single source of truth (the perf HUD entry point) decides
- * when synthetic data enters the map.
- */
 export const generateSyntheticPois = ({
   centerLat,
   centerLng,

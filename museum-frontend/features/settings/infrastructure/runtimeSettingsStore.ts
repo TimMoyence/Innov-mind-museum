@@ -3,52 +3,51 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 import type { GuideLevel, RuntimeSettings } from '@/features/settings/runtimeSettings.pure';
 import { defaults } from '@/features/settings/runtimeSettings.pure';
+import { accountPreference } from '@/features/settings/infrastructure/accountPreference';
+import { saveProfilePreferences } from '@/features/settings/infrastructure/userProfileApi';
 import { storage } from '@/shared/infrastructure/storage';
 
+const museumModeOnAccount = accountPreference<boolean>((value) =>
+  saveProfilePreferences({ defaultMuseumMode: value }),
+);
+const guideLevelOnAccount = accountPreference<GuideLevel>((value) =>
+  saveProfilePreferences({ guideLevel: value }),
+);
+
 interface RuntimeSettingsState extends RuntimeSettings {
-  /** Whether settings have been hydrated from storage at least once. */
   _hydrated: boolean;
 
-  /** Replace all settings at once (e.g. after initial load or migration). */
   setAll: (settings: RuntimeSettings) => void;
-  /** Update the default locale. */
-  setDefaultLocale: (locale: string) => void;
-  /** Update the default museum mode. */
-  setDefaultMuseumMode: (enabled: boolean) => void;
-  /** Update the guide expertise level. */
-  setGuideLevel: (level: GuideLevel) => void;
-  /**
-   * Merge the server-side preferences into the local store (TD-2 Option B,
-   * server-wins-first per session — R3). Each field is set independently when
-   * the server payload contains a typed value; absent/`undefined`/wrong-shape
-   * fields are silently skipped (R5 schema tolerance).
-   */
+  setDefaultMuseumMode: (enabled: boolean) => Promise<Error | null>;
+  setGuideLevel: (level: GuideLevel) => Promise<Error | null>;
   mergeFromServer: (
-    server: Partial<Pick<RuntimeSettings, 'defaultLocale' | 'defaultMuseumMode' | 'guideLevel'>>,
+    server: Partial<Pick<RuntimeSettings, 'defaultMuseumMode' | 'guideLevel'>>,
   ) => void;
 }
 
 export const useRuntimeSettingsStore = create<RuntimeSettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...defaults,
       _hydrated: false,
 
       setAll: (settings) => set({ ...settings }),
 
-      setDefaultLocale: (locale) => set({ defaultLocale: locale }),
+      setDefaultMuseumMode: (enabled) =>
+        museumModeOnAccount.write(enabled, get().defaultMuseumMode, (value) => {
+          set({ defaultMuseumMode: value });
+        }),
 
-      setDefaultMuseumMode: (enabled) => set({ defaultMuseumMode: enabled }),
-
-      setGuideLevel: (level) => set({ guideLevel: level }),
+      setGuideLevel: (level) =>
+        guideLevelOnAccount.write(level, get().guideLevel, (value) => {
+          set({ guideLevel: value });
+        }),
 
       mergeFromServer: (server) => {
         const next: Partial<RuntimeSettings> = {};
-        if (typeof server.defaultLocale === 'string' && server.defaultLocale.length > 0) {
-          next.defaultLocale = server.defaultLocale;
-        }
         if (typeof server.defaultMuseumMode === 'boolean') {
           next.defaultMuseumMode = server.defaultMuseumMode;
+          museumModeOnAccount.accept(server.defaultMuseumMode);
         }
         if (
           server.guideLevel === 'beginner' ||
@@ -56,6 +55,7 @@ export const useRuntimeSettingsStore = create<RuntimeSettingsState>()(
           server.guideLevel === 'expert'
         ) {
           next.guideLevel = server.guideLevel;
+          guideLevelOnAccount.accept(server.guideLevel);
         }
         if (Object.keys(next).length > 0) {
           set(next);
@@ -67,7 +67,6 @@ export const useRuntimeSettingsStore = create<RuntimeSettingsState>()(
       storage: createJSONStorage(() => storage),
       version: 1,
       partialize: (state) => ({
-        defaultLocale: state.defaultLocale,
         defaultMuseumMode: state.defaultMuseumMode,
         guideLevel: state.guideLevel,
       }),

@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -11,14 +12,9 @@ import type { ConnectionOptions } from 'bullmq';
 
 export const MUSEUM_ENRICHMENT_QUEUE_NAME = 'museum-enrichment';
 
-/** Stable jobId that doubles as BullMQ dedup key. */
 const jobIdFor = (input: MuseumEnrichmentJob): string =>
   `mus:${String(input.museumId)}:${input.locale}`;
 
-/**
- * jobId doubles as dedup key — BullMQ rejects a second `add()` with the same
- * jobId while the first is active, giving free idempotency on `(museumId, locale)`.
- */
 export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueuePort {
   private readonly queue: Queue<MuseumEnrichmentJob>;
 
@@ -34,10 +30,6 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     });
   }
 
-  /**
-   * Fail-open: logs and returns the jobId even if the enqueue fails — caller
-   * sees a "pending" response and can retry on the next request.
-   */
   async enqueue(input: MuseumEnrichmentJob): Promise<string> {
     const jobId = jobIdFor(input);
     try {
@@ -46,7 +38,7 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     } catch (err) {
       logger.warn('museum_enrichment_enqueue_error', {
         jobId,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     }
     return jobId;
@@ -61,7 +53,6 @@ export class BullmqMuseumEnrichmentQueueAdapter implements MuseumEnrichmentQueue
     return 'active';
   }
 
-  /** Returns null when no active job (completed/failed treated as "not running"). */
   async isJobActive(input: MuseumEnrichmentJob): Promise<string | null> {
     const jobId = jobIdFor(input);
     const job = await this.queue.getJob(jobId);

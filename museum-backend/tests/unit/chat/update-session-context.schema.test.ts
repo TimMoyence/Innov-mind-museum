@@ -1,12 +1,5 @@
 import { updateSessionContextSchema } from '@modules/chat/adapters/primary/http/schemas/chat-session.schemas';
 
-/**
- * W3 (T5.3) — unit tests for the `updateSessionContextSchema` Zod schema
- * (defence in depth — UUID v4 server-side, never trust FE-parsed values).
- *
- * Spec: docs/team-state/2026-05-17-w3-geo-walk-intra/spec.md R19/R20.
- */
-
 const VALID_UUID = '01234567-89ab-4cde-9012-3456789abcde';
 const VALID_UUID_2 = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
 

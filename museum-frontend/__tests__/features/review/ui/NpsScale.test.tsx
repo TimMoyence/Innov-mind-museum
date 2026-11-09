@@ -5,19 +5,8 @@ import { I18nManager } from 'react-native';
 import '../../../helpers/test-utils';
 import { findPhysicalSideLeaks } from '../../../rtl/_rtl-style-audit';
 
-// C2-FE / UFR-022 RED phase. Target component `features/review/ui/NpsScale.tsx`
-// does NOT exist yet (verified: `ls features/review/ui/` → ReviewCard.tsx,
-// StarRating.tsx only). These tests therefore FAIL at baseline with a module
-// resolution error. They encode the 0-10 NPS input contract (spec R20/R21,
-// design §6 `NpsScale.tsx`): 11 buttons 0..10, each `testID=nps-value-N`,
-// `accessibilityRole="button"`, label from `a11y.reviews.nps_value`, selected
-// state via `accessibilityState.selected`, NO fixed `accessibilityValue max:5`,
-// text-only digits (no emoji, no Ionicons stars), RTL logical props only.
 import { NpsScale } from '@/features/review/ui/NpsScale';
 
-// Unicode ranges for emoji / pictograms. Mirrors StatusIndicator.test.tsx:73.
-// Digits 0-9 (U+0030..U+0039) are NOT in these ranges, so plain "0".."10"
-// labels pass; only a stray emoji would fail.
 const EMOJI_REGEX =
   /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/u;
 

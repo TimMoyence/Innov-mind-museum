@@ -8,7 +8,6 @@ import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';
 
 import type { InsertRefreshTokenInput } from '@modules/auth/domain/refresh-token/refresh-token.repository.interface';
 
-// ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
   const qb = makeMockQb({ execute: jest.fn().mockResolvedValue({ affected: 1 }) });
   const { repo } = makeMockTypeOrmRepo<AuthRefreshToken>({ qb });
@@ -25,7 +24,6 @@ function buildMocks() {
   return { repo, qb, dataSource, txRepo };
 }
 
-// ─── Fixture helper ───
 function makeInsertInput(
   overrides: Partial<InsertRefreshTokenInput> = {},
 ): InsertRefreshTokenInput {
@@ -40,11 +38,6 @@ function makeInsertInput(
   };
 }
 
-/**
- * Build a fake AuthRefreshToken entity with user relation loaded.
- * `userId` is the JoinColumn name — accepted on overrides for fallback scenarios.
- * @param overrides
- */
 function makeRefreshTokenEntity(
   overrides: Partial<AuthRefreshToken> & { userId?: number } = {},
 ): AuthRefreshToken {
@@ -84,7 +77,6 @@ describe('RefreshTokenRepositoryPg', () => {
     sut = new RefreshTokenRepositoryPg(dataSource);
   });
 
-  // ─── insert ───
   describe('insert', () => {
     it('creates and saves a refresh token, returns StoredRefreshTokenRow', async () => {
       const input = makeInsertInput();
@@ -155,7 +147,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── findByJti ───
   describe('findByJti', () => {
     it('returns StoredRefreshTokenRow when found', async () => {
       const entity = makeRefreshTokenEntity();
@@ -181,7 +172,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── rotate ───
   describe('rotate', () => {
     it('inserts new token and updates current token in a transaction', async () => {
       const nextInput = makeInsertInput({ jti: 'jti-next', familyId: 'family-xyz-789' });
@@ -230,7 +220,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── revokeByJti ───
   describe('revokeByJti', () => {
     it('executes an update query builder chain to set revokedAt', async () => {
       await sut.revokeByJti('jti-to-revoke');
@@ -245,7 +234,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── deleteExpiredTokens ───
   describe('deleteExpiredTokens', () => {
     it('deletes expired tokens with default limit and returns affected count', async () => {
       qb.execute.mockResolvedValue({ affected: 42 });
@@ -279,7 +267,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── revokeAllForUser ───
   describe('revokeAllForUser', () => {
     it('revokes all tokens for a user without exclusion', async () => {
       await sut.revokeAllForUser(42);
@@ -302,7 +289,6 @@ describe('RefreshTokenRepositoryPg', () => {
     });
   });
 
-  // ─── revokeFamily ───
   describe('revokeFamily', () => {
     it('revokes all tokens in the family without reuse detection', async () => {
       await sut.revokeFamily('family-abc');

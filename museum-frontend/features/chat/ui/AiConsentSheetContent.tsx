@@ -38,13 +38,6 @@ interface ProviderGroup {
   rows: RowSpec[];
 }
 
-/**
- * Four reassurance bullets shown in the default `summary` view. The copy
- * lives in `consent.summary_*` keys (FR + EN translations) and is the
- * single source of truth for the "no personal data + no leak" message the
- * user explicitly asked for (2026-05-20). Icons are Ionicons — no emoji
- * unicode (CLAUDE.md gotcha + ast-grep `no-unicode-emoji-in-screen`).
- */
 const SUMMARY_BULLETS: readonly ReassuranceBullet[] = [
   { icon: 'checkmark-circle-outline', copyKey: 'consent.summary_only_content' },
   { icon: 'shield-checkmark-outline', copyKey: 'consent.summary_no_personal_data' },
@@ -125,17 +118,6 @@ const PROVIDER_GROUPS: readonly ProviderGroup[] = [
 
 const REQUIRED_SCOPE: ThirdPartyAiScope = 'third_party_ai_text_openai';
 
-/**
- * The two geo scopes are location data-sharing grants (NOT per-LLM-vendor
- * grants), so they render in their own "Location" group BELOW the provider grid
- * (design §2.2), never under OpenAI/Google. Both default OFF (GDPR Art. 4(11)
- * unambiguous affirmative action) and are mutually exclusive (D1 Option C —
- * `GEO_SCOPES` below drives the exclusivity in `toggle`):
- *   - `location_to_llm` = full / neighbourhood (`<neighbourhood>, <city>`).
- *   - `location_coarse_to_llm` = coarse / city + country only (Cycle 1.5-FE).
- * The BE consent gate (`location-resolver.ts:214-251`) is what actually
- * propagates the resolved location once one of these is granted.
- */
 const LOCATION_ROWS: readonly RowSpec[] = [
   {
     scope: 'location_to_llm',
@@ -153,12 +135,6 @@ const LOCATION_ROWS: readonly RowSpec[] = [
   },
 ] as const;
 
-/**
- * The two mutually-exclusive geo scopes (D1 Option C). Enabling one forces the
- * other OFF in the sheet's local state, preventing the misleading "both ON"
- * state (where the BE silently lets full dominate). Derived from LOCATION_ROWS
- * so the source of truth stays single.
- */
 const GEO_SCOPES: readonly ThirdPartyAiScope[] = LOCATION_ROWS.map((row) => row.scope);
 
 const initialState = (): Record<ThirdPartyAiScope, boolean> =>
@@ -167,26 +143,6 @@ const initialState = (): Record<ThirdPartyAiScope, boolean> =>
     boolean
   >;
 
-/**
- * Bottom-sheet content (full-screen presentation) for the granular third-party
- * AI consent gate. S4-P0-02 amendment 2026-05-20 — cookie-banner UX :
- *
- * - Default `summary` view : reassurance copy (no personal data, no leak,
- *   limited processing, revocation) + one-click "Accept all" CTA + secondary
- *   "Manage" CTA. The default path requires zero scope-by-scope decision —
- *   GDPR Art. 7(1) compliant because (a) "Accept all" is an explicit
- *   affirmative act, (b) the four reassurance bullets give specific informed
- *   consent, (c) revocation is documented and reachable from Settings.
- *
- * - `manage` view (after pressing Manage) : 4 categories × 2 providers = 8
- *   independent Switches defaulting OFF (no pre-checked boxes — GDPR Art.
- *   4(11) + Apple 5.1.2(i) "unambiguous indication by a statement or clear
- *   affirmative action"). Save stays disabled with an EXPLICIT hint
- *   ("Enable 'OpenAI Text' to save your choices.") until the user actively
- *   toggles the mandatory `third_party_ai_text_openai` scope ON. Before
- *   2026-05-20 the disabled-state was opaque (button looked tappable but did
- *   nothing) which produced confused-user reports.
- */
 export const AiConsentSheetContent = ({
   close,
   onAccept,
@@ -195,15 +151,8 @@ export const AiConsentSheetContent = ({
   const { t } = useTranslation();
   const { theme } = useTheme();
 
-  // View state — `summary` is the default cookie-banner-style landing.
-  // `manage` exposes the granular switches once the user opts in to detail.
-  // BottomSheetRouter remounts this content via `key={state.route}` on every
-  // fresh open, so initialising to 'summary' here doubles as "fresh open =
-  // fresh view" without an additional reset effect.
   const [view, setView] = useState<'summary' | 'manage'>('summary');
 
-  // Granular switch state. Survives back-and-forth between summary↔manage
-  // (intentional — a user who toggled then went Back keeps their choices).
   const [grants, setGrants] = useState<Record<ThirdPartyAiScope, boolean>>(initialState);
 
   const grantedScopes = useMemo(
@@ -214,9 +163,6 @@ export const AiConsentSheetContent = ({
   const canSave = grants[REQUIRED_SCOPE];
 
   const handleAcceptAll = (): void => {
-    // D1 Option C — the two geo scopes are mutually exclusive, so "Accept all"
-    // cannot grant both. It grants the full level (`location_to_llm`) and OMITS
-    // `location_coarse_to_llm` (full dominates coarse on the BE anyway).
     const acceptAllScopes = THIRD_PARTY_AI_SCOPES.filter((s) => s !== 'location_coarse_to_llm');
     onAccept?.(acceptAllScopes);
     close();
@@ -231,9 +177,6 @@ export const AiConsentSheetContent = ({
     setGrants((prev) => {
       const nextValue = !prev[scope];
       const next = { ...prev, [scope]: nextValue };
-      // D1 Option C — geo exclusivity: turning a geo scope ON forces the other
-      // geo scope OFF (never "both ON", which would mislead the user since the
-      // BE silently lets full dominate coarse).
       if (nextValue && GEO_SCOPES.includes(scope)) {
         for (const other of GEO_SCOPES) {
           if (other !== scope) next[other] = false;

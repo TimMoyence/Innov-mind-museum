@@ -2,21 +2,12 @@ import type { BottomSheetRouteId } from './routes';
 
 export type { BottomSheetRouteId };
 
-/**
- * Pending route descriptor used both as a `queued` slot inside the `closing`
- * state and as the OPEN event payload.
- */
 export interface PendingRoute {
   route: BottomSheetRouteId;
   params: unknown;
   blocking: boolean;
 }
 
-/**
- * Pure state shape for the bottom-sheet router. `blocking` is captured on the
- * OPEN event so the reducer can evaluate R6 / R11 in isolation, without
- * looking up the routes registry. See spec §2.3 and the red-test design note.
- */
 export type BottomSheetState =
   | { kind: 'idle' }
   | { kind: 'opening'; route: BottomSheetRouteId; params: unknown; blocking: boolean }
@@ -33,33 +24,9 @@ export type BottomSheetEvent =
   | { type: 'OPEN'; route: BottomSheetRouteId; params: unknown; blocking: boolean }
   | { type: 'OPEN_DONE' }
   | { type: 'CLOSE' }
-  /**
-   * Programmatic close fired by the CTA inside the route content (via
-   * `close()` prop). Bypasses the `blocking` gate — `blocking: true` only
-   * locks down OFF-route dismissals (backdrop tap, swipe-down, Android back).
-   * The CTA is by definition an in-route explicit user choice ; without this
-   * dedicated event, blocking sheets could never be dismissed from inside.
-   */
   | { type: 'CTA_CLOSE' }
   | { type: 'CLOSE_DONE' };
 
-/**
- * Pure reducer driving the bottom-sheet router lifecycle.
- *
- * Invariants:
- * - R1: `idle + OPEN` → `opening`.
- * - R2 / R12: `open(non-blocking) + OPEN(any)` → `closing(prev, nextQueued=new)`.
- *   Last-write-wins replace even when both are blocking — per integration test.
- * - R6: `open(blocking) + OPEN(non-blocking)` → unchanged. Blocking sheet wins.
- * - R7 / R10: `open(non-blocking) + CLOSE` → `closing(prev, nextQueued=null)`.
- * - R11: `open(blocking) + CLOSE` → unchanged. Backdrop / swipe / Android-back
- *   dispatch `CLOSE` ; the route's CTA dispatches `CTA_CLOSE` and is therefore
- *   exempt from this gate (the user IS the affirmative actor inside the sheet).
- * - R12: `closing + CLOSE_DONE` → `opening(queued)` if queued, else `idle`.
- * - R14: `opening | open + CTA_CLOSE` → `closing` regardless of `blocking`.
- *   Without this, blocking sheets are visually un-dismissable from inside —
- *   reported 2026-05-20 ("Accepter tout ne fonctionne pas").
- */
 export function bottomSheetReducer(
   state: BottomSheetState,
   event: BottomSheetEvent,
@@ -86,10 +53,7 @@ export function bottomSheetReducer(
           blocking: state.blocking,
         };
       }
-      // OPEN while opening: replace target via closing path. Treat current as
-      // "to-be-closed" with the new one queued.
       if (event.type === 'OPEN') {
-        // Blocking sheet refuses non-blocking opener.
         if (state.blocking && !event.blocking) return state;
         return {
           kind: 'closing',
@@ -113,8 +77,6 @@ export function bottomSheetReducer(
           nextQueued: null,
         };
       }
-      // R14 — CTA close bypasses the blocking gate (the route's own button
-      // represents the in-sheet affirmative action).
       if (event.type === 'CTA_CLOSE') {
         return {
           kind: 'closing',
@@ -129,7 +91,6 @@ export function bottomSheetReducer(
 
     case 'open': {
       if (event.type === 'OPEN') {
-        // R6: blocking active sheet refuses non-blocking opener.
         if (state.blocking && !event.blocking) return state;
         return {
           kind: 'closing',
@@ -144,7 +105,6 @@ export function bottomSheetReducer(
         };
       }
       if (event.type === 'CLOSE') {
-        // R11: blocking sheet ignores CLOSE event (CTA path is separate).
         if (state.blocking) return state;
         return {
           kind: 'closing',
@@ -154,7 +114,6 @@ export function bottomSheetReducer(
           nextQueued: null,
         };
       }
-      // R14 — CTA close bypasses the blocking gate.
       if (event.type === 'CTA_CLOSE') {
         return {
           kind: 'closing',
@@ -180,7 +139,6 @@ export function bottomSheetReducer(
         }
         return { kind: 'idle' };
       }
-      // Replace queued if another OPEN arrives mid-close.
       if (event.type === 'OPEN') {
         if (state.blocking && !event.blocking) return state;
         return {

@@ -1,144 +1,97 @@
 appId: com.musaium.mobile.preview
 ---
-# Navigation Flow: Verify tab navigation and key screen transitions
-#
-# This flow validates the bottom tab navigator (Dashboard / Museums / Home)
-# and the Settings -> Preferences stack navigation reached via the Home gear.
-#
-# NOTE: Settings is NOT a tab — it is a (stack) route reached from the Home
-# hero gear (testID hero-settings-button). There is also no "Onboarding"
-# tap-target on Home, so the old Onboarding/Welcome phase was removed (it
-# never had a real in-app affordance). See nav-stack-deep-links.yaml for the
-# full stack-screen surface.
-
 - launchApp:
     clearState: true
 
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
 
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 
-# ──────────────────────────────────────────────
-# Phase 0: Authenticate, land on Home
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 
-# The iOS "Save Password?" system dialog appears a BEAT AFTER submit; an immediate
-# optional tap races and misses it, then it covers every later tap. Let it settle,
-# then dismiss optionally.
 - waitForAnimationToEnd:
     timeout: 5000
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
-# Defensive: dismiss the dialog again if it is still covering Home before tabbing.
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 1: Dashboard tab
-# ──────────────────────────────────────────────
 - tapOn:
-    text: ".*(Tableau de bord|Dashboard).*"
-# Dashboard signal: the screen heading is exactly "Tableau de bord" (the tab node
-# is "Tableau de bord, tab, 2 of 4", so an exact match hits only the heading). The
-# subtitle "Vos sessions de musée récentes…" is not always rendered.
+    text: '.*(Tableau de bord|Dashboard).*'
 - extendedWaitUntil:
     visible:
-      text: "Tableau de bord|Dashboard"
+      text: 'Tableau de bord|Dashboard'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 2: Museums tab
-# ──────────────────────────────────────────────
 - tapOn:
-    text: ".*(Musées|Museums).*"
+    text: '.*(Musées|Museums).*'
 - extendedWaitUntil:
     visible:
-      text: "Musées à proximité|Nearby Museums"
+      text: 'Musées à proximité|Nearby Museums'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 3: Home tab (return)
-# ──────────────────────────────────────────────
 - tapOn:
-    text: ".*(Accueil|Home).*"
+    text: '.*(Accueil|Home).*'
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 4: Settings (stack) via Home gear icon
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
 - extendedWaitUntil:
     visible:
-      text: "Paramètres|Settings"
+      text: 'Paramètres|Settings'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 5: Open Preferences from Settings
-# ──────────────────────────────────────────────
 - scrollUntilVisible:
     element:
-      text: "Ouvrir les préférences|Open Preferences"
+      text: 'Ouvrir les préférences|Open Preferences'
     direction: DOWN
 
 - tapOn:
-    text: "Ouvrir les préférences|Open Preferences"
+    text: 'Ouvrir les préférences|Open Preferences'
 - extendedWaitUntil:
     visible:
-      text: "Préférences|Preferences"
+      text: 'Préférences|Preferences'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 6: Return to the Settings screen via the top "Paramètres" nav chip.
-# (The Preferences screen is a sub-hub with chips Mode Guidé | Confidentialité |
-# Paramètres; a hardware `back` is swallowed here, so the chip is the reliable
-# way back to the main Settings screen.)
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Paramètres|Settings"
+    text: 'Paramètres|Settings'
 - extendedWaitUntil:
     visible:
-      text: "Ouvrir les préférences|Open Preferences"
+      text: 'Ouvrir les préférences|Open Preferences'
     timeout: 15000
 
-# ──────────────────────────────────────────────
-# Phase 7: Return to Home via the in-screen "Back to Home" CTA. Its Pressable sets
-# accessibilityLabel a11y.settings.back_home (collapses the visible
-# "Retour à l'accueil" Text) — match the label, partial visibility OK.
-# ──────────────────────────────────────────────
 - scrollUntilVisible:
     element:
       text: "Return to home screen|Retourner à l'écran d'accueil"
@@ -149,5 +102,5 @@ appId: com.musaium.mobile.preview
     text: "Return to home screen|Retourner à l'écran d'accueil"
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 15000

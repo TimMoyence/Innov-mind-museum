@@ -54,14 +54,12 @@ describe('uploadAdmissionMiddleware', () => {
   it('returns 503 when concurrent limit is reached', () => {
     const middleware = createUploadAdmissionMiddleware(1);
 
-    // First request — fills the slot
     const req1 = mockReq('multipart/form-data');
     const res1 = mockRes();
     const next1 = jest.fn() as NextFunction;
     middleware(req1, res1, next1);
     expect(next1).toHaveBeenCalledTimes(1);
 
-    // Second request — should be rejected
     const req2 = mockReq('multipart/form-data');
     const res2 = mockRes();
     const next2 = jest.fn() as NextFunction;
@@ -81,17 +79,14 @@ describe('uploadAdmissionMiddleware', () => {
   it('releases slot after response close and allows new requests', () => {
     const middleware = createUploadAdmissionMiddleware(1);
 
-    // First request
     const req1 = mockReq('multipart/form-data');
     const res1 = mockRes();
     const next1 = jest.fn() as NextFunction;
     middleware(req1, res1, next1);
     expect(next1).toHaveBeenCalledTimes(1);
 
-    // Simulate response close
     res1.triggerClose();
 
-    // Second request should now succeed
     const req2 = mockReq('multipart/form-data');
     const res2 = mockRes();
     const next2 = jest.fn() as NextFunction;
@@ -102,16 +97,13 @@ describe('uploadAdmissionMiddleware', () => {
   it('releases slot on aborted connection (close event)', () => {
     const middleware = createUploadAdmissionMiddleware(1);
 
-    // Fill the slot
     const req1 = mockReq('multipart/form-data');
     const res1 = mockRes();
     const next1 = jest.fn() as NextFunction;
     middleware(req1, res1, next1);
 
-    // Simulate abort via close event
     res1.triggerClose();
 
-    // New request should succeed
     const req2 = mockReq('multipart/form-data');
     const res2 = mockRes();
     const next2 = jest.fn() as NextFunction;
@@ -122,7 +114,6 @@ describe('uploadAdmissionMiddleware', () => {
   it('uses default maxConcurrent of 50 when not specified', () => {
     const middleware = createUploadAdmissionMiddleware();
 
-    // Should allow 50 concurrent requests
     const responses: ReturnType<typeof mockRes>[] = [];
     for (let i = 0; i < 50; i++) {
       const req = mockReq('multipart/form-data');
@@ -133,7 +124,6 @@ describe('uploadAdmissionMiddleware', () => {
       responses.push(res);
     }
 
-    // 51st should be rejected
     const req51 = mockReq('multipart/form-data');
     const res51 = mockRes();
     const next51 = jest.fn() as NextFunction;
@@ -141,7 +131,6 @@ describe('uploadAdmissionMiddleware', () => {
     expect(next51).not.toHaveBeenCalled();
     expect(res51.status).toHaveBeenCalledWith(503);
 
-    // Clean up
     for (const res of responses) {
       res.triggerClose();
     }
@@ -155,18 +144,15 @@ describe('uploadAdmissionMiddleware', () => {
     const next1 = jest.fn() as NextFunction;
     middleware(req1, res1, next1);
 
-    // Double close should not break anything
     res1.triggerClose();
     res1.triggerClose();
 
-    // Should still work correctly
     const req2 = mockReq('multipart/form-data');
     const res2 = mockRes();
     const next2 = jest.fn() as NextFunction;
     middleware(req2, res2, next2);
     expect(next2).toHaveBeenCalledTimes(1);
 
-    // And the second slot should not be magically opened
     const req3 = mockReq('multipart/form-data');
     const res3 = mockRes();
     const next3 = jest.fn() as NextFunction;

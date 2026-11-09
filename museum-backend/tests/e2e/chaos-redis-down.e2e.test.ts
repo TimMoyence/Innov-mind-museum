@@ -109,7 +109,7 @@ describeE2E('chaos: Redis down (cache always throws)', () => {
     expect(res.status).toBe(201);
     const bodyStr = JSON.stringify(res.body);
     expect(bodyStr).not.toMatch(/ECONNREFUSED/i);
-    expect(bodyStr).not.toMatch(/at .* \(/); // no stack traces
+    expect(bodyStr).not.toMatch(/at .* \(/);
   });
 
   it('login flow works with broken cache', async () => {
@@ -117,13 +117,7 @@ describeE2E('chaos: Redis down (cache always throws)', () => {
     expect(token).toBeTruthy();
   });
 
-  // NOTE: this test MUST run last in the file. It boots a second harness via
-  // `createE2EHarness({...})`, which re-binds the singleton AppDataSource to a
-  // freshly-started container; when its `stop()` runs in `finally`, the shared
-  // DataSource is destroyed and any subsequent test in this file that uses the
-  // outer `harness` would fail with "Driver not Connected".
   it('flaky cache mode (50% failure) still returns 2xx', async () => {
-    // Quick reseat with flaky mode for one call
     const flakyCache = new BrokenRedisCache({ mode: 'flaky', failureRate: 0.5 });
     const flakyHarness = await createE2EHarness({ cacheService: flakyCache });
     try {

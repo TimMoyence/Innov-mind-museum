@@ -32,7 +32,7 @@ describe('DetectMuseumUseCase', () => {
       expect(result.museumId).toBe(42);
       expect(result.confidence).toBe(1.0);
       expect(result.name).toBe('Louvre');
-      expect(repo.findAll).not.toHaveBeenCalled(); // short-circuit
+      expect(repo.findAll).not.toHaveBeenCalled();
     });
 
     it('falls back to Haversine when no geofence hit ; confidence decays with distance', async () => {
@@ -48,7 +48,6 @@ describe('DetectMuseumUseCase', () => {
       });
 
       const sut = new DetectMuseumUseCase(repo);
-      // Same lat/lng as museum centroid → distance ≈ 0
       const result = await sut.execute(48.86, 2.34);
 
       expect(result.museumId).toBe(7);
@@ -70,7 +69,6 @@ describe('DetectMuseumUseCase', () => {
       });
 
       const sut = new DetectMuseumUseCase(repo);
-      // Point in Tokyo — Far Museum is in Paris ; > 30 km cap of findNearbyMuseums
       const result = await sut.execute(35.6762, 139.6503);
 
       expect(result.museumId).toBeNull();
@@ -80,7 +78,6 @@ describe('DetectMuseumUseCase', () => {
     });
 
     it('Haversine 200 m → confidence ≈ 0.6 (mid-bucket: confirm-sheet UX)', async () => {
-      // ~200 m east of centroid via lat≈0, lng delta ~0.0027° at 48.86° latitude
       const museum = makeMuseum({
         id: 11,
         name: 'Mid Museum',
@@ -96,7 +93,6 @@ describe('DetectMuseumUseCase', () => {
       const result = await sut.execute(48.86, 2.3427);
 
       expect(result.museumId).toBe(11);
-      // ~200 m away → confidence ~0.6 (allow ±0.1 fudge for Haversine)
       expect(result.confidence).toBeGreaterThan(0.4);
       expect(result.confidence).toBeLessThan(0.8);
     });

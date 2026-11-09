@@ -1,15 +1,3 @@
-/**
- * UFR-022 red phase — PR-5 assertPagination helper.
- * RUN_ID 2026-05-23-pr-5-assertPagination.
- *
- * These tests intentionally FAIL pre-green: `assertPagination` does not yet
- * exist in `@shared/types/pagination` (only the `PaginationParams` and
- * `PaginatedResult<T>` interfaces are exported). Green phase MUST implement
- * the helper per `design.md` §1.1 to make these pass.
- *
- * Frozen-test discipline: this file is sha256-hashed in `red-test-manifest.json`.
- * Green phase MUST NOT modify it. Suspected bug → emit `BLOCK-TEST-WRONG`.
- */
 import { AppError } from '@shared/errors/app.error';
 import { assertPagination } from '@shared/types/pagination';
 
@@ -123,8 +111,6 @@ describe('assertPagination — happy path return', () => {
 
 describe('assertPagination — ordering (R5: page checked before limit)', () => {
   it('throws page message (NOT limit message) when BOTH are invalid', () => {
-    // page=0 invalid AND limit=200 invalid for default max=100 — page check
-    // must short-circuit so the message is the page one, not the limit one.
     expect(() => assertPagination({ page: 0, limit: 200 })).toThrow(
       'page must be a positive integer',
     );
@@ -137,7 +123,6 @@ describe('assertPagination — ordering (R5: page checked before limit)', () => 
     } catch (err) {
       const e = err as AppError;
       expect(e.message).toBe('page must be a positive integer');
-      // Sanity: NOT the limit message.
       expect(e.message).not.toBe('limit must be between 1 and 100');
     }
   });
@@ -183,10 +168,6 @@ describe('assertPagination — purity (R7: no mutation, no I/O)', () => {
   });
 
   it('returns a new object (not the same reference as input)', () => {
-    // R1 spec returns "{ page, limit } typed" — implementation per design.md
-    // §1.1 destructures + returns a fresh literal. Lock that contract so green
-    // can't silently `return params` (which would tie callers to input shape
-    // for extra fields).
     const input = { page: 1, limit: 10 };
     const result = assertPagination(input);
     expect(result).not.toBe(input);

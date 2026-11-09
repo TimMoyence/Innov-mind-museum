@@ -1,10 +1,6 @@
 import { useCallback } from 'react';
 import { useArtKeywordsStore } from '@/features/art-keywords/infrastructure/artKeywordsStore';
 
-/**
- * Classifies user text as art-related or unknown using locally cached keywords.
- * Returns 'art' if any token matches a keyword for the given locale, 'unknown' otherwise.
- */
 export function useArtKeywordsClassifier() {
   const getKeywords = useArtKeywordsStore((state) => state.getKeywords);
 

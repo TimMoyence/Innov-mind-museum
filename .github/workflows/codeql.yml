@@ -1,22 +1,11 @@
 name: codeql
 
-# Semantic SAST — taint tracking, prototype pollution, second-order injection.
-# Complements Semgrep (pattern-based) with deeper interprocedural analysis.
-# Created: 2026-04-07 (Tier 1 audit fix)
-#
-# Path filtering moved from workflow-level `on.pull_request.paths` to a
-# job-level `if:` gated by `dorny/paths-filter`. Workflow-level path filters
-# leave required-status-checks in "Pending" forever when a PR touches none
-# of the configured paths (typical for Renovate workflow SHA bumps). With the
-# pattern below, the workflow always starts; the `analyze` job evaluates `if:`
-# and skipped jobs report `success` — unblocking PR merges.
 
 on:
   pull_request: {}
   push:
     branches: ['main']
   schedule:
-    # Nightly deep scan at 03:30 UTC (after Semgrep nightly at 04:30)
     - cron: '30 3 * * *'
 
 permissions:
@@ -50,19 +39,8 @@ jobs:
               - '.github/workflows/codeql.yml'
 
   analyze:
-    # NO matrix: a SKIPPED matrix job reports its check as the UNEXPANDED
-    # `CodeQL (${{ matrix.language }})` string, which never matches the required
-    # `CodeQL (javascript-typescript)` context → that context stays "Expected"
-    # forever and BLOCKS every dep-only PR (this is what stalled the Renovate
-    # queue). A single-language job with a literal name reports the exact
-    # required context as `skipped` (= passed for required checks) when the code
-    # filter misses, exactly like the semgrep job. Add languages back as separate
-    # jobs (not a matrix) if a second language is ever scanned.
     name: CodeQL (javascript-typescript)
     needs: changes
-    # Always run on schedule + manual dispatch. On PR/push, run only if scanned
-    # paths actually changed — skipped jobs report `success` so the required
-    # check is satisfied for Renovate workflow-SHA bumps.
     if: |
       needs.changes.outputs.code == 'true' ||
       github.event_name == 'schedule' ||
@@ -77,8 +55,6 @@ jobs:
         uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
         with:
           languages: javascript-typescript
-          # security-extended pulls additional queries beyond default (taint tracking,
-          # prototype pollution, unsafe deserialization, regex injection, etc.)
           queries: security-extended,security-and-quality
           config: |
             paths:
@@ -102,5 +78,4 @@ jobs:
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
         with:
           category: '/language:javascript-typescript'
-          # upload: always — push results to GitHub Security tab
           upload: always

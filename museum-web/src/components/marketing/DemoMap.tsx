@@ -7,26 +7,26 @@ import { OFFLINE_MAP_STYLE_PATH } from '@musaium/shared/map';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const museums: [number, number][] = [
-  [2.3376, 48.8606], // Louvre
-  [2.3265, 48.86], // Orsay
-  [2.3522, 48.8607], // Pompidou
-  [2.3157, 48.8554], // Rodin
-  [2.3225, 48.8639], // Orangerie
-  [2.3594, 48.8662], // Arts et Metiers
-  [2.3321, 48.848], // Cluny
-  [2.2945, 48.8583], // Quai Branly
-  [2.3435, 48.861], // Carnavalet
-  [2.3127, 48.8738], // Monceau
-  [2.3269, 48.8738], // Jacquemart-Andre
-  [2.318, 48.8614], // Palais de Tokyo
-  [2.3101, 48.8649], // Galliera
-  [2.2965, 48.8622], // Marmottan
-  [2.344, 48.853], // Institut du Monde Arabe
-  [2.36, 48.853], // Muséum Histoire Naturelle
-  [2.35, 48.844], // Manufacture des Gobelins
-  [2.337, 48.877], // Musée de la Vie Romantique
-  [2.3475, 48.8835], // Montmartre
-  [2.287, 48.858], // Palais de Chaillot
+  [2.3376, 48.8606],
+  [2.3265, 48.86],
+  [2.3522, 48.8607],
+  [2.3157, 48.8554],
+  [2.3225, 48.8639],
+  [2.3594, 48.8662],
+  [2.3321, 48.848],
+  [2.2945, 48.8583],
+  [2.3435, 48.861],
+  [2.3127, 48.8738],
+  [2.3269, 48.8738],
+  [2.318, 48.8614],
+  [2.3101, 48.8649],
+  [2.2965, 48.8622],
+  [2.344, 48.853],
+  [2.36, 48.853],
+  [2.35, 48.844],
+  [2.337, 48.877],
+  [2.3475, 48.8835],
+  [2.287, 48.858],
 ];
 
 export default function DemoMap() {
@@ -35,14 +35,6 @@ export default function DemoMap() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // maplibre-gl needs a live WebGL context. Where none is available — headless
-    // CI browsers with no GPU (the nightly Firefox a11y run), users who disabled
-    // WebGL, hardened/old browsers — `new Map()` THROWS synchronously. Unguarded,
-    // that error escapes the effect and trips the route error boundary, so the
-    // whole public page renders "Something went wrong" (empty <title>, skip-link
-    // resolves to the boundary's "Try again" button). The demo map is decorative
-    // — the overlay chrome below renders regardless — so we fail soft: report once
-    // to Sentry and skip the live map rather than crash the page.
     setWorkerUrl(`/maplibre/maplibre-gl-worker-${getVersion()}.mjs`);
 
     let map: Map;
@@ -52,7 +44,6 @@ export default function DemoMap() {
         style: OFFLINE_MAP_STYLE_PATH,
         center: [2.3376, 48.862],
         zoom: 12.5,
-        // Allow drag/pan for tactile feel, but lock zoom & rotate to avoid scroll hijack
         scrollZoom: false,
         doubleClickZoom: false,
         touchZoomRotate: false,
@@ -68,8 +59,6 @@ export default function DemoMap() {
       return;
     }
 
-    // TD-MGL-02 — surface maplibre-gl tile / style / network errors to Sentry
-    // instead of swallowing them silently in the console.
     map.on('error', (e) => {
       Sentry.captureException(e.error);
     });
@@ -112,7 +101,6 @@ export default function DemoMap() {
           style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
         />
 
-        {/* Search bar overlay (under iOS status bar at top: 44px) */}
         <div
           className="pointer-events-none absolute z-10"
           style={{ top: 44, left: 8, right: 8 }}
@@ -151,7 +139,6 @@ export default function DemoMap() {
           </div>
         </div>
 
-        {/* "My location" pulsing dot — center */}
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 z-10"
           style={{ transform: 'translate(-50%, -50%)' }}
@@ -186,7 +173,6 @@ export default function DemoMap() {
           </div>
         </div>
 
-        {/* Bottom sheet — decorative */}
         <div
           className="pointer-events-none absolute bottom-0 left-0 right-0 z-10"
           aria-hidden="true"
@@ -203,7 +189,6 @@ export default function DemoMap() {
               boxShadow: '0 -4px 14px rgba(15,23,42,0.08)',
             }}
           >
-            {/* Drag handle */}
             <div
               style={{
                 width: 36,

@@ -6,46 +6,18 @@ import {
   isS3ImageRef,
 } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { invalidInput } from '@shared/errors/app.error';
+import { nonEmpty } from '@shared/utils/defaults';
 import { env } from '@src/config/env';
 
 import type { Request, RequestHandler } from 'express';
 
-/**
- * I-OPS4 — chat-route socket-timeout ceiling reconciliation.
- *
- * Coherence margin (ms) added on top of the worst-case server-side work
- * (`totalBudgetMs + serial guardrail budget`) so the response socket is never
- * force-closed by the request-timeout middleware *before* the LLM deadline path
- * has a chance to emit a graceful answer/timeout. Must stay strictly positive.
- */
 const CHAT_ROUTE_TIMEOUT_MARGIN_MS = 2_000;
 
 const serialGuardrailBudgetMs = (): number => env.guardrails.judgeTimeoutMs;
 
-/**
- * Single source of truth for the chat-route socket ceiling (R2 invariant):
- *
- *   chatRouteSocketCeilingMs = totalBudgetMs + serialGuardrailBudget + margin
- *
- * The global request timeout (`env.requestTimeoutMs`, default 20 000) can fire
- * BEFORE the LLM total budget (`env.llm.totalBudgetMs`, default 25 000) plus the
- * serial guardrail budget (~2 000) is exhausted. `extendTimeoutForUpload` raises
- * the socket ceiling to this value on EVERY chat request (text-only included),
- * never shortening an already-larger ceiling. With defaults: 25 000 + 2 000 +
- * 2 000 = 29 000 ms.
- */
 export const chatRouteSocketCeilingMs =
   env.llm.totalBudgetMs + serialGuardrailBudgetMs() + CHAT_ROUTE_TIMEOUT_MARGIN_MS;
 
-/**
- * MUST mount BEFORE multer; uses a finite ceiling, not 0/unlimited.
- *
- * Raises the response socket timeout for BOTH the multipart upload path AND the
- * text-only (`application/json`) chat path so neither is cut before the LLM
- * deadline path completes. The multipart path historically used
- * `totalBudgetMs + 10 000` (image ingest headroom); it is kept as a floor and
- * never shortened below `chatRouteSocketCeilingMs` (R1, NFR §Latency).
- */
 export const extendTimeoutForUpload: RequestHandler = (req, res, next) => {
   const ceiling = req.is('multipart/form-data')
     ? Math.max(env.llm.totalBudgetMs + 10_000, chatRouteSocketCeilingMs)
@@ -59,17 +31,11 @@ interface ParsedContext {
   museumMode?: boolean;
   guideLevel?: 'beginner' | 'intermediate' | 'expert';
   locale?: string;
-  /**
-   * C9.10 (2026-05-17) — set by the FE STT path. When true, the LLM is
-   * constrained to a 60-80w prose-only answer for TTS playback.
-   */
   voiceMode?: boolean;
 }
 
-/** Matches ImageProcessingService.assertMimeType (LLM vision pipeline). */
 const DEFAULT_IMAGE_MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
-/** iOS m4a, Android 3gp/webm, generic mp4/mpeg/wav. */
 const DEFAULT_AUDIO_MIME_TYPES: readonly string[] = [
   'audio/mp4',
   'audio/mpeg',
@@ -78,73 +44,43 @@ const DEFAULT_AUDIO_MIME_TYPES: readonly string[] = [
   'audio/x-m4a',
 ];
 
-const resolveAllowedImageMimeTypes = (): Set<string> => {
-  const configured = env.upload.allowedMimeTypes;
-  const list = configured.length > 0 ? configured : DEFAULT_IMAGE_MIME_TYPES;
-  return new Set(list.map((type) => type.toLowerCase()));
+const toMimeSet = (configured: readonly string[], defaults: readonly string[]): Set<string> =>
+  new Set((configured.length > 0 ? configured : defaults).map((type) => type.toLowerCase()));
+
+const singleFileUpload = (
+  kind: 'image' | 'audio',
+  maxBytes: number,
+  configuredTypes: () => readonly string[],
+  defaultTypes: readonly string[],
+): multer.Multer => {
+  let allowed: Set<string> | null = null;
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: maxBytes, files: 1, fields: 10, parts: 20, headerPairs: 50 },
+    fileFilter: (_req, file, cb) => {
+      allowed ??= toMimeSet(configuredTypes(), defaultTypes);
+      if (allowed.has((file.mimetype || '').toLowerCase())) {
+        cb(null, true);
+        return;
+      }
+      cb(invalidInput(`Unsupported ${kind} content type: ${file.mimetype || 'unknown'}`));
+    },
+  });
 };
 
-const resolveAllowedAudioMimeTypes = (): Set<string> => {
-  const configured = env.upload.allowedAudioMimeTypes;
-  const list = configured.length > 0 ? configured : DEFAULT_AUDIO_MIME_TYPES;
-  return new Set(list.map((type) => type.toLowerCase()));
-};
+export const upload = singleFileUpload(
+  'image',
+  env.llm.maxImageBytes,
+  () => env.upload.allowedMimeTypes,
+  DEFAULT_IMAGE_MIME_TYPES,
+);
 
-/**
- * SEC-M2 pre-flight — reject by declared Content-Type BEFORE buffering to cap
- * memory under upload bursts. Authoritative magic-byte + size validation runs
- * in ImageProcessingService / audio ingestion (defense-in-depth).
- * Allowlist memoised lazily so tests can mock env post-module-load.
- */
-let cachedAllowedImageMimeTypes: Set<string> | null = null;
-let cachedAllowedAudioMimeTypes: Set<string> | null = null;
-
-const imageFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
-  cachedAllowedImageMimeTypes ??= resolveAllowedImageMimeTypes();
-  const mime = (file.mimetype || '').toLowerCase();
-  if (cachedAllowedImageMimeTypes.has(mime)) {
-    cb(null, true);
-    return;
-  }
-  cb(invalidInput(`Unsupported image content type: ${file.mimetype || 'unknown'}`));
-};
-
-const audioFileFilter: NonNullable<multer.Options['fileFilter']> = (_req, file, cb) => {
-  cachedAllowedAudioMimeTypes ??= resolveAllowedAudioMimeTypes();
-  const mime = (file.mimetype || '').toLowerCase();
-  if (cachedAllowedAudioMimeTypes.has(mime)) {
-    cb(null, true);
-    return;
-  }
-  cb(invalidInput(`Unsupported audio content type: ${file.mimetype || 'unknown'}`));
-};
-
-export const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: env.llm.maxImageBytes,
-    files: 1,
-    // TD-MUL-01 — bound multipart field/part/header counts (defense-in-depth
-    // DoS guard, lib-docs/multer/PATTERNS.md §4).
-    fields: 10,
-    parts: 20,
-    headerPairs: 50,
-  },
-  fileFilter: imageFileFilter,
-});
-
-export const audioUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: env.llm.maxAudioBytes,
-    files: 1,
-    // TD-MUL-01 — same defense-in-depth bounds as the image upload above.
-    fields: 10,
-    parts: 20,
-    headerPairs: 50,
-  },
-  fileFilter: audioFileFilter,
-});
+export const audioUpload = singleFileUpload(
+  'audio',
+  env.llm.maxAudioBytes,
+  () => env.upload.allowedAudioMimeTypes,
+  DEFAULT_AUDIO_MIME_TYPES,
+);
 
 const MAX_CONTEXT_LENGTH = 2000;
 
@@ -180,7 +116,6 @@ const parseLocation = (value: unknown): string | undefined => {
   return value;
 };
 
-/** Accepts boolean or boolean-string ('true'/'false'). */
 const parseMuseumMode = (value: unknown): boolean | undefined => {
   return parseBoolean(value, 'context.museumMode');
 };
@@ -205,7 +140,6 @@ const parseGuideLevel = (value: unknown): ParsedContext['guideLevel'] | undefine
   return value as 'beginner' | 'intermediate' | 'expert';
 };
 
-/** Length + charset cap only; whitelist downstream via resolveLocale. */
 const parseLocale = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
   if (typeof value !== 'string') throw invalidInput('context.locale must be a string');
@@ -238,7 +172,6 @@ export const parseContext = (input: unknown): ParsedContext | undefined => {
   const locale = parseLocale(value.locale);
   if (locale !== undefined) context.locale = locale;
 
-  // C9.10 — accept boolean or boolean-string (multipart).
   const voiceMode = parseBoolean(value.voiceMode, 'context.voiceMode');
   if (voiceMode !== undefined) context.voiceMode = voiceMode;
 
@@ -261,8 +194,7 @@ export const resolveRequestBaseUrl = (req: {
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-  const protocol = req.protocol || 'http';
+  const protocol = nonEmpty(req.protocol) ?? 'http';
   return `${protocol}://${host}`;
 };
 
@@ -277,7 +209,6 @@ export const getRequestUser = (req: Request): { id?: number } | undefined => {
   return req.user;
 };
 
-/** Returns S3-signed URL if `imageRef` is S3, else local signed URL. */
 export const buildImageReadUrl = (params: {
   baseUrl: string | null;
   messageId: string;

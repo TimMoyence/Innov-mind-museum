@@ -1,25 +1,13 @@
-/**
- * Tests for walk-intent wiring in useStartConversation.
- *
- * Cases:
- *  1. Walk intent calls createSession with intent: 'walk' AND coordinates AND museumId.
- *  2. Walk intent navigates with ?intent=walk in the URL.
- *  3. Walk intent does NOT push the deprecated WALK_COMPOSER_ROUTE.
- *  4. Default intent still works (smoke test).
- */
-
 import { renderHook, act } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { useStartConversation } from '@/features/chat/application/useStartConversation';
 import { makeCreateSessionResponse } from '@/__tests__/helpers/factories/session.factories';
 
-// ── expo-router ───────────────────────────────────────────────────────────────
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
   useLocalSearchParams: () => ({}),
 }));
 
-// ── chatApi ───────────────────────────────────────────────────────────────────
 const mockCreateSession = jest.fn();
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
@@ -27,21 +15,16 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── runtimeSettingsStore ──────────────────────────────────────────────────────
 jest.mock('@/features/settings/infrastructure/runtimeSettingsStore', () => ({
   useRuntimeSettingsStore: {
-    getState: () => ({ defaultLocale: 'en-US', defaultMuseumMode: false }),
+    getState: () => ({ defaultMuseumMode: false }),
   },
 }));
 
-// ── Sentry (imported transitively via chatApi) ────────────────────────────────
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
 }));
 
-// ── useLocation (W3 — useStartConversation now subscribes for auto-detect) ────
-// The walk-intent flow does NOT use auto-detect; we return an idle GPS state
-// so the auto-detect branch is bypassed entirely.
 jest.mock('@/features/museum/application/useLocation', () => ({
   useLocation: () => ({
     latitude: null,
@@ -57,8 +40,6 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => ({
     detectMuseum: jest.fn(),
   },
 }));
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 const WALK_COMPOSER_ROUTE = '/(stack)/walk-composer';
 

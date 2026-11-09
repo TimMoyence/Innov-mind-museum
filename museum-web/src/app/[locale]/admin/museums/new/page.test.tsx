@@ -1,15 +1,6 @@
-/**
- * NewMuseumPage — W4 W2.1.
- * Verifies: required-field validation (name + slug), slug format check,
- * lat/lng range check, successful POST → redirect to branding page.
- * Uses fireEvent + change/click directly (no @testing-library/user-event
- * dep in this workspace — see existing admin tests for the pattern).
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NewMuseumPage from './page';
-
-// ── Next.js mocks ─────────────────────────────────────────────────────────
 
 const pushSpy = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -32,8 +23,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-// ── API mock ──────────────────────────────────────────────────────────────
-
 const mockApiPost = vi.fn();
 
 vi.mock('@/lib/api', () => ({
@@ -45,8 +34,6 @@ vi.mock('@/lib/api', () => ({
 function typeInto(el: HTMLElement, value: string): void {
   fireEvent.change(el, { target: { value } });
 }
-
-// ── Tests ────────────────────────────────────────────────────────────────
 
 describe('NewMuseumPage', () => {
   beforeEach(() => {

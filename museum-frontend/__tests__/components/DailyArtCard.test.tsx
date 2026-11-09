@@ -1,12 +1,6 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 
-// ── react-native-gesture-handler — Swipeable mock that captures callbacks ────
-// Must appear before the component import so Jest hoisting applies correctly.
-// TD-RNGH-04 — DailyArtCard now imports `ReanimatedSwipeable` from the subpath
-// `react-native-gesture-handler/ReanimatedSwipeable`. We mock both the root
-// module (other deps) AND the subpath (the new ctor) so the captured
-// `onSwipeableOpen` hook still fires deterministically in tests.
 let capturedOnSwipeableOpen: ((direction: string) => void) | undefined;
 jest.mock('react-native-gesture-handler', () => {
   const { View } = require('react-native');
@@ -35,7 +29,6 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   };
 });
 
-// ── toggleSavedArtwork mock ──────────────────────────────────────────────────
 const mockToggleSavedArtwork = jest.fn().mockResolvedValue({ saved: true });
 jest.mock('@/features/daily-art/application/useDailyArt', () => ({
   ...jest.requireActual('@/features/daily-art/application/useDailyArt'),
@@ -45,7 +38,7 @@ jest.mock('@/features/daily-art/application/useDailyArt', () => ({
 import { DailyArtCard } from '@/features/daily-art/ui/DailyArtCard';
 import type { DailyArtwork } from '@/features/daily-art/infrastructure/dailyArtApi';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+import { speakAppLanguage } from '../helpers/real-i18n';
 
 const sampleArtwork: DailyArtwork = {
   title: 'Starry Night',
@@ -64,14 +57,13 @@ const defaultProps = {
   onSkip: jest.fn(),
 };
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('DailyArtCard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders artwork title, artist, year, and museum', () => {
+    speakAppLanguage('en');
     render(<DailyArtCard {...defaultProps} />);
 
     expect(screen.getByText('Starry Night')).toBeTruthy();
@@ -89,7 +81,6 @@ describe('DailyArtCard', () => {
   it('renders the image when imageUrl is provided and no error', () => {
     render(<DailyArtCard {...defaultProps} />);
 
-    // Image should have accessibilityLabel matching artwork title
     const image = screen.getByLabelText('Starry Night');
     expect(image).toBeTruthy();
   });
@@ -98,25 +89,20 @@ describe('DailyArtCard', () => {
     const artworkNoImage: DailyArtwork = { ...sampleArtwork, imageUrl: '' };
     render(<DailyArtCard {...defaultProps} artwork={artworkNoImage} />);
 
-    // The Ionicons mock renders icon name as text
     expect(screen.getByText('image-outline')).toBeTruthy();
   });
 
   it('fun fact toggle expands and collapses', () => {
     render(<DailyArtCard {...defaultProps} />);
 
-    // Fun fact text should NOT be visible initially
     expect(screen.queryByText(sampleArtwork.funFact)).toBeNull();
 
-    // The toggle button should show the "Did you know?" label
     const toggleButton = screen.getByText('dailyArt.fun_fact');
     expect(toggleButton).toBeTruthy();
 
-    // Expand
     fireEvent.press(toggleButton);
     expect(screen.getByText(sampleArtwork.funFact)).toBeTruthy();
 
-    // Collapse
     fireEvent.press(toggleButton);
     expect(screen.queryByText(sampleArtwork.funFact)).toBeNull();
   });
@@ -151,7 +137,6 @@ describe('DailyArtCard', () => {
 
     const savedButton = screen.getByLabelText('dailyArt.saved');
     expect(savedButton).toBeTruthy();
-    // The button should have the "heart" (filled) icon when saved
     expect(screen.getByText('heart')).toBeTruthy();
   });
 
@@ -163,12 +148,11 @@ describe('DailyArtCard', () => {
 
   it('handles missing optional year gracefully', () => {
     const artworkNoYear: DailyArtwork = { ...sampleArtwork, year: '' };
+    speakAppLanguage('en');
     render(<DailyArtCard {...defaultProps} artwork={artworkNoYear} />);
 
-    // Should still render artist without year parentheses
     const artistText = screen.getByText(/Vincent van Gogh/);
     expect(artistText).toBeTruthy();
-    // The year parentheses should not appear
     expect(screen.queryByText(/\(.*\)/)).toBeNull();
   });
 
@@ -184,10 +168,8 @@ describe('DailyArtCard', () => {
 
     const image = screen.getByLabelText('Starry Night');
 
-    // Simulate image load error
     fireEvent(image, 'error');
 
-    // After error, the fallback icon should be shown
     expect(screen.getByText('image-outline')).toBeTruthy();
   });
 
@@ -199,7 +181,6 @@ describe('DailyArtCard', () => {
     capturedOnSwipeableOpen = undefined;
     render(<DailyArtCard {...defaultProps} />);
 
-    // Swipeable mock captures onSwipeableOpen during render
     expect(capturedOnSwipeableOpen).toBeDefined();
 
     await act(async () => {
@@ -216,7 +197,6 @@ describe('DailyArtCard', () => {
   it('swipeToSave=false renders card without Swipeable wrapper', () => {
     render(<DailyArtCard {...defaultProps} swipeToSave={false} />);
     expect(screen.queryByTestId('swipeable-wrapper')).toBeNull();
-    // Card content still renders
     expect(screen.getByText('Starry Night')).toBeTruthy();
   });
 });

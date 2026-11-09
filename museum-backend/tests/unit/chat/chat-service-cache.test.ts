@@ -37,11 +37,9 @@ describe('chat service – cache integration', () => {
 
     const session = await service.createSession({ userId: USER_ID });
 
-    // Populate cache
     await service.getSession(session.id, { limit: 20 }, USER_ID);
     expect(cache.has(`session:${session.id}:first:20`)).toBe(true);
 
-    // Post message should invalidate
     await service.postMessage(session.id, { text: 'New message' }, undefined, USER_ID);
     expect(cache.has(`session:${session.id}:first:20`)).toBe(false);
   });
@@ -52,11 +50,9 @@ describe('chat service – cache integration', () => {
 
     await service.createSession({ userId: USER_ID });
 
-    // Populate list cache
     await service.listSessions({ limit: 20 }, USER_ID);
     expect(cache.has(`sessions:user:${USER_ID}:first:20`)).toBe(true);
 
-    // Creating another session should invalidate list cache
     await service.createSession({ userId: USER_ID });
     expect(cache.has(`sessions:user:${USER_ID}:first:20`)).toBe(false);
   });

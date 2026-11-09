@@ -120,13 +120,11 @@ describe('WikidataClient', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
 
-    // Search call
     const searchCall = fetchSpy.mock.calls[0] as [string, RequestInit];
     expect((searchCall[1].headers as Record<string, string>)['User-Agent']).toBe(
       'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
     );
 
-    // SPARQL call
     const sparqlCall = fetchSpy.mock.calls[1] as [string, RequestInit];
     expect((sparqlCall[1].headers as Record<string, string>)['User-Agent']).toBe(
       'Musaium/1.0 (https://musaium.com; contact@musaium.com)',
@@ -152,7 +150,6 @@ describe('WikidataClient', () => {
   });
 
   it('validates QID format (rejects non-Q\\d+ patterns)', async () => {
-    // Simulate a search result with an invalid QID
     fetchSpy.mockResolvedValueOnce({
       ok: true,
       json: async () =>
@@ -168,7 +165,6 @@ describe('WikidataClient', () => {
     const result = await client.lookup({ searchTerm: 'test' });
 
     expect(result).toBeNull();
-    // SPARQL should not have been called
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 

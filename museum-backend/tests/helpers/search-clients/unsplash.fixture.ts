@@ -26,7 +26,6 @@ export const makeUnsplashApiResult = (overrides: Record<string, unknown> = {}) =
   ...overrides,
 });
 
-/** Returns a fully-typed jest mock of UnsplashClient (single method: searchPhotos). */
 export function makeUnsplashClientMock(
   photos: ImageSourcePhoto[] = [],
 ): jest.Mocked<UnsplashClient> {

@@ -1,17 +1,3 @@
-/**
- * TD-4 — real-PG integration test for `pruneReviews`.
- *
- * Two-pass prune (rejected > 30d + pending > 60d). `approved` reviews are
- * NEVER deleted (GDPR legitimate interest). Pins the driver-tuple contract
- * against a real Postgres testcontainer so the incident-2026-05-08 busy-loop
- * class of bugs cannot reach prod again.
- * See `museum-backend/src/modules/review/useCase/moderation/prune-reviews.ts`
- * and ADR-019.
- *
- * Run with:
- *   RUN_INTEGRATION=true pnpm test:integration -- \
- *     --testPathPattern=tests/integration/retention/prune-reviews
- */
 import type { Repository } from 'typeorm';
 
 import { pruneReviews } from '@modules/review/useCase/moderation/prune-reviews';
@@ -29,7 +15,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number): Date => new Date(Date.now() - n * DAY_MS);
 
 describeIntegration('pruneReviews (real PG) [integration]', () => {
-
   let harness: IntegrationHarness;
   let reviewRepo: Repository<Review>;
 
@@ -43,15 +28,6 @@ describeIntegration('pruneReviews (real PG) [integration]', () => {
     await harness.reset();
   });
 
-  /**
-   * Insert a single Review and (optionally) force its `updatedAt` to a past
-   * timestamp via raw UPDATE because `@UpdateDateColumn` overrides explicit
-   * values on insert.
-   * @param params
-   * @param params.status
-   * @param params.updatedAt
-   * @param params.seq
-   */
   async function insertReview(params: {
     status: 'pending' | 'approved' | 'rejected';
     updatedAt?: Date;
@@ -81,19 +57,15 @@ describeIntegration('pruneReviews (real PG) [integration]', () => {
   }
 
   it('R1+R4: deletes 25 rejected stale + 25 pending stale, leaves 50 approved/recent untouched', async () => {
-    // 25 rejected, stale > 30d (eligible)
     for (let i = 0; i < 25; i += 1) {
       await insertReview({ status: 'rejected', updatedAt: daysAgo(45), seq: i });
     }
-    // 25 pending, stale > 60d (eligible)
     for (let i = 25; i < 50; i += 1) {
       await insertReview({ status: 'pending', updatedAt: daysAgo(70), seq: i });
     }
-    // 25 approved, stale 400d (NEVER deleted — GDPR keep)
     for (let i = 50; i < 75; i += 1) {
       await insertReview({ status: 'approved', updatedAt: daysAgo(400), seq: i });
     }
-    // 25 rejected but recent (NOT eligible)
     for (let i = 75; i < 100; i += 1) {
       await insertReview({ status: 'rejected', updatedAt: daysAgo(5), seq: i });
     }
@@ -140,7 +112,6 @@ describeIntegration('pruneReviews (real PG) [integration]', () => {
     for (let i = 30; i < 60; i += 1) {
       await insertReview({ status: 'pending', updatedAt: daysAgo(70), seq: i });
     }
-    // 10 approved sentinels — must never be touched.
     for (let i = 60; i < 70; i += 1) {
       await insertReview({ status: 'approved', updatedAt: daysAgo(400), seq: i });
     }

@@ -7,15 +7,9 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { authStyles as styles } from './authStyles';
 
 interface AuthHeaderProps {
-  /** Whether the screen is currently in login mode (otherwise register). */
   isLogin: boolean;
 }
 
-/**
- * Branded header for the auth screen: Musaium logo (left) + mode-aware
- * title and subtitle (right) on a horizontal 50/50 row to keep the header
- * compact and free vertical space for the form.
- */
 export function AuthHeader({ isLogin }: AuthHeaderProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();

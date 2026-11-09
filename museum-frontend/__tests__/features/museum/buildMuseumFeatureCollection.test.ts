@@ -10,8 +10,6 @@ describe('buildMuseumFeatureCollection', () => {
   });
 
   it('maps one museum with valid coords to one Feature with GeoJSON [lng, lat] order', () => {
-    // Paris Louvre: lat ≈ 48.86, lng ≈ 2.34. The [lng, lat] order is the load-bearing
-    // assertion — inverting it plots Paris museums in the Indian Ocean (lat <-> lng).
     const louvre = makeMuseumWithDistance({
       id: 1,
       name: 'Louvre',
@@ -27,7 +25,6 @@ describe('buildMuseumFeatureCollection', () => {
     const feature = nonNull(fc.features[0]);
     expect(feature.type).toBe('Feature');
     expect(feature.geometry.type).toBe('Point');
-    // RFC 7946 mandates [longitude, latitude]. Flip this and the map breaks.
     expect(feature.geometry.coordinates).toEqual([2.3376, 48.8606]);
     expect(feature.properties).toEqual({
       museumId: 1,
@@ -143,7 +140,6 @@ describe('buildMuseumFeatureCollection', () => {
 
     buildMuseumFeatureCollection(readonlyInput);
 
-    // Nothing in the caller's array was reassigned or reordered.
     expect(base).toEqual(snapshot);
     expect(base).toHaveLength(2);
   });

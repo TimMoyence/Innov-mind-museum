@@ -3,17 +3,6 @@ import { resolve } from 'node:path';
 
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
 
-/**
- * RED (UFR-022) — A1 / spec R1.
- * `museum-backend/src/shared/pii/extractEmailDomain.ts` does not exist yet, so the
- * import above fails to resolve and this whole suite is RED until the GREEN phase
- * creates the pure helper. Asserts the documented contract (design §4):
- *   'Alice@Example.COM' -> 'example.com'   (lower-cased)
- *   'a@b@c.com'         -> 'c.com'         (substring after the LAST '@')
- *   'no-at-sign' / '' / '   ' -> fallback  (never the raw input, never a '@')
- * Fallback constant standardised on 'unknown' (tasks T0.1R).
- */
-
 const FALLBACK = 'unknown';
 
 describe('extractEmailDomain (A1 / R1)', () => {
@@ -62,8 +51,6 @@ describe('extractEmailDomain (A1 / R1)', () => {
   });
 
   it('is a pure helper: imports no logger / IO module', () => {
-    // Grounding the "pure, no framework imports" contract (design §3) at the
-    // source level so a future refactor cannot smuggle a logger/IO dependency in.
     const source = readFileSync(
       resolve(__dirname, '../../../../src/shared/pii/extractEmailDomain.ts'),
       'utf8',

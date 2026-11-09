@@ -2,7 +2,6 @@ import { TavilyClient } from '@modules/chat/adapters/secondary/search/tavily.cli
 import { mockFetch } from '../../helpers/fetch/fetch-mock.helpers';
 import { makeTavilyHit, makeTavilyApiResponse } from '../../helpers/search-clients/tavily.fixture';
 
-// Silence logger
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

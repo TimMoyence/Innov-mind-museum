@@ -36,7 +36,7 @@ jest.mock('@/shared/i18n/rtl', () => ({
   applyRTLLayout: jest.fn(),
 }));
 
-import { I18nProvider, useI18n, setOnLanguageChange } from '@/shared/i18n/I18nContext';
+import { I18nProvider, useI18n } from '@/shared/i18n/I18nContext';
 import i18n from 'i18next';
 import { setLocale } from '@/shared/infrastructure/httpClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,7 +72,6 @@ describe('I18nContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-    setOnLanguageChange(null);
   });
 
   it('detects device language on mount when no stored preference', async () => {
@@ -123,10 +122,7 @@ describe('I18nContext', () => {
     expect(setLocale).toHaveBeenCalledWith('en');
   });
 
-  it('invokes onLanguageChange callback when language changes', async () => {
-    const callback = jest.fn();
-    setOnLanguageChange(callback);
-
+  it('persists the device-detected language when none was chosen', async () => {
     render(
       <I18nProvider>
         <TestConsumer />
@@ -134,8 +130,7 @@ describe('I18nContext', () => {
     );
 
     await waitFor(() => {
-      // Device detection triggers callback when no stored value
-      expect(callback).toHaveBeenCalledWith('fr');
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('musaium.runtime.defaultLocale', 'fr');
     });
   });
 
@@ -168,7 +163,6 @@ describe('I18nContext', () => {
       </I18nProvider>,
     );
 
-    // Should not crash — stays at default 'en'
     await waitFor(() => {
       expect(screen.getByTestId('lang')).toBeTruthy();
     });
@@ -192,7 +186,6 @@ describe('I18nContext', () => {
 
     render(<Orphan />);
     expect(screen.getByTestId('orphan-lang').props.children).toBe('en');
-    // Should not crash — noop
     fireEvent.press(screen.getByTestId('orphan-set'));
   });
 });

@@ -1,17 +1,3 @@
-/**
- * R3 RED — landing page mount sentinel.
- *
- * Pins R3 §1 R1 + AC1 down BEFORE implementation: the landing page MUST
- * inject `<BetaSignupSection>` AFTER `<LandingDownloadCTA>` and BEFORE the
- * `<Footer>` (which is rendered by the layout, not the page).
- *
- * Approach: grep the page.tsx source for the import + the JSX position.
- * Source-grep is more robust than rendering the full landing tree (which
- * pulls Framer Motion + marketing fixtures).
- *
- * MUST FAIL at baseline `d5919dd3` — page.tsx does not import
- * BetaSignupSection yet.
- */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';

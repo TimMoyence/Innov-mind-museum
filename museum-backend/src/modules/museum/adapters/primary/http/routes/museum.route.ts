@@ -33,7 +33,6 @@ import type { EnrichMuseumUseCase } from '@modules/museum/useCase/enrichment/enr
 import type { CacheService } from '@shared/cache/cache.port';
 import type { z } from 'zod';
 
-/** Shared 400 message — keeps sonarjs/no-duplicate-string happy. */
 const INVALID_MUSEUM_ID = 'Invalid museum ID';
 
 const handleGetDirectory = async (_req: Request, res: Response) => {
@@ -106,7 +105,6 @@ const handleGetMuseum = async (req: Request, res: Response) => {
   res.json({ museum });
 };
 
-/** Throws 400 if missing/NaN/≤0. */
 const parseMuseumIdParam = (raw: string | undefined): number => {
   if (!raw) throw invalidInput(INVALID_MUSEUM_ID);
   const id = Number.parseInt(raw, 10);
@@ -160,9 +158,7 @@ const buildHandleDetectMuseum = (detectMuseumUseCase: DetectMuseumUseCase) => {
 
 export interface CreateMuseumRouterDeps {
   cacheService?: CacheService;
-  /** When undefined, the two `/enrichment` endpoints return 503. */
   enrichMuseumUseCase?: EnrichMuseumUseCase;
-  /** When undefined, `/detect-museum` returns 503. */
   detectMuseumUseCase?: DetectMuseumUseCase;
 }
 
@@ -186,8 +182,6 @@ export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router =>
     buildHandleSearch(searchMuseumsUseCase),
   );
 
-  // W3 — geofence detection. Mounted BEFORE the catch-all `/:idOrSlug` so
-  // Express doesn't treat "detect-museum" as a slug.
   if (deps.detectMuseumUseCase) {
     const detectLimiter = createRateLimitMiddleware({
       limit: 30,

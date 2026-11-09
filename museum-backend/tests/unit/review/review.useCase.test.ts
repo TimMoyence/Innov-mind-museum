@@ -37,12 +37,9 @@ function makeFakeRepo(): jest.Mocked<IReviewRepository> {
   };
 }
 
-/** No-op session-lookup stub (these cases never thread a sessionId). */
 function makeFakeLookup(): jest.Mocked<IReviewSessionLookup> {
   return { findSessionMuseum: jest.fn().mockResolvedValue(null) };
 }
-
-// ─── CreateReviewUseCase ────────────────────────────────────────────
 
 describe('CreateReviewUseCase', () => {
   const fakeUser = { id: 1, firstname: 'Ada', lastname: 'Lovelace' };
@@ -98,7 +95,6 @@ describe('CreateReviewUseCase', () => {
     ).rejects.toThrow('authentication');
   });
 
-  // Wave B C7 / R-C7b — NPS range widened to 0-10. Rejects only -1 and 11+.
   it('rejects rating < 0 (NPS detractor floor)', async () => {
     const repo = makeFakeRepo();
     const uc = new CreateReviewUseCase(repo, makeFakeLookup());
@@ -124,8 +120,6 @@ describe('CreateReviewUseCase', () => {
   });
 });
 
-// ─── ListApprovedReviewsUseCase ─────────────────────────────────────
-
 describe('ListApprovedReviewsUseCase', () => {
   it('returns paginated approved reviews', async () => {
     const repo = makeFakeRepo();
@@ -150,8 +144,6 @@ describe('ListApprovedReviewsUseCase', () => {
     await expect(uc.execute({ page: 1, limit: 101 })).rejects.toThrow('limit');
   });
 });
-
-// ─── ListAllReviewsUseCase (admin) ──────────────────────────────────
 
 describe('ListAllReviewsUseCase', () => {
   it('returns all reviews without status filter', async () => {
@@ -187,8 +179,6 @@ describe('ListAllReviewsUseCase', () => {
     await expect(uc.execute({ page: 0, limit: 20 })).rejects.toThrow('page');
   });
 });
-
-// ─── ModerateReviewUseCase ──────────────────────────────────────────
 
 describe('ModerateReviewUseCase', () => {
   const makeAuditSpy = () => ({ log: jest.fn(), logActorAction: jest.fn() });
@@ -372,8 +362,6 @@ describe('ModerateReviewUseCase', () => {
     });
   });
 });
-
-// ─── GetReviewStatsUseCase ──────────────────────────────────────────
 
 describe('GetReviewStatsUseCase', () => {
   it('returns average rating and count', async () => {

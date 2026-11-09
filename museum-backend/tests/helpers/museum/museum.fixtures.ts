@@ -2,7 +2,6 @@ import { Museum } from '@modules/museum/domain/museum/museum.entity';
 
 import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.repository.interface';
 
-/** Shared mock IMuseumRepository factory. All methods default to jest.fn(). */
 export const makeMuseumRepo = (
   overrides: Partial<jest.Mocked<IMuseumRepository>> = {},
 ): jest.Mocked<IMuseumRepository> => ({
@@ -17,7 +16,6 @@ export const makeMuseumRepo = (
   ...overrides,
 });
 
-/** Shared Museum entity factory with sensible defaults. */
 export const makeMuseum = (overrides: Partial<Museum> = {}): Museum =>
   Object.assign(new Museum(), {
     id: 1,

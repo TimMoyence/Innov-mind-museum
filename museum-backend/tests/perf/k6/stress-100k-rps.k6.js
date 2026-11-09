@@ -1,18 +1,11 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-/**
- * Stress test targeting 100K rps for 60 s. NOT auto-run in CI — operator
- * kicks off when subsystem F infra is provisioned. Runbook in
- * tests/perf/k6/helpers/100k-runbook.md.
- *
- * Spec: see git log (deleted 2026-05-03 — roadmap consolidation, original spec in commit history)
- */
 export const options = {
   scenarios: {
     constant_request_rate: {
       executor: 'constant-arrival-rate',
-      rate: 100000, // requests per timeUnit
+      rate: 100000,
       timeUnit: '1s',
       duration: '60s',
       preAllocatedVUs: 5000,
@@ -20,8 +13,8 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.01'], // < 1% errors per SLO
-    http_req_duration: ['p(99)<5000'], // 5s p99 budget for chat
+    http_req_failed: ['rate<0.01'],
+    http_req_duration: ['p(99)<5000'],
   },
 };
 

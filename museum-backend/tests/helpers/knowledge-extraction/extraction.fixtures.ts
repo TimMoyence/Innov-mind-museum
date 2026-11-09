@@ -41,8 +41,6 @@ export function makeArtworkKnowledge(overrides?: Partial<ArtworkKnowledge>): Art
   return artwork;
 }
 
-// ── Repository mock factories ──────────────────────────────────────────────
-
 type ContentRepoStubs = {
   findByUrl?: jest.Mock;
   upsert?: jest.Mock;
@@ -61,7 +59,6 @@ type MuseumRepoStubs = {
   searchByName?: jest.Mock;
 };
 
-/** Mock TypeOrmExtractedContentRepo with jest-spyable methods. */
 export function makeMockExtractedContentRepo(
   overrides: ContentRepoStubs = {},
 ): jest.Mocked<TypeOrmExtractedContentRepo> {
@@ -74,7 +71,6 @@ export function makeMockExtractedContentRepo(
   return mock as unknown as jest.Mocked<TypeOrmExtractedContentRepo>;
 }
 
-/** Mock TypeOrmArtworkKnowledgeRepo with jest-spyable methods. */
 export function makeMockArtworkKnowledgeRepo(
   overrides: ArtworkRepoStubs = {},
 ): jest.Mocked<TypeOrmArtworkKnowledgeRepo> {
@@ -89,7 +85,6 @@ export function makeMockArtworkKnowledgeRepo(
   return mock as unknown as jest.Mocked<TypeOrmArtworkKnowledgeRepo>;
 }
 
-/** Mock TypeOrmMuseumEnrichmentRepo with jest-spyable methods. */
 export function makeMockMuseumEnrichmentRepo(
   overrides: MuseumRepoStubs = {},
 ): jest.Mocked<TypeOrmMuseumEnrichmentRepo> {

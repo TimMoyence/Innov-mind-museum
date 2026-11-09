@@ -1,14 +1,3 @@
-/**
- * F11 (2026-05) — Google authorization-code exchange.
- *
- * POSTs the code received on /callback to Google's token endpoint with the
- * registered web client_id + client_secret + redirect_uri, and parses the
- * resulting `id_token`. Signature/audience/nonce verification of that
- * id_token is delegated to {@link SocialLoginUseCase} which already runs
- * the JWKS check via the social-token-verifier port (defence-in-depth: the
- * exchange itself authenticates Google as the issuer via the TLS handshake,
- * but the ID token still goes through the canonical JWKS verification).
- */
 import { z } from 'zod';
 
 import { AppError } from '@shared/errors/app.error';
@@ -23,20 +12,6 @@ export interface GoogleTokenExchangeParams {
   redirectUri: string;
 }
 
-/**
- * Runtime shape contract for Google's `/token` endpoint response (P0-8).
- *
- * Closes the silent-cast gap audited in
- * `docs/audit-2026-05-12/details/01-typing.md §P1-1` — replacing the bare
- * `as GoogleTokenResponse` cast at the json() call site so external API
- * drift (added required fields, wrong types, error envelopes) surfaces as
- * a typed AppError with the failing field name in `details.issues` rather
- * than as a deep TypeError or undetected contract breach downstream.
- *
- * `id_token` is required because every code path that consumes this
- * response forwards it; the other fields are kept optional to match Google's
- * actual variable response shape.
- */
 const GoogleTokenResponseSchema = z.object({
   id_token: z.string().min(1),
   access_token: z.string().optional(),
@@ -45,7 +20,6 @@ const GoogleTokenResponseSchema = z.object({
   token_type: z.string().optional(),
 });
 
-/** Throws AppError 401 on any error so the route handler can short-circuit. */
 export async function exchangeGoogleAuthCode(params: GoogleTokenExchangeParams): Promise<string> {
   const body = new URLSearchParams({
     code: params.code,
@@ -89,8 +63,6 @@ export async function exchangeGoogleAuthCode(params: GoogleTokenExchangeParams):
   const raw: unknown = await response.json();
   const parsed = GoogleTokenResponseSchema.safeParse(raw);
   if (!parsed.success) {
-    // P0-8: surface Zod issues so ops can distinguish "missing id_token"
-    // from "id_token wrong type" from "expires_in wrong type" at a glance.
     throw new AppError({
       message: 'Google token response failed shape validation',
       statusCode: 502,

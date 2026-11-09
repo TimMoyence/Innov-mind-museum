@@ -1,13 +1,3 @@
-/**
- * R2 RED — dictionary symmetry for `admin.export.*`.
- *
- * Pins R2 §3.8 + N12 down BEFORE implementation : every key under
- * `admin.export.{sessions,reviews,tickets}.{label,downloading,error}` MUST
- * exist in BOTH fr.json AND en.json (full parity).
- *
- * MUST FAIL at baseline `a77e48aa` — neither dict has the `admin.export`
- * namespace yet.
- */
 import { describe, it, expect } from 'vitest';
 import frDict from '@/dictionaries/fr.json';
 import enDict from '@/dictionaries/en.json';

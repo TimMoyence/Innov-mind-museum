@@ -1,21 +1,3 @@
-/**
- * T2.3 / R11 / R14 — Canonical content shape (RED phase, UFR-022).
- *
- * Asserts that the new canonical JSON file
- * `museum-backend/src/shared/legal/privacy-content.canonical.json` exists and
- * has the structure mandated by design.md §4 `PrivacyCanonical`:
- *
- *   {
- *     version: string,                // '1.0.0'
- *     lastUpdated: string,            // '2026-05-21'
- *     locales: {
- *       en: { sections: PrivacySection[14], recipients: Subprocessor[19] },
- *       fr: { sections: PrivacySection[14], recipients: Subprocessor[19] },
- *     }
- *   }
- *
- * Pre-impl state (RED): file does not exist → readFileSync throws ENOENT.
- */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -104,8 +86,6 @@ describe('T2.3 / R14 — privacy-content.canonical.json shape', () => {
       const data = loadCanonical<PrivacyCanonical>(PRIVACY_CANONICAL);
       const declared = new Set(data.locales[locale].recipients.map((r) => r.name.toLowerCase()));
       for (const vendor of CANONICAL_VENDORS) {
-        // The canonical MUST contain a recipient whose name matches one of
-        // the vendor aliases (case-insensitive).
         const found = vendor.searchAliases.some((alias) => declared.has(alias.toLowerCase()));
         expect({ vendor: vendor.name, found }).toEqual({
           vendor: vendor.name,
@@ -120,7 +100,6 @@ describe('T2.3 / R14 — privacy-content.canonical.json shape', () => {
     const article10 = data.locales.en.sections[9];
     expect(article10).toBeDefined();
     const joined = article10!.paragraphs.join('\n');
-    // EN may render "15 years"; the legal citation must be verbatim.
     expect(joined).toMatch(/15\s+years?/i);
     expect(joined).toMatch(/D[ée]lib[ée]ration\s*2021-018/);
   });

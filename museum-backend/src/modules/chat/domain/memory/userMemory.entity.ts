@@ -71,13 +71,6 @@ export class UserMemory {
   @Column({ type: 'integer', nullable: true, name: 'session_duration_p90_minutes' })
   sessionDurationP90Minutes!: number | null;
 
-  /**
-   * Optimistic-lock version. PASSIVE on primary `upsert()` path — TypeORM only
-   * auto-increments via `.save()`/`.update()`, NOT via `.insert().orUpdate()`
-   * used by `UserMemoryRepository.upsert()`. Use `updatedAt` for cache
-   * invalidation on UPSERT path. Kept so future `.save()` paths gain optimistic
-   * lock automatically without schema change.
-   */
   @VersionColumn()
   version!: number;
 

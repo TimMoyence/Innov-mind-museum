@@ -21,7 +21,6 @@ import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { styles } from './_styles/museum-detail';
 
-/** Renders the museum detail screen showing info and a "Start Chat Here" button. */
 export default function MuseumDetailScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -45,18 +44,12 @@ export default function MuseumDetailScreen() {
 
   const hasCoordinates = Boolean(params.latitude && params.longitude);
 
-  // Enrichment: only enabled for real DB-backed museums (positive numeric ids).
-  // Synthetic OSM entries arrive without a usable id, so the hook stays idle.
   const parsedMuseumId = params.id ? parseInt(params.id, 10) : NaN;
   const enrichmentMuseumId =
     Number.isFinite(parsedMuseumId) && parsedMuseumId > 0 ? parsedMuseumId : null;
   const enrichment = useMuseumEnrichment(enrichmentMuseumId, i18n.language);
   const enriched = enrichment.data;
 
-  // Per-museum co-branding: fetches `config.branding` for the active DB-backed
-  // museum (idle for synthetic/OSM entries) and derives a screen-scoped theme
-  // with the brand primary color. First paint stays on the app theme until the
-  // branding resolves (no spinner gate) — fail-open to app theme on any error.
   const { branding } = useMuseumBranding(enrichmentMuseumId);
   const theme = useBrandedTheme(appTheme, branding);
 

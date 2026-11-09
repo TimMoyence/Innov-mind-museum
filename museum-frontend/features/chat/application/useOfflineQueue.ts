@@ -44,10 +44,6 @@ export const useOfflineQueue = () => {
   if (!queue) {
     throw new Error('useOfflineQueue must be used inside OfflineQueueProvider');
   }
-  // Source "offline" from the canonical predicate (design §D7) so a captive
-  // portal ({isConnected:true, isInternetReachable:false}) reads as offline,
-  // not the old `!isConnected` off a coerced value. lib-docs:
-  // @react-native-community/netinfo PATTERNS.md:173 (reachable != connected).
   const { isOnline } = useConnectivity();
 
   const snapshot = useSyncExternalStore(

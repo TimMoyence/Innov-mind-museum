@@ -1,12 +1,3 @@
-/**
- * Shared BullMQ job-failure handler. Uniform DLQ policy:
- *   - Every failure logged (warn) with diagnosable context.
- *   - Only **final attempt** pages Sentry — intermediate retries are noise.
- *   - `removeOnFail` on queue retains dead jobs for Bull-board / `queue.getFailed()`.
- * Pure — sinks injected (unit-testable without Redis).
- */
-
-/** Narrowed to fields handler reads. */
 export interface FailedJobSnapshot<TData = Record<string, unknown>> {
   id?: string;
   data: TData;
@@ -20,18 +11,11 @@ export interface JobFailureSinks {
 }
 
 export interface HandleJobFailureOptions<TData> {
-  /** Log-event key + Sentry context tag. */
   queueName: string;
-  /** Flat map for log + Sentry context. Small + non-sensitive (URLs, IDs — never secrets). */
   summarize?: (data: TData) => Record<string, unknown>;
-  /**
-   * Crons w/o retries: treat every failure as terminal. Default `false` preserves
-   * pre-shared-handler semantics (`attemptsMax > 0 && attemptsMade >= attemptsMax`).
-   */
   treatNoAttemptsAsFinal?: boolean;
 }
 
-/** Preserves historic KE log-event key for backward-compat. */
 const DEFAULT_QUEUE_NAME = 'knowledge-extraction';
 
 const resolveLogEventName = (queueName: string): string =>
@@ -51,7 +35,6 @@ const buildSummary = <TData>(
   return options.summarize(job.data);
 };
 
-/** Drops null/undefined. */
 const toSentryContext = (
   baseContext: Record<string, string | undefined>,
   summary: Record<string, unknown>,
@@ -74,7 +57,6 @@ const toSentryContext = (
   return context;
 };
 
-/** Every backend worker funnels through this. */
 export function handleJobFailure<TData = Record<string, unknown>>(
   job: FailedJobSnapshot<TData> | null,
   err: Error,

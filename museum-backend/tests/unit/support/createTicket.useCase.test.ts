@@ -1,7 +1,6 @@
 import { CreateTicketUseCase } from '@modules/support/useCase/ticket-user/createTicket.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 
-// Mock the audit module — the use case imports the singleton directly
 jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn(), logActorAction: jest.fn() },
   AUDIT_SUPPORT_TICKET_CREATED: 'SUPPORT_TICKET_CREATED',

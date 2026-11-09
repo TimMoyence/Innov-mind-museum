@@ -6,6 +6,7 @@ import { MessageFeedback } from '@modules/chat/domain/message/messageFeedback.en
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { CursorCodec } from '@shared/pagination/cursor-codec';
+import { nonEmpty } from '@shared/utils/defaults';
 
 import {
   clearMessageAudio,
@@ -72,8 +73,7 @@ export class TypeOrmChatRepository implements ChatRepository {
 
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
     const session = this.sessionRepo.create({
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-      locale: input.locale || null,
+      locale: nonEmpty(input.locale) ?? null,
       museumMode: input.museumMode ?? false,
       intent: input.intent ?? 'default',
       user: input.userId ? { id: input.userId } : null,
@@ -116,7 +116,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
-  /** Transactional — deletes only if message count is zero. */
   async deleteSessionIfEmpty(sessionId: string): Promise<boolean> {
     return await this.sessionRepo.manager.transaction(async (transactionManager) => {
       const sessionRepository = transactionManager.getRepository(ChatSession);
@@ -144,7 +143,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  /** Shared by persistMessage + persistBlockedExchange so they can use one tx. */
   private async persistMessageWithinTx(
     transactionManager: EntityManager,
     input: PersistMessageInput,
@@ -157,10 +155,6 @@ export class TypeOrmChatRepository implements ChatRepository {
       text: input.text ?? null,
       imageRef: input.imageRef ?? null,
       metadata: input.metadata ?? null,
-      // PR-P0-1 (2026-05-23) — opaque LLM-cache-invalidation cookie. Goes
-      // through `repository.create()` + `repository.save()` (NOT `.update().set({})`)
-      // so the CLAUDE.md TypeORM `.set({ field: undefined })` silent-skip
-      // gotcha is avoided.
       cacheKey: input.cacheKey ?? null,
       session: { id: input.sessionId } as ChatSession,
     });
@@ -197,7 +191,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     );
   }
 
-  /** Atomic — both rolled back on failure (no orphan user row). */
   async persistBlockedExchange(input: {
     userMessage: PersistMessageInput;
     refusal: PersistMessageInput;
@@ -209,7 +202,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     });
   }
 
-  /** Cursor pagination, newest first; returned reversed to chronological order. */
   async listSessionMessages({
     sessionId,
     limit,
@@ -255,7 +247,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     };
   }
 
-  /** Most-recent N messages, returned oldest-first (LLM context). limit clamped to MAX_PAGE_SIZE. */
   async listSessionHistory(sessionId: string, limit: number): Promise<ChatMessage[]> {
     const rows = await this.messageRepo
       .createQueryBuilder('message')
@@ -269,7 +260,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     return [...rows].reverse();
   }
 
-  /** Cursor pagination — sessions + message counts + latest-message preview. */
   async listSessions({ userId, limit, cursor }: ListSessionsParams): Promise<ChatSessionsPage> {
     const effectiveLimit = Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
     const queryBuilder = this.sessionRepo
@@ -346,7 +336,6 @@ export class TypeOrmChatRepository implements ChatRepository {
     await this.reportRepo.save(entity);
   }
 
-  /** GDPR data portability (Art. 20). */
   async exportUserData(userId: number): Promise<UserChatExportData> {
     return await exportUserChatData(this.sessionRepo, userId);
   }
@@ -381,41 +370,22 @@ export class TypeOrmChatRepository implements ChatRepository {
     await clearMessageAudio(this.messageRepo, messageId);
   }
 
-  /**
-   * GDPR right-to-erasure — returns imageRefs predating user-scoped S3 paths.
-   * MUST be called BEFORE user delete (CASCADE wipes messages/sessions).
-   */
   async findLegacyImageRefsByUserId(userId: number): Promise<string[]> {
     return await findLegacyImageRefsByUserId(this.messageRepo, userId);
   }
 
-  /**
-   * GDPR right-to-erasure (B1) — returns the user's stored TTS audio refs. MUST
-   * be called BEFORE user delete (CASCADE wipes messages/sessions).
-   */
   async findAudioRefsByUserId(userId: number): Promise<string[]> {
     return await findAudioRefsByUserId(this.messageRepo, userId);
   }
 
-  /** DSAR (Art.15/20, B3) — the user's message feedback for the export payload. */
   async listMessageFeedbackForUser(userId: number) {
     return await listMessageFeedbackForUser(this.feedbackRepo, userId);
   }
 
-  /** DSAR (Art.15/20, B3, D7) — the user's message reports for the export payload. */
   async listMessageReportsForUser(userId: number) {
     return await listMessageReportsForUser(this.reportRepo, userId);
   }
 
-  /**
-   * W3 (T5.3) — patches the W3 intra-musée context columns on a session row.
-   *
-   * Implementation note (CLAUDE.md gotcha) — `repo.update(criteria, partial)`
-   * forwards to `UpdateQueryBuilder.set()` which SILENTLY SKIPS `undefined`
-   * fields (correct) but DOES set `null` (we want this to clear). We
-   * construct the patch object explicitly so only the caller-supplied keys
-   * land in the UPDATE statement.
-   */
   async updateSessionContext(
     sessionId: string,
     patch: { currentArtworkId?: string | null; currentRoom?: string | null },

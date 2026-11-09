@@ -1,15 +1,3 @@
-/**
- * T6.2 — `POST /chat/compare` route handler.
- *
- * Wire contract (pinned by `compare.route.test.ts`):
- *   - 200 + CompareResult (R1)
- *   - 400 COMPARE_INVALID_IMAGE — missing/rejected upload (R6/R12)
- *   - 400 COMPARE_INVALID_TOPK — topK ∉ [1,10] AND sole failure (R17)
- *   - 400 COMPARE_GUARDRAIL_BLOCKED — OCR/injection guardrail (R18)
- *   - 401 — missing/invalid Bearer
- *   - 503 COMPARE_ENCODER_UNAVAILABLE — fallbackReason='encoder_unavailable' (R11)
- *   Other fallback reasons (no_visual_neighbor, quota_exceeded) return 200 + empty matches.
- */
 import { Router } from 'express';
 
 import {
@@ -42,11 +30,6 @@ import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-par
 import type { Request, Response, RequestHandler } from 'express';
 import type { z } from 'zod';
 
-/**
- * Mirrored locally (not imported from compare.use-case.ts) to keep the route's
- * compile graph free of the similarity-service factory — needed when the
- * integration test harness mounts the route in isolation.
- */
 interface CompareUseCaseInput {
   sessionId: string;
   buffer: Buffer;
@@ -54,7 +37,6 @@ interface CompareUseCaseInput {
   topK: number;
   locale: 'fr' | 'en';
   museumQids?: string[];
-  /** OWASP LLM08 — resolved from `ChatSession.museumId` by the route. */
   museumId?: number | null;
   ownerId?: number;
 }
@@ -62,39 +44,15 @@ interface CompareUseCaseInput {
 export interface CompareRouterDeps {
   compareImageUseCase: (input: CompareUseCaseInput) => Promise<CompareResult>;
   uploadAdmission?: RequestHandler;
-  /**
-   * SEC: Required (not optional) — mirrors ensureSessionAccess() on every chat
-   * write path. Throws 404 on UUID parse failure / ownership mismatch. Without
-   * this, user A could append to user B's session (BLOCKER 2026-05-10).
-   *
-   * OWASP LLM08: returned museumId is the internal tenant axis. `null` for
-   * B2C anonymous / V1 single-tenant; positive int once B2B onboarding pins
-   * the session. Forwarded 1:1 to the kNN search at repo layer to scope rows
-   * to `museum_id IS NULL OR museum_id = $tenantId`.
-   */
   verifySessionAccess: (
     sessionId: string,
     ownerId: number | undefined,
   ) => Promise<{ museumId: number | null }>;
-  /**
-   * B-03 (GDPR Art. 7) — third-party AI image-share consent gate, parity with
-   * STT (`chat-media.route.ts`). Injectable
-   * for tests; defaults to the production `buildThirdPartyAiConsentChecker()`.
-   */
   consentChecker?: ThirdPartyAiConsentChecker;
 }
 
 const DEFAULT_LOCALE: 'fr' | 'en' = 'en';
 
-/**
- * Resolution order: body field → req.clientLocale → DEFAULT_LOCALE.
- *
- * Each candidate is normalised via `extractLangCode` (shared/i18n/locale.ts —
- * the same normaliser the main LLM pipeline uses) so a raw region-qualified
- * Accept-Language tag like `fr-FR`/`en-US` resolves to its bare code before the
- * FR/EN check. Without this, `'fr-FR' === 'fr'` is false and a French client
- * with no explicit body.locale silently falls through to English copy.
- */
 function resolveLocale(bodyLocale: 'fr' | 'en' | undefined, req: Request): 'fr' | 'en' {
   for (const candidate of [bodyLocale, req.clientLocale]) {
     if (!candidate) continue;
@@ -110,14 +68,7 @@ function resolveExistingMuseumQids(value: unknown): unknown[] {
   return [value];
 }
 
-/**
- * Multer parses repeated `museumQids[]` multipart fields into the literal
- * `req.body['museumQids[]']` key (bracket syntax not honoured by default).
- * Rewrites that into `museumQids: string[]` so the Zod schema sees it.
- * Narrowly scoped — only `museumQids[]` is rewritten.
- */
 function normaliseMuseumQids(body: Record<string, unknown>): Record<string, unknown> {
-  // Destructure rename avoids dynamic `delete` (no eslint-disable needed).
   const { 'museumQids[]': bracketField, ...rest } = body;
   if (bracketField === undefined) return body;
 
@@ -126,22 +77,11 @@ function normaliseMuseumQids(body: Record<string, unknown>): Record<string, unkn
   return { ...rest, museumQids: [...existing, ...list] };
 }
 
-/**
- * True iff EVERY issue is rooted at `topK` — keeps COMPARE_INVALID_TOPK
- * scoped to topK-sole failures; multi-field failures degrade
- * to generic BAD_REQUEST.
- */
 function isTopKOnlyZodFailure(issues: readonly z.core.$ZodIssue[]): boolean {
   if (issues.length === 0) return false;
   return issues.every((issue) => issue.path[0] === 'topK');
 }
 
-/**
- * Re-emit shared ImageProcessingService BAD_REQUEST errors as the FE-facing
- * COMPARE_* taxonomy. Non-BAD_REQUEST errors (e.g. 503 encoder) bubble through
- * unchanged. "Image contains disallowed content" is the OCR guardrail
- * signature (ImageProcessingService.runOcrGuard).
- */
 function mapUseCaseError(error: unknown): unknown {
   if (!(error instanceof AppError)) return error;
   if (error.statusCode !== 400 || error.code !== 'BAD_REQUEST') return error;
@@ -154,11 +94,6 @@ function mapUseCaseError(error: unknown): unknown {
 
 function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response): Promise<void> => {
-    // B-03 (GDPR Art. 7) — gate the third-party AI image-share scope FIRST, in
-    // the handler head: short-circuits BEFORE `verifySessionAccess` and the
-    // use-case so a denied photo never reaches the SigLIP encoder. Read-only,
-    // runs after auth (401 for anon) → no mutating-middleware regress. Parity
-    // with the STT gate.
     const { scope } = resolveActiveProviderForScope('image');
     const granted = await consentChecker.isGranted(getRequestUser(req)?.id, scope);
     if (!granted) {
@@ -175,7 +110,6 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
     if (!parsed.success) {
       const issues = parsed.error.issues;
       const formatted = formatZodIssues(issues);
-      // R17 — topK-only failures get the dedicated code.
       if (isTopKOnlyZodFailure(issues)) {
         throw compareInvalidTopK(formatted, issues);
       }
@@ -186,9 +120,6 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
     const locale = resolveLocale(body.locale, req);
     const ownerId = req.user?.id;
 
-    // SEC BLOCKER 2026-05-10 — verify session ownership; without this, user A
-    // could append to user B's session. Returns museumId (OWASP LLM08 tenant
-    // axis) for kNN scoping.
     const { museumId: sessionMuseumId } = await deps.verifySessionAccess(body.sessionId, ownerId);
 
     const mimeType = req.file.mimetype as CompareUseCaseInput['mimeType'];
@@ -200,8 +131,6 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
       topK: body.topK,
       locale,
       ...(body.museumQids !== undefined ? { museumQids: body.museumQids } : {}),
-      // OWASP LLM08 — only set when pinned to a tenant; null B2C sessions
-      // fall back to legacy global read at the repo.
       ...(sessionMuseumId !== null ? { museumId: sessionMuseumId } : {}),
       ...(ownerId !== undefined ? { ownerId } : {}),
     };
@@ -226,20 +155,11 @@ function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPart
   };
 }
 
-/**
- * Mounted at `/chat` by composition root → public path `POST /chat/compare`.
- * Middleware order: auth → admission → multer single-file → handler.
- */
 export const createCompareRouter = (deps: CompareRouterDeps): Router => {
   const router = Router();
 
-  // B-03 — default to the production checker (parity `createMediaRouter`);
-  // tests inject an override via `deps.consentChecker`.
   const consentChecker = deps.consentChecker ?? buildThirdPartyAiConsentChecker();
 
-  // SEC BLOCKER 2026-05-10 — without limiters an authenticated attacker can
-  // hammer (cache thrashing + encoder saturation). Mirrors chat-message.route
-  // windows; compare-specific tightening is a follow-up.
   const sessionLimiter = createRateLimitMiddleware({
     limit: env.rateLimit.sessionLimit,
     windowMs: env.rateLimit.windowMs,

@@ -7,7 +7,6 @@ type ReviewStatsResponse = components['schemas']['ReviewStatsResponse'];
 
 export type { ReviewDTO, ReviewListResponse, ReviewStatsResponse };
 
-/** Service for review API operations: list, stats, and submit. */
 export const reviewApi = {
   async getReviews(page = 1, limit = 10): Promise<ReviewListResponse> {
     return openApiRequest({
@@ -29,14 +28,11 @@ export const reviewApi = {
     comment: string,
     sessionId?: string,
   ): Promise<{ review: ReviewDTO }> {
-    // `userName` is derived server-side and was dropped from the request body
-    // (NPS attribution, design D-C2-6). `sessionId` (optional) attributes the
-    // review to the most-recently-visited chat session's museum; omitted → global.
     const body = sessionId !== undefined ? { rating, comment, sessionId } : { rating, comment };
     return openApiRequest({
       path: '/api/reviews',
       method: 'post',
-      body: JSON.stringify(body),
+      json: body,
     });
   },
 };

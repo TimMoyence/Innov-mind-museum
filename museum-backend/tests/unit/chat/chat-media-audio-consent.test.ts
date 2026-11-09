@@ -1,40 +1,6 @@
-/**
- * RED — UFR-022 phase=red, Cluster A (B7), RUN_ID=2026-05-21-p0-gdpr.
- *
- * Specifies the audio-route consent gate (R4, R5, R6) on
- * `POST /api/chat/sessions/:id/audio`
- * (`museum-backend/src/modules/chat/adapters/primary/http/routes/chat-media.route.ts:230-241`).
- *
- * Acceptance shape (design §3 R4 / §5):
- *  - denied scope `third_party_ai_audio_openai` → HTTP 403
- *    body `{ error: 'consent_required', scope: 'third_party_ai_audio_openai' }`,
- *    `chatService.postAudioMessage` invoked ZERO times (R5 short-circuit).
- *  - granted scope → HTTP 201 (existing happy path unchanged).
- *
- * RED rationale: today the route runs `isAuthenticated → rateLimit →
- * costGuard → multer → handler`; there is NO consent step. Whatever the
- * scope state, today's route returns 201 (or other AppError) — the 403
- * assertion fails, and `postAudioMessage` is invoked once when it should be
- * zero. Both assertions fail RED until T1.10 lands the gate.
- *
- * The userConsentRepository is mocked at the `@modules/auth/useCase` barrel
- * (mirrors `tests/unit/auth/consent.route.test.ts:12-73`) so the future
- * `buildThirdPartyAiConsentChecker()` factory (T1.6) — which lazy-imports
- * the barrel exactly like `buildLocationConsentChecker()` does at
- * `chat-module.ts:836-838` — consults this in-memory store.
- *
- * Lib-docs consulted:
- *  - lib-docs/express/LESSONS.md (middleware ordering, async error shape)
- *  - lib-docs/typeorm/LESSONS.md (repo boundary; no direct ORM usage in port).
- */
-
-// ─── 1. Mock the auth barrel BEFORE any imports that transitively touch chat ──
 jest.mock('@modules/auth/useCase', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory runs before ESM imports
   const jwtLib = require('jsonwebtoken');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory hoist
   const { env: envConfig } = require('@src/config/env');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoist
   const { makeUserConsentRepo: makeRepo } = require('../../helpers/auth/userConsent-repo.mock');
 
   const sharedRepo = makeRepo();
@@ -57,12 +23,6 @@ jest.mock('@modules/auth/useCase', () => {
           museumId: decoded.museumId ?? null,
         };
       },
-      // I-SEC7b sibling — middleware `isAuthenticated` calls this after the
-      // P0 security sweep (PR #293 squash). Returns the claims object that
-      // includes `jti` + `expSec` so the denylist read path can run; the
-      // module-level denylist defaults to a no-op (returns false) in tests
-      // with no Redis, so the gate stays open and we only assert the
-      // consent-route behaviour this test cares about.
       verifyAccessTokenWithClaims: (token: string) => {
         const decoded = jwtLib.verify(token, envConfig.auth.accessTokenSecret) as {
           sub: string;
@@ -110,7 +70,6 @@ jest.mock('@shared/audit', () => ({
   auditService: { log: jest.fn() },
 }));
 
-// ─── 2. Imports (top-level — Jest hoists jest.mock above these) ──────────────
 import request from 'supertest';
 
 import { createApp } from '@src/app';
@@ -120,14 +79,12 @@ import { makeConsentGranted, applyConsentGrantSpec } from 'tests/helpers/auth/co
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- factory hoist
 const { userConsentRepository: sharedRepo } = require('@modules/auth/useCase') as {
   userConsentRepository: ReturnType<
     typeof import('../../helpers/auth/userConsent-repo.mock').makeUserConsentRepo
   >;
 };
 
-// ─── 3. Mock ChatService — we only care whether postAudioMessage is invoked ──
 const mockPostAudioMessage = jest.fn();
 const mockChatService: Partial<ChatService> = {
   postAudioMessage: mockPostAudioMessage,
@@ -138,7 +95,7 @@ const app = createApp({
   healthCheck: async () => ({ database: 'up' }),
 });
 
-const TEST_USER_ID = 1; // userToken() default sub
+const TEST_USER_ID = 1;
 const AUDIO_SCOPE = 'third_party_ai_audio_openai';
 
 const successAudioReply = {
@@ -165,8 +122,7 @@ describe('POST /api/chat/sessions/:id/audio — third_party_ai_audio_openai cons
   });
 
   it('returns 403 { error: "consent_required", scope: "third_party_ai_audio_openai" } when scope NOT granted (R4 deny path + R6 shape)', async () => {
-    // No grant applied — denial path.
-    mockPostAudioMessage.mockResolvedValue(successAudioReply); // would succeed if invoked
+    mockPostAudioMessage.mockResolvedValue(successAudioReply);
 
     const res = await request(app)
       .post('/api/chat/sessions/session-uuid/audio')
@@ -215,7 +171,6 @@ describe('POST /api/chat/sessions/:id/audio — third_party_ai_audio_openai cons
   });
 
   it('consent check runs AFTER auth (no token → 401, not 403) — middleware ordering preserved', async () => {
-    // No Authorization header → isAuthenticated returns 401 BEFORE consent check.
     const res = await request(app)
       .post('/api/chat/sessions/session-uuid/audio')
       .attach('audio', Buffer.from('fake-audio'), {

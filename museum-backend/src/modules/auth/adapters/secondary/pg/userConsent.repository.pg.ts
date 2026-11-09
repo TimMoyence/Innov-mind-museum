@@ -6,7 +6,6 @@ import type { ConsentScope, ConsentSource } from '@modules/auth/domain/consent/u
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 import type { DataSource, Repository } from 'typeorm';
 
-/** TypeORM implementation of {@link IUserConsentRepository}. */
 export class UserConsentRepositoryPg implements IUserConsentRepository {
   private readonly repo: Repository<UserConsent>;
 
@@ -31,7 +30,6 @@ export class UserConsentRepositoryPg implements IUserConsentRepository {
     return await this.repo.save(entity);
   }
 
-  /** Idempotent: no-op if no active grant exists. */
   async revoke(userId: number, scope: ConsentScope): Promise<void> {
     await this.repo.update({ userId, scope, revokedAt: IsNull() }, { revokedAt: new Date() });
   }

@@ -26,10 +26,6 @@ describe('chat service ownership checks', () => {
     expect(result.message.role).toBe('assistant');
   });
 
-  // SEC-19 (2026-04-08): orphan-adoption fix. An authenticated user MUST NOT
-  // be able to read or extend an anonymous/orphaned session — the previous
-  // behaviour silently allowed this and let auth users adopt sessions whose
-  // owner had been deleted (FK SET NULL). Now rejected uniformly.
   it('postMessage rejects authenticated access to an anonymous session - SEC-19', async () => {
     const service = buildChatTestService();
     const session = await service.createSession({});
@@ -39,9 +35,6 @@ describe('chat service ownership checks', () => {
     ).rejects.toThrow(expect.objectContaining({ statusCode: 404 }));
   });
 
-  // The legitimate end-to-end anonymous flow still works (anonymous caller
-  // reaching its own anonymous session — currently used only by the service
-  // contract, no route exposes it).
   it('postMessage still allows the anonymous-anonymous flow', async () => {
     const service = buildChatTestService();
     const session = await service.createSession({});

@@ -1,16 +1,3 @@
-/**
- * Red tests for B4 — i18n coverage of the 12 new cartel-scanner keys across
- * the 8 shipped locales (ar/de/en/es/fr/it/ja/zh).
- *
- * Validates:
- *   - every locale contains all 12 keys (R28, AC26)
- *   - no Unicode emoji anywhere in the new strings (R29, AC27)
- *   - `lookup_template` contains exactly one `{{code}}` placeholder (R30, AC28)
- *   - `chat.attachmentPicker.scan_cartel` is ≤ 30 chars (R31, AC29)
- *
- * Spec: docs/chat-ux-refonte/specs/B4.md §0.9 + §1.7, AC26-AC29.
- */
-
 import '../../helpers/test-utils';
 
 const LOCALES = ['ar', 'de', 'en', 'es', 'fr', 'it', 'ja', 'zh'] as const;
@@ -30,8 +17,6 @@ const CARTEL_SCANNER_KEYS = [
   'a11y.cartelScanner.cancel_hint',
 ] as const;
 
-// Forbid the visible-symbol emoji ranges plus the dingbat / pictograph block.
-// Cohérent A1/A2/A5/A6/B3/B5 regex.
 const EMOJI_RE = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}]/u;
 
 function readLocale(locale: string): Record<string, unknown> {

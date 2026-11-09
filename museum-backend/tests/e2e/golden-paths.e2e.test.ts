@@ -4,15 +4,6 @@ import { markEmailVerified, registerAndLogin } from 'tests/helpers/e2e/e2e-auth.
 const shouldRunE2E = process.env.RUN_E2E === 'true';
 const describeE2E = shouldRunE2E ? describe : describe.skip;
 
-// NOTE ON SCOPE (audit H5 — honest labelling): the e2e harness injects a
-// SYNTHETIC chat orchestrator (e2e-app-harness.ts — returns a fixed stub text).
-// These flows therefore assert the real request->auth->multipart->persistence
-// PIPELINE (registration, login/refresh, session CRUD, image/audio upload +
-// imageRef/transcription persistence, session round-trip) — NOT the quality of
-// the LLM's answer. Real LLM/vision/STT output is exercised against live models
-// in tests/ai/* (RUN_AI_TESTS). Assertions below deliberately check the
-// pipeline contract (assistant role present, message persisted + re-readable),
-// not the assistant text content, so they stay deterministic and key-free.
 describeE2E(
   'golden path e2e flows (HTTP/auth/persistence pipeline — LLM stubbed; quality in tests/ai)',
   () => {
@@ -41,9 +32,6 @@ describeE2E(
       await harness?.stop();
     });
 
-    // ---------------------------------------------------------------------------
-    // Golden Path 1: Register -> Login -> Create Session -> Send Text -> AI Response
-    // ---------------------------------------------------------------------------
     describe('GP1: register -> login -> chat text flow', () => {
       const password = 'GoldenPath1!';
       let email: string;
@@ -76,8 +64,6 @@ describeE2E(
           }),
         );
 
-        // E2E test environments have no SMTP — bypass the verification email and
-        // mark the user verified in-DB so the next step can log in successfully.
         await markEmailVerified(harness, email);
       });
 
@@ -155,10 +141,6 @@ describeE2E(
           metadata: Record<string, unknown>;
         };
 
-        // Pipeline assertions: an assistant-role message is persisted with
-        // non-empty text and a valid envelope. We do NOT assert the text CONTENT
-        // (the orchestrator is stubbed here — content quality is tested in
-        // tests/ai/* against a live model).
         expect(body.sessionId).toBe(sessionId);
         expect(body.message.role).toBe('assistant');
         expect(body.message.text.length).toBeGreaterThan(0);
@@ -194,14 +176,10 @@ describeE2E(
       });
     });
 
-    // ---------------------------------------------------------------------------
-    // Golden Path 2: Photo Upload -> AI Contextual Response
-    // ---------------------------------------------------------------------------
     describe('GP2: photo upload -> assistant reply persisted (vision stubbed)', () => {
       it('uploads an image (multipart) and persists an assistant-role reply + imageRef (pipeline; vision stubbed)', async () => {
         const { token } = await registerAndLogin(harness);
 
-        // Create a session
         const createRes = await harness.request(
           '/api/chat/sessions',
           {
@@ -213,13 +191,11 @@ describeE2E(
         expect(createRes.status).toBe(201);
         const sessionId = (createRes.body as { session: { id: string } }).session.id;
 
-        // Real minimal 1x1 transparent PNG (67 bytes — passes backend magic-byte validation)
         const minimalPng = Buffer.from(
           'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX///+nxBvIAAAAC0lEQVQI12NgAAIAAAUAAeImBZsAAAAASUVORK5CYII=',
           'base64',
         );
 
-        // Upload image + text via multipart form
         const formData = new FormData();
         formData.append('image', new Blob([minimalPng], { type: 'image/png' }), 'artwork.png');
         formData.append(
@@ -247,7 +223,6 @@ describeE2E(
         expect(body.message.role).toBe('assistant');
         expect(body.message.text.length).toBeGreaterThan(0);
 
-        // Verify the session contains the user image message
         const getRes = await harness.request(
           `/api/chat/sessions/${sessionId}?limit=20`,
           { method: 'GET' },
@@ -262,20 +237,15 @@ describeE2E(
           }
         ).messages;
 
-        // User message should have an image reference
         const userImageMsg = messages.find((m) => m.role === 'user' && m.imageRef);
         expect(userImageMsg).toBeTruthy();
       });
     });
 
-    // ---------------------------------------------------------------------------
-    // Golden Path 3: Audio -> Transcription -> AI Response
-    // ---------------------------------------------------------------------------
     describe('GP3: audio upload -> transcription + assistant reply persisted (STT/LLM stubbed)', () => {
       it('uploads audio and persists transcription + assistant-role reply (pipeline; STT/LLM stubbed)', async () => {
         const { token } = await registerAndLogin(harness);
 
-        // Create a session
         const createRes = await harness.request(
           '/api/chat/sessions',
           {
@@ -287,8 +257,6 @@ describeE2E(
         expect(createRes.status).toBe(201);
         const sessionId = (createRes.body as { session: { id: string } }).session.id;
 
-        // Grant third_party_ai_audio_openai (B6/B7) — without this, POST /audio
-        // is gated 403 by the consent checker wired in chat-media.route.ts.
         const grantRes = await harness.request(
           '/api/auth/consent',
           {
@@ -299,7 +267,6 @@ describeE2E(
         );
         expect(grantRes.status).toBe(201);
 
-        // Build a minimal audio payload (the harness fake transcriber accepts anything)
         const formData = new FormData();
         formData.append(
           'audio',
@@ -333,17 +300,14 @@ describeE2E(
           metadata: Record<string, unknown>;
         };
 
-        // Transcription was produced
         expect(body.transcription.text).toBe('Transcribed voice question for e2e');
         expect(body.transcription.provider).toBe('openai');
         expect(typeof body.transcription.model).toBe('string');
 
-        // Assistant responded
         expect(body.message.role).toBe('assistant');
         expect(body.message.text.length).toBeGreaterThan(0);
         expect(body.sessionId).toBe(sessionId);
 
-        // Verify the session now contains messages
         const getRes = await harness.request(
           `/api/chat/sessions/${sessionId}?limit=20`,
           { method: 'GET' },
@@ -357,9 +321,6 @@ describeE2E(
       });
     });
 
-    // ---------------------------------------------------------------------------
-    // Golden Path 4: Session Lifecycle (create, list, delete, verify)
-    // ---------------------------------------------------------------------------
     describe('GP4: session lifecycle — create, list, delete, verify', () => {
       let token: string;
       let sessionIds: string[];
@@ -387,7 +348,6 @@ describeE2E(
           const id = (res.body as { session: { id: string } }).session.id;
           sessionIds.push(id);
 
-          // Small delay to ensure distinct updatedAt ordering
           if (i < 2) {
             await new Promise((resolve) => setTimeout(resolve, 10));
           }
@@ -407,21 +367,18 @@ describeE2E(
           page: { hasMore: boolean; limit: number };
         };
 
-        // All 3 sessions are present
         expect(body.sessions.length).toBeGreaterThanOrEqual(3);
         const listedIds = body.sessions.map((s) => s.id);
         for (const id of sessionIds) {
           expect(listedIds).toContain(id);
         }
 
-        // Newest first — updatedAt should be descending
         for (let i = 0; i < body.sessions.length - 1; i++) {
           const current = new Date(body.sessions[i].updatedAt).getTime();
           const next = new Date(body.sessions[i + 1].updatedAt).getTime();
           expect(current).toBeGreaterThanOrEqual(next);
         }
 
-        // Pagination metadata is present
         expect(typeof body.page.hasMore).toBe('boolean');
         expect(typeof body.page.limit).toBe('number');
       });
@@ -452,10 +409,8 @@ describeE2E(
         const body = res.body as { sessions: { id: string }[] };
         const listedIds = body.sessions.map((s) => s.id);
 
-        // Deleted session is absent
         expect(listedIds).not.toContain(sessionIds[1]);
 
-        // Other two sessions remain
         expect(listedIds).toContain(sessionIds[0]);
         expect(listedIds).toContain(sessionIds[2]);
       });

@@ -1,54 +1,10 @@
-/**
- * C4.1 T3.3 — `KnowledgeRouter` wiring composition/cascade UNIT test.
- *
- * Tier note (moved tests/integration → tests/unit 2026-06-14): this file
- * `jest.mock()`s the three adapter clients and feeds `ChatModule.build()` a
- * stub `DataSource` (see {@link makeStubDataSource}). It crosses NO real infra
- * boundary — no `createIntegrationHarness`, no Docker, no DataSource. It is a
- * legitimate composition-root / cascade UNIT test and now lives under
- * tests/unit/ to match its tier.
- *
- * Asserts that {@link ChatModule.build} instantiates a `KnowledgeRouterService`
- * with the wired KB / judge / WebSearch providers, and that the resulting
- * `BuiltChatModule.knowledgeRouter` actually delegates to those providers
- * along the documented cascade (R6 / R7 / R8 / R9).
- *
- * Strategy : mock the adapter clients (`WikidataClient`, `FallbackSearchProvider`,
- * `LlmJudgeGuardrail`) at module-resolution time so the composition root can
- * import them as usual, then read `built.knowledgeRouter` and exercise the
- * cascade through three scenarios :
- *
- *   1. KB hit                  → `source='wikidata'`, fallback NOT triggered.
- *   2. KB miss + judge HIGH    → `source='none'`,    fallback NOT triggered.
- *   3. KB miss + judge LOW
- *      + WebSearch HIT         → `source='web'`,    fallback triggered.
- *
- * Backward-compat note : we do NOT remove the existing `knowledgeBase`
- * injection (NFR8 — 1 cycle migration). T3.4 will plumb the router into the
- * actual `fetchEnrichmentData` consumer; for now, the router is an additive
- * field on `BuiltChatModule` that asserts the wiring is healthy.
- *
- * Doctrine compliance : no `*_ENABLED` flag is asserted by this test, and no
- * such flag is introduced by the wiring it covers (D11 / pré-launch V1
- * `feedback_no_feature_flags_prelaunch`).
- */
-
 import type { DataSource } from 'typeorm';
-
-// ─── Module mocks ───────────────────────────────────────────────────────────
-// Each adapter client gets a jest.fn() impl so the composition root, which
-// constructs them with `new XxxClient(...)`, ends up with deterministic mocks.
 
 const wikidataLookup = jest.fn();
 const fallbackSearch = jest.fn();
 const judgeEvaluate = jest.fn();
 
 jest.mock('@modules/chat/adapters/secondary/search/wikidata.client', () => ({
-  // Mock BOTH `lookup` and `lookupOrThrow` because C5.3 Phase B inserts the
-  // `WikidataBreakerClient` in the provider chain — the breaker invokes
-  // `lookupOrThrow` (its `action` callback) rather than the public `lookup`.
-  // Keeping the same `wikidataLookup` impl behind both surfaces preserves the
-  // call-count assertions across the wrapped path.
   WikidataClient: jest.fn().mockImplementation(() => ({
     lookup: wikidataLookup,
     lookupOrThrow: wikidataLookup,
@@ -72,7 +28,6 @@ jest.mock('@modules/chat/useCase/llm/llm-judge-guardrail', () => {
   };
 });
 
-// Avoid pulling the OpenAI client / TTS / OCR / S3 graph at module init.
 jest.mock('@modules/chat/adapters/secondary/audio/audio-transcriber.openai', () => ({
   OpenAiAudioTranscriber: jest.fn().mockImplementation(() => ({})),
 }));
@@ -88,12 +43,6 @@ import type { ArtworkFacts } from '@modules/chat/domain/ports/knowledge-base.por
 import type { KnowledgeRouterPort } from '@modules/chat/useCase/knowledge/knowledge-router.service';
 import type { SearchResult } from '@modules/chat/domain/ports/web-search.port';
 
-/**
- * Builds a minimal {@link DataSource} stub sufficient for `ChatModule.build()`
- * to traverse the TypeORM repositories' constructors. Every `getRepository()`
- * returns an empty object — repository methods are never invoked because the
- * router test does not exercise persistence paths.
- */
 function makeStubDataSource(): DataSource {
   return {
     getRepository: jest.fn().mockReturnValue({
@@ -104,8 +53,6 @@ function makeStubDataSource(): DataSource {
     }),
   } as unknown as DataSource;
 }
-
-/* ───────────────────────────────────────────────────────────────────────── */
 
 describe('chat-module knowledge router wiring (T3.3 composition unit)', () => {
   let module: ChatModule;
@@ -119,8 +66,6 @@ describe('chat-module knowledge router wiring (T3.3 composition unit)', () => {
     module = new ChatModule();
     const built = module.build(makeStubDataSource());
 
-    // Wiring contract — the router must be exposed on the built module so
-    // upstream observability / debugging / tests can inspect the cascade.
     if (!built.knowledgeRouter) {
       throw new Error('BuiltChatModule.knowledgeRouter is undefined — T3.3 wiring missing');
     }

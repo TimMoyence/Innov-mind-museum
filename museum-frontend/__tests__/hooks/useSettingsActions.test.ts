@@ -3,8 +3,6 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Alert, Share } from 'react-native';
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockLogout = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
 const mockSetIsAuthenticated = jest.fn();
 
@@ -36,8 +34,6 @@ jest.mock('@/features/auth/infrastructure/authTokenStore', () => ({
 jest.mock('@/features/auth/routes', () => ({
   AUTH_ROUTE: '/auth',
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useSettingsActions', () => {
   beforeEach(() => {
@@ -126,9 +122,6 @@ describe('useSettingsActions', () => {
   });
 
   it('guards against re-entrant logout calls', async () => {
-    // Verify the guard exists: call onLogout twice in sequence,
-    // second call should short-circuit since isSigningOut is still true
-    // We test this by verifying logout is only called once per render cycle
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
@@ -156,8 +149,6 @@ describe('useSettingsActions', () => {
     );
   });
 
-  // ── Biometric enable() throws → error propagates ─────────────────────────
-
   it('propagates error when biometric enable() throws', async () => {
     const mockEnable = jest
       .fn<Promise<unknown>, []>()
@@ -176,8 +167,6 @@ describe('useSettingsActions', () => {
     expect(mockDisable).not.toHaveBeenCalled();
   });
 
-  // ── Share.share throws during export → isExporting resets to false ───────
-
   it('resets isExporting to false when Share.share throws', async () => {
     mockExportData.mockResolvedValue({ email: 'test@test.com', data: [] });
     jest.spyOn(Share, 'share').mockRejectedValue(new Error('Share cancelled'));
@@ -192,8 +181,6 @@ describe('useSettingsActions', () => {
     expect(Alert.alert).toHaveBeenCalledWith('common.error', expect.any(String));
   });
 
-  // ── logout() throws → isSigningOut resets to false ──────────────────────
-
   it('resets isSigningOut to false when logout throws', async () => {
     mockLogout.mockRejectedValue(new Error('Logout network error'));
 
@@ -202,25 +189,19 @@ describe('useSettingsActions', () => {
     await act(async () => {
       try {
         await result.current.onLogout();
-      } catch {
-        // Expected — the finally block still runs
-      }
+      } catch {}
     });
 
     expect(result.current.isSigningOut).toBe(false);
   });
 
-  // ── Delete account: user taps "Delete" → deleteAccount throws ───────────
-
   it('shows error alert when deleteAccount API call throws', async () => {
     mockDeleteAccount.mockRejectedValue(new Error('Deletion blocked'));
 
-    // Intercept Alert.alert to capture and invoke the "Delete" button callback
     jest
       .spyOn(Alert, 'alert')
       .mockImplementation(
         (_title: string, _message?: string, buttons?: { onPress?: () => void }[]) => {
-          // Find the destructive "Delete" button (second in the array)
           const deleteButton = buttons?.find(
             (b) => 'style' in b && (b as { style?: string }).style === 'destructive',
           ) as { onPress?: () => void } | undefined;
@@ -234,20 +215,15 @@ describe('useSettingsActions', () => {
       result.current.onDeleteAccount();
     });
 
-    // Wait for the async deletion flow to complete
     await waitFor(() => {
       expect(result.current.isDeletingAccount).toBe(false);
     });
 
-    // The second Alert.alert call is the error alert
     expect(Alert.alert).toHaveBeenCalledTimes(2);
     expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
   });
 
-  // ── Delete account: user taps "Cancel" → no deletion ───────────────────
-
   it('does nothing when user taps Cancel on delete confirmation', () => {
-    // Intercept Alert.alert and invoke the Cancel button
     jest
       .spyOn(Alert, 'alert')
       .mockImplementation(

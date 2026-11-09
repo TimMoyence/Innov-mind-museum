@@ -1,10 +1,3 @@
-/**
- * Targeted mutation kills for `SupportRepositoryPg` — written 2026-05-14 to
- * eliminate 5 Stryker survivors (LogicalOperator / StringLiteral /
- * OptionalChaining / ObjectLiteral mutators). Strict assertions only,
- * no production-code changes. Pairs with `support-repository.test.ts`
- * (behavioural baseline).
- */
 import type { DataSource, Repository } from 'typeorm';
 
 import { SupportTicket } from '@modules/support/domain/ticket/supportTicket.entity';
@@ -45,9 +38,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
     sut = new SupportRepositoryPg(mocks.dataSource);
   });
 
-  // ── L26:15 LogicalOperator: `entity.category ?? null` → `entity.category && null`
-  // With a truthy category, original returns the category; mutant returns null.
-
   describe('toTicketDTO category nullish-coalescing (L26:15)', () => {
     it('preserves a truthy category when mapping the entity (kills `?? null` → `&& null`)', async () => {
       const entity = makeTicket({ category: 'billing' });
@@ -61,7 +51,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
         category: 'billing',
       });
 
-      // Strict: category must be the original string, not null.
       expect(result.category).toBe('billing');
       expect(result.category).not.toBeNull();
     });
@@ -77,13 +66,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
     });
   });
 
-  // ── L76:51 StringLiteral: createQueryBuilder alias `'t'` → `""`
-  // The alias is the prefix every subsequent .andWhere('t.userId = …') and
-  // .orderBy('t.updatedAt', …) clause depends on. Mock returns the same qb
-  // regardless of arg, so behavioural tests miss this — we assert the call arg
-  // directly. Pairs with the existing andWhere/orderBy literal assertions which
-  // already pin 't.' as the prefix.
-
   describe('listTickets createQueryBuilder alias (L76:51)', () => {
     it('passes the literal alias "t" to ticketRepo.createQueryBuilder (kills StringLiteral → "")', async () => {
       qb.getCount.mockResolvedValue(0);
@@ -96,10 +78,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
     });
   });
 
-  // ── L95:10 StringLiteral: addSelect alias `'messageCount'` → `""`
-  // The alias is what TypeORM uses as the raw-row property name; with `""` the
-  // raw row would carry an empty-string key instead of `messageCount`.
-
   describe('listTickets messageCount alias (L95:10)', () => {
     it('passes the exact alias "messageCount" as the second arg of addSelect (kills StringLiteral → "")', async () => {
       qb.getCount.mockResolvedValue(0);
@@ -107,7 +85,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
 
       await sut.listTickets({ pagination: { page: 1, limit: 10 } });
 
-      // First arg is the subquery callback, second is the alias literal.
       expect(qb.addSelect).toHaveBeenCalledTimes(1);
       const addSelectCall = qb.addSelect.mock.calls[0];
       expect(addSelectCall[1]).toBe('messageCount');
@@ -115,15 +92,10 @@ describe('SupportRepositoryPg — mutation kills', () => {
     });
   });
 
-  // ── L105:52 OptionalChaining: `rawRow?.messageCount ?? ''` → `rawRow.messageCount`
-  // When entities.length > raw.length, raw[idx] is undefined. Original maps to
-  // 0; the mutant throws "Cannot read properties of undefined".
-
   describe('listTickets raw-row optional chaining (L105:52)', () => {
     it('falls back to messageCount = 0 when raw[idx] is undefined (kills OptionalChaining removal)', async () => {
       const tickets = [makeTicket({ id: 't1' }), makeTicket({ id: 't2' })];
       qb.getCount.mockResolvedValue(2);
-      // raw has only ONE row but entities has TWO → raw[1] is undefined.
       qb.getRawAndEntities.mockResolvedValue({
         entities: tickets,
         raw: [{ messageCount: '7' }],
@@ -133,7 +105,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
 
       expect(result.data).toHaveLength(2);
       expect(result.data[0].messageCount).toBe(7);
-      // Strict: undefined raw row must yield 0, not crash.
       expect(result.data[1].messageCount).toBe(0);
     });
 
@@ -151,10 +122,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
     });
   });
 
-  // ── L164:50 + L164:59 ObjectLiteral: `findOne({ where: { id: input.ticketId } })`
-  // L164:50 mutates the inner `{ id: ... }` → `{}`.
-  // L164:59 mutates the outer `{ where: ... }` → `{}`.
-
   describe('updateTicket findOne arg shape (L164)', () => {
     it('calls findOne with the exact { where: { id: ticketId } } shape (kills both ObjectLiteral → {})', async () => {
       const updated = makeTicket({ id: 'ticket-xyz', status: 'closed' });
@@ -163,7 +130,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
 
       await sut.updateTicket({ ticketId: 'ticket-xyz', status: 'closed' });
 
-      // Strict: full nested object — kills both the outer `{}` and the inner `{}` mutants.
       expect(ticketRepo.findOne).toHaveBeenCalledTimes(1);
       expect(ticketRepo.findOne).toHaveBeenCalledWith({ where: { id: 'ticket-xyz' } });
     });
@@ -177,7 +143,6 @@ describe('SupportRepositoryPg — mutation kills', () => {
 
       const findOneArg = ticketRepo.findOne.mock.calls[0][0];
       expect(findOneArg).toEqual({ where: { id: 'ticket-other' } });
-      // Defence against `{}` mutant which would leave `where` undefined.
       expect(findOneArg).toHaveProperty('where');
       expect(findOneArg?.where).toEqual({ id: 'ticket-other' });
     });

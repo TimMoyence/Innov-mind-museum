@@ -6,9 +6,8 @@ import type { CacheService } from '@shared/cache/cache.port';
 const LOCK_KEY = 'token-cleanup:lock';
 const LOCK_TTL_SECONDS = 300;
 const BATCH_LIMIT = 10000;
-const DEFAULT_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const DEFAULT_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-/** Periodic expired-token deletion with distributed-lock protection. */
 export class TokenCleanupService {
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -17,7 +16,6 @@ export class TokenCleanupService {
     private readonly cacheService?: CacheService,
   ) {}
 
-  /** Acquires distributed lock if cache available. */
   async runCleanup(): Promise<number> {
     if (this.cacheService) {
       const acquired = await this.cacheService.setNx(LOCK_KEY, true, LOCK_TTL_SECONDS);

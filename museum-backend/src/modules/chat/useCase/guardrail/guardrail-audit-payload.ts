@@ -7,12 +7,6 @@ import {
 import type { GuardrailBlockReason } from './art-topic-guardrail';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-/**
- * Optional request-scoped context threaded into guardrail audit rows so
- * forensic queries can pivot by session, actor, request id, ip, and locale
- * (V13 / STRIDE R3). All fields optional — anonymous traffic still logs, just
- * with `actorType: 'anonymous'` and `actorId: null`.
- */
 export interface GuardrailAuditContext {
   sessionId?: string;
   userId?: number;
@@ -21,15 +15,6 @@ export interface GuardrailAuditContext {
   locale?: string;
 }
 
-/**
- * Builds the AuditService.log() payload for a guardrail block (V13 / STRIDE R3).
- * Pure — no I/O, just shape construction. The caller persists via
- * `auditService.log(buildGuardrailBlockAuditEntry(...))`.
- *
- * Single forensic entry per block: phase-scoped action, actor identification,
- * redacted snippet (≤64 chars + sha256 of full text), classifier flags, locale,
- * and request correlation fields.
- */
 export function buildGuardrailBlockAuditEntry(params: {
   phase: 'input' | 'output';
   reason: GuardrailBlockReason | undefined;
@@ -58,4 +43,3 @@ export function buildGuardrailBlockAuditEntry(params: {
     requestId: context?.requestId ?? null,
   };
 }
-

@@ -1,28 +1,14 @@
-/**
- * Tests — `<MuseumPickerScreen>` (W3 R15-R17).
- *
- * Asserts:
- *   - Search box renders with i18n placeholder + a11y label.
- *   - Favourites section is rendered when the storage list resolves > 0.
- *   - Nearby section is rendered with results from `searchMuseums`.
- *   - Tapping a row calls onSelect AND persists to favourites.
- *   - Empty state is visible when nothing is found.
- *   - Close button calls onClose.
- */
-
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import '../../helpers/test-utils';
 import { makeSearchEntryLocal, makeSearchEntryOsm } from '../../helpers/factories/museum.factories';
 
-// ── useLocation mock ───────────────────────────────────────────────────────
 const mockUseLocation = jest.fn();
 jest.mock('@/features/museum/application/useLocation', () => ({
   useLocation: () => mockUseLocation(),
 }));
 
-// ── museumApi mocks ────────────────────────────────────────────────────────
 const mockSearchMuseums = jest.fn<Promise<unknown>, [unknown]>();
 const mockListMuseumDirectory = jest.fn<Promise<unknown>, []>();
 jest.mock('@/features/museum/infrastructure/museumApi', () => ({
@@ -32,7 +18,6 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => ({
   },
 }));
 
-// ── favourites infra mocks ─────────────────────────────────────────────────
 const mockGetFavourites = jest.fn<Promise<number[]>, []>();
 const mockAddFavourite = jest.fn<Promise<void>, [number]>();
 jest.mock('@/features/museum/infrastructure/favourites', () => ({
@@ -127,7 +112,6 @@ describe('<MuseumPickerScreen>', () => {
 
     fireEvent.press(getByTestId('museum-picker-row-7'));
     expect(mockAddFavourite).toHaveBeenCalledWith(7);
-    // New union contract: a LOCAL tap yields kind 'local' carrying museumId (R9).
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'local', museumId: 7, name: 'Louvre' }),
     );
@@ -150,9 +134,7 @@ describe('<MuseumPickerScreen>', () => {
       expect(getByTestId('museum-picker-row-7')).toBeTruthy();
     });
 
-    // The OSM row must be rendered (not filtered out) → empty-state absent (R12).
     expect(queryByTestId('museum-picker-empty')).toBeNull();
-    // OSM testID must be deterministic and distinct — never `*-row-undefined` (R13).
     expect(queryByTestId('museum-picker-row-undefined')).toBeNull();
     expect(queryAllByTestId('museum-picker-row-osm-osm:44.83780:-0.56390').length).toBe(1);
   });
@@ -173,9 +155,7 @@ describe('<MuseumPickerScreen>', () => {
 
     fireEvent.press(getByTestId('museum-picker-row-osm-osm:44.83780:-0.56390'));
 
-    // OSM entries are NOT favouritable in this run (R11).
     expect(mockAddFavourite).not.toHaveBeenCalled();
-    // OSM tap yields kind 'osm' with coords, no museumId (R10).
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'osm',
@@ -213,7 +193,6 @@ describe('<MuseumPickerScreen>', () => {
 
     const { getByTestId } = render(<MuseumPickerScreen onSelect={jest.fn()} />);
 
-    // Initial nearby call fires synchronously inside an effect.
     await act(async () => {
       await Promise.resolve();
     });
@@ -221,13 +200,11 @@ describe('<MuseumPickerScreen>', () => {
 
     fireEvent.changeText(getByTestId('museum-picker-search'), 'pomp');
 
-    // < 300 ms : no call yet.
     act(() => {
       jest.advanceTimersByTime(200);
     });
     expect(mockSearchMuseums).not.toHaveBeenCalled();
 
-    // Once 300 ms elapsed → call is fired.
     await act(async () => {
       jest.advanceTimersByTime(150);
       await Promise.resolve();

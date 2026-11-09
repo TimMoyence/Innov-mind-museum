@@ -1,36 +1,9 @@
-/**
- * Red tests for B5 — screen-level wiring of sotto-voce gate on `useAutoTts`.
- *
- * Asserts that `ChatSessionScreen` :
- *   1. Consumes `useSottoVoce()` to read the user preference (R22).
- *   2. Gates `useAutoTts({ enabled })` behind `&& !sottoVoce` so that turning
- *      sotto-voce ON disables TTS auto-playback regardless of audio-description
- *      mode being globally ON (R23, AC16).
- *   3. Keeps `useAutoTts.enabled === true` when sotto-voce is OFF AND
- *      audio-description is globally ON (R23 inverse, AC17).
- *   4. Forwards the toggle handler to `<CollapsibleTopBar>` (R22).
- *
- * At baseline (B5 not yet implemented) :
- *   - `@/features/chat/application/useSottoVoce` does not exist.
- *   - The screen does NOT import / consume it.
- *   - `useAutoTts` is called with `enabled = audioDescEnabled || override` —
- *     no `&& !sottoVoce` gate. Therefore mocking `useSottoVoce` to return
- *     `enabled: true` STILL produces `useAutoTts({ enabled: true })`, and the
- *     `&& !sottoVoce` assertion fails.
- *   - `<CollapsibleTopBar>` receives no `onToggleSottoVoce` prop.
- *
- * Why a dedicated file (mirror chat-status-rendering.test.tsx pattern) :
- *   - The deep file already weighs > 1k lines.
- *   - Minimum surface mocked here ; screen-local gate is the contract.
- */
-
 import type * as ReactTypes from 'react';
 import React from 'react';
 import { render } from '../helpers/render-chat-screen';
 
 import '../helpers/test-utils';
 
-// ── Stub heavy children before importing the screen ────────────────────────
 jest.mock('@/features/chat/ui/ChatMessageList', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
@@ -54,13 +27,11 @@ jest.mock('@/features/chat/ui/Composer', () => {
     Composer: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-Composer' })),
   };
 });
-jest.mock('@/features/chat/ui/CollapsibleTopBar', () => {
+jest.mock('@/features/chat/ui/ChatHeader', () => {
   const RN = require('react-native');
   const ReactNS = require('react');
   return {
-    CollapsibleTopBar: jest.fn(() =>
-      ReactNS.createElement(RN.View, { testID: 'mock-CollapsibleTopBar' }),
-    ),
+    ChatHeader: jest.fn(() => ReactNS.createElement(RN.View, { testID: 'mock-ChatHeader' })),
   };
 });
 jest.mock('@/features/chat/ui/OfflineBanner', () => {
@@ -98,11 +69,9 @@ jest.mock('@/features/chat/ui/ArtworkHeroModal', () => {
   };
 });
 
-// ── expo-router params ──────────────────────────────────────────────────────
 const mockExpoRouterMock = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouterMock.useLocalSearchParams = () => ({ sessionId: 'session-B5' });
 
-// ── @react-navigation/native ────────────────────────────────────────────────
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     setOptions: jest.fn(),
@@ -115,7 +84,6 @@ jest.mock('@react-navigation/native', () => ({
   },
 }));
 
-// ── chatApi (avoid network) ─────────────────────────────────────────────────
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   chatApi: {
     createSession: jest.fn(),
@@ -124,13 +92,11 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── useChatSession ──────────────────────────────────────────────────────────
 const mockUseChatSession = jest.fn();
 jest.mock('@/features/chat/application/useChatSession', () => ({
   useChatSession: (...args: unknown[]) => mockUseChatSession(...args),
 }));
 
-// ── Side hooks ──────────────────────────────────────────────────────────────
 const mockImagePickerState = {
   selectedImage: null as string | null,
   onPickImage: jest.fn(),
@@ -161,21 +127,16 @@ jest.mock('@/features/chat/hooks/useVoiceDisclosure', () => ({
   }),
 }));
 
-// ── useAutoTts — capture the `enabled` param of every call ──────────────────
 const mockUseAutoTts = jest.fn();
 jest.mock('@/features/chat/application/useAutoTts', () => ({
   useAutoTts: (params: { messages: unknown[]; enabled: boolean }) => mockUseAutoTts(params),
 }));
 
-// ── useAudioDescriptionMode — set globally enabled to amplify sotto-voce gate ──
 const mockAudioDescState = { enabled: true, isLoading: false, toggle: jest.fn() };
 jest.mock('@/features/settings/application/useAudioDescriptionMode', () => ({
   useAudioDescriptionMode: () => mockAudioDescState,
 }));
 
-// ── useSottoVoce — the NEW hook under test (RED at baseline) ────────────────
-// The screen MUST import this hook ; mocking it is what lets us inject sotto-voce
-// state into the screen wiring contract.
 const mockSottoVoceState = { enabled: false, isLoading: false, toggle: jest.fn() };
 jest.mock('@/features/chat/application/useSottoVoce', () => ({
   useSottoVoce: () => mockSottoVoceState,
@@ -208,7 +169,6 @@ jest.mock('@/features/chat/ui/bottom-sheet-router', () => ({
   }),
 }));
 
-// ── Import AFTER mocks ──────────────────────────────────────────────────────
 import ChatSessionScreen from '@/app/(stack)/chat/[sessionId]';
 
 function defaultSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -241,15 +201,15 @@ function lastAutoTtsParams(): { messages: unknown[]; enabled: boolean } {
   return calls[calls.length - 1][0] as { messages: unknown[]; enabled: boolean };
 }
 
-function lastCollapsibleTopBarProps(): {
+function lastChatHeaderProps(): {
   sottoVoceEnabled?: boolean;
   onToggleSottoVoce?: () => void;
 } {
-  const mod = jest.requireMock<Record<string, jest.Mock>>('@/features/chat/ui/CollapsibleTopBar');
-  const fn = mod.CollapsibleTopBar;
-  if (!fn) throw new Error('CollapsibleTopBar mock not registered');
+  const mod = jest.requireMock<Record<string, jest.Mock>>('@/features/chat/ui/ChatHeader');
+  const fn = mod.ChatHeader;
+  if (!fn) throw new Error('ChatHeader mock not registered');
   const calls = fn.mock.calls;
-  if (calls.length === 0) throw new Error('CollapsibleTopBar was never rendered');
+  if (calls.length === 0) throw new Error('ChatHeader was never rendered');
   return calls[calls.length - 1][0] as {
     sottoVoceEnabled?: boolean;
     onToggleSottoVoce?: () => void;
@@ -296,14 +256,14 @@ describe('ChatSessionScreen — B5 sotto-voce gate on useAutoTts', () => {
     expect(lastAutoTtsParams().enabled).toBe(false);
   });
 
-  it('forwards sottoVoceEnabled to <CollapsibleTopBar> (R22)', () => {
+  it('forwards sottoVoceEnabled to <ChatHeader> (R22)', () => {
     mockSottoVoceState.enabled = true;
     render(<ChatSessionScreen />);
-    expect(lastCollapsibleTopBarProps().sottoVoceEnabled).toBe(true);
+    expect(lastChatHeaderProps().sottoVoceEnabled).toBe(true);
   });
 
-  it('forwards onToggleSottoVoce handler to <CollapsibleTopBar> (R22)', () => {
+  it('forwards onToggleSottoVoce handler to <ChatHeader> (R22)', () => {
     render(<ChatSessionScreen />);
-    expect(typeof lastCollapsibleTopBarProps().onToggleSottoVoce).toBe('function');
+    expect(typeof lastChatHeaderProps().onToggleSottoVoce).toBe('function');
   });
 });

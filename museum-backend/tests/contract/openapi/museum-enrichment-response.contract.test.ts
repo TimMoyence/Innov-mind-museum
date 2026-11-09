@@ -1,20 +1,3 @@
-/**
- * QA-06 RED — OpenAPI contract for the museum enrichment endpoint.
- *
- * Phase RED (UFR-022). Proves D2 from team-runs/qa-06/spec.md: the path
- * `/api/museums/{id}/enrichment` is ENTIRELY ABSENT from
- * `museum-backend/openapi/openapi.json` today, so the generated mobile types
- * (`shared/api/generated/openapi.ts`) carry no enrichment shape and the rich
- * fields can never be contract-verified.
- *
- * Discrimination (verified against the validator helper):
- *  - `getResponseSchema` throws `OpenAPI path not found: <path>` when the path
- *    is missing → these tests FAIL now (the path does not exist).
- *  - After GREEN adds the path + `MuseumEnrichmentReady` schema (with the four
- *    rich fields as nullable `object` + `additionalProperties: true`), the
- *    `ready` payload below validates and these tests pass.
- */
-
 import { assertMatchesOpenApiResponse } from 'tests/helpers/openapi/openapi-response-validator';
 
 describe('QA-06 — OpenAPI enrichment response contract (R3)', () => {

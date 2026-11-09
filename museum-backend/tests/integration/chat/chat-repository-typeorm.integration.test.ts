@@ -1,16 +1,3 @@
-/**
- * Phase 9 Sprint 9.4 Group H — `TypeOrmChatRepository` integration test.
- *
- * Pins the full {@link ChatRepository} contract against a real Postgres
- * testcontainer via {@link createIntegrationHarness}. Exercises every public
- * method on {@link TypeOrmChatRepository} together with the SQL paths in
- * `chat-repository-queries.ts` (counts, previews, GDPR export) so they all
- * appear in coverage.
- *
- * Run with:
- *   RUN_INTEGRATION=true pnpm test:integration -- \
- *     --testPathPattern=chat-repository-typeorm.integration
- */
 import {
   createIntegrationHarness,
   type IntegrationHarness,
@@ -31,7 +18,6 @@ const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
-
   let harness: IntegrationHarness;
   let repo: TypeOrmChatRepository;
 
@@ -45,11 +31,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     await harness.reset();
   });
 
-  /**
-   * Persist a user using the shared factory and return its assigned numeric id.
-   * Strips id/createdAt/updatedAt so Postgres assigns them deterministically.
-   * @param overrides
-   */
   async function seedUser(overrides: Parameters<typeof makeUser>[0] = {}): Promise<number> {
     const userRepo = harness.dataSource.getRepository(User);
     const fixture = makeUser(overrides);
@@ -69,12 +50,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     return saved.id;
   }
 
-  /**
-   * Force a chat_messages.createdAt timestamp via raw UPDATE because
-   * `@CreateDateColumn` overrides explicit values on insert.
-   * @param messageId
-   * @param createdAt
-   */
   async function forceMessageCreatedAt(messageId: string, createdAt: Date): Promise<void> {
     await harness.dataSource
       .createQueryBuilder()
@@ -84,11 +59,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       .execute();
   }
 
-  /**
-   * Force a chat_sessions.updatedAt timestamp (used for cursor ordering tests).
-   * @param sessionId
-   * @param updatedAt
-   */
   async function forceSessionUpdatedAt(sessionId: string, updatedAt: Date): Promise<void> {
     await harness.dataSource
       .createQueryBuilder()
@@ -98,14 +68,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       .execute();
   }
 
-  /**
-   * Cycle 4 (DSAR Art.15/20) — attach one `ArtworkMatch` row to a message via
-   * the shared factory. `persistMessage` only seeds a single match per call,
-   * so this helper inserts directly to cover the N-matches-per-message case.
-   * Returns the persisted ArtworkMatch.
-   * @param messageId - id of the parent ChatMessage.
-   * @param overrides - factory overrides (e.g. title/artist).
-   */
   async function seedArtworkMatch(
     messageId: string,
     overrides: Parameters<typeof makeArtworkMatch>[0] = {},
@@ -124,10 +86,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       }),
     );
   }
-
-  // ────────────────────────────────────────────────────────────────────────
-  // createSession
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('createSession', () => {
     it('persists a session with all defaults applied', async () => {
@@ -189,10 +147,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // getSessionById
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('getSessionById', () => {
     it('returns the session with the eager user relation populated', async () => {
       const userId = await seedUser({ email: 'get-session@test.dev' });
@@ -211,10 +165,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(fetched).toBeNull();
     });
   });
-
-  // ────────────────────────────────────────────────────────────────────────
-  // getMessageById
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('getMessageById', () => {
     it('returns the message and owning session', async () => {
@@ -240,10 +190,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(fetched).toBeNull();
     });
   });
-
-  // ────────────────────────────────────────────────────────────────────────
-  // deleteSessionIfEmpty
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('deleteSessionIfEmpty', () => {
     it('deletes a session that has zero messages', async () => {
@@ -274,10 +220,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(deleted).toBe(false);
     });
   });
-
-  // ────────────────────────────────────────────────────────────────────────
-  // persistMessage (+ artworkMatch + sessionUpdates)
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('persistMessage', () => {
     it('persists a user message with explicit text/imageRef/metadata', async () => {
@@ -379,10 +321,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // persistBlockedExchange
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('persistBlockedExchange', () => {
     it('atomically persists user message + assistant refusal in one transaction', async () => {
       const userId = await seedUser({ email: 'blocked@test.dev' });
@@ -404,10 +342,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(all).toHaveLength(2);
     });
   });
-
-  // ────────────────────────────────────────────────────────────────────────
-  // listSessionMessages (cursor pagination)
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('listSessionMessages', () => {
     it('returns messages oldest-first with hasMore=false when count fits', async () => {
@@ -445,13 +379,11 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
         ids.push(msg.id);
       }
 
-      // Page 1: newest 2 (m4, m3) returned chronological → [m3, m4]
       const page1 = await repo.listSessionMessages({ sessionId: session.id, limit: 2 });
       expect(page1.messages.map((m) => m.id)).toEqual([ids[3], ids[4]]);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).not.toBeNull();
 
-      // Page 2: next 2 older (m2, m1) → [m1, m2]
       const page2 = await repo.listSessionMessages({
         sessionId: session.id,
         limit: 2,
@@ -461,7 +393,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(page2.hasMore).toBe(true);
       expect(page2.nextCursor).not.toBeNull();
 
-      // Page 3: final 1 (m0) → [m0]
       const page3 = await repo.listSessionMessages({
         sessionId: session.id,
         limit: 2,
@@ -499,10 +430,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // listSessionHistory
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('listSessionHistory', () => {
     it('returns last N messages chronological-first (oldest of slice → newest)', async () => {
       const userId = await seedUser({ email: 'history@test.dev' });
@@ -520,7 +447,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
 
       const history = await repo.listSessionHistory(session.id, 2);
 
-      // Limit=2 → newest two are h2, h3 → returned chronological [h2, h3]
       expect(history.map((m) => m.id)).toEqual([ids[2], ids[3]]);
     });
 
@@ -535,17 +461,12 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // listSessions (cursor pagination + previews + counts)
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('listSessions', () => {
     it('returns the user sessions sorted desc by updatedAt with previews and counts', async () => {
       const userId = await seedUser({ email: 'list-sessions@test.dev' });
       const s1 = await repo.createSession({ userId, locale: 'en' });
       const s2 = await repo.createSession({ userId, locale: 'fr' });
 
-      // s1: 2 messages, s2: 1 message
       const m1a = await repo.persistMessage({ sessionId: s1.id, role: 'user', text: 's1-first' });
       const m1b = await repo.persistMessage({
         sessionId: s1.id,
@@ -556,7 +477,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       await forceMessageCreatedAt(m1a.id, new Date('2026-04-01T10:00:00Z'));
       await forceMessageCreatedAt(m1b.id, new Date('2026-04-01T10:00:10Z'));
       await forceMessageCreatedAt(m2.id, new Date('2026-04-01T10:00:05Z'));
-      // Force s2 newer than s1
       await forceSessionUpdatedAt(s1.id, new Date('2026-04-01T11:00:00Z'));
       await forceSessionUpdatedAt(s2.id, new Date('2026-04-01T12:00:00Z'));
 
@@ -619,10 +539,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // Message reports
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('hasMessageReport / persistMessageReport', () => {
     it('persistMessageReport then hasMessageReport returns true for the same (msg,user)', async () => {
       const userId = await seedUser({ email: 'report@test.dev' });
@@ -683,10 +599,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(stored?.comment).toBeNull();
     });
   });
-
-  // ────────────────────────────────────────────────────────────────────────
-  // Message feedback
-  // ────────────────────────────────────────────────────────────────────────
 
   describe('upsertMessageFeedback / getMessageFeedback / deleteMessageFeedback', () => {
     it('upsert inserts a new feedback entry for a fresh (msg,user) pair', async () => {
@@ -755,10 +667,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // Audio cache
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('updateMessageAudio / clearMessageAudio', () => {
     it('updateMessageAudio sets all three audio fields', async () => {
       const userId = await seedUser({ email: 'audio-set@test.dev' });
@@ -809,10 +717,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // findLegacyImageRefsByUserId
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('findLegacyImageRefsByUserId', () => {
     it('returns deduplicated non-null imageRefs across all user sessions', async () => {
       const userId = await seedUser({ email: 'legacy-img@test.dev' });
@@ -831,14 +735,12 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
         text: 'b',
         imageRef: 's3://chat-images/legacy/two.jpg',
       });
-      // Duplicate ref → must be deduped
       await repo.persistMessage({
         sessionId: s2.id,
         role: 'user',
         text: 'c',
         imageRef: 's3://chat-images/legacy/one.jpg',
       });
-      // Null imageRef → must be excluded
       await repo.persistMessage({ sessionId: s1.id, role: 'user', text: 'no image' });
 
       const refs = await repo.findLegacyImageRefsByUserId(userId);
@@ -884,10 +786,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // exportUserData (GDPR)
-  // ────────────────────────────────────────────────────────────────────────
-
   describe('exportUserData', () => {
     it('returns an empty payload for a user with no sessions', async () => {
       const userId = await seedUser({ email: 'export-empty@test.dev' });
@@ -905,7 +803,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
         museumName: 'Louvre',
         museumMode: true,
       });
-      // Force s1.createdAt OLDER so s2 (created next, default now()) is newer
       await harness.dataSource
         .createQueryBuilder()
         .update(ChatSession)
@@ -938,7 +835,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       const data = await repo.exportUserData(userId);
 
       expect(data.sessions).toHaveLength(2);
-      // Ordered desc by createdAt → s2 first, s1 second
       expect(data.sessions[0].id).toBe(s2.id);
       expect(data.sessions[0].locale).toBe('fr');
       expect(data.sessions[0].messages).toEqual([]);
@@ -946,11 +842,9 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(data.sessions[1].locale).toBe('en');
       expect(data.sessions[1].museumName).toBe('Louvre');
       expect(data.sessions[1].museumMode).toBe(true);
-      // Messages chronological (asc)
       expect(data.sessions[1].messages.map((m) => m.text)).toEqual(['first-in-s1', 'second-in-s1']);
       expect(data.sessions[1].messages[0].imageRef).toBe('s3://chat-images/x.jpg');
       expect(data.sessions[1].messages[1].metadata).toEqual({ tag: 'export' });
-      // ISO-string timestamps
       expect(data.sessions[1].createdAt).toBe('2026-04-01T10:00:00.000Z');
       expect(data.sessions[1].messages[0].createdAt).toBe('2026-04-01T10:00:00.000Z');
     });
@@ -966,13 +860,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(dataA.sessions).toHaveLength(1);
       expect(dataA.sessions[0].locale).toBe('en');
     });
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Cycle 4 (DSAR Art.15/20 — B-03) : recognised artworks (ArtworkMatch)
-    // MUST appear in the export. These assertions FAIL at the red baseline —
-    // `exportUserChatData` loads `relations: ['session']` only and never maps
-    // `artworkMatches` (chat-repository-queries.ts:93-132).
-    // ──────────────────────────────────────────────────────────────────────
 
     it('includes the recognised artworks (artworkMatches) of each message [T1/T7]', async () => {
       const userId = await seedUser({ email: 'export-artwork@test.dev' });
@@ -1004,10 +891,8 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       expect(m.confidence).toBeCloseTo(0.92, 5);
       expect(m.source).toBe('siglip');
       expect(m.room).toBe('Salle des États');
-      // createdAt exported as ISO-8601 string (NFR-4).
       expect(typeof m.createdAt).toBe('string');
       expect(() => new Date(m.createdAt).toISOString()).not.toThrow();
-      // Allow-list per field (D-2 / EARS-6) — NO internal uuid PK, NO FK.
       expect(m).not.toHaveProperty('id');
       expect(m).not.toHaveProperty('message');
       expect(m).not.toHaveProperty('messageId');
@@ -1020,7 +905,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
 
       const data = await repo.exportUserData(userId);
 
-      // Key present, value is [] — never undefined / null (EARS-3).
       expect(data.sessions[0].messages[0]).toHaveProperty('artworkMatches');
       expect(data.sessions[0].messages[0].artworkMatches).toEqual([]);
     });
@@ -1033,7 +917,6 @@ describeIntegration('TypeOrmChatRepository (real PG) [integration]', () => {
       const m1 = await repo.persistMessage({ sessionId: s1.id, role: 'assistant', text: 's1' });
       const m2 = await repo.persistMessage({ sessionId: s2.id, role: 'assistant', text: 's2' });
 
-      // 2 matches on m1, 1 match on m2 → 3 total across 2 sessions.
       await seedArtworkMatch(m1.id, { artworkId: 'A1', title: 'Work One' });
       await seedArtworkMatch(m1.id, { artworkId: 'A2', title: 'Work Two' });
       await seedArtworkMatch(m2.id, { artworkId: 'A3', title: 'Work Three' });

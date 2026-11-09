@@ -1,73 +1,49 @@
 appId: com.musaium.mobile.preview
 ---
-# Auth — Login (happy path)
-#
-# Login with the pre-seeded smoke-test account:
-#   apple.test@apple.com / Apple1234!
-#
-# Expect navigation past the auth screen into onboarding/home.
-# screen: AuthScreen
-
-# ──────────────────────────────────────────────
-# Phase 0: Cold start -> auth screen (login mode by default)
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back|Bon retour"
+      text: 'Welcome back|Bon retour'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
-
-# ──────────────────────────────────────────────
-# Phase 2: Fill credentials (seeded smoke account, hard-coded for determinism)
-# ──────────────────────────────────────────────
-- tapOn:
-    id: "email-input"
-- inputText: "apple.test@apple.com"
+    id: 'analytics-consent-decline'
 
 - tapOn:
-    id: "password-input"
-- inputText: "Apple1234!"
+    id: 'email-input'
+- inputText: 'apple.test@apple.com'
+
+- tapOn:
+    id: 'password-input'
+- inputText: 'Apple1234!'
 
 - hideKeyboard
 
-# hideKeyboard dismisses the keyboard so auth-submit is tappable; the explicit tap
-# is the real login trigger on both platforms (no onSubmitEditing is wired — see
-# LoginForm.tsx). optional:true tolerates the button already being gone.
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
     optional: true
-# iOS native "Save Password?" dialog
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 3: Verify post-login navigation
-# ──────────────────────────────────────────────
 - waitForAnimationToEnd:
     timeout: 10000
 
-# Onboarding may appear on first launch — skip if it does
 - tapOn:
-    text: "Skip|Passer"
+    text: 'Skip|Passer'
     optional: true
 - waitForAnimationToEnd
 
-# Home screen hero is the canonical "we made it" signal
 - extendedWaitUntil:
     visible:
-      text: "Your museum companion|Votre compagnon de musée"
+      text: 'Your museum companion|Votre compagnon de musée'
     timeout: 40000
 
-# Sanity: auth screen is gone
 - assertNotVisible:
-    text: "Welcome back|Bon retour"
+    text: 'Welcome back|Bon retour'
 - assertNotVisible:
-    id: "auth-submit"
+    id: 'auth-submit'

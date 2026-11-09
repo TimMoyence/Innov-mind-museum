@@ -51,7 +51,7 @@ describe('MemoryCacheService', () => {
     cache = new MemoryCacheService({ maxEntries: 2 });
     await cache.set('a', 1, 60);
     await cache.set('b', 2, 60);
-    await cache.set('c', 3, 60); // evicts "a"
+    await cache.set('c', 3, 60);
     await expect(cache.get('a')).resolves.toBeNull();
     await expect(cache.get<number>('b')).resolves.toBe(2);
     await expect(cache.get<number>('c')).resolves.toBe(3);
@@ -99,7 +99,7 @@ describe('MemoryCacheService', () => {
     await cache.zadd('leaderboard', 'a', 1);
     await cache.zadd('leaderboard', 'b', 5);
     await cache.zadd('leaderboard', 'c', 3);
-    await cache.zadd('leaderboard', 'a', 10); // a now 11
+    await cache.zadd('leaderboard', 'a', 10);
 
     const top = await cache.ztop('leaderboard', 2);
     expect(top).toEqual([

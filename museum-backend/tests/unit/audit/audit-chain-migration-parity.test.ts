@@ -6,24 +6,6 @@ import {
   computeRowHash,
 } from '@shared/audit/audit-chain';
 
-/**
- * Parity test between the hash logic in
- * `src/data/db/migrations/1777100000000-AddAuditLogHashChain.ts` and the
- * canonical `computeRowHash` in `src/shared/audit/audit-chain.ts` (AC3/AC4/AC5).
- *
- * AC4 (source unique) — this test imports the SAME `canonicalStringify` that the
- * runtime AND the migration use. It no longer re-implements `stableStringify`
- * inline: a second hand-written copy could diverge silently and would defeat the
- * single-source guarantee. Importing the production serializer means modifying
- * its definition makes this parity (and the snapshot below) fail — proving there
- * is exactly one effective canonicalization.
- *
- * NOTE (RED): `canonicalStringify` is created in the GREEN phase. In RED the
- * symbol does not exist yet → this file fails to type-check (tsc) and throws at
- * runtime (`canonicalStringify is not a function`), which is the intended RED for
- * AC3 (nested divergence) and AC4 (single source). See red task T1.5.
- */
-
 interface RawRow {
   id: string;
   actor_id: number | null;
@@ -34,14 +16,6 @@ interface RawRow {
   created_at: Date;
 }
 
-/**
- * Models the hash the MIGRATION backfill computes. Post-fix (GREEN) the migration
- * serializes metadata via the SHARED `canonicalStringify` (single source, AC4), so
- * this helper uses the imported `canonicalStringify` — NOT a second inline copy.
- * @param row the raw DB row (snake_case) as the migration sees it
- * @param prevHash previous row hash
- * @returns the SHA-256 hex digest the migration backfill would compute
- */
 function migrationHash(row: RawRow, prevHash: string): string {
   const payload = [
     row.id,
@@ -151,8 +125,6 @@ describe('audit-chain / migration ↔ runtime parity', () => {
     expect(migrationSideHash).toBe(runtimeSideHash);
   });
 
-  // --- AC3 : parity on NESTED metadata (>=2 levels + array of objects) ---------------------
-
   const nestedMetadata = {
     breach: {
       count: 1200,
@@ -164,9 +136,6 @@ describe('audit-chain / migration ↔ runtime parity', () => {
   };
 
   it('AC3 — produces identical hashes for runtime vs migration on nested metadata', () => {
-    // With the buggy runtime serializer this DIVERGES: runtime serializes
-    // {"breach":{},"items":[...],"severity":"high"} (nested keys dropped) while the
-    // migration serializes the full nested content → different hashes (RED).
     const migrationSideHash = migrationHash(
       {
         id,
@@ -196,13 +165,7 @@ describe('audit-chain / migration ↔ runtime parity', () => {
     expect(migrationSideHash).toBe(runtimeSideHash);
   });
 
-  // --- AC4 : single-source canonicalization — pin the serialized OUTPUT ---------------------
-
   it('AC4 — canonicalStringify emits the exact deep-sorted canonical string (single source)', () => {
-    // The expected string is an AUDITED literal: keys sorted by code unit at every
-    // level, arrays order-preserved, scalars via JSON.stringify. Any change to the
-    // single canonical definition (sort comparator, nesting handling) breaks this
-    // snapshot → proves there is no second divergent copy in play.
     const expected =
       '{' +
       '"breach":{"affectedDataClasses":["account","email"],"count":1200,"nested":{"a":1}},' +

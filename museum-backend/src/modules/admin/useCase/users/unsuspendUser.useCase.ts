@@ -11,7 +11,6 @@ interface UnsuspendUserInput {
   requestId?: string;
 }
 
-/** Idempotent. */
 export class UnsuspendUserUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 

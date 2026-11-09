@@ -28,8 +28,6 @@ const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
   visitor: 'bg-gray-100 text-gray-700',
 };
 
-// Roles assignable from the admin panel. `super_admin` is platform-owner,
-// granted out-of-band; never grantable from the UI (mirrors `users/page.tsx`).
 const ASSIGNABLE_ROLES: Exclude<UserRole, 'super_admin'>[] = [
   'visitor',
   'moderator',
@@ -101,7 +99,6 @@ export default function UserDetailPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
-  // Modal + form state
   const [modal, setModal] = useState<ModalKind>(null);
   const [busy, setBusy] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>('visitor');
@@ -218,8 +215,6 @@ export default function UserDetailPage({ params }: PageProps) {
     return parts.length > 0 ? parts.join(' ') : user.email;
   }, [user]);
 
-  // ── Render branches ────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24" aria-live="polite">
@@ -261,7 +256,6 @@ export default function UserDetailPage({ params }: PageProps) {
       {error && <AlertBanner variant="error" message={error} className="mt-4" />}
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
-        {/* Identity */}
         <section
           aria-labelledby="section-identity"
           className="rounded-xl border border-primary-100 bg-white p-6"
@@ -292,8 +286,6 @@ export default function UserDetailPage({ params }: PageProps) {
               label={dict.fieldMuseum}
               value={user.museumId !== null ? `#${String(user.museumId)}` : dict.noValue}
             />
-            {/* R1 (C6) — soft-paywall tier toggle. Read-only label for non
-                super_admin viewers ; the component handles its own visibility. */}
             <DescRow
               label={dict.tier.label}
               valueNode={
@@ -309,7 +301,6 @@ export default function UserDetailPage({ params }: PageProps) {
           </dl>
         </section>
 
-        {/* Status */}
         <section
           aria-labelledby="section-status"
           className="rounded-xl border border-primary-100 bg-white p-6"
@@ -355,7 +346,6 @@ export default function UserDetailPage({ params }: PageProps) {
           </dl>
         </section>
 
-        {/* Lifecycle */}
         <section
           aria-labelledby="section-lifecycle"
           className="rounded-xl border border-primary-100 bg-white p-6 md:col-span-2"
@@ -373,7 +363,6 @@ export default function UserDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      {/* Actions */}
       {(isAdmin || isSuperAdmin) && !isSoftDeleted && (
         <section
           aria-labelledby="section-actions"
@@ -437,7 +426,6 @@ export default function UserDetailPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Modals */}
       {modal === 'role' && (
         <RoleChangeModal
           adminDict={adminDict}
@@ -491,8 +479,6 @@ export default function UserDetailPage({ params }: PageProps) {
     </div>
   );
 }
-
-// ── Small presentational helpers ─────────────────────────────────────────
 
 function DescRow({
   label,

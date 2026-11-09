@@ -1,31 +1,9 @@
-/**
- * C1 Red — consentApi infra service.
- *
- * Cluster C1 (hexagonal violations, 2026-05-23-frontend-dry-audit) — the
- * `features/chat/application/thirdPartyAiConsent.ts` module currently lives in
- * the application layer but is a pure HTTP adapter (3 named functions calling
- * `httpRequest<…>`). Plan T2.3 migrates the 3 functions to
- * `features/chat/infrastructure/consentApi.ts` exposed as
- * `consentApi.{ list, grant, revoke }`. Constants/types move to
- * `features/chat/domain/consentScopes.ts` (covered by a separate test file).
- *
- * THIS TEST FILE IS RED-PHASE: it must FAIL because
- * `@/features/chat/infrastructure/consentApi` does not yet exist (the
- * functions still live under `features/chat/application/thirdPartyAiConsent`).
- *
- * REQ-C1-009 (Apple 5.1.2(i)) — `grant(scope, version?)` MUST send exactly
- * ONE POST per call; no batching API exposed on the service. This file
- * enforces that contract via "emits exactly one underlying request" asserts.
- */
-
 const mockHttpRequest = jest.fn();
 jest.mock('@/shared/api/httpRequest', () => ({
   httpRequest: (...args: unknown[]) => mockHttpRequest(...args),
 }));
 
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import { consentApi } from '@/features/chat/infrastructure/consentApi';
-// eslint-disable-next-line import/order, import/first -- mock-first per Jest hoisting rules
 import { CONSENT_POLICY_VERSION } from '@/features/chat/domain/consentScopes';
 
 describe('consentApi (C1 hexagonal façade)', () => {

@@ -1,18 +1,3 @@
-/**
- * T1.7.b3 — `parsedToJsonb` variance helper coverage.
- *
- * The helper is module-internal to
- * `typeorm-museum-enrichment-cache.adapter.ts` (no export). We exercise it
- * indirectly via the `upsert` code path, which calls it twice (once for the
- * INSERT branch, once for the UPDATE branch via `applyViewToEntity`). The
- * assertions verify the post-T1.7 contract:
- *   - `ParsedOpeningHours | null` input → `Record<string, unknown> | null`
- *     output assignable to the JSONB column.
- *   - `null` in → `null` out (no `{}` regression).
- *   - Non-null in → fresh top-level object (defensive copy, ref-inequality),
- *     with the same enumerable keys.
- */
-
 import { TypeOrmMuseumEnrichmentCacheAdapter } from '@modules/museum/adapters/secondary/enrichment/typeorm-museum-enrichment-cache.adapter';
 
 import type {
@@ -63,11 +48,6 @@ const makeView = (overrides: Partial<MuseumEnrichmentView> = {}): MuseumEnrichme
   ...overrides,
 });
 
-/**
- * Tiny in-memory stand-in for a TypeORM repository — enough surface to drive
- * `upsert` without spinning up a real DataSource. We capture `save` calls so
- * the test can assert on the JSONB shape produced by `parsedToJsonb`.
- */
 function makeFakeRepo() {
   const saved: FakeMuseumRow[] = [];
   let existing: FakeMuseumRow | null = null;
@@ -102,9 +82,6 @@ function makeFakeRepo() {
 function makeAdapter() {
   const enrichmentRepo = makeFakeRepo();
   const museumRepo = makeFakeRepo();
-  // Ctor calls `getRepository` twice: first for MuseumEnrichment, then for
-  // Museum. We dispatch by call index instead of identity-checking the entity
-  // class to keep the fake DataSource minimal.
   let getRepoCallIndex = 0;
   const fakeDataSource = {
     getRepository: jest.fn(() => {
@@ -131,11 +108,8 @@ describe('TypeOrmMuseumEnrichmentCacheAdapter — parsedToJsonb variance helper'
     const persisted = enrichmentRepo.saved[0];
     expect(persisted).toBeDefined();
     expect(persisted.openingHours).not.toBeNull();
-    // Defensive copy: NOT the same reference as the caller's view object.
     expect(persisted.openingHours).not.toBe(view.openingHours);
-    // Same enumerable shape (shallow spread preserves keys + primitive values).
     expect(persisted.openingHours).toEqual({ ...view.openingHours });
-    // Specifically: status + raw round-tripped as Record-indexable values.
     expect(persisted.openingHours!.raw).toBe('Mo-Su 09:00-18:00');
     expect(persisted.openingHours!.status).toBe('open');
   });
@@ -171,10 +145,8 @@ describe('TypeOrmMuseumEnrichmentCacheAdapter — parsedToJsonb variance helper'
     expect(enrichmentRepo.saved).toHaveLength(1);
     const persisted = enrichmentRepo.saved[0];
     expect(persisted).toBeDefined();
-    // applyViewToEntity mutated the existing row in place, then saved it.
     expect(persisted).toBe(existing);
     expect(persisted.openingHours).not.toBeNull();
-    // Fresh top-level object, NOT the caller's view.openingHours.
     expect(persisted.openingHours).not.toBe(view.openingHours);
     expect(persisted.openingHours).toEqual({ ...view.openingHours });
   });

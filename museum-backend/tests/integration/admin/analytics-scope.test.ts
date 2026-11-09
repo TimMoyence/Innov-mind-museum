@@ -1,57 +1,3 @@
-/**
- * T-B5 (RED — Wave B / C8 — UFR-022 fresh-context red phase 2026-05-21).
- *
- * Pins the museumId scope + BOLA (OWASP API3) guard for admin analytics
- * routes :
- *
- *   GET /api/admin/stats?museumId=<id>
- *
- * Acceptance (spec R-C8 + tasks.md T-B5) :
- *   (a) museum_manager(museumId=42) calling GET /admin/stats?museumId=42
- *       → 200 + scoped response (use case called with { museumId: 42 }).
- *   (b) museum_manager(museumId=42) calling GET /admin/stats?museumId=99
- *       → 403 OR scope force-rewritten to 42 (BOLA — caller MUST NOT
- *       observe museum 99's data). OWASP API3 (Broken Object Level Auth).
- *   (c) super_admin without museumId param → 200 + cross-tenant view
- *       (use case called with no museumId, or museumId=undefined).
- *   (d) `museumId` extra param goes through z.strictObject → 400 when an
- *       extra param like `foo=bar` is sent (strictObject rejects unknown
- *       keys).
- *
- * Spec : `team-state/2026-05-21-p0-feature-gates/spec.md` R-C8 +
- * `design.md` §3 Vague B C8 (D6: z.strictObject + RBAC scope:
- * super_admin global, museum_manager forced tenant) + `tasks.md` T-B5.
- *
- * Baseline (HEAD `89d2d7b44`) :
- *   - `admin.route.ts:229-237` : GET /stats has NO query schema, no Zod
- *     validation, no museumId binding → use case called with `()`.
- *   - `getStatsUseCase.execute()` (`getStats.useCase.ts:7-9`) takes
- *     NOTHING — there is no place to thread museumId through.
- *   - `requireRole('admin','moderator')` allows museum_manager only via
- *     super_admin implicit escalation; museum_manager itself is BLOCKED
- *     at the requireRole gate (museum_manager is NOT in the list).
- *
- * Expected red failure modes (any one suffices) :
- *   - (a) the test signals the route did not parse `museumId` (mock
- *     use case was never called with `{ museumId: 42 }`).
- *   - (b) the test signals BOLA: museum_manager(42) calling ?museumId=99
- *     received 200 with cross-tenant data (museum_manager is 403'd
- *     entirely today → still failing because the test expects either 403
- *     OR forced-scope, but the route blocks museum_manager at requireRole
- *     before reaching either code path → the BOLA negative assertion
- *     "use case was NOT called with { museumId: 99 }" still passes, but
- *     the positive scope assertion in (a) and (c) fail).
- *   - (d) the test signals `?foo=bar` returns 200 instead of 400.
- *
- * Pattern : mirrors `tests/unit/admin/admin-schemas.test.ts` (createRouteTestApp
- * + supertest + mock use cases via jest.mock('@modules/admin/useCase', ...)).
- * Lives under `tests/integration/admin/` (not `tests/unit/`) per the brief —
- * the contract spans router + Zod + RBAC + use case invocation shape, which is
- * a multi-layer integration even without Postgres.
- *
- * No factories used — JWT tokens come from `tests/helpers/auth/token.helpers`
- * (`makeToken` with role + claim overrides). No inline entity creation.
- */
 import request from 'supertest';
 
 import { makeToken } from '../../helpers/auth/token.helpers';
@@ -60,9 +6,6 @@ import {
   resetRateLimits,
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
-
-// ── Mock admin use cases — same pattern as `tests/unit/admin/admin-schemas.test.ts`.
-// `mockGetStats` MUST be defined before the jest.mock() factory captures it.
 
 const mockGetStats = jest.fn();
 const mockListUsers = jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20 });
@@ -111,9 +54,6 @@ jest.mock('@modules/admin/useCase', () => ({
 const { app } = createRouteTestApp();
 
 const bearerSuperAdmin = (): string => `Bearer ${makeToken({ role: 'super_admin' })}`;
-// museum_manager tokens carry the tenant claim — green resolves the JWT
-// claim into the use-case `museumId` scope (D6). Today the JWT shape has
-// no `museumId` claim baked in, so this property names what green must add.
 const bearerMuseumManager = (museumId: number): string =>
   `Bearer ${makeToken({ role: 'museum_manager', museumId })}`;
 
@@ -133,10 +73,6 @@ describe('GET /api/admin/stats — museumId scope + BOLA guard (T-B5 — R-C8 / 
       .get('/api/admin/stats?museumId=42')
       .set('Authorization', bearerMuseumManager(42));
 
-    // FAIL at baseline (any of these):
-    //  - 403 (requireRole list excludes museum_manager, today gate at
-    //    admin.route.ts:232).
-    //  - 200 but use case called with `()` (no museumId threaded).
     expect(res.status).toBe(200);
     expect(mockGetStats).toHaveBeenCalledTimes(1);
     expect(mockGetStats).toHaveBeenCalledWith(expect.objectContaining({ museumId: 42 }));
@@ -147,15 +83,6 @@ describe('GET /api/admin/stats — museumId scope + BOLA guard (T-B5 — R-C8 / 
       .get('/api/admin/stats?museumId=99')
       .set('Authorization', bearerMuseumManager(42));
 
-    // Two acceptable green branches per D6:
-    //  (i) reject outright with 403 (preferred — explicit BOLA signal).
-    //  (ii) accept 200 but force-rewrite museumId back to the caller's
-    //       tenant (42) before the use-case call.
-    // FAIL at baseline: route does not parse museumId AND does not bind
-    // the JWT museumId claim → either 403 (current museum_manager block
-    // by requireRole, which technically satisfies BOLA but not (a)/(c))
-    // OR 200 + use case called with `()` (no museumId), which leaves
-    // tenant intent ambiguous.
     const got403 = res.status === 403;
     const got200WithForcedScope =
       res.status === 200 &&
@@ -164,8 +91,6 @@ describe('GET /api/admin/stats — museumId scope + BOLA guard (T-B5 — R-C8 / 
       );
     expect(got403 || got200WithForcedScope).toBe(true);
 
-    // BOLA negative guard — regardless of branch, the use case MUST NOT
-    // be invoked with `{ museumId: 99 }` for this caller.
     const calledWithCrossTenant = mockGetStats.mock.calls.some(
       (call) => (call[0] as { museumId?: number } | undefined)?.museumId === 99,
     );
@@ -177,10 +102,7 @@ describe('GET /api/admin/stats — museumId scope + BOLA guard (T-B5 — R-C8 / 
 
     expect(res.status).toBe(200);
     expect(mockGetStats).toHaveBeenCalledTimes(1);
-    // No museumId in the call args → cross-tenant aggregate.
     const firstArg = mockGetStats.mock.calls[0]?.[0] as { museumId?: number } | undefined;
-    // Accept either undefined args (current `execute()`) OR an object with
-    // museumId undefined — both shapes mean "no scope filter".
     const noMuseumId = firstArg === undefined || firstArg.museumId === undefined;
     expect(noMuseumId).toBe(true);
   });
@@ -190,8 +112,6 @@ describe('GET /api/admin/stats — museumId scope + BOLA guard (T-B5 — R-C8 / 
       .get('/api/admin/stats?museumId=42&foo=bar')
       .set('Authorization', bearerSuperAdmin());
 
-    // FAIL at baseline: route has NO Zod validation on /stats, so any
-    // query param goes through unchecked → 200.
     expect(res.status).toBe(400);
   });
 });

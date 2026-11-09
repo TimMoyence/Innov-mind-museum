@@ -24,9 +24,6 @@ function makeProvider(): ProviderStub {
 function makeDump(): DumpStub {
   return {
     findFactsBySearchTerm: jest.fn(),
-    // C5.3 write-through contract — kept as a swallowed no-op stub so the
-    // cascade tests stay focused on the lookup path without leaking
-    // assertions about persistence.
     upsert: jest.fn<Promise<void>, [string, string | undefined, ArtworkFacts]>(),
   };
 }
@@ -80,7 +77,7 @@ describe('KnowledgeBaseService cascade (C5.3)', () => {
     const dump = makeDump();
     dump.findFactsBySearchTerm.mockResolvedValue(DUMP_MONA);
 
-    const openSince = Date.now() - 1000; // 1s ago, soak is 60s
+    const openSince = Date.now() - 1000;
     const state: BreakerState = { name: 'OPEN', openSince };
 
     const svc = new KnowledgeBaseService(provider, baseConfig, undefined, {

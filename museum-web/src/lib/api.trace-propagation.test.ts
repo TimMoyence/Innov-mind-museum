@@ -1,20 +1,3 @@
-/**
- * RED — TD-47: the hand-written fetch wrapper in `api.ts` does NOT forward the
- * active Sentry trace context (`sentry-trace` / `baggage`) on the happy path.
- *
- * The browser SDK patches client-side `fetch` (and error paths are auto-captured),
- * but server-rendered RSC requests that go through THIS wrapper bypass that
- * instrumentation, so admin web → backend calls don't show up in the correlated
- * trace. The fix forwards `Sentry.getTraceData()` (the v8+ manual-propagation
- * helper) into the request headers.
- *
- * Isolated in its own file with a per-file `vi.mock('@sentry/nextjs')` so the
- * 40+ existing api.test.ts cases (which don't mock Sentry) are untouched.
- *
- * Run scope:
- *   pnpm vitest run src/lib/api.trace-propagation.test.ts
- */
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { requireIndex } from '@/__tests__/helpers/require-index';
@@ -25,7 +8,6 @@ vi.mock('@sentry/nextjs', () => ({
   getTraceData: getTraceDataMock,
 }));
 
-// Imported AFTER the mock is registered (vi.mock is hoisted above this anyway).
 import { apiGet, apiPost } from './api';
 
 function mockFetch() {

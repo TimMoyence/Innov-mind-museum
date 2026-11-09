@@ -4,14 +4,10 @@ import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQu
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
 import { makeAuthTokens } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockSignInWithApple = jest.fn<
   Promise<{ provider: 'apple'; idToken: string; nonce?: string }>,
   [unknown?]
 >();
-// F11-mobile (2026-05) — signInWithGoogle now returns a session directly
-// (server-mediated redeem flow), not the legacy {provider, idToken, nonce}.
 const mockSignInWithGoogle = jest.fn<Promise<unknown>, []>();
 const mockIsAppleSignInAvailable = jest.fn<Promise<boolean>, []>();
 
@@ -31,13 +27,9 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
   },
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const defaultOptions = () => ({
   loginWithSession: jest.fn<Promise<void>, [unknown]>().mockResolvedValue(undefined),
 });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useSocialLogin', () => {
   beforeEach(() => {
@@ -49,9 +41,6 @@ describe('useSocialLogin', () => {
       idToken: 'apple-token-123',
       nonce: 'fixed-nonce',
     });
-    // F11-mobile (2026-05) — Google flow returns the session directly via the
-    // server-mediated redeem path. The default mock therefore returns a
-    // LoginResponse-shaped object, not the legacy {provider, idToken, nonce}.
     mockSignInWithGoogle.mockResolvedValue(makeAuthTokens());
   });
 
@@ -89,11 +78,7 @@ describe('useSocialLogin', () => {
     });
 
     expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1);
-    // No client-side nonce fetch — backend issues + consumes the nonce
-    // entirely server-side in the /google/initiate -> /google/callback dance.
     expect(mockRequestSocialNonce).not.toHaveBeenCalled();
-    // Redeem flow returns the session directly; /social-login is NOT invoked
-    // for Google anymore (Apple still uses it).
     expect(mockSocialLogin).not.toHaveBeenCalled();
     expect(opts.loginWithSession).toHaveBeenCalledWith(tokens);
     expect(result.current.isSocialLoading).toBe(false);
@@ -127,7 +112,6 @@ describe('useSocialLogin', () => {
       await result.current.handleGoogleSignIn().catch(() => undefined);
     });
 
-    // Cancellation messages are filtered out — errorMessage stays null.
     expect(result.current.errorMessage).toBeNull();
     expect(result.current.isSocialLoading).toBe(false);
   });
@@ -175,7 +159,6 @@ describe('useSocialLogin', () => {
     expect(opts.loginWithSession).not.toHaveBeenCalled();
   });
 
-  // ── F3 — OIDC nonce binding ───────────────────────────────────────
   describe('F3 nonce', () => {
     it('falls through with undefined nonce when /social-nonce request fails (rollout window)', async () => {
       mockRequestSocialNonce.mockRejectedValue(new Error('network'));
@@ -188,15 +171,10 @@ describe('useSocialLogin', () => {
         await result.current.handleAppleSignIn();
       });
 
-      // Apple SDK still invoked (no nonce field) and backend call carries no nonce.
       expect(mockSignInWithApple).toHaveBeenCalledWith({ nonce: undefined });
       expect(mockSocialLogin).toHaveBeenCalledWith('apple', 'apple-tok', undefined);
     });
 
-    // F11-mobile (2026-05) — Google no longer threads the client-side nonce
-    // round-trip. The nonce is issued, embedded in the OIDC state, and
-    // consumed entirely on the backend during the /google/initiate ->
-    // /google/callback redirect dance.
     it('skips client-side nonce fetch on Google flow (server-mediated redeem)', async () => {
       mockRequestSocialNonce.mockResolvedValue({ nonce: 'specific-google-nonce' });
       mockSignInWithGoogle.mockResolvedValue(makeAuthTokens());

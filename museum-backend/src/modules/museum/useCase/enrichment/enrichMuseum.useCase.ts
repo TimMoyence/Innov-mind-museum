@@ -8,7 +8,6 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/museum-enrichment-cache.port';
 import type { MuseumEnrichmentQueuePort } from '@modules/museum/domain/ports/museum-enrichment-queue.port';
 
-/** Default 30-day TTL on cached enrichment rows. */
 const DEFAULT_FRESH_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000;
 
 export interface EnrichMuseumInput {
@@ -16,14 +15,6 @@ export interface EnrichMuseumInput {
   locale: string;
 }
 
-/**
- *   1. Fresh DB cache hit → `status: 'ready'`.
- *   2. Miss + already-queued job → `status: 'pending'` + existing jobId.
- *   3. Miss + no active job → enqueue new BullMQ job, `status: 'pending'`.
- *
- * Actual fetch (Wikidata + Wikipedia + OSM) performed off-band by
- * {@link MuseumEnrichmentWorker}.
- */
 export class EnrichMuseumUseCase {
   constructor(
     private readonly museumRepo: IMuseumRepository,
@@ -64,7 +55,6 @@ export class EnrichMuseumUseCase {
 
     const status = await this.queue.getJobStatus(input.jobId);
     if (status === 'completed') {
-      // Race: worker finished between our cache read and queue probe.
       const retry = await this.cache.findFresh({
         museumId: input.museumId,
         locale: input.locale,

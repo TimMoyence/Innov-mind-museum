@@ -14,6 +14,7 @@ import { FloatingContextMenu } from '@/shared/ui/FloatingContextMenu';
 import { semantic } from '@/shared/ui/tokens';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
+import { TextLines } from '@/shared/ui/TextLines';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { styles } from './_styles/privacy';
@@ -23,7 +24,6 @@ interface MetaItem {
   value: string;
 }
 
-/** Renders the GDPR/RGPD privacy policy screen with legal metadata, rights summary, and release readiness status. */
 export default function PrivacyScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -165,11 +165,11 @@ export default function PrivacyScreen() {
             {t('privacy.gdpr_rights')}
           </Text>
           <View style={styles.bulletGroup}>
-            {PRIVACY_POLICY_CONTENT.rightsSummary.map((item) => (
-              <Text key={item} style={[styles.bulletText, { color: theme.textSecondary }]}>
-                • {item}
-              </Text>
-            ))}
+            <TextLines
+              lines={PRIVACY_POLICY_CONTENT.rightsSummary}
+              prefix="• "
+              style={[styles.bulletText, { color: theme.textSecondary }]}
+            />
           </View>
         </GlassCard>
 
@@ -185,11 +185,11 @@ export default function PrivacyScreen() {
               {t('privacy.prerelease_text')}
             </Text>
             <View style={styles.bulletGroup}>
-              {PRIVACY_POLICY_CONTENT.releaseChecklist.map((item) => (
-                <Text key={item} style={[styles.warningBullet, { color: theme.warningText }]}>
-                  • {item}
-                </Text>
-              ))}
+              <TextLines
+                lines={PRIVACY_POLICY_CONTENT.releaseChecklist}
+                prefix="• "
+                style={[styles.warningBullet, { color: theme.warningText }]}
+              />
             </View>
           </GlassCard>
         ) : null}

@@ -147,7 +147,6 @@ describe('s3-path-utils', () => {
         key: 'photo.jpg',
       });
       expect(result.objectPath).toContain('photo.jpg');
-      // Should not duplicate bucket in path when bucket is already in host
       const pathOccurrences = (result.objectPath.match(/my-bucket/g) ?? []).length;
       expect(pathOccurrences).toBe(0);
     });

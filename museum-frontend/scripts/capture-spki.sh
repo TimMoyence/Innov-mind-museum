@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# capture-spki.sh — print SPKI SHA-256 base64 hashes for every cert in a host's chain.
-#
-# Usage:
-#   ./scripts/capture-spki.sh musaium.com
-#   ./scripts/capture-spki.sh api.example.com:443
-#
-# Output: one block per cert in the chain (leaf first), with subject + issuer +
-# notAfter + SPKI hash. The hash format matches what `cert-pinning.ts`
-# expects in `PROD_SPKI_HASHES`.
-#
-# See `museum-frontend/docs/CERT_PINNING_RUNBOOK.md` for the rotation
-# procedure that consumes this output.
 
 set -euo pipefail
 
@@ -34,7 +22,6 @@ fi
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-# Pull the full chain. -showcerts emits each cert as a PEM block.
 openssl s_client -connect "${host}:${port}" -servername "${host}" -showcerts </dev/null 2>/dev/null \
   | awk '
       /-----BEGIN CERTIFICATE-----/ { n++; out="'"$tmpdir"'/cert-" n ".pem" }
@@ -51,7 +38,6 @@ fi
 echo "Chain for ${host}:${port} (leaf first) :"
 echo
 
-# Sort numerically so cert-1, cert-2, cert-10 come in order.
 sorted_certs=$(printf '%s\n' "${certs[@]}" | sort -V)
 i=0
 while IFS= read -r pem; do

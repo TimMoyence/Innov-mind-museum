@@ -137,12 +137,6 @@
             },
             "description": "Visitor's content preferences (zero or more). Returned by GET /auth/me, written by PATCH /auth/content-preferences."
           },
-          "defaultLocale": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 8,
-            "description": "TD-2 — Visitor's preferred BCP-47 locale. Server defaults to `en-US`. FE validates against `SUPPORTED_LOCALES`."
-          },
           "defaultMuseumMode": {
             "type": "boolean",
             "description": "TD-2 — Whether the visitor opts into auto museum-mode detection on launch."
@@ -448,11 +442,6 @@
               },
               "openQuestion": {
                 "type": "string"
-              },
-              "suggestedFollowUp": {
-                "type": "string",
-                "maxLength": 80,
-                "description": "B3 — Single follow-up question (≤80 chars) anchored to a fact in the answer. Absent when no factual anchor exists (refusal/clarification/recap). Replaces legacy `followUpQuestions: string[]`."
               },
               "imageDescription": {
                 "type": "string"
@@ -1868,69 +1857,6 @@
           }
         ]
       },
-      "DescribeRequest": {
-        "type": "object",
-        "description": "Describe request — either text or image is required",
-        "properties": {
-          "image": {
-            "type": "object",
-            "required": ["source", "value"],
-            "properties": {
-              "source": {
-                "type": "string",
-                "enum": ["base64", "url"]
-              },
-              "value": {
-                "type": "string",
-                "minLength": 1
-              },
-              "mimeType": {
-                "type": "string"
-              }
-            }
-          },
-          "text": {
-            "type": "string",
-            "maxLength": 2000
-          },
-          "locale": {
-            "type": "string",
-            "maxLength": 10,
-            "default": "en"
-          },
-          "guideLevel": {
-            "type": "string",
-            "enum": ["beginner", "intermediate", "expert"],
-            "default": "beginner"
-          },
-          "format": {
-            "type": "string",
-            "enum": ["text", "audio", "both"],
-            "default": "text"
-          }
-        }
-      },
-      "DescribeResponse": {
-        "type": "object",
-        "required": ["description", "metadata"],
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "audio": {
-            "type": "string",
-            "description": "Base64-encoded audio, present only when format=both"
-          },
-          "audioContentType": {
-            "type": "string",
-            "description": "MIME type of the audio payload when format=both"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
       "MemoryPreferenceResponse": {
         "type": "object",
         "required": ["enabled"],
@@ -2126,6 +2052,19 @@
           "fallbackReason": {
             "$ref": "#/components/schemas/FallbackReason"
           }
+        }
+      },
+      "QuotaExceededError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "tier", "currentCount", "limit", "resetAt", "message"],
+        "properties": {
+          "code": { "type": "string", "enum": ["QUOTA_EXCEEDED"] },
+          "tier": { "type": "string", "enum": ["free"] },
+          "currentCount": { "type": "integer", "minimum": 0 },
+          "limit": { "type": "integer", "minimum": 0 },
+          "resetAt": { "type": "string", "format": "date-time" },
+          "message": { "type": "string" }
         }
       },
       "CompareErrorResponse": {
@@ -3210,7 +3149,7 @@
       "patch": {
         "tags": ["Auth"],
         "summary": "TD-2 — Batch-update the authenticated user's profile preferences",
-        "description": "Persists a partial patch of the 5 profile preferences (defaultLocale, defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.",
+        "description": "Persists a partial patch of the 4 profile preferences (defaultMuseumMode, guideLevel, dataMode, audioDescriptionMode). At least one field must be present (empty body → 400). Returns the canonical effective state.",
         "security": [
           {
             "bearerAuth": []
@@ -3224,11 +3163,6 @@
                 "type": "object",
                 "minProperties": 1,
                 "properties": {
-                  "defaultLocale": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 8
-                  },
                   "defaultMuseumMode": {
                     "type": "boolean"
                   },
@@ -3257,18 +3191,12 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "defaultLocale",
                     "defaultMuseumMode",
                     "guideLevel",
                     "dataMode",
                     "audioDescriptionMode"
                   ],
                   "properties": {
-                    "defaultLocale": {
-                      "type": "string",
-                      "minLength": 2,
-                      "maxLength": 8
-                    },
                     "defaultMuseumMode": {
                       "type": "boolean"
                     },
@@ -3430,6 +3358,16 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "402": {
+            "description": "Monthly free-tier session quota reached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotaExceededError"
+                }
+              }
+            }
           }
         }
       },
@@ -6709,57 +6647,6 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/api/chat/describe": {
-      "post": {
-        "tags": ["Chat"],
-        "summary": "Generate standalone AI description from image or text",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DescribeRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Description JSON (or binary audio when format=audio)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DescribeResponse"
-                }
-              },
-              "audio/mpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalError"
           }
         }
       }

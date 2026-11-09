@@ -1,22 +1,3 @@
-/**
- * Targeted mutation kills for `admin-analytics-queries.ts` — written
- * 2026-05-15 to chip into the 65 first-pass survivors documented in the
- * 2026-05-15 night recap (commit f90026b0).
- *
- * Strategy: the existing analytics-usecases.test.ts mocks the IAdminRepository
- * facade and never reaches the QueryBuilder string-construction layer. The
- * StringLiteral / ConditionalExpression / ArithmeticOperator / BlockStatement
- * mutants on `.createQueryBuilder(alias)`, `.select(expr, alias)`,
- * `.addSelect`, `.where`, `.orderBy`, `.groupBy`, the `if (filters.from)`
- * conditionals, and the cutoff date computation all survive because no test
- * asserts on the qb call args.
- *
- * This file calls the 3 exported query functions directly with a spy-based
- * mock of `AnalyticsRepositories` and asserts the exact arg strings on every
- * fluent qb method.
- *
- * Strict assertions only. No production-code changes.
- */
 import { ArtworkMatch } from '@modules/chat/domain/art-keyword/artworkMatch.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
@@ -48,27 +29,9 @@ interface TestHarness {
   dataSourceQuery: jest.Mock;
 }
 
-/**
- * Build a fully mocked `AnalyticsRepositories` bundle. The same `qb` instance
- * is returned by every `createQueryBuilder()` call so a single set of
- * assertions can cover every chained method invocation across the 3 query
- * functions. `dataSource.getRepository(ArtworkMatch)` returns its own
- * `createQueryBuilder` mock so the alias for the artworks query (`'a'`) can
- * be asserted independently of the session/message/audit aliases.
- */
 function buildHarness(): TestHarness {
   const qb = makeMockQb();
-  // The .from() builder callback in queryEngagementAnalytics is invoked with
-  // a subquery builder — point clone/from at qb so the callback can build its
-  // sub-query against the same spy and we can assert on the subquery args
-  // too (s.id / msg_count / leftJoin alias).
   qb.from.mockImplementation((arg: unknown) => {
-    // `.from` accepts (1) an entity class — `ChatSession` etc, which is also
-    // `typeof === 'function'`, (2) a subquery callback `(qb) => qb.select(...)`,
-    // or (3) a string. Only the callback path should be invoked here so the
-    // inner .select / .addSelect / .leftJoin / .groupBy chain runs against qb
-    // and gets recorded for assertions. Distinguish via `.prototype` — classes
-    // have one, arrow functions don't.
     if (typeof arg === 'function' && !(arg as { prototype?: unknown }).prototype) {
       (arg as (sub: typeof qb) => unknown)(qb);
     }
@@ -107,12 +70,6 @@ function buildHarness(): TestHarness {
 }
 
 describe('admin-analytics-queries — mutation kills', () => {
-  // ──────────────────────────────────────────────────────────────────────
-  // queryUsageAnalytics — covers granularity switch (L28-32), cutoff date
-  // arithmetic (L61), filter conditionals (L67/L70/L74), and 3 separate
-  // createQueryBuilder fluent chains (sessions / messages / activeUsers).
-  // ──────────────────────────────────────────────────────────────────────
-
   describe('queryUsageAnalytics', () => {
     describe('granularityToTrunc switch (L28-32 StringLiteral kills)', () => {
       it('emits date_trunc(\'day\', …) when granularity is "daily" (kills `return "day"` → "")', async () => {
@@ -152,7 +109,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const before = Date.now();
         await queryUsageAnalytics(repos as never, { days: 30 });
 
-        // First `qb.where` call carries `{ cutoff: ISO string }` (no filters.from).
         const whereCalls = qb.where.mock.calls;
         const cutoffCall = whereCalls.find(
           (c) => typeof c[1] === 'object' && c[1] !== null && 'cutoff' in (c[1] as object),
@@ -161,9 +117,7 @@ describe('admin-analytics-queries — mutation kills', () => {
         const cutoffIso = (cutoffCall![1] as { cutoff: string }).cutoff;
         const cutoffMs = Date.parse(cutoffIso);
 
-        // Past, not future — kills the `+` mutant which would put cutoff in the future.
         expect(cutoffMs).toBeLessThan(before);
-        // Roughly 30 days before now (allow 1 hour slack for test scheduling).
         const thirtyDaysMs = 30 * 86_400_000;
         expect(before - cutoffMs).toBeGreaterThan(thirtyDaysMs - 3_600_000);
         expect(before - cutoffMs).toBeLessThan(thirtyDaysMs + 3_600_000);
@@ -173,9 +127,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const { repos } = buildHarness();
         const result = await queryUsageAnalytics(repos as never, { days: 30 });
 
-        // result.period.from is computed via the same `Date.now() - days * 86400000`
-        // but with `.slice(0, 10)` — kills the `- days / 86400000` mutant which
-        // would return today's date (the divide collapses to a tiny number).
         const fromMs = Date.parse(`${result.period.from}T00:00:00Z`);
         const todayMs = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
         expect(fromMs).toBeLessThan(todayMs);
@@ -185,9 +136,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const { repos } = buildHarness();
         const result = await queryUsageAnalytics(repos as never, { days: 30 });
 
-        // L127 MethodExpression: `.toISOString().slice(0, 10)` → `.toISOString()`
-        // Mutant would return a full ISO string with the time portion; original
-        // truncates to YYYY-MM-DD.
         expect(result.period.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
         expect(result.period.to.length).toBe(10);
       });
@@ -202,8 +150,6 @@ describe('admin-analytics-queries — mutation kills', () => {
           (c) => typeof c[1] === 'object' && c[1] !== null && 'from' in (c[1] as object),
         );
         expect(fromCall).toBeDefined();
-        // Asserts the condition string contains ':from' — kills the
-        // `conditions.push("")` StringLiteral mutant on L68.
         expect(fromCall![0]).toContain(':from');
       });
 
@@ -216,7 +162,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         );
         expect(cutoffCall).toBeDefined();
         expect(cutoffCall![0]).toContain(':cutoff');
-        // And NOT :from
         expect(cutoffCall![0]).not.toContain(':from');
       });
 
@@ -238,8 +183,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         expect(withToCall).toBeDefined();
         expect(withToCall![0]).toContain(':to');
         expect(withToCall![0]).toContain(':from');
-        // The two clauses are AND-joined — kills `.join("")` StringLiteral
-        // mutant on L93 / L101 / L110.
         expect(withToCall![0]).toMatch(/ AND /);
       });
     });
@@ -249,7 +192,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const harness = buildHarness();
         await queryUsageAnalytics(harness.repos as never, { days: 30 });
 
-        // sessionsResult + activeUsersResult both use sessionRepo with alias 'session'.
         expect(harness.sessionCreate).toHaveBeenCalledWith('session');
         expect(harness.sessionCreate.mock.calls.every((c) => c[0] === 'session')).toBe(true);
       });
@@ -297,19 +239,12 @@ describe('admin-analytics-queries — mutation kills', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────
-  // queryContentAnalytics — topArtworks via getRepository(ArtworkMatch),
-  // topMuseums via sessionRepo, guardrailBlockRate via auditRepo (2 qbs).
-  // ──────────────────────────────────────────────────────────────────────
-
   describe('queryContentAnalytics', () => {
     describe('topN nullish-coalescing default (L141 LogicalOperator kill)', () => {
       it('uses default 10 when filters.limit is undefined (kills ?? → && on L141)', async () => {
         const { repos, qb } = buildHarness();
         await queryContentAnalytics(repos as never, {});
 
-        // Mutant `?? 10` → `&& 10` returns `undefined` for falsy limit → qb.limit(undefined).
-        // Original returns 10. Asserting toHaveBeenCalledWith(10) kills the mutant.
         expect(qb.limit).toHaveBeenCalledWith(10);
       });
 
@@ -340,7 +275,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const harness = buildHarness();
         await queryContentAnalytics(harness.repos as never, {});
 
-        // Both totalQb and blockedQb use the audit repo with alias 'log'.
         expect(harness.auditCreate).toHaveBeenCalledWith('log');
         expect(harness.auditCreate.mock.calls.every((c) => c[0] === 'log')).toBe(true);
         expect(harness.auditCreate).toHaveBeenCalledTimes(2);
@@ -441,7 +375,6 @@ describe('admin-analytics-queries — mutation kills', () => {
 
       it('returns blocked/total ratio when total > 0', async () => {
         const { repos, qb } = buildHarness();
-        // First getRawOne (total) then second getRawOne (blocked).
         qb.getRawOne.mockResolvedValueOnce({ total: '100' }).mockResolvedValueOnce({ total: '5' });
         qb.getRawMany.mockResolvedValue([]);
 
@@ -451,10 +384,6 @@ describe('admin-analytics-queries — mutation kills', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────
-  // queryEngagementAnalytics — 3 sessionRepo qbs + raw dataSource.query.
-  // ──────────────────────────────────────────────────────────────────────
-
   describe('queryEngagementAnalytics', () => {
     describe('createQueryBuilder aliases (StringLiteral kills L248/L267/L277)', () => {
       it('all three sessionRepo qbs use alias "s" (kills createQueryBuilder("") on L248/L267/L277)', async () => {
@@ -463,7 +392,6 @@ describe('admin-analytics-queries — mutation kills', () => {
 
         expect(harness.sessionCreate).toHaveBeenCalledWith('s');
         expect(harness.sessionCreate.mock.calls.every((c) => c[0] === 's')).toBe(true);
-        // 3 calls total: avgMsgQb, avgDurationQb, returnRateMainQb.
         expect(harness.sessionCreate).toHaveBeenCalledTimes(3);
       });
     });
@@ -498,7 +426,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const { repos, qb } = buildHarness();
         await queryEngagementAnalytics(repos as never, {});
 
-        // Subquery built via .from(callback) — callback invokes select/addSelect/etc.
         expect(qb.select).toHaveBeenCalledWith('s.id', 'id');
         expect(qb.addSelect).toHaveBeenCalledWith('COUNT(m.id)', 'msg_count');
         expect(qb.leftJoin).toHaveBeenCalledWith(ChatMessage, 'm', 'm."sessionId" = s.id');
@@ -528,8 +455,6 @@ describe('admin-analytics-queries — mutation kills', () => {
           (c) => typeof c[0] === 'string' && c[0] === 's."createdAt" <= :to',
         );
         expect(toCall).toBeDefined();
-        // ObjectLiteral mutant on L237 produces `{}` — kills by asserting the
-        // exact key/value pair survives.
         expect(toCall![1]).toEqual({ to: '2026-02-28' });
       });
 
@@ -553,7 +478,6 @@ describe('admin-analytics-queries — mutation kills', () => {
         const harness = buildHarness();
         await queryEngagementAnalytics(harness.repos as never, {});
 
-        // dataSource.query is called with (sql, params). With no filters, params = [].
         const queryCall = harness.dataSourceQuery.mock.calls[0];
         expect(queryCall).toBeDefined();
         expect(queryCall[1]).toEqual([]);
@@ -565,7 +489,6 @@ describe('admin-analytics-queries — mutation kills', () => {
 
         const queryCall = harness.dataSourceQuery.mock.calls[0];
         expect(queryCall[1]).toEqual(['2026-02-01']);
-        // SQL fragment must include the AND clause for from.
         expect(queryCall[0]).toContain('sub."createdAt" >= $1');
       });
 
@@ -578,8 +501,6 @@ describe('admin-analytics-queries — mutation kills', () => {
 
         const queryCall = harness.dataSourceQuery.mock.calls[0];
         expect(queryCall[1]).toEqual(['2026-02-01', '2026-02-28']);
-        // Position-numbered placeholders survive — kills the empty-string mutants
-        // on L287/L291 which would produce an unfiltered subquery.
         expect(queryCall[0]).toContain('sub."createdAt" >= $1');
         expect(queryCall[0]).toContain('sub."createdAt" <= $2');
       });
@@ -602,13 +523,12 @@ describe('admin-analytics-queries — mutation kills', () => {
       it('parses numeric strings via parseInt/parseFloat and falls back to 0 on undefined (kills OptionalChaining L310/L311 + parseFloat fallback)', async () => {
         const { repos, qb, dataSourceQuery } = buildHarness();
         qb.getRawOne
-          .mockResolvedValueOnce(null) // avg_msg
-          .mockResolvedValueOnce(null) // avg_dur
-          .mockResolvedValueOnce(null); // total_unique
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null);
         dataSourceQuery.mockResolvedValue([]);
 
         const result = await queryEngagementAnalytics(repos as never, {});
-        // All fall back to 0 — kills OptionalChaining removal (would throw on null.total_unique).
         expect(result.avgMessagesPerSession).toBe(0);
         expect(result.avgSessionDurationMinutes).toBe(0);
         expect(result.totalUniqueUsers).toBe(0);

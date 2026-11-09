@@ -1,105 +1,43 @@
 appId: com.musaium.mobile.preview
 ---
-# Audio Recording Flow — proves the FULL STT → LLM → TTS voice round-trip.
-#
-# Maestro cannot drive a real microphone on a simulator/emulator, so the build
-# bakes a test-only fixture injection seam (env EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE
-# = "true", set on the Maestro build jobs in .github/workflows/ci-cd-mobile.yml).
-# When set, useAudioRecorder.startRecording/stopRecording return a bundled
-# pre-recorded clip ("Who painted the Mona Lisa") instead of driving expo-audio
-# (see features/chat/application/maestroAudioFixture.ts + .maestro/fixtures/audio.md).
-# That clip uploads through the SAME multipart path as a live recording, so the
-# backend STT (gpt-4o-mini-transcribe) → LLM → TTS (gpt-4o-mini-tts) pipeline runs
-# deterministically. The round-trip assertions below are therefore NON-optional:
-# a dead STT / LLM / TTS fails this flow.
-#
-# Flow: open chat -> mic -> EU AI Act voice-disclosure gate -> record toggle ->
-#       send -> assert STT transcript + assistant reply + TTS "Listen" affordance.
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-#   - Backend running on localhost:3000 with STT (gpt-4o-mini-transcribe) and
-#     TTS (gpt-4o-mini-tts) configured
-#   - The Maestro build sets EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE=true (CI does;
-#     a hand-built APK/app without it leaves the recorder on the live mic path
-#     and the round-trip assertions will fail — that is intended).
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - runFlow:
     file: helpers/chat-entry.yaml
 
-# ──────────────────────────────────────────────
-# Phase 2: Tap mic -> EU AI Act voice-disclosure gate -> acknowledge
-# ──────────────────────────────────────────────
-# First mic press of the session opens the voice-intro sheet (the actual
-# rawToggleRecording fires only after acknowledging — chat/[sessionId].tsx:152).
 - tapOn:
-    id: "composer-mic-button"
+    id: 'composer-mic-button'
 - waitForAnimationToEnd
 
-# Acknowledge the voice disclosure (testID voice-disclosure-start). Acknowledging
-# fires rawToggleRecording() automatically (chat/[sessionId].tsx
-# onAcknowledgeVoiceDisclosure), so recording is ON right after this tap.
-# `optional` only for resilience if the disclosure was already acknowledged this
-# session — in either branch recording is active afterwards.
 - tapOn:
-    id: "voice-disclosure-start"
+    id: 'voice-disclosure-start'
     optional: true
 - waitForAnimationToEnd
 
-# With the EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE seam the recorder never touches the
-# OS mic, so no permission dialog should appear. Kept optional purely so a stray
-# system dialog (rare on iOS) does not wedge the flow.
 - tapOn:
-    text: "Allow|OK|Autoriser"
+    text: 'Allow|OK|Autoriser'
     optional: true
 - waitForAnimationToEnd
 
-# Recording is active — tap the mic again to STOP. stopRecording resolves the
-# bundled fixture clip to a file:// URI and surfaces the audio pill. This tap is
-# deterministic (the fixture seam removed the live-capture race), so NOT optional:
-# if it cannot stop the recording, the round-trip cannot run and the flow fails.
 - tapOn:
-    id: "composer-mic-button"
+    id: 'composer-mic-button'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: The audio pill surfaced (fixture URI captured) — send it
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "send-button"
+    id: 'send-button'
 - waitForAnimationToEnd:
     timeout: 30000
 
-# ──────────────────────────────────────────────
-# Phase 4: STT -> LLM -> TTS round-trip assertions (NON-optional)
-# ──────────────────────────────────────────────
-# The fixture clip says "Who painted the Mona Lisa". If STT is alive the user
-# bubble shows that transcript; if the LLM is alive an assistant bubble appears;
-# if TTS is alive the "Listen" affordance renders. A dead STT/LLM/TTS fails here.
-# 60s: the full voice round-trip is STT (gpt-4o-mini-transcribe) → LLM → TTS
-# (gpt-4o-mini-tts). The user-transcript bubble only replaces the optimistic
-# "Voice message" pill once the /audio response resolves, and on a cold local
-# backend that whole chain can take 15-25s. 20s raced the response and flaked;
-# 60s covers the real latency without weakening the assertion (STT must produce
-# this exact transcript, proving the pipeline is alive).
 - extendedWaitUntil:
     visible: "Who painted the Mona Lisa\\??"
     timeout: 60000
 - assertVisible:
-    id: "chat-bubble-assistant"
+    id: 'chat-bubble-assistant'
 - scrollUntilVisible:
     element:
-      text: "Écouter|Listen"
+      text: 'Écouter|Listen'
     direction: DOWN
     timeout: 20000
 
-# ──────────────────────────────────────────────
-# Phase 5: Cleanup — close the chat
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Fermer la conversation|Close conversation"
+    text: 'Fermer la conversation|Close conversation'
     optional: true
 - waitForAnimationToEnd

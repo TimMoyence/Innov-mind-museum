@@ -8,6 +8,11 @@ import {
   makeCompareMatch,
   makeCompareResult,
 } from '../../../helpers/factories';
+import { speakAppLanguage } from '../../../helpers/real-i18n';
+
+beforeEach(() => {
+  speakAppLanguage('fr');
+});
 
 jest.mock('@/features/chat/ui/MarkdownBubble', () => {
   const { Text } = require('react-native');

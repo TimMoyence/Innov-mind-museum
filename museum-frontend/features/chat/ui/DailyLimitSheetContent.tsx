@@ -11,12 +11,6 @@ interface DailyLimitSheetContentProps {
   onDismiss?: () => void;
 }
 
-/**
- * Bottom-sheet content (centered card, blocking) shown when the user has
- * exhausted their daily chat message allowance. Mounted by
- * `<BottomSheetRouter>` for the `daily-limit` route. Replaces the previous
- * `<DailyLimitModal>` (Modal wrapper stripped).
- */
 export const DailyLimitSheetContent = ({ close, onDismiss }: DailyLimitSheetContentProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();

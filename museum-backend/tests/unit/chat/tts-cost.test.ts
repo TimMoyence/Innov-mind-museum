@@ -1,16 +1,3 @@
-/**
- * M1 W5-C3 (RED, UFR-022) — OpenAiTextToSpeechService feeds the global LLM cost
- * circuit breaker on a successful synthesis, with the charge derived from the
- * (truncated) text length (design §D1/D2/D3/D5, AC2/AC5).
- *
- * We mock the breaker (`{ recordCharge: jest.fn() }`) and assert the
- * INTERACTION — the FSM itself is covered by `llm-cost-circuit-breaker.test.ts`.
- * fetch + env are mocked like the sibling `text-to-speech.test.ts`.
- *
- * FAILS today: `OpenAiTextToSpeechService` constructor takes no breaker
- * argument and never calls `recordCharge`.
- */
-
 jest.mock('@src/config/env', () => ({
   env: {
     llm: {

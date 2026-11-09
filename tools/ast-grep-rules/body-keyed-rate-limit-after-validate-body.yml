@@ -1,31 +1,3 @@
-# R8 / TD-EX-01 — Body-keyed rate-limit middleware must appear AFTER
-# validateBody() in every router.post() registration under
-# museum-backend/src/modules/{auth,chat}/.
-#
-# spec.md §3.2 R8:
-#   "If a developer adds a new POST route that uses both validateBody and a
-#   body-keyed express-rate-limit, then the CI guard shall fail the PR if
-#   ordering is reversed."
-#
-# design.md §D5:
-#   Rule matches router.post(path, ...args) where the args list contains BOTH
-#   a validateBody(...) call AND a named body-keyed limiter identifier where
-#   the LIMITER appears BEFORE validateBody in the argument list.
-#
-# Body-keyed limiters (named allowlist per design D4):
-#   - loginByAccountLimiter  (keys on req.body.email)
-#   - refreshLimiter         (keys on req.body.refreshToken → familyId)
-#   - socialLoginLimiter     (keys on req.body.provider)
-#   - challengeLimiter       (keys on req.body.mfaSessionToken → userId)
-#   - recoveryLimiter        (keys on req.body.mfaSessionToken → userId)
-#
-# This rule catches the shape:
-#   router.post(path, ..., <bodyKeyedLimiter>, ..., validateBody(...), ...)
-#
-# After green phase reorders the middleware, this rule produces 0 findings.
-#
-# Severity: error — blocks CI.
-# Scope: museum-backend/src/modules/{auth,chat}/**/*.ts
 
 id: body-keyed-rate-limit-after-validate-body
 language: TypeScript
@@ -51,8 +23,6 @@ note: |
 
 rule:
   any:
-    # Each pattern matches: limiter identifier appears before validateBody(...)
-    # in the same router.post() call argument list.
     - pattern: >
         $ROUTER.post($PATH, $$$BEFORE, loginByAccountLimiter, $$$MIDDLE,
         validateBody($SCHEMA), $$$AFTER)

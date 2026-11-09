@@ -16,10 +16,8 @@ interface UseLocationResult {
   error: string | null;
 }
 
-/** Maximum time we wait for a fresh GPS fix before falling back to the cached position. */
 const GPS_TIMEOUT_MS = 8_000;
 
-/** Symbol used to detect timeout in Promise.race without confusing it with a real fix. */
 const TIMEOUT_SENTINEL = Symbol('gps-timeout');
 
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMEOUT_SENTINEL> => {
@@ -34,12 +32,6 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | typeof TIM
   });
 };
 
-/**
- * Hook that requests foreground location permission and returns the current position.
- * On mount, hydrates from the last known position cache so the map can render
- * immediately on the right area for returning users; then races a fresh GPS fix
- * against an 8s timeout. On timeout, the cached position is kept.
- */
 export const useLocation = (): UseLocationResult => {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -49,10 +41,11 @@ export const useLocation = (): UseLocationResult => {
 
   useEffect(() => {
     let cancelled = false;
+    const isCancelled = (): boolean => cancelled;
 
     const run = async () => {
       const cached = await locationCache.load();
-      if (cancelled) return;
+      if (isCancelled()) return;
       if (cached) {
         setLatitude(cached.latitude);
         setLongitude(cached.longitude);
@@ -65,11 +58,9 @@ export const useLocation = (): UseLocationResult => {
       try {
         const { status: permissionStatus } = await Location.requestForegroundPermissionsAsync();
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- async cancellation guard mutated by useEffect cleanup
-        if (cancelled) return;
+        if (isCancelled()) return;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- expo-location returns string-typed status from permission APIs
-        if (permissionStatus !== 'granted') {
+        if (permissionStatus !== Location.PermissionStatus.GRANTED) {
           setStatus('denied');
           return;
         }
@@ -81,11 +72,9 @@ export const useLocation = (): UseLocationResult => {
           GPS_TIMEOUT_MS,
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- async cancellation guard mutated by useEffect cleanup
-        if (cancelled) return;
+        if (isCancelled()) return;
 
         if (result === TIMEOUT_SENTINEL) {
-          // Keep cached position if any; surface a soft error so the UI can show a hint.
           setError(
             getErrorMessage(
               createAppError({ kind: 'Location', code: 'timeout', message: 'timeout' }),
@@ -102,8 +91,7 @@ export const useLocation = (): UseLocationResult => {
           longitude: result.coords.longitude,
         });
       } catch (err) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- async cancellation guard mutated by useEffect cleanup
-        if (cancelled) return;
+        if (isCancelled()) return;
         setError(
           getErrorMessage(
             createAppError({

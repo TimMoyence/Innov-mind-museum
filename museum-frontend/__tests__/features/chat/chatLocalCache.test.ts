@@ -1,4 +1,3 @@
-// ── AsyncStorage mock ───────────────────────────────────────────────────────
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
@@ -27,7 +26,6 @@ function makeCachedAnswer(overrides: Partial<CachedAnswer> = {}): CachedAnswer {
 
 describe('chatLocalCache store', () => {
   beforeEach(() => {
-    // Reset store between tests
     useChatLocalCacheStore.setState({ entries: {} });
   });
 
@@ -71,7 +69,6 @@ describe('chatLocalCache store', () => {
       });
 
       expect(result).toBeNull();
-      // Entry should have been removed
       expect(Object.keys(useChatLocalCacheStore.getState().entries)).toHaveLength(0);
     });
 
@@ -112,14 +109,13 @@ describe('chatLocalCache store', () => {
     it('evicts oldest entries when exceeding MAX_LOCAL_ENTRIES', () => {
       const store = useChatLocalCacheStore.getState();
 
-      // Store MAX_LOCAL_ENTRIES + 5 entries
       const now = Date.now();
       const entries: CachedAnswer[] = [];
       for (let i = 0; i < MAX_LOCAL_ENTRIES + 5; i++) {
         entries.push(
           makeCachedAnswer({
             question: `Question number ${String(i)}`,
-            cachedAt: now - (MAX_LOCAL_ENTRIES + 5 - i), // increasing timestamp = newer
+            cachedAt: now - (MAX_LOCAL_ENTRIES + 5 - i),
           }),
         );
       }
@@ -129,8 +125,6 @@ describe('chatLocalCache store', () => {
       const state = useChatLocalCacheStore.getState();
       expect(Object.keys(state.entries)).toHaveLength(MAX_LOCAL_ENTRIES);
 
-      // The oldest 5 should have been evicted
-      // The oldest had cachedAt = 1000..1004, so questions 0-4
       const resultOldest = state.lookup({
         text: 'Question number 0',
         museumId: 'louvre',
@@ -139,7 +133,6 @@ describe('chatLocalCache store', () => {
       });
       expect(resultOldest).toBeNull();
 
-      // The newest should still be there
       const resultNewest = state.lookup({
         text: `Question number ${String(MAX_LOCAL_ENTRIES + 4)}`,
         museumId: 'louvre',
@@ -200,7 +193,6 @@ describe('chatLocalCache store', () => {
       const state = useChatLocalCacheStore.getState();
       expect(Object.keys(state.entries)).toHaveLength(1);
 
-      // orsay entry should remain
       const result = state.lookup({
         text: 'Q3',
         museumId: 'orsay',

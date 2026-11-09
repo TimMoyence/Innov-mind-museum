@@ -1,18 +1,5 @@
 import { assertMatchesOpenApiRequest } from 'tests/helpers/openapi/openapi-response-validator';
 
-/**
- * Contract tests for REQUEST bodies against the OpenAPI spec.
- *
- * Mirror of `openapi-response.contract.test.ts` but exercises the
- * `requestBody.content.application/json.schema` path. The goal is to catch
- * drift between what routes actually validate (Zod schemas) and what the
- * OpenAPI spec promises to external consumers + the generated mobile types.
- *
- * These tests assert two things per endpoint:
- *   1. A canonical happy-path body matches the declared schema.
- *   2. A body missing `required` fields fails validation with a helpful error.
- */
-
 describe('openapi request contracts (active API)', () => {
   describe('auth', () => {
     it('POST /auth/register — canonical body matches', () => {
@@ -24,7 +11,6 @@ describe('openapi request contracts (active API)', () => {
           password: 'Sup3rStr0ngP@ss',
           firstname: 'Ada',
           lastname: 'Lovelace',
-          // A2: dateOfBirth is now a required field on the register schema (CNIL age gate).
           dateOfBirth: '1990-06-13',
         },
       });
@@ -73,12 +59,6 @@ describe('openapi request contracts (active API)', () => {
     });
   });
 
-  // T-API-5 (RED — S-BE-API drift fix R18 + attribution R23).
-  // Baseline FAILS: OpenAPI POST /api/reviews still lists `userName` in
-  // `required` (openapi.json:4457) — so a body WITHOUT `userName` fails the
-  // contract (assertion-fail), and a body WITH `sessionId` is currently not
-  // declared. After green (T-API-11) drops `userName` from required + adds
-  // optional `sessionId`, both assertions hold.
   describe('reviews (drift fix)', () => {
     it('POST /reviews — body {rating, comment} (NO userName) matches the contract (R18)', () => {
       assertMatchesOpenApiRequest({

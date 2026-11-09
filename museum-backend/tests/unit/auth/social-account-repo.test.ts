@@ -5,14 +5,12 @@ import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/s
 import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockTypeOrmRepo, makeMockDataSource } from 'tests/helpers/shared/mock-deps';
 
-// ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
   const { repo } = makeMockTypeOrmRepo<SocialAccount>();
   const dataSource = makeMockDataSource(repo);
   return { repo, dataSource };
 }
 
-/** Build a fake SocialAccount entity. */
 function makeSocialAccount(overrides: Partial<SocialAccount> = {}): SocialAccount {
   const user = makeUser();
   return {
@@ -38,7 +36,6 @@ describe('SocialAccountRepositoryPg', () => {
     sut = new SocialAccountRepositoryPg(mocks.dataSource);
   });
 
-  // ─── findByProviderAndProviderUserId ───
   describe('findByProviderAndProviderUserId', () => {
     it('returns SocialAccountRow when found', async () => {
       const entity = makeSocialAccount();
@@ -74,7 +71,6 @@ describe('SocialAccountRepositoryPg', () => {
     });
   });
 
-  // ─── findByUserId ───
   describe('findByUserId', () => {
     it('returns array of SocialAccountRow for a user', async () => {
       const apple = makeSocialAccount({ id: 'sa-1', provider: 'apple' });
@@ -98,7 +94,6 @@ describe('SocialAccountRepositoryPg', () => {
     });
   });
 
-  // ─── create ───
   describe('create', () => {
     it('creates and saves a social account, returns SocialAccountRow', async () => {
       const saved = makeSocialAccount({ userId: 5 });
@@ -181,7 +176,6 @@ describe('SocialAccountRepositoryPg', () => {
     });
   });
 
-  // ─── deleteByUserId ───
   describe('deleteByUserId', () => {
     it('deletes all social accounts for the given userId', async () => {
       repo.delete.mockResolvedValue({ affected: 2, raw: [] });

@@ -5,10 +5,6 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 
 import { authStyles as styles } from './authStyles';
 
-/**
- * "— or continue with —" horizontal rule with centered label, used to
- * separate the email/password form from the social login buttons.
- */
 export function AuthSeparator() {
   const { t } = useTranslation();
   const { theme } = useTheme();

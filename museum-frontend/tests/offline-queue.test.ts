@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { OfflineQueue } from '../features/chat/application/offlineQueue';
@@ -9,6 +9,10 @@ describe('OfflineQueue', () => {
 
   beforeEach(() => {
     queue = new OfflineQueue();
+  });
+
+  afterEach(() => {
+    mock.timers.reset();
   });
 
   it('enqueue adds an element with unique id, createdAt, and retryCount=0', () => {
@@ -326,20 +330,14 @@ describe('OfflineQueue', () => {
     it('removes messages older than maxAgeMs', () => {
       const q = new OfflineQueue({ maxQueueSize: 100, maxAgeMs: 60_000 });
 
-      // Manually insert messages with old timestamps
       const entry = q.enqueue({ sessionId: 's1', text: 'recent' });
       assert.ok(entry !== null);
 
-      // Access internal queue via getAll + remove + re-add with old timestamp is complex,
-      // so we test prune indirectly: enqueue a message, then prune with a very short maxAgeMs
       const shortLived = new OfflineQueue({ maxQueueSize: 100, maxAgeMs: 1 });
       shortLived.enqueue({ sessionId: 's1', text: 'will-expire' });
 
-      // Wait a tiny bit so the message is older than 1ms
-      const start = Date.now();
-      while (Date.now() - start < 5) {
-        // busy-wait to ensure at least 1ms passes
-      }
+      mock.timers.enable({ apis: ['Date'], now: Date.now() });
+      mock.timers.tick(5);
 
       shortLived.prune();
       assert.equal(shortLived.size(), 0, 'expired message should be pruned');
@@ -357,10 +355,8 @@ describe('OfflineQueue', () => {
       const q = new OfflineQueue({ maxQueueSize: 100, maxAgeMs: 1 });
       q.enqueue({ sessionId: 's1', text: 'a' });
 
-      const start = Date.now();
-      while (Date.now() - start < 5) {
-        // busy-wait
-      }
+      mock.timers.enable({ apis: ['Date'], now: Date.now() });
+      mock.timers.tick(5);
 
       let notified = false;
       q.subscribe(() => {
@@ -395,10 +391,8 @@ describe('OfflineQueue', () => {
       });
       q.enqueue({ sessionId: 's1', text: 'will-expire', imageUri: 'file:///tmp/photo.jpg' });
 
-      const start = Date.now();
-      while (Date.now() - start < 5) {
-        // busy-wait
-      }
+      mock.timers.enable({ apis: ['Date'], now: Date.now() });
+      mock.timers.tick(5);
 
       q.prune();
       assert.equal(evicted.length, 1, 'onEvict should receive the pruned message');

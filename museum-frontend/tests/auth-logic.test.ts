@@ -8,7 +8,6 @@ import {
   isAuthInvalidError,
 } from '../features/auth/domain/authLogic.pure';
 
-/** Helper: builds a fake JWT with the given payload (no real signature). */
 const fakeJwt = (payload: Record<string, unknown>): string => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const body = btoa(JSON.stringify(payload));

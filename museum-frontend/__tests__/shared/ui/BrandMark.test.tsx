@@ -1,11 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 
-// NOTE: do NOT import the global test-utils — it stubs BrandMark itself with a
-// placeholder View so the rest of the suite can render screens without dragging
-// in the real <Image>. Here we want the real component, so we inline the
-// minimal mocks BrandMark transitively needs.
-
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => ({ width: 320, height: 568, scale: 2, fontScale: 1 }),

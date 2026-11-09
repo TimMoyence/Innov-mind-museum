@@ -1,28 +1,9 @@
-/**
- * R2 RED — `<ExportCsvButton kind="sessions" />` on /admin/analytics.
- *
- * Pins R2 §1 R21 / R22 / R23 / R24 + Risk7 + AC2 down BEFORE implementation :
- *  - Button renders with label `dict.admin.export.sessions.label` on the page.
- *  - Hidden if user.role NOT in {super_admin, museum_manager, admin}.
- *  - Click → fetch `/api/admin/export/sessions.csv` with credentials, triggers
- *    blob download via `URL.createObjectURL` + synth `<a download>` click.
- *  - Loading state during fetch (aria-busy=true).
- *  - Error state on non-2xx (toast or aria-live surfaces the failure).
- *
- * Production targets (R2 §0.3) :
- *   museum-web/src/components/admin/ExportCsvButton.tsx
- *   wired into museum-web/src/app/[locale]/admin/analytics/page.tsx
- *
- * MUST FAIL at baseline `a77e48aa` — component + dict.admin.export keys absent.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import type { UserRole } from '@/lib/admin-types';
-
-// ── Mock auth so we can flip the role per test ──────────────────────────
 
 const mockUser = { id: 1, email: 'a@b.com', name: 'a', role: 'super_admin' as UserRole };
 const useAuthMock = vi.fn(() => ({
@@ -47,9 +28,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-// Extend the admin dict mock with export keys (R2 §3.8) — the component
-// reads these via `useAdminDict()`. At baseline the keys are absent → test
-// also fails on access.
 type AdminDictWithExport = typeof mockAdminDict & {
   export: {
     sessions: { label: string; downloading: string; error: string };
@@ -78,7 +56,6 @@ function Providers({ children, userRole }: { children: React.ReactNode; userRole
 describe('ExportCsvButton kind=sessions (R2 R21 / R22 / R23 / R24)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // jsdom does not implement URL.createObjectURL — stub it for the blob path.
     Object.assign(URL, {
       createObjectURL: vi.fn(() => 'blob:mock-url'),
       revokeObjectURL: vi.fn(),
@@ -184,7 +161,6 @@ describe('ExportCsvButton kind=sessions (R2 R21 / R22 / R23 / R24)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Export Sessions/i }));
 
     await waitFor(() => {
-      // Error is surfaced via aria-live region OR text node — match liberally.
       expect(screen.getByText(/Failed/i)).toBeInTheDocument();
     });
   });

@@ -4,9 +4,6 @@ import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import '../../../helpers/test-utils';
 import { makeEnrichedImage } from '../../../helpers/factories';
 
-// Mock useReducedMotion so the goTo() branch can be driven deterministically
-// without relying on AccessibilityInfo platform behaviour. Default = false
-// (decorative animation enabled); individual tests override per test.
 const mockReduceMotion = jest.fn(() => false);
 jest.mock('@/shared/ui/hooks/useReducedMotion', () => ({
   useReducedMotion: () => mockReduceMotion(),
@@ -151,7 +148,6 @@ describe('ImageFullscreenModal', () => {
     render(<ImageFullscreenModal images={images} initialIndex={0} visible onClose={jest.fn()} />);
     expect(screen.getByText('1 / 2')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('a11y.chat.next_image'));
-    // Drain Animated.timing(scale, 100ms) and the follow-up 150ms ramp-back.
     act(() => {
       jest.advanceTimersByTime(300);
     });
@@ -159,19 +155,12 @@ describe('ImageFullscreenModal', () => {
     jest.useRealTimers();
   });
 
-  // ── Audit #16 (R11) — UFR-022 run 2026-05-23-chat-composer-buttons-modal-dismiss ──
-  // No tap-anywhere-to-close: the image area is reserved for prev/next tap
-  // zones + swipe-down dismiss, never for "tap on image center". This guard
-  // ensures any future refactor that wires a tap-to-close handler on the
-  // image host fails CI.
   it('tap on image center does not call onClose (audit #16, R11)', () => {
     const onClose = jest.fn();
     const images = [makeEnrichedImage({ caption: 'Center' })];
     render(<ImageFullscreenModal images={images} initialIndex={0} visible onClose={onClose} />);
 
-    // The image is rendered with accessibilityLabel = current.caption.
     const image = screen.getByLabelText('Center');
-    // The image is a plain RN <Image> with no onPress handler.
     expect((image.props as { onPress?: () => void }).onPress).toBeUndefined();
     expect(onClose).not.toHaveBeenCalled();
   });

@@ -14,15 +14,9 @@ export interface ListAllReviewsInput {
   status?: string;
   page: number;
   limit: number;
-  /**
-   * C1B — tenant scope (BOLA). `undefined`/`null` = global cross-tenant view
-   * (super_admin/admin). For a `museum_manager` the route forces this to their
-   * JWT claim so the repo filters to their own museum's reviews only.
-   */
   museumId?: number | null;
 }
 
-/** Admin use only — lists all reviews regardless of status. */
 export class ListAllReviewsUseCase {
   constructor(private readonly repository: IReviewRepository) {}
 

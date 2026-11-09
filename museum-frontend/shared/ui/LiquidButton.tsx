@@ -42,9 +42,7 @@ export function LiquidButton({
     if (hapticOnPress) {
       try {
         await Haptics.selectionAsync();
-      } catch {
-        // haptics unavailable on simulator / web
-      }
+      } catch {}
     }
     await onPress();
   };

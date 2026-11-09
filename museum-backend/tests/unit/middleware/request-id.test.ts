@@ -38,7 +38,6 @@ describe('requestIdMiddleware', () => {
     requestIdMiddleware(req, res, next);
 
     const requestId = req.requestId;
-    // UUID v4 pattern (also validates it's defined and non-empty)
     expect(requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(res.setHeader).toHaveBeenCalledWith('x-request-id', requestId);
     expect(next).toHaveBeenCalledTimes(1);
@@ -52,7 +51,6 @@ describe('requestIdMiddleware', () => {
     requestIdMiddleware(req, res, next);
 
     const requestId = req.requestId;
-    // Should not be whitespace — should be a generated UUID
     expect(requestId).toMatch(/^[0-9a-f]{8}-/);
     expect(next).toHaveBeenCalledTimes(1);
   });

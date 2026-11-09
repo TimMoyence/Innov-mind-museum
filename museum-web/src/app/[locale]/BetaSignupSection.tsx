@@ -17,16 +17,6 @@ interface BetaSignupSectionProps {
 
 type ValidationKey = 'email' | 'consent';
 
-/**
- * Public beta-signup section (R3 §1 R2-R11 + D7 a11y).
- *
- * - 1 email + 1 consent + 1 hidden honeypot — friction maximally low.
- * - Posts JSON to `/api/leads/beta` on submit (R6); 202 toggles to the
- *   success copy in a `role="status" aria-live="polite"` region (R7 +
- *   R20).
- * - Idempotent duplicates surface the SAME success copy as a first signup —
- *   no enumeration leak (R16).
- */
 export default function BetaSignupSection({ dict, locale }: BetaSignupSectionProps) {
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(false);
@@ -81,7 +71,6 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
-          {/* Email */}
           <div>
             <label
               htmlFor="beta-email"
@@ -107,7 +96,6 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
             <FormFieldError id="beta-email-error" error={errors.email} />
           </div>
 
-          {/* Consent */}
           <div className="flex items-start gap-3">
             <input
               id="beta-consent"
@@ -136,10 +124,8 @@ export default function BetaSignupSection({ dict, locale }: BetaSignupSectionPro
           </div>
           <FormFieldError error={errors.consent} />
 
-          {/* Honeypot — must NOT be visible to humans, NOT in tab order */}
           <HoneypotField value={website} onChange={setWebsite} />
 
-          {/* Polite live region for the error message (success has its own block above) */}
           <div aria-live="polite" className="min-h-[1.5rem]">
             {failed ? <AlertBanner variant="error" message={dict.error} /> : null}
           </div>

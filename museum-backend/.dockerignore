@@ -8,32 +8,24 @@ coverage
 .env.*
 npm-debug.log
 
-# C3 — local ONNX bundle. The prod build gets it via `COPY --from` the pinned
-# GHCR base image (deploy/Dockerfile.prod); a dev-machine `models/` dir is never
-# shipped from the host context, so exclude it to keep the context small.
 models/
 
-# Test & dev files
 tests/
 *.test.ts
 jest.config.ts
 
-# Documentation
 docs/
 *.md
 !README.md
 
-# Scripts (only keep those needed at runtime: seed scripts for deploy)
 scripts/*
 !scripts/seed-museums.ts
 !scripts/seed-knowledge.ts
 !scripts/seed-smoke-account.ts
 
-# Docker configs (avoid recursive context)
 docker-compose*.yml
 deploy/
 
-# Editor & CI
 .vscode/
 .claude/
 .github/

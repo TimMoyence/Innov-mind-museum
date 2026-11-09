@@ -4,10 +4,6 @@ import { logger } from '@shared/logger/logger';
 
 import type { DataSource } from 'typeorm';
 
-/**
- * Throttle between non-empty chunks so a runaway purge cannot monopolise
- * pgbouncer (incident 2026-05-08 hardening — /team run `2026-05-08-prune-hardening`).
- */
 const CHUNK_THROTTLE_MS = 50;
 
 export interface PruneReviewsResult {
@@ -16,20 +12,11 @@ export interface PruneReviewsResult {
 }
 
 export interface PruneReviewsConfig {
-  /** Default 30. */
   rejectedDays: number;
-  /** Default 60. */
   pendingDays: number;
-  /** Rows per chunk (single transaction). Default 1000. */
   batchLimit: number;
 }
 
-/**
- * do/while ensures the first DELETE always fires (even on an empty table),
- * exits when a chunk reports 0. TypeORM 0.3.x returns DELETE results as
- * `[rows, rowCount]` — see prune-support-tickets.ts for the production
- * incident background (2026-05-08).
- */
 async function prunePass(
   dataSource: DataSource,
   status: 'rejected' | 'pending',
@@ -37,9 +24,6 @@ async function prunePass(
   batchLimit: number,
   logKey: string,
 ): Promise<number> {
-  // SEC: `status` is a TS literal-typed arg (`'rejected' | 'pending'`) — compiler-enforced,
-  // never user input — so string interpolation is safe AND keeps the EXPLAIN plan identical
-  // to the pre-refactor literal-status query.
   const sql = `DELETE FROM "reviews"
        WHERE id IN (
          SELECT id FROM "reviews"
@@ -66,17 +50,6 @@ async function prunePass(
   return totalDeleted;
 }
 
-/**
- * Hard-deletes reviews in two passes:
- *   1. status = 'rejected' AND updatedAt < NOW() - rejectedDays
- *   2. status = 'pending'  AND updatedAt < NOW() - pendingDays
- *
- * GDPR: approved reviews kept forever (legitimate interest / public record).
- * Idempotent — re-running deletes only newly eligible rows. Chunked DELETE
- * LIMIT N loop holds row locks for milliseconds.
- *
- * ADR: docs/adr/ADR-019-reviews-retention.md
- */
 export async function pruneReviews(
   dataSource: DataSource,
   cfg: PruneReviewsConfig,

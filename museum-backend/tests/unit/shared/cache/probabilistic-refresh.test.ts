@@ -1,29 +1,8 @@
-/**
- * UFR-022 red phase — PR-10 probabilistic-refresh shared helper.
- * RUN_ID: 2026-05-23-pr-10-probabilistic-refresh.
- *
- * Direct unit tests for `@shared/cache/probabilistic-refresh` covering R5
- * cases (a)-(h) from the spec. The helper currently does NOT exist — these
- * tests are authored RED and FAIL with `Cannot find module …` until phase 4
- * green creates the module. Exit ≠ 0 = red success per UFR-022.
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>`, do NOT touch.
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-10-probabilistic-refresh/spec.md §4 (R1, R5)
- *                                                                            §6 A4 (acceptance)
- *   .claude/skills/team/team-state/2026-05-23-pr-10-probabilistic-refresh/design.md §1.2 (signatures)
- *                                                                              §4 (observable diff)
- *
- * Pattern reference: jest.spyOn(Math, 'random') + afterEach restoreAllMocks
- * mirrors museum-backend/tests/unit/shared/overpass-cache.test.ts:52-54,77,84.
- */
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+import { randomSource } from '@shared/utils/random';
 import {
   EARLY_REFRESH_THRESHOLD_DEFAULT,
   createBackgroundRefresh,
@@ -33,17 +12,10 @@ import {
 
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Flushes the IIFE microtask queue used by `createBackgroundRefresh` triggers. */
 async function flushMicrotasks(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-/**
- * Minimal CacheService double — only the methods the helper touches are wired.
- * The other CacheService methods are stubbed to `jest.fn()` so accidental
- * touches surface as expectation failures rather than `undefined is not a fn`.
- * @param overrides
- */
 function makeCacheStub(overrides: Partial<Record<keyof CacheService, jest.Mock>> = {}): {
   cache: CacheService;
   set: jest.Mock;
@@ -82,84 +54,66 @@ describe('probabilistic-refresh — shouldEarlyRefresh', () => {
   });
 
   it('exports EARLY_REFRESH_THRESHOLD_DEFAULT = 0.9', () => {
-    // R1: default threshold is 0.9 (spec §4 R1, design §1.2).
     expect(EARLY_REFRESH_THRESHOLD_DEFAULT).toBe(0.9);
   });
 
-  // R5 (a) — elapsedRatio < threshold → false AND Math.random NOT called.
   it('returns false when elapsedRatio < threshold and never calls Math.random', () => {
-    const spy = jest.spyOn(Math, 'random');
+    const spy = jest.spyOn(randomSource, 'unit');
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 0, ttlSeconds: 100 };
-    // 50_000 ms / 100_000 ms = 0.5 → < 0.9 → short-circuit return false.
     expect(shouldEarlyRefresh(entry, 50_000)).toBe(false);
     expect(spy).not.toHaveBeenCalled();
   });
 
-  // R5 (b) — ttlSeconds === 0 → false AND Math.random NOT called.
   it('returns false when ttlSeconds is zero and never calls Math.random', () => {
-    const spy = jest.spyOn(Math, 'random');
+    const spy = jest.spyOn(randomSource, 'unit');
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 1_000, ttlSeconds: 0 };
     expect(shouldEarlyRefresh(entry, 100_000)).toBe(false);
     expect(spy).not.toHaveBeenCalled();
   });
 
-  // R5 (b') — ttlSeconds < 0 (clock-skew defense) → false AND Math.random NOT called.
   it('returns false when ttlSeconds is negative and never calls Math.random', () => {
-    const spy = jest.spyOn(Math, 'random');
+    const spy = jest.spyOn(randomSource, 'unit');
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 1_000, ttlSeconds: -1 };
     expect(shouldEarlyRefresh(entry, 100_000)).toBe(false);
     expect(spy).not.toHaveBeenCalled();
   });
 
-  // R5 (c) — Math.random < adjustedRatio → true.
-  // ratio = 95_000 / 100_000 = 0.95 → adjustment = (0.95 - 0.9) / (1 - 0.9) = 0.5.
-  // stub random=0.04 < 0.5 → true.
   it('returns true when Math.random rolls below the adjusted ratio', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.04);
+    jest.spyOn(randomSource, 'unit').mockReturnValue(0.04);
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 0, ttlSeconds: 100 };
     expect(shouldEarlyRefresh(entry, 95_000)).toBe(true);
   });
 
-  // R5 (c') — strict-less-than boundary: Math.random === adjustedRatio → false.
-  // Kills EqualityOperator (< → <=) mutator.
   it('returns false when Math.random equals the adjustment boundary exactly', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    jest.spyOn(randomSource, 'unit').mockReturnValue(0.5);
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 0, ttlSeconds: 100 };
-    // ratio = 0.95, adjustment = 0.5, 0.5 < 0.5 = false (strict).
     expect(shouldEarlyRefresh(entry, 95_000)).toBe(false);
   });
 
-  // R5 (c'') — threshold override parameter honoured.
   it('accepts a custom threshold override and uses it in the ratio formula', () => {
-    // threshold = 0.8 → adjustment = (0.85 - 0.8) / (1 - 0.8) = 0.25.
-    jest.spyOn(Math, 'random').mockReturnValue(0.1);
+    jest.spyOn(randomSource, 'unit').mockReturnValue(0.1);
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 0, ttlSeconds: 100 };
     expect(shouldEarlyRefresh(entry, 85_000, 0.8)).toBe(true);
   });
 
   it('rejects a roll above the adjusted ratio with a custom threshold', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.3);
+    jest.spyOn(randomSource, 'unit').mockReturnValue(0.3);
     const entry: RefreshableEntry<unknown> = { value: null, storedAtMs: 0, ttlSeconds: 100 };
-    // threshold = 0.8, ratio = 0.85, adjustment = 0.25, 0.3 < 0.25 = false.
     expect(shouldEarlyRefresh(entry, 85_000, 0.8)).toBe(false);
   });
 
-  // R5 (c''') — Generic accepts union-with-null (NominatimReverseResult | null shape).
-  // NFR-1 from spec §5: T = X | null resolves without runtime guard.
   it('accepts a union-with-null payload type (T = X | null)', () => {
-    jest.spyOn(Math, 'random').mockReturnValue(0.99);
+    jest.spyOn(randomSource, 'unit').mockReturnValue(0.99);
     const entry: RefreshableEntry<{ x: number } | null> = {
       value: null,
       storedAtMs: 0,
       ttlSeconds: 100,
     };
-    // ratio = 0.95, adjustment = 0.5, 0.99 < 0.5 = false.
     expect(shouldEarlyRefresh(entry, 95_000)).toBe(false);
   });
 });
 
 describe('probabilistic-refresh — createBackgroundRefresh', () => {
-  // R5 (d) — positive TTL when isEmpty=false.
   it('calls cache.set with positiveTtlSeconds when isEmpty(value) returns false', async () => {
     const { cache, set } = makeCacheStub();
     const { logger } = makeLoggerStub();
@@ -185,7 +139,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // R5 (e) — negative TTL when isEmpty=true.
   it('calls cache.set with negativeTtlSeconds when isEmpty(value) returns true', async () => {
     const { cache, set } = makeCacheStub();
     const { logger } = makeLoggerStub();
@@ -211,7 +164,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // R5 (e') — null-sentinel isEmpty form (Nominatim-shaped payload).
   it('handles null-sentinel isEmpty (T = X | null) — picks negative TTL when value is null', async () => {
     const { cache, set } = makeCacheStub();
     const { logger } = makeLoggerStub();
@@ -237,7 +189,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // R5 (f) — refresh throws → logger.warn called, trigger does NOT throw.
   it('logs a warning when refresh rejects and never throws synchronously', async () => {
     const { cache, set } = makeCacheStub();
     const { logger, warn } = makeLoggerStub();
@@ -269,7 +220,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // R5 (g) — cache.set throws → logger.warn called, trigger does NOT throw.
   it('logs a warning when cache.set rejects and never throws synchronously', async () => {
     const setReject = jest.fn().mockRejectedValue(new Error('redis down'));
     const { cache } = makeCacheStub({ set: setReject });
@@ -302,7 +252,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // R5 (h) — non-Error thrown values are stringified (String(error) branch).
   it('stringifies non-Error rejection values via String(error)', async () => {
     const { cache, set } = makeCacheStub();
     const { logger, warn } = makeLoggerStub();
@@ -315,7 +264,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     });
     trigger({
       cacheKey: 'k:string-err',
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- intentional non-Error reject to exercise String(error) branch
       refresh: () => Promise.reject('plain string'),
       positiveTtlSeconds: 86_400,
       negativeTtlSeconds: 3_600,
@@ -328,9 +276,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     );
   });
 
-  // Factory returns a fresh function — deduplication of repeated factory calls is
-  // NOT a feature of the helper (callers cache the trigger themselves). This test
-  // pins that the trigger is a callable synchronous void.
   it('returns a function with synchronous void return type', () => {
     const { cache } = makeCacheStub();
     const { logger } = makeLoggerStub();
@@ -351,10 +296,6 @@ describe('probabilistic-refresh — createBackgroundRefresh', () => {
     expect(ret).toBeUndefined();
   });
 
-  // Logger contract: the helper passes `op: opName` so dashboards can split
-  // sources without parsing `failureMessage`. This is the ADDITIVE change from
-  // design.md §4 — frozen tests at the sweep sites assert
-  // `expect.objectContaining({error, cacheKey})` which remains satisfied.
   it('includes the opName in the log context on failure', async () => {
     const { cache } = makeCacheStub();
     const { logger, warn } = makeLoggerStub();

@@ -4,11 +4,6 @@ import {
   stopRateLimitSweep,
 } from '@shared/middleware/rate-limit.middleware';
 
-/**
- * Creates a test Express app with mocked healthCheck and provides
- * rate-limit cleanup helpers for beforeEach/afterAll.
- * @returns An object containing the Express app instance.
- */
 export function createRouteTestApp() {
   const app = createApp({
     healthCheck: async () => ({ database: 'up' }),
@@ -17,10 +12,8 @@ export function createRouteTestApp() {
   return { app };
 }
 
-/** Call in beforeEach to reset rate limit state between tests. */
 export function resetRateLimits() {
   clearRateLimitBuckets();
 }
 
-/** Call in afterAll to stop the background sweep interval. */
 export { stopRateLimitSweep };

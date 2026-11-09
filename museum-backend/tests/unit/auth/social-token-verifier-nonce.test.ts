@@ -1,14 +1,3 @@
-/**
- * F3 — verifier-level nonce binding.
- *
- * Asserts the four cells of the nonce-enforcement matrix:
- *   provider × (expectedNonce present | absent) × (env.auth.oidcNonceEnforce true | false)
- *
- * Also asserts the Apple SHA-256 transform: Apple Sign-In hashes the nonce
- * client-side before embedding it in the ID token, so the backend MUST compare
- * `decoded.nonce` against `sha256(expectedNonce)` lowercase hex — NOT the raw
- * nonce. Google passes the nonce verbatim.
- */
 import crypto from 'node:crypto';
 
 import jwt from 'jsonwebtoken';
@@ -60,7 +49,6 @@ const signToken = (payload: Record<string, unknown>): string =>
   });
 
 const mockFetch = jest.fn();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- override global fetch in tests
 (global as any).fetch = mockFetch;
 
 describe('social-token-verifier — F3 nonce binding', () => {
@@ -77,8 +65,6 @@ describe('social-token-verifier — F3 nonce binding', () => {
       json: async () => mockJwksResponse,
     });
   });
-
-  // ── Apple: SHA-256 binding ──────────────────────────────────────────────
 
   it('accepts an Apple ID token whose nonce claim is sha256(expectedNonce) lowercase hex', async () => {
     const expectedNonce = 'apple-raw-nonce-value';
@@ -99,7 +85,7 @@ describe('social-token-verifier — F3 nonce binding', () => {
       sub: 'apple-user',
       iss: 'https://appleid.apple.com',
       aud: 'com.example.app',
-      nonce: expectedNonce, // mistakenly raw, not sha256
+      nonce: expectedNonce,
     });
     await expect(verifySocialIdToken('apple', token, expectedNonce)).rejects.toMatchObject({
       code: 'INVALID_NONCE',
@@ -117,8 +103,6 @@ describe('social-token-verifier — F3 nonce binding', () => {
       code: 'INVALID_NONCE',
     });
   });
-
-  // ── Google: direct binding ─────────────────────────────────────────────
 
   it('accepts a Google ID token whose nonce claim equals the expected nonce verbatim', async () => {
     const expectedNonce = 'google-nonce-abc';
@@ -145,8 +129,6 @@ describe('social-token-verifier — F3 nonce binding', () => {
       },
     );
   });
-
-  // ── Migration window (oidcNonceEnforce flag) ──────────────────────────
 
   it('passes when expectedNonce is undefined and enforce=false (legacy mobile build)', async () => {
     oidcNonceEnforce = false;

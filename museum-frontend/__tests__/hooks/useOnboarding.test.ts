@@ -2,8 +2,6 @@ import '@/__tests__/helpers/test-utils';
 import { renderHook, act } from '@testing-library/react-native';
 import { useOnboarding } from '@/features/onboarding/application/useOnboarding';
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useOnboarding', () => {
   const TOTAL_STEPS = 4;
 
@@ -27,7 +25,6 @@ describe('useOnboarding', () => {
   it('does not advance past the last step', () => {
     const { result } = renderHook(() => useOnboarding(TOTAL_STEPS));
 
-    // Advance to the last step
     act(() => {
       result.current.next();
       result.current.next();
@@ -37,7 +34,6 @@ describe('useOnboarding', () => {
     expect(result.current.currentStep).toBe(3);
     expect(result.current.isLast).toBe(true);
 
-    // Try to go beyond
     act(() => {
       result.current.next();
     });

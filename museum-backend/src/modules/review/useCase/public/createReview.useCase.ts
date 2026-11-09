@@ -16,22 +16,9 @@ interface CreateReviewUseCaseInput {
   user: ReviewAuthorProfile;
   rating: number;
   comment: string;
-  /**
-   * NPS attribution (C2 / R1-R4 / Q1). UUID of the chat session the review was
-   * authored from. The use-case resolves the session via the session-lookup
-   * port and derives `museum_id` from `session.museumId` (may be NULL). An
-   * absent / foreign / not-owned session persists BOTH `museum_id = NULL` AND
-   * `session_id = NULL` silently (no 400, no FK violation, no existence leak,
-   * no cross-user link). The `session_id` link is kept only when the lookup
-   * succeeds. The author's own tenant claim is NEVER read.
-   */
   sessionId?: string | null;
 }
 
-/**
- * Shape: "Firstname L." (first initial of last name), or just the firstname when absent.
- * Falls back to "Anonymous" if neither firstname nor lastname exists.
- */
 export function buildReviewDisplayName(user: ReviewAuthorProfile): string {
   const firstname = user.firstname?.trim() ?? '';
   const lastname = user.lastname?.trim() ?? '';
@@ -40,7 +27,6 @@ export function buildReviewDisplayName(user: ReviewAuthorProfile): string {
   return firstname || `${lastname.charAt(0)}.`;
 }
 
-/** Creates a new review with status 'pending'. */
 export class CreateReviewUseCase {
   constructor(
     private readonly repository: IReviewRepository,
@@ -52,8 +38,6 @@ export class CreateReviewUseCase {
       throw unauthorized('User authentication required');
     }
 
-    // Wave B C7 / R-C7b — NPS 0-10 range (was 1-5; back-compat: 1-5 still
-    // valid since the new range is a strict superset).
     if (!Number.isInteger(input.rating) || input.rating < 0 || input.rating > 10) {
       throw invalidInput('rating must be an integer between 0 and 10');
     }
@@ -65,18 +49,6 @@ export class CreateReviewUseCase {
 
     const derivedName = buildReviewDisplayName(input.user).slice(0, 128);
 
-    // NPS attribution (C2 / R1-R4 / Q1). Derive museum scope from the VISITED
-    // session, never from the noter's tenant claim. Absent / foreign /
-    // not-owned session → museumId NULL (silent, no 400, no existence leak).
-    //
-    // The sessionId link is persisted ONLY when the lookup succeeds (session
-    // exists AND is owned by the noter). Persisting the raw client sessionId
-    // unconditionally would (a) trip the reviews.session_id → chat_sessions FK
-    // with a non-existent UUID (500 instead of the silent 201), and (b) link a
-    // review to another user's session (cross-user privacy leak) while the
-    // 201/500 split would become an existence oracle, defeating the
-    // IReviewSessionLookup no-existence-leak guarantee. Keep museumId and
-    // sessionId coherent: both NULL when the lookup misses.
     let museumId: number | null = null;
     let resolvedSessionId: string | null = null;
     if (input.sessionId) {

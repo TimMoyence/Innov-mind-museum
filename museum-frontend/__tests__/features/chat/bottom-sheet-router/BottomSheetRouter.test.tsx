@@ -1,12 +1,3 @@
-/**
- * Red component tests for `<BottomSheetRouter />` (C4 / AC4, AC5, AC6, AC7).
- *
- * These tests target router orchestration only — the real `*SheetContent`
- * components live behind the route registry. Tests inject mock content
- * components via `test-harness.tsx::installMockRoutes()` and drive the
- * router imperatively via `RouterTestHost` + ref.
- */
-
 import React from 'react';
 import { AccessibilityInfo, Animated, BackHandler } from 'react-native';
 import { act, render } from '@testing-library/react-native';
@@ -43,7 +34,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
     installMockRoutes();
   });
 
-  // ── AC4 ────────────────────────────────────────────────────────────────────
   describe('AC4 — open / close lifecycle', () => {
     it('renders the route Content when open() is called', () => {
       const ref = React.createRef<RouterHandle>();
@@ -65,7 +55,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
       act(() => {
         ref.current?.open('context-menu', { message: { id: 'msg-1' } });
       });
-      // Drain the entrance `Animated.timing` so the reducer settles `open`.
       act(() => {
         jest.runAllTimers();
       });
@@ -74,8 +63,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
       act(() => {
         ref.current?.close();
       });
-      // Drain the exit `Animated.timing` so the container dispatches CLOSE_DONE
-      // and the reducer settles back to `idle` (spec R12 sequencing).
       act(() => {
         jest.runAllTimers();
       });
@@ -85,7 +72,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
     });
   });
 
-  // ── AC5 ────────────────────────────────────────────────────────────────────
   describe('AC5 — accessibility invariants on mount', () => {
     it('sets accessibilityViewIsModal=true on the sheet container', () => {
       const ref = React.createRef<RouterHandle>();
@@ -94,9 +80,7 @@ describe('<BottomSheetRouter /> — orchestration', () => {
         ref.current?.open('consent', {});
       });
 
-      // The sheet container must wrap the content with accessibilityViewIsModal.
       const accept = view.getByLabelText('consent.accept');
-      // Walk up the rendered tree (TestInstance) to find the dialog container.
       let node: unknown = accept;
       let modal: { props: { accessibilityViewIsModal?: boolean } } | null = null;
       while (node && typeof node === 'object' && 'parent' in node) {
@@ -156,7 +140,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
     });
   });
 
-  // ── AC6 ────────────────────────────────────────────────────────────────────
   describe('AC6 — reduced motion skips animations', () => {
     it('does NOT call Animated.timing with duration>0 when useReducedMotion()=true', () => {
       mockReduceMotion.mockReturnValue(true);
@@ -171,7 +154,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
 
       for (const call of timingSpy.mock.calls) {
         const config = call[1];
-        // Either timing is not used at all, or duration is 0 (snap).
         expect(config?.duration ?? 0).toBe(0);
       }
 
@@ -179,7 +161,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
     });
   });
 
-  // ── AC7 ────────────────────────────────────────────────────────────────────
   describe('AC7 — Android hardware back button', () => {
     it('non-blocking route: back press closes the sheet and consumes the event', () => {
       jest.useFakeTimers();
@@ -199,7 +180,6 @@ describe('<BottomSheetRouter /> — orchestration', () => {
       act(() => {
         consumed = back.invoke();
       });
-      // Drain the exit `Animated.timing` so CLOSE_DONE fires (spec R12).
       act(() => {
         jest.runAllTimers();
       });

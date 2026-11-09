@@ -6,6 +6,7 @@ import { ensureSessionAccess } from '@modules/chat/useCase/session/session-acces
 import { invalidInput } from '@shared/errors/app.error';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { maskPersonalData } from '@shared/pii/mask-personal-data';
+import { nonEmpty } from '@shared/utils/defaults';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
 
@@ -44,21 +45,9 @@ import type { LlmJudgeScope } from '@shared/observability/derive-tier';
 export interface PrepareReady {
   kind: 'ready';
   session: Awaited<ReturnType<typeof ensureSessionAccess>>;
-  /**
-   * W3 (T5.4) — resolved from `session.currentArtworkId` via the
-   * `ArtworkKnowledgeRepoPort` when present. Pre-sanitised title goes to the
-   * LLM prompt builder's `[CURRENT ARTWORK]` section. `null` ≠ `undefined`:
-   * `undefined` = lookup skipped (no `currentArtworkId`); `null` = lookup
-   * attempted and no row found.
-   */
   currentArtwork?: { title: string; roomId: string | null } | null;
   imageRef?: string;
   orchestratorImage?: PostMessageInput['image'];
-  /**
-   * SHA-256[:32] of post-EXIF-strip buffer. Present iff request carried
-   * `upload`/legacy-base64 image AND processing succeeded. Threaded into
-   * `buildLlmCacheInput` to lift image-bypass on LLM cache (R11/R12).
-   */
   imageContentHash?: string;
   requestedLocale?: string;
   history: Awaited<ReturnType<ChatRepository['listSessionHistory']>>;
@@ -69,29 +58,14 @@ export interface PrepareReady {
   webSearchBlock?: string;
   enrichedImages?: EnrichedImage[];
   resolvedLocation?: ResolvedLocation;
-  /**
-   * LLM02 — sanitized user input when provider scrubbed PII. Message service
-   * substitutes for `input.text` before LLM call so provider never sees raw PII.
-   */
-  /** Facts wrapped in Spotlighting envelope at orchestrator. */
   routerFacts?: readonly string[];
-  /** Web pages behind `routerFacts`, shown as sources when the model cites none. */
   routerSources?: readonly CitationSource[];
-  /** `'none'` short-circuits envelope. */
   routerSource?: KnowledgeRouterSource;
 }
 
 export interface PrepareRefused {
   kind: 'refused';
   result: PostMessageResult;
-  /**
-   * Hybrid-gravity (2026-06-01) — set when the refusal is a SECURITY hard-block
-   * (V1 keyword / sidecar block with a non-`off_topic` reason). The caller
-   * records a SECURITY-weight friction strike (design §5 / spec R2) so a repeat
-   * injection / PII spammer escalates into a cool-down. Absent for GDPR consent
-   * refusals (not a security event) and for `off_topic` blocks (the friction
-   * model already handles off-topic via the parallel-judge path).
-   */
   securityBlock?: boolean;
 }
 
@@ -109,33 +83,11 @@ export interface PrepareMessagePipelineDeps {
   dbLookup?: DbLookupService;
   extractionQueue?: ExtractionQueuePort;
   locationResolver?: LocationResolver;
-  /**
-   * GDPR — when supplied, location propagated to LLM prompt only if user
-   * granted `location_to_llm` scope. Without port: legacy always-propagate.
-   */
   locationConsentChecker?: LocationConsentChecker;
-  /**
-   * GDPR Art. 7 — gates text + image LLM dispatch on the granular
-   * `third_party_ai_<text|image>_<provider>` scopes (R2/R3 of cluster A).
-   * D3 fail-CLOSED: anonymous user (`currentUserId` nullish) refused without
-   * touching the repo. Without port: legacy always-allow (kept for tests that
-   * exercise other branches and for migration windows). Mirrors
-   * `locationConsentChecker` wiring (`location-resolver.ts:196-200` +
-   * `chat-module.ts:834-841`).
-   */
   thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
-  /**
-   * W3 (T5.4) — looked up for the LLM prompt `[CURRENT ARTWORK]` section
-   * when `chatSession.currentArtworkId` is populated. Optional: when missing,
-   * the section is simply never emitted (degrades gracefully).
-   */
   artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
 }
 
-/**
- * Pre-LLM: validate → process image → input guardrail → persist user →
- * enrichment → location. Extracted from ChatMessageService for file size cap.
- */
 export class PrepareMessagePipeline {
   private readonly repository: ChatRepository;
   private readonly imageProcessor: ImageProcessingService;
@@ -185,11 +137,6 @@ export class PrepareMessagePipeline {
   private enqueueForExtraction(results: SearchResult[], locale: string | undefined): void {
     if (!this.extractionQueue || results.length === 0 || !locale) return;
     const queue = this.extractionQueue;
-    // I-SEC9 (R9 / GDPR Art. 5(1)(c)) — the legacy `searchTerm` (raw user chat
-    // text) was removed from the BullMQ payload: it sat unused in Redis and
-    // had no functional consumer downstream (`extraction-job.service.ts`).
-    // Promise.resolve().then converts sync throw (queue closed w/ enableOfflineQueue:false
-    // when Redis down) into rejection so fireAndForget logs it instead of bubbling.
     fireAndForget(
       Promise.resolve().then(() =>
         queue.enqueueUrls(results.slice(0, 5).map((r) => ({ url: r.url, locale }))),
@@ -218,23 +165,10 @@ export class PrepareMessagePipeline {
     return {
       imageRef: processed.imageRef,
       orchestratorImage: processed.orchestratorImage,
-      // C3 — undefined for url-source per R2.
       imageContentHash: processed.imageContentHash,
     };
   }
 
-  /**
-   * R2 / R3 / R5 / D3 — `third_party_ai_<text|image>_<provider>` gate
-   * (cluster A, RUN_ID=2026-05-21-p0-gdpr). Runs BEFORE `ensureSessionAccess`
-   * so D3 anon (`currentUserId` nullish) fail-CLOSES before any session
-   * lookup, and so an authenticated turn with a denied scope never persists
-   * the user message, fans out enrichment, or hits Redis/BullMQ (R9 parity +
-   * GDPR Art. 5(1)(c)). The gate is intentionally session-independent —
-   * refusal locale derives from `input.context.locale` only (reading
-   * `session.locale` would leak session-existence to anon probers; the
-   * default `en` fallback inside `consent-gate.ts` matches existing
-   * `buildGuardrailRefusal` semantics).
-   */
   private async runConsentGate(
     sessionId: string,
     input: PostMessageInput,
@@ -276,8 +210,7 @@ export class PrepareMessagePipeline {
       ownerId ?? currentUserId,
     );
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string fallback
-    const requestedLocale = input.context?.locale?.trim() || session.locale || undefined;
+    const requestedLocale = nonEmpty(input.context?.locale?.trim()) ?? nonEmpty(session.locale);
 
     const userGuardrail = await this.guardrail.evaluateInput(text, input.context?.preClassified, {
       sessionId,
@@ -288,8 +221,6 @@ export class PrepareMessagePipeline {
     });
 
     if (!userGuardrail.allow) {
-      // Both user attempt + refusal always persisted (user row = moderation
-      // audit trail). Atomic TX: neither row lands without the other.
       const result = await this.guardrail.handleInputBlock({
         sessionId,
         reason: userGuardrail.reason,
@@ -297,10 +228,6 @@ export class PrepareMessagePipeline {
         userId: ownerId,
         userMessage: { sessionId, role: 'user', text, imageRef },
       });
-      // Hybrid-gravity (2026-06-01) — a security hard-block (any non-off_topic
-      // reason: insult / prompt_injection / unsafe_output / service_unavailable)
-      // feeds a SECURITY-weight friction strike at the call site. `off_topic`
-      // is excluded — the parallel-judge friction path owns off-topic.
       const securityBlock =
         userGuardrail.reason !== undefined && userGuardrail.reason !== 'off_topic';
       return { kind: 'refused', result, securityBlock };
@@ -319,9 +246,6 @@ export class PrepareMessagePipeline {
       requestId,
     });
 
-    // W3 (T5.4) — Resolve `[CURRENT ARTWORK]` block from session.currentArtworkId
-    // when the visitor has scanned a cartel. Missing repo or missing id =
-    // skip silently (degrades to no-block, never blocks the message).
     const currentArtwork = await this.resolveCurrentArtwork(session);
 
     return {
@@ -338,17 +262,6 @@ export class PrepareMessagePipeline {
     };
   }
 
-  /**
-   * W3 (T5.4) — Resolves the artwork the visitor is standing in front of so the
-   * LLM prompt builder can render `[CURRENT ARTWORK]`. Returns:
-   *   - `undefined` when no lookup attempted (no `currentArtworkId` on session
-   *     OR no repo wired) — caller MUST NOT emit the section.
-   *   - `null` when lookup attempted but the row was not found (deleted /
-   *     malformed) — caller treats as "no artwork data available", same as
-   *     undefined for the LLM but distinguishable in observability.
-   *   - `{ title, roomId }` on a hit. `title` is pre-sanitised here so the
-   *     prompt builder's defensive double-sanitisation is idempotent.
-   */
   private async resolveCurrentArtwork(
     session: ChatSession,
   ): Promise<{ title: string; roomId: string | null } | null | undefined> {
@@ -356,13 +269,10 @@ export class PrepareMessagePipeline {
     const currentArtworkId = session.currentArtworkId;
     if (!repo || !currentArtworkId) return undefined;
     try {
-      // I-SEC8 (OWASP LLM08) — scope the cartel lookup to the session's tenant
-      // so a cross-tenant artwork never leaks its title/room into the prompt.
       const row = await repo.findById(currentArtworkId, session.museumId);
       if (!row) return null;
       return { title: row.title, roomId: row.roomId ?? session.currentRoom ?? null };
     } catch {
-      // Fail-open — degraded LLM prompt is preferable to a 500 on chat turn.
       return null;
     }
   }
@@ -408,10 +318,6 @@ export class PrepareMessagePipeline {
     routerSource: KnowledgeRouterSource;
   }> {
     const { input, session, requestedLocale, history, ownerId, currentUserId, requestId } = args;
-    // TD-20 (R13d/R12) — per-tenant scope for the judge-via-knowledge-router
-    // path. `tier` derived from the session owner (or the requesting user) via
-    // the shared `deriveTier` (verbatim parity with the chat orchestrator).
-    // Spread-omit: a missing field is absent on the observation, never `null`.
     const routerScope: LlmJudgeScope = {
       ...(session.museumId != null ? { museumId: session.museumId } : {}),
       tier: deriveTier(ownerId ?? currentUserId),
@@ -503,16 +409,12 @@ export class PrepareMessagePipeline {
       lowDataMode: input.context?.lowDataMode ?? false,
       resolvedLocation: prep.resolvedLocation,
       contentPreferences: input.context?.contentPreferences,
-      // R1 cache scoping: museumId+userId pick global-vs-user-scoped key namespace.
       museumId: prep.session.museumId ?? null,
       userId: prep.ownerId ?? null,
       sessionId: prep.session.id,
-      // Walk-intent routing for walk prompt section + structured suggestions.
       intent: prep.session.intent,
       facts: prep.routerFacts,
       factsSource: prep.routerSource,
-      // W3 (T5.4) — `null`/`undefined` collapsed to `null` here (the
-      // orchestrator port + prompt builder treat both as "no block").
       currentArtwork: prep.currentArtwork ?? null,
     };
   }

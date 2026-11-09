@@ -3,9 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import { makeSupportTicketDetail, makeTicketMessage } from '../helpers/factories/support.factories';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
-// Override useLocalSearchParams from test-utils mock to provide a ticketId.
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => ({ ticketId: 'ticket-123' });
 
@@ -51,8 +48,6 @@ describe('TicketDetailScreen', () => {
       }),
     });
   });
-
-  // ── Mount & loading ────────────────────────────────────────────────────────
 
   it('calls getTicketDetail with the ticketId from route params on mount', async () => {
     render(<TicketDetailScreen />);
@@ -107,8 +102,6 @@ describe('TicketDetailScreen', () => {
     expect(screen.queryByText('bug')).toBeNull();
   });
 
-  // ── Status badge variants (open / in_progress / resolved / closed) ────────
-
   it('renders the open status badge label', async () => {
     render(<TicketDetailScreen />);
     await waitFor(() => {
@@ -149,11 +142,9 @@ describe('TicketDetailScreen', () => {
   it('renders the priority badge text', async () => {
     render(<TicketDetailScreen />);
     await waitFor(() => {
-      expect(screen.getByText('medium')).toBeTruthy();
+      expect(screen.getByText('tickets.priorityMedium')).toBeTruthy();
     });
   });
-
-  // ── Message thread ─────────────────────────────────────────────────────────
 
   it('renders both visitor and staff message bubbles in the thread', async () => {
     render(<TicketDetailScreen />);
@@ -172,8 +163,6 @@ describe('TicketDetailScreen', () => {
       expect(screen.getByText('tickets.noMessages')).toBeTruthy();
     });
   });
-
-  // ── Reply input + submit ───────────────────────────────────────────────────
 
   it('renders the reply input with placeholder and the send button', async () => {
     render(<TicketDetailScreen />);
@@ -242,8 +231,6 @@ describe('TicketDetailScreen', () => {
       expect(screen.getByText('Send failed')).toBeTruthy();
     });
   });
-
-  // ── Error path on initial load ────────────────────────────────────────────
 
   it('shows the standalone error notice when initial load fails (no ticket yet)', async () => {
     mockGetTicketDetail.mockRejectedValue(new Error('Not found'));

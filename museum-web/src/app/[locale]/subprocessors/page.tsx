@@ -1,8 +1,7 @@
-import { getDictionary, type Locale } from '@/lib/i18n';
-import { getAlternates, getOpenGraph } from '@/lib/seo';
+import { getDictionary } from '@/lib/i18n';
+import { footerPageMetadata } from '@/lib/seo';
 import { getSubprocessors } from '@/lib/privacy-content';
 import privacyCanonical from '@/lib/legal/privacy-content.canonical.json';
-import type { Metadata } from 'next';
 
 interface SubprocessorsPageProps {
   params: Promise<{ locale: string }>;
@@ -43,15 +42,7 @@ function pickLocale(locale: string): 'en' | 'fr' {
   return locale === 'fr' ? 'fr' : 'en';
 }
 
-export async function generateMetadata({ params }: SubprocessorsPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const dict = await getDictionary(locale as Locale);
-  return {
-    title: dict.footer.links.subprocessors,
-    alternates: getAlternates(locale, '/subprocessors'),
-    openGraph: getOpenGraph(locale),
-  };
-}
+export const generateMetadata = footerPageMetadata('subprocessors', '/subprocessors');
 
 export default async function SubprocessorsPage({ params }: SubprocessorsPageProps) {
   const { locale } = await params;

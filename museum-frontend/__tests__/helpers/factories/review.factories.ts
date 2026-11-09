@@ -2,7 +2,6 @@ import type { components } from '@/shared/api/generated/openapi';
 
 type ReviewDTO = components['schemas']['ReviewDTO'];
 
-/** Creates a ReviewDTO with sensible defaults. Override any field via overrides. */
 export function makeReview(overrides: Partial<ReviewDTO> = {}): ReviewDTO {
   return {
     id: '1',

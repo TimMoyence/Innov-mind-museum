@@ -9,8 +9,6 @@ import { render, screen } from '@testing-library/react-native';
 
 import type { ChatUiMessage } from '@/features/chat/application/useChatSession';
 
-// ── Sub-component mocks ──────────────────────────────────────────────────────
-
 jest.mock('@/features/chat/ui/ChatMessageBubble', () => {
   const { View: RNView } = require('react-native');
   return {
@@ -55,8 +53,6 @@ jest.mock('@/features/chat/application/useTextToSpeech', () => ({
 
 import { ChatMessageList } from '@/features/chat/ui/ChatMessageList';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const createMessage = (overrides: Partial<ChatUiMessage> = {}): ChatUiMessage => ({
   id: 'msg-1',
   role: 'user',
@@ -71,7 +67,6 @@ const defaultProps = {
   isSending: false,
   isStreaming: false,
   locale: 'en',
-  onFollowUpPress: jest.fn(),
   onRecommendationPress: jest.fn(),
   onCamera: jest.fn(),
   onImageError: jest.fn(),

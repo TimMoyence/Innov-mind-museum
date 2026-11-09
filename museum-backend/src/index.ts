@@ -44,6 +44,7 @@ import { registerSupportRetentionCron } from '@modules/support/jobs/support-rete
 import { registerAuditCron, type AuditCronHandle } from '@shared/audit/audit-cron.registrar';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
+import { errorMessage } from '@shared/errors/error-message';
 import { RedisLlmCostCounter } from '@shared/llm-cost-guard/redis-llm-cost-counter';
 import { logger } from '@shared/logger/logger';
 import { setAccessTokenDenylist } from '@shared/middleware/authenticated.middleware';
@@ -56,6 +57,8 @@ import {
 } from '@shared/middleware/rate-limit.middleware';
 import { RedisRateLimitStore } from '@shared/middleware/redis-rate-limit-store';
 import { shutdownOpenTelemetry } from '@shared/observability/opentelemetry';
+import { safeClose, type ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
+import { nonEmpty } from '@shared/utils/defaults';
 import { assertDeploymentInvariants } from '@src/config/deployment-invariants';
 import { env } from '@src/config/env';
 
@@ -63,17 +66,10 @@ import { createApp } from './app';
 
 import type { EnrichmentSchedulerPort, MuseumEnrichmentWorker } from '@modules/museum';
 import type { CacheService } from '@shared/cache/cache.port';
-import type { ScheduledJobHandle } from '@shared/queue/scheduled-jobs';
 import type { Server } from 'node:http';
 
-/** Grace period for in-flight requests to complete before forced exit (ms). */
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
-/**
- * Returns the BullMQ-compatible Redis connection options shared by every
- * scheduler/queue we start at boot. Centralized so adjusting (e.g.) TLS or
- * retry policy lands in one place.
- */
 const createRedisConnectionOptions = () =>
   ({
     host: env.redis.host,
@@ -81,14 +77,10 @@ const createRedisConnectionOptions = () =>
     password: env.redis.password,
     maxRetriesPerRequest: null,
     enableOfflineQueue: false,
-    // TD-IO-01 — bounded exponential backoff (PATTERNS.md ioredis §3 DO).
     retryStrategy: (times: number) => Math.min(times * 50, 2000),
-    // TD-IO-02 — ElastiCache failover defense: force reconnect on READONLY
-    // primary→replica role flip and resend the command (return 2).
     reconnectOnError: (err: Error) => (err.message.includes('READONLY') ? (2 as const) : false),
   }) as const;
 
-/** Initializes cache and rate-limit Redis connections from environment config. */
 function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Redis | undefined } {
   if (env.cache?.enabled) {
     const redisPassword = env.cache.password;
@@ -99,49 +91,28 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
     });
     void redisCacheService.connect().catch((err: unknown) => {
       logger.error('redis_connection_failed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     });
 
-    // Create a dedicated Redis connection for rate limiting
     const redisClient = new Redis(env.cache.url, {
       maxRetriesPerRequest: 1,
       lazyConnect: false,
       enableReadyCheck: false,
       connectionName: 'rate-limit',
-      // TD-IO-01 / TD-IO-02 — bounded backoff + READONLY recovery (PATTERNS.md ioredis §3).
       retryStrategy: (times) => Math.min(times * 50, 2000),
       reconnectOnError: (err) => (err.message.includes('READONLY') ? 2 : false),
       ...(redisPassword ? { password: redisPassword } : {}),
     });
     redisClient.on('error', (err) => {
       logger.warn('redis_rate_limit_connection_error', {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive: err.message may be undefined at runtime
-        error: err.message ?? 'unknown',
+        error: nonEmpty(err.message) ?? 'unknown',
       });
     });
     const redisRateLimitStore = new RedisRateLimitStore(redisClient);
     setRedisRateLimitStore(redisRateLimitStore);
-    // PR-11 (2026-05-23) — `setDailyChatLimitCacheService` removed; the
-    // `dailyChatLimit` middleware now counts atomically via `RedisRateLimitStore`
-    // wired one line above.
-    // P0-4 (audit 2026-05-12 §P0-U-2) — wire the per-user daily USD counter on
-    // the same ioredis client. The middleware fails OPEN if no counter is
-    // registered (dev/test), so this single setter is the only boot wiring.
     setLlmCostCounter(new RedisLlmCostCounter(redisClient));
-    // F3 / T1.7#5 — upgrade OIDC nonce store from in-memory default to Redis
-    // so multi-instance deployments share a single atomic redemption surface
-    // (GETDEL primitive race-free across replicas). Single-instance dev/tests
-    // skip this branch and keep the InMemoryNonceStore default.
     setSocialNonceStore(new RedisNonceStore(redisClient));
-    // I-SEC7b / R7-R9 — access-token denylist for post-logout revocation.
-    // Fail-OPEN on Redis error (spec §R9, lib-docs/ioredis/LESSONS.md L36
-    // fail-soft cache pattern). Single shared `redisClient` is fine — denylist
-    // is non-blocking GET/SET, no pub/sub (cf F-IO-05 sharing comment). Two
-    // wire points : (a) middleware consults denylist on every request via the
-    // module-level setter, (b) logout/refresh use cases write to it via the
-    // AuthSessionService DI setter (set post-construction since the auth
-    // singletons instantiate before this boot path runs).
     const accessTokenDenylist = new RedisAccessTokenDenylist(redisClient);
     setAccessTokenDenylist(accessTokenDenylist);
     authSessionService.setAccessTokenDenylist(accessTokenDenylist);
@@ -160,17 +131,6 @@ function initCacheAndRateLimit(): { cacheService: CacheService; redisClient: Red
   return { cacheService: new NoopCacheService(), redisClient: undefined };
 }
 
-/**
- * Boots the daily stale-enrichment scan scheduler. Fail-open: any error
- * (missing Redis, BullMQ init failure) is logged and the server proceeds
- * without the scheduler — on-demand enrichment keeps working.
- *
- * Default-off (`MUSEUM_ENRICHMENT_SCHEDULER_ENABLED=false`) — this is the
- * separate *periodic* stale-rescan feature (different `museum-enrichment-scheduler`
- * queue) and stays off by product decision for V1. The on-demand CONSUMER it once
- * waited on is now wired at boot (see {@link startEnrichmentWorker}, task #16), so
- * cache-miss enqueues are drained; only the daily rescan remains gated by this flag.
- */
 async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | undefined> {
   if (!env.museumEnrichmentSchedulerEnabled) {
     logger.info('enrichment_scheduler_disabled', {
@@ -192,25 +152,12 @@ async function startEnrichmentScheduler(): Promise<EnrichmentSchedulerPort | und
     return scheduler;
   } catch (err) {
     logger.warn('enrichment_scheduler_boot_skipped', {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     return undefined;
   }
 }
 
-/**
- * Boots the on-demand museum-enrichment CONSUMER (`MuseumEnrichmentWorker` on the
- * `museum-enrichment` queue). Without it the producer (`EnrichMuseumUseCase` on a
- * cache miss) just fills Redis with jobs nobody drains, so the `museum_enrichment`
- * cache row is never written and the fiche stays pending/empty (task #16).
- *
- * Gated on `env.cache?.enabled` (BullMQ requires Redis) — an infra-capability
- * check, NOT a feature flag: dev/test/CI without Redis short-circuit BEFORE any
- * ioredis client is opened, exactly like the retention crons (`:421`) and the
- * knowledge-extraction worker, so no un-`.unref()`d socket / `ECONNREFUSED` flood
- * / Jest-Stryker open-handle hang. Fail-open: any construction/start error is
- * logged and boot proceeds (on-demand enrichment degrades to "pending").
- */
 function startEnrichmentWorker(): MuseumEnrichmentWorker | undefined {
   if (!env.cache?.enabled) {
     logger.info('enrichment_worker_disabled', {
@@ -225,20 +172,14 @@ function startEnrichmentWorker(): MuseumEnrichmentWorker | undefined {
     return worker;
   } catch (err) {
     logger.warn('enrichment_worker_boot_skipped', {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     return undefined;
   }
 }
 
-/** BullMQ queue name used exclusively by the audit IP anonymization cron. */
 const AUDIT_CRON_QUEUE_NAME = 'audit-cron';
 
-/**
- * Boots the daily audit IP anonymization scheduler on a dedicated queue.
- * Fail-open: any error (missing Redis, BullMQ init failure) is logged and
- * the server proceeds without the cron.
- */
 async function startAuditCron(): Promise<{
   handle: AuditCronHandle | undefined;
   queue: Queue | undefined;
@@ -253,13 +194,12 @@ async function startAuditCron(): Promise<{
     return { handle, queue };
   } catch (err) {
     logger.warn('audit_cron_boot_skipped', {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     return { handle: undefined, queue: undefined };
   }
 }
 
-/** Grouped lifecycle resources wired at boot and drained on shutdown. */
 interface ShutdownResources {
   server: Server;
   tokenCleanup: TokenCleanupService;
@@ -275,21 +215,6 @@ interface ShutdownResources {
   retentionCrons: ScheduledJobHandle[];
 }
 
-/** Runs an async teardown step, logging any error under the given key without rethrowing. */
-async function safeTeardown(
-  label: string,
-  step: () => Promise<void> | void | undefined,
-): Promise<void> {
-  try {
-    await step();
-  } catch (err) {
-    logger.warn(label, {
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-}
-
-/** Stops all synchronous schedulers and the dedicated in-process sweeps. */
 function stopSynchronousSchedulers(
   tokenCleanup: TokenCleanupService,
   poolMonitor: NodeJS.Timeout,
@@ -300,7 +225,6 @@ function stopSynchronousSchedulers(
   stopArtKeywordsRefresh();
 }
 
-/** Stops all BullMQ crons + queues + OpenTelemetry + caches, logging each failure independently. */
 async function drainAsyncResources(resources: ShutdownResources): Promise<void> {
   const {
     enrichmentScheduler,
@@ -313,58 +237,42 @@ async function drainAsyncResources(resources: ShutdownResources): Promise<void> 
     cacheService,
   } = resources;
 
-  await safeTeardown('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
-  // TD-OP-01 — release the Wikidata opossum breaker's rolling-stats timer.
-  await safeTeardown('wikidata_breaker_shutdown_error', () => {
+  await safeClose('knowledge_extraction_shutdown_error', () => stopKnowledgeExtraction());
+  await safeClose('wikidata_breaker_shutdown_error', () => {
     stopWikidataBreaker();
   });
   if (enrichmentScheduler) {
-    await safeTeardown('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
+    await safeClose('enrichment_scheduler_shutdown_error', () => enrichmentScheduler.stop());
   }
-  // F10/TD-BMQ-02 (lib-docs/bullmq/LESSONS.md:11-14) — SIGTERM MUST await the
-  // on-demand enrichment worker's close() so in-flight jobs drain (or hit
-  // lockDuration) before exit; the awaited close() also releases the blocking
-  // ioredis connection (PATTERNS.md:137).
   if (enrichmentWorker) {
-    await safeTeardown('enrichment_worker_shutdown_error', () => enrichmentWorker.close());
+    await safeClose('enrichment_worker_shutdown_error', () => enrichmentWorker.close());
   }
   if (auditCron) {
-    await safeTeardown('audit_cron_shutdown_error', () => auditCron.stop());
+    await safeClose('audit_cron_shutdown_error', () => auditCron.stop());
   }
   if (auditCronQueue) {
-    await safeTeardown('audit_cron_queue_close_failed', () => auditCronQueue.close());
+    await safeClose('audit_cron_queue_close_failed', () => auditCronQueue.close());
   }
   if (chatPurgeCron) {
-    await safeTeardown('chat_purge_cron_shutdown_error', () => chatPurgeCron.stop());
+    await safeClose('chat_purge_cron_shutdown_error', () => chatPurgeCron.stop());
   }
   if (s3OrphanPurgeCron) {
-    await safeTeardown('s3_orphan_purge_cron_shutdown_error', () => s3OrphanPurgeCron.stop());
+    await safeClose('s3_orphan_purge_cron_shutdown_error', () => s3OrphanPurgeCron.stop());
   }
   for (const handle of retentionCrons) {
-    await safeTeardown('retention_cron_shutdown_error', () => handle.close());
+    await safeClose('retention_cron_shutdown_error', () => handle.close());
   }
-  // TD-ONNX-02 — release SigLIP NAPI session BEFORE OTel/cache teardown.
-  // ONNX session is CPU-only (no TCP) so leak severity is "graceful-restart
-  // hygiene" rather than "blocks SIGTERM" — `safeTeardown` swallows any
-  // throw so a missing/already-released adapter never blocks the rest.
-  await safeTeardown('embeddings_adapter_shutdown_failed', () => shutdownEmbeddingsAdapter());
+  await safeClose('embeddings_adapter_shutdown_failed', () => shutdownEmbeddingsAdapter());
   await shutdownOpenTelemetry();
   const ocr = getOcrService();
   if (ocr.destroy) await ocr.destroy();
   if (cacheService.destroy) await cacheService.destroy();
 }
 
-/**
- * Flushes Langfuse spans then closes DB + Redis. Called inside the
- * `server.close()` callback so Langfuse fires AFTER the in-flight HTTP drain
- * (per langfuse.client.ts contract). Wrapper isolates the async sequence from
- * the callback's lexical scope (sonarjs/no-nested-functions).
- */
 async function flushTelemetryAndFinalize(redisClient: Redis | undefined): Promise<void> {
   await finalizeShutdown(redisClient);
 }
 
-/** Closes DB + Redis after in-flight HTTP requests drained, then exits with code 0. */
 async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
   try {
     if (AppDataSource.isInitialized) {
@@ -373,7 +281,7 @@ async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
     }
   } finally {
     if (redisClient) {
-      await safeTeardown('redis_rate_limit_close_failed', async () => {
+      await safeClose('redis_rate_limit_close_failed', async () => {
         await redisClient.quit();
       });
       logger.info('redis_rate_limit_closed');
@@ -382,7 +290,6 @@ async function finalizeShutdown(redisClient: Redis | undefined): Promise<void> {
   }
 }
 
-/** Registers SIGINT/SIGTERM handlers that drain connections and clean up resources. */
 function registerShutdownHandlers(resources: ShutdownResources): void {
   const { server, tokenCleanup, redisClient, poolMonitor } = resources;
   let isShuttingDown = false;
@@ -422,11 +329,6 @@ type CronRegister<H> = (
   cfg: { connection: ReturnType<typeof createRedisConnectionOptions>; retentionDays: number },
 ) => Promise<H>;
 
-/**
- * Boots a Redis-backed BullMQ retention cron (chat-purge, S3 orphan-purge).
- * Guarded by `env.cache?.enabled` (BullMQ requires Redis); fail-open so a
- * registrar error logs `<skipLog>` and never blocks boot.
- */
 async function startRedisCron<H>(
   register: CronRegister<H>,
   retentionDays: number,
@@ -439,16 +341,11 @@ async function startRedisCron<H>(
       retentionDays,
     });
   } catch (err) {
-    logger.warn(skipLog, { error: err instanceof Error ? err.message : String(err) });
+    logger.warn(skipLog, { error: errorMessage(err) });
     return undefined;
   }
 }
 
-/**
- * Boots the three daily retention crons (support_tickets, reviews, art_keywords).
- * Pre-launch V1: always-on; structural skip when Redis is unavailable (BullMQ requires it).
- * Fail-open: any registrar error is logged and the server proceeds without the cron.
- */
 async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
   if (!env.cache?.enabled) {
     logger.info('retention_crons_disabled', {
@@ -488,9 +385,6 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
       hitThreshold: artKeywordsHitThreshold,
       batchLimit,
     });
-    // Cycle B (« Aucun lead perdu », T5.4) — async redelivery of pending/failed
-    // leads + in-handler retention purge. Joins the sequential boot + teardown
-    // list so SIGTERM awaits its BullMQ `.close()` (lib-docs/bullmq/LESSONS:11-14).
     const leadsRedeliveryHandle = registerLeadsRedeliveryCron(new LeadRepositoryPg(AppDataSource), {
       connection,
       cronPattern: env.leads.redeliveryCronPattern,
@@ -501,11 +395,6 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
       backoffCapMs: env.leads.backoffCapMs,
     });
 
-    // Sequential startup so the four background workers do not race the DB at
-    // boot. BullMQ already enforces concurrency=1 per queue, but a parallel
-    // `Promise.all` here briefly tripled the cron-tick load and contributed to
-    // the 2026-05-08 pgbouncer saturation when the prune busy-loop hit (see
-    // /team run `2026-05-08-prune-hardening`).
     await supportHandle.start();
     await reviewHandle.start();
     await artKeywordsHandle.start();
@@ -515,13 +404,12 @@ async function startRetentionCrons(): Promise<ScheduledJobHandle[]> {
     return [supportHandle, reviewHandle, artKeywordsHandle, leadsRedeliveryHandle];
   } catch (err) {
     logger.warn('retention_crons_boot_skipped', {
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
     return [];
   }
 }
 
-/** Wires schedulers + cron jobs around the freshly-initialized cache/DB. Pure orchestration. */
 async function bootBackgroundJobs(
   cacheService: CacheService,
 ): Promise<Omit<ShutdownResources, 'server' | 'redisClient' | 'cacheService'>> {
@@ -533,8 +421,6 @@ async function bootBackgroundJobs(
 
   const poolMonitor = startPoolMonitor();
   const enrichmentScheduler = await startEnrichmentScheduler();
-  // Task #16 — drain the on-demand `museum-enrichment` queue so the fiche
-  // gets populated. Gated on Redis availability inside startEnrichmentWorker().
   const enrichmentWorker = startEnrichmentWorker();
   const { handle: auditCron, queue: auditCronQueue } = env.cache?.enabled
     ? await startAuditCron()
@@ -564,12 +450,11 @@ async function bootBackgroundJobs(
   };
 }
 
-/** Logs a startup failure with the most informative message available and an env hint in non-prod. */
 function logStartupFailure(error: unknown): void {
-  const errorMessage =
+  const detail =
     error instanceof Error ? error.message || util.inspect(error) : util.inspect(error);
   logger.error('startup_failed', {
-    error: errorMessage,
+    error: detail,
     dbHost: env.db.host,
     dbPort: env.db.port,
   });
@@ -581,10 +466,7 @@ function logStartupFailure(error: unknown): void {
   }
 }
 
-/** Initializes the database, starts the HTTP server, and registers graceful shutdown handlers. */
 const start = async (): Promise<void> => {
-  // Fail fast on unsafe deployment topology (multi-instance + no shared Redis in prod).
-  // Must run BEFORE any external connection so the pod fails its readiness probe.
   assertDeploymentInvariants(env, { logger });
 
   try {
@@ -594,12 +476,7 @@ const start = async (): Promise<void> => {
       database: env.db.database,
     });
 
-    // R1 (C6) — wire the soft-paywall monthly quota repo as soon as the
-    // DataSource is ready. The middleware fails-OPEN if no repo is registered
-    // (see `monthly-session-quota.middleware.ts`), so this single boot wiring
-    // is the canonical activation point.
     setMonthlyQuotaRepo(new PgMonthlyQuotaRepo(AppDataSource));
-
 
     const { cacheService, redisClient } = initCacheAndRateLimit();
 

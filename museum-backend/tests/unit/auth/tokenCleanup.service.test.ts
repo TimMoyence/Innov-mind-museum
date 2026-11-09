@@ -1,30 +1,6 @@
 import { TokenCleanupService } from '@modules/auth/useCase/session/tokenCleanup.service';
 import { makeRefreshTokenRepo as makeRepoBase } from '../../helpers/auth/user-repo.mock';
 
-/**
- * Service-level tests for TokenCleanupService.
- *
- * Companion to `token-cleanup.test.ts` — that file covers the basic happy
- * path / error path / scheduler start-stop. This file adds behaviors that
- * matter for production but were not covered:
- *
- *   - Concurrency: distributed lock prevents double-deletion when several
- *     instances tick at the same wall-clock moment.
- *   - Constants: the LOCK_TTL_SECONDS / BATCH_LIMIT values are part of the
- *     contract with ops (PgBouncer / cron sizing) — pinning them prevents a
- *     silent regression.
- *   - Scheduler hygiene: timer.unref() is called so the cron doesn't keep
- *     the Node event-loop alive on shutdown; multiple ticks reuse the same
- *     interval; restart after stop works.
- *   - Logging contract: error path logs the message string only (no Error
- *     object leak that Pino would dump under `err`); skipped path logs the
- *     deterministic reason field.
- *
- * Note: the retention horizon (cutoff date for "expired") lives in the SQL
- * of `deleteExpiredTokens`, not in this service — see
- * `refresh-token-repo.test.ts` for that boundary.
- */
-
 jest.mock('@shared/logger/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -64,8 +40,6 @@ describe('TokenCleanupService — service-level behavior', () => {
     jest.clearAllMocks();
   });
 
-  // ── Distributed-lock contract ────────────────────────────────────
-
   describe('lock acquisition contract', () => {
     it('acquires lock with the documented key and 5-minute TTL', async () => {
       const repo = makeRepo(7);
@@ -78,7 +52,6 @@ describe('TokenCleanupService — service-level behavior', () => {
       const [key, value, ttl] = cache.setNx.mock.calls[0];
       expect(key).toBe('token-cleanup:lock');
       expect(value).toBe(true);
-      // 5 minutes — must outlive the longest realistic deleteExpiredTokens batch
       expect(ttl).toBe(300);
     });
 
@@ -94,7 +67,6 @@ describe('TokenCleanupService — service-level behavior', () => {
 
     it('serialises concurrent runCleanup calls — only the first acquires the lock', async () => {
       const repo = makeRepo(11);
-      // First setNx wins (true), every subsequent attempt fails (false)
       let firstCallSettled = false;
       const cache = makeCache({
         setNxResult: () => {
@@ -129,15 +101,12 @@ describe('TokenCleanupService — service-level behavior', () => {
       const service = new TokenCleanupService(repo, cache);
 
       await service.runCleanup();
-      // Simulate Redis releasing the key (cron interval >> TTL)
       cache.setNx.mockResolvedValueOnce(true);
       await service.runCleanup();
 
       expect(repo.deleteExpiredTokens).toHaveBeenCalledTimes(2);
     });
   });
-
-  // ── BATCH_LIMIT contract ─────────────────────────────────────────
 
   describe('batch-size contract', () => {
     it('always passes BATCH_LIMIT=10000 to deleteExpiredTokens', async () => {
@@ -165,12 +134,9 @@ describe('TokenCleanupService — service-level behavior', () => {
       const deleted = await service.runCleanup();
 
       expect(deleted).toBe(0);
-      // Empty cleanups must not pollute the audit log every 6h
       expect(logger.info).not.toHaveBeenCalledWith('token_cleanup_completed', expect.anything());
     });
   });
-
-  // ── Error containment ───────────────────────────────────────────
 
   describe('error containment', () => {
     it('swallows repository errors and logs only the message string (not the Error object)', async () => {
@@ -184,7 +150,6 @@ describe('TokenCleanupService — service-level behavior', () => {
       expect(logger.error).toHaveBeenCalledWith('token_cleanup_failed', {
         error: 'PG connection lost',
       });
-      // No raw Error/stack leaked in the logger payload
       const payload = logger.error.mock.calls[0][1];
       expect(payload).not.toHaveProperty('stack');
       expect(payload.error).toBe('PG connection lost');
@@ -198,8 +163,6 @@ describe('TokenCleanupService — service-level behavior', () => {
       await expect(service.runCleanup()).resolves.toBe(0);
     });
   });
-
-  // ── Audit/log emission ──────────────────────────────────────────
 
   describe('audit log emission', () => {
     it('emits token_cleanup_completed with the deleted count when work happened', async () => {
@@ -227,8 +190,6 @@ describe('TokenCleanupService — service-level behavior', () => {
     });
   });
 
-  // ── Scheduler hygiene ───────────────────────────────────────────
-
   describe('scheduler hygiene', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -246,7 +207,6 @@ describe('TokenCleanupService — service-level behavior', () => {
       service.startScheduler(60_000);
 
       const timer = setIntervalSpy.mock.results[0].value as { unref?: () => void };
-      // Node Timeout instances expose .unref(); jest's fake timers honour it.
       expect(typeof timer.unref).toBe('function');
 
       service.stopScheduler();
@@ -330,7 +290,6 @@ describe('TokenCleanupService — service-level behavior', () => {
 
       service.startScheduler(1_000);
       jest.advanceTimersByTime(1_000);
-      // Allow the void-handled promise chain to settle.
       await Promise.resolve();
       await Promise.resolve();
 

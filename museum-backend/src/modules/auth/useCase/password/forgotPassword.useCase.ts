@@ -15,7 +15,6 @@ export class ForgotPasswordUseCase {
     private readonly frontendUrl?: string,
   ) {}
 
-  /** Returns `undefined` silently if user does not exist (prevents enumeration). */
   async execute(
     email: string,
     locale: EmailLocale = DEFAULT_EMAIL_LOCALE,
@@ -27,11 +26,6 @@ export class ForgotPasswordUseCase {
     const user = await this.userRepository.getUserByEmail(normalizedEmail);
     if (!user) return;
 
-    // TD-65: never issue a reset token to a soft-deleted account. `deletedAt`
-    // is a hand-rolled column (not @DeleteDateColumn), so it is NOT filtered
-    // by `getUserByEmail` — only login/refresh guard it. Skip silently to
-    // avoid enumerating deleted accounts (same anti-enumeration pattern as the
-    // unverified skip below).
     if (user.deletedAt) {
       logger.warn('forgot_password_soft_deleted_skipped', {
         emailDomain: extractEmailDomain(normalizedEmail),
@@ -39,8 +33,6 @@ export class ForgotPasswordUseCase {
       return;
     }
 
-    // SEC-HARDENING (M16): require verified email before issuing reset token.
-    // Silently skip to avoid enumerating verified vs. unverified accounts.
     if (!user.email_verified) {
       logger.warn('forgot_password_unverified_skipped', {
         emailDomain: extractEmailDomain(normalizedEmail),
@@ -49,7 +41,7 @@ export class ForgotPasswordUseCase {
     }
 
     const { raw: token, hashed: hashedToken } = issueEmailToken();
-    const expires = new Date(Date.now() + 3600000); // 1 hour expiration
+    const expires = new Date(Date.now() + 3600000);
     await this.userRepository.setResetToken(normalizedEmail, hashedToken, expires);
 
     if (this.emailService && this.frontendUrl) {

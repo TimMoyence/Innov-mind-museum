@@ -10,32 +10,9 @@ import { fontSize, semantic, space } from '@/shared/ui/tokens';
 
 interface SourceCitationProps {
   source: CitationSource;
-  /** 1-based index for the `[n]` superscript marker. */
   index: number;
 }
 
-/**
- * Inline citation marker `[n]` rendered next to a factual assistant response
- * (C4 anti-hallucination citations v2). Tap opens a bottom-sheet preview with
- * the source title, verbatim quote, and an "Open URL" CTA that hands off to
- * `Linking.openURL`.
- *
- * Why a `Modal` and not `@gorhom/bottom-sheet`: that library is NOT in our
- * dependency tree (verified at T5.1 pre-flight); rather than introduce a new
- * runtime dep at launch, we use the platform `Modal` with a bottom slide
- * animation. The user-visible UX matches the bottom-sheet pattern (slide-up
- * panel with title, body, action) and we keep the launch budget tight.
- *
- * Guardrails:
- * - Ionicons only (`information-circle-outline` for the marker, `open-outline`
- *   + `close` for sheet controls) — never unicode emoji per
- *   `feedback_no_unicode_emoji`.
- * - a11y: marker has `accessibilityRole='button'` + label
- *   `chat.sources.viewSource`; close + open-URL CTAs likewise labelled.
- * - Empty-quote defensive: the quote pane renders an i18n fallback text
- *   instead of crashing, so pre-validation/legacy cached responses degrade
- *   gracefully.
- */
 export const SourceCitation = React.memo(({ source, index }: SourceCitationProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -144,7 +121,6 @@ const styles = StyleSheet.create({
   markerText: {
     fontSize: fontSize.xs,
     fontWeight: '600',
-    // Visual cue for "superscript-like" feel while remaining readable on RN.
     lineHeight: fontSize.xs * 1.2,
   },
   backdrop: {

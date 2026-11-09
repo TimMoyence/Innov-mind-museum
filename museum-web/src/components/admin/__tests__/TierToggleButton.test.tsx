@@ -1,22 +1,3 @@
-/**
- * R1 RED — TierToggleButton component (T1.14 — J in brief).
- *
- * Pins R1 §1 R31/R32/R33 + §3.6 D6 + AC7 down BEFORE implementation :
- *  - super_admin viewer → button visible w/ tier-specific label
- *    (`toggleToPremium` when tier=free, `toggleToFree` when tier=premium).
- *  - non-super_admin viewer → read-only tier label (no button).
- *  - Click → opens SimpleConfirmModal with confirmTitle + confirmBody from
- *    dict.
- *  - Modal confirm → `apiPatch('/api/admin/users/<id>/tier', {tier:nextTier})`
- *    called once.
- *  - apiPatch success → onSuccess callback invoked with updated user.
- *  - apiPatch failure → error message rendered, modal still open.
- *  - i18n drawn from `dict.admin.userDetailPage.tier.*` (R1 §0.3 web).
- *
- * MUST FAIL at baseline `cd7e22bc` —
- * `src/components/admin/TierToggleButton.tsx` does not exist;
- * `dict.admin.userDetailPage.tier.*` keys don't exist either.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AdminUserDTO } from '@/lib/admin-types';
@@ -41,10 +22,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-// The shared mock admin dict doesn't have the new R1 `tier` subtree yet —
-// we extend it inline to model what `T2` (green agent) will add to
-// `userDetailPage.tier.*`. Tests fail at module load if the component does
-// not exist OR at assertion time if the dict keys are not consumed.
 const tierDictExt = {
   label: 'Tier',
   currentFree: 'Free tier',
@@ -100,21 +77,15 @@ describe('TierToggleButton (R1 §1 R31-R33)', () => {
     mockApiPatch.mockReset();
   });
 
-  // ── R32 — non-super_admin sees read-only label ───────────────────────
-
   it('R32: viewer role admin (not super_admin) → no button, read-only label only', () => {
     render(
       <Providers>
         <TierToggleButton user={makeUser({ tier: 'free' })} viewerRole="admin" />
       </Providers>,
     );
-    // Read-only label visible.
     expect(screen.getByText(tierDictExt.currentFree)).toBeTruthy();
-    // No toggle button rendered.
     expect(screen.queryByRole('button', { name: tierDictExt.toggleToPremium })).toBeNull();
   });
-
-  // ── R31 — super_admin sees button with correct label ─────────────────
 
   it('R31: free user + super_admin viewer → button labelled "Promote to premium"', () => {
     render(
@@ -133,8 +104,6 @@ describe('TierToggleButton (R1 §1 R31-R33)', () => {
     );
     expect(screen.getByRole('button', { name: tierDictExt.toggleToFree })).toBeTruthy();
   });
-
-  // ── R33 — click opens confirm modal, confirm fires apiPatch ──────────
 
   it('R33: clicking the button opens a confirm modal with confirmTitle + confirmBody', () => {
     render(
@@ -173,8 +142,6 @@ describe('TierToggleButton (R1 §1 R31-R33)', () => {
     });
   });
 
-  // ── Error state ──────────────────────────────────────────────────────
-
   it('apiPatch failure → renders error text from dict, modal stays open', async () => {
     mockApiPatch.mockRejectedValueOnce(new Error('boom'));
     render(
@@ -188,11 +155,8 @@ describe('TierToggleButton (R1 §1 R31-R33)', () => {
     await waitFor(() => {
       expect(screen.getByText(tierDictExt.error)).toBeTruthy();
     });
-    // Modal title still visible → modal not auto-closed on error.
     expect(screen.getByText(tierDictExt.confirmTitle)).toBeTruthy();
   });
-
-  // ── Cancel button ────────────────────────────────────────────────────
 
   it('cancel button → closes modal, no apiPatch call', () => {
     render(

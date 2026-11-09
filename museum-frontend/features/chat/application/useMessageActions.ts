@@ -10,7 +10,6 @@ interface UseMessageActionsOptions {
   onReport: (messageId: string) => void;
 }
 
-/** Hook that provides context menu actions for chat messages: copy, share, report. */
 export const useMessageActions = ({ onReport }: UseMessageActionsOptions) => {
   const { t } = useTranslation();
 

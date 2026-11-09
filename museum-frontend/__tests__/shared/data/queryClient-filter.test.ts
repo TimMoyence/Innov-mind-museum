@@ -1,11 +1,5 @@
 import { shouldDehydrateQuery } from '@/shared/data/queryClient';
 
-/**
- * Sensitive query-key prefixes (chat messages, sessions, admin views, auth,
- * user profile) MUST be excluded from AsyncStorage dehydration. The in-memory
- * React Query cache still holds them for runtime use — only the persister
- * roundtrip is suppressed.
- */
 describe('queryClient — shouldDehydrateQuery (sensitive filter)', () => {
   const asQuery = (queryKey: readonly unknown[], status = 'success') => ({
     queryKey,
@@ -46,11 +40,6 @@ describe('queryClient — shouldDehydrateQuery (sensitive filter)', () => {
     expect(shouldDehydrateQuery(asQuery([]))).toBe(true);
   });
 
-  // QA-05 regression — a query dehydrated while still PENDING serialises a live
-  // promise that rehydrates as a dead one on cold start, surfacing
-  // "A query that was dehydrated as pending ended up rejecting / CancelledError"
-  // (observed on the ['museums','directory'] list). A custom shouldDehydrateQuery
-  // REPLACES React Query's default status gate, so it must re-assert it.
   it('does NOT persist a pending or errored query, even with a non-sensitive key', () => {
     expect(shouldDehydrateQuery(asQuery(['museums', 'directory'], 'pending'))).toBe(false);
     expect(shouldDehydrateQuery(asQuery(['museums', 'directory'], 'error'))).toBe(false);

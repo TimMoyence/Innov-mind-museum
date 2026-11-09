@@ -1,40 +1,3 @@
-/**
- * RED integration test — C2 cost breaker end-to-end 503 surface.
- *
- * RUN_ID 2026-05-21-p0-c2-cost-breaker.
- * Spec §3 R2 — when the cost breaker is OPEN, the chat path MUST surface the
- *              `CircuitOpenError` (statusCode 503, code `CIRCUIT_BREAKER_OPEN`)
- *              verbatim through the chat-message service → route error
- *              middleware mapping. `mapOrchestratorError`
- *              (`chat-message.service.ts:61`) preserves `AppError` instances
- *              by design, so once the orchestrator throws the right shape it
- *              bubbles cleanly.
- * Design.md §6 — `chat-cost-breaker-503.integration.test.ts`.
- *
- * Today (RED) :
- *  - Default-path `invokeSection()` does NOT consult `costBreaker.canAttempt()`.
- *  - With an OPEN cost breaker, the orchestrator continues to call the fake
- *    LLM → either returns 200-OK with the fake response OR section-runner
- *    fallback. Either way: the path does NOT reject with CircuitOpenError.
- *
- * Green (T2.3 + T2.4) :
- *  - The guards added at `invokeSection()` + `generateWalk()` entry throw
- *    `CircuitOpenError`; `mapOrchestratorError` preserves it; the assertion
- *    below turns green.
- *
- * Wiring : we use `buildChatTestService()` with a real
- * `LangChainChatOrchestrator` (in-process; the cost breaker stub is injected
- * directly via DI). NO Express harness — `chat-message.service` is the
- * narrowest boundary that exercises `mapOrchestratorError` on the orchestrator
- * throw, which is the contract under test for R2.
- */
-
-// NB: we DO NOT mock `@src/config/env` — the chat-service imports a wide
-// adapter graph (LocationResolver → NominatimClient, etc.) whose top-level
-// reads of `env.*` would NPE with a partial mock. The default `tests/helpers/
-// jest-env-pgdatabase.setup.ts` covers PGDATABASE; everything else uses the
-// real env values. Sentry / logger mocks remain narrow (avoid log noise).
-
 jest.mock('@shared/logger/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -72,7 +35,6 @@ const SUCCESS_SECTION_RESPONSE = {
   text: 'A successful answer from the fake LLM.',
   deeperContext: null,
   openQuestion: null,
-  suggestedFollowUp: null,
   imageDescription: null,
   suggestedImages: null,
   detectedArtwork: null,

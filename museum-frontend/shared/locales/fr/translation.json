@@ -125,6 +125,7 @@
     "session_unsaved": "Session retirée des favoris",
     "session_saved": "Session enregistrée",
     "empty_title": "Aucune conversation",
+    "untitled": "Pas encore de message",
     "empty_saved": "Aucune session enregistrée. Appuyez longuement sur une session pour l'enregistrer.",
     "empty_body": "Démarrez une conversation depuis l'Accueil pour créer votre première session.",
     "message_count": "Messages : {{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "Fermer",
       "noQuote": "Aucun extrait disponible pour cette source."
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "Catalogue du musée",
-        "reference-db": "Base de référence",
-        "web": "Résultat web",
-        "ai-knowledge": "Savoir de l'IA"
-      },
-      "confidence": {
-        "high": "Confiance élevée",
-        "medium": "Confiance moyenne",
-        "low": "Faible — IA seule"
-      },
-      "chip": {
-        "a11y_hint": "Toucher pour les détails"
-      },
-      "ai_only": {
-        "disclosure_title": "Réponse IA seule",
-        "disclosure_body": "Cette réponse repose sur le savoir général de l'IA. Aucune source n'a été récupérée. Vérifiez avant d'en dépendre."
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "Ouvrir les pièces jointes",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "Œuvre sans titre",
       "a11y_label": "Œuvre : {{title}} de {{artist}}, toucher pour agrandir",
+      "a11y_label_no_artist": "Œuvre : {{title}}, toucher pour agrandir",
       "a11y_label_untitled": "Œuvre sans titre, toucher pour agrandir",
       "a11y_hint": "Ouvre en plein écran, zoom au pincement",
       "expand": "Agrandir",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "Identification en cours"
       },
@@ -569,6 +550,7 @@
       "empty": "Aucune œuvre similaire trouvée — essaie une photo plus nette",
       "viewArtist": "Voir l'artiste",
       "attribution": "Source : Wikimedia Commons",
+      "card_a11y": "Œuvre similaire : {{credit}}, {{rationale}}",
       "rationale": {
         "fallback": "Œuvre similaire"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "Visite guidée",
       "suggestionsLabel": "Suggestions de visite",
       "suggestionHint": "Envoie cette suggestion comme votre prochaine demande"
-    },
-    "askMore": {
-      "a11y_label": "Question de suivi : {{text}}",
-      "a11y_hint": "Toucher pour poser cette question"
     },
     "sottoVoce": {
       "a11y_label": "Mode sotto-voce",
@@ -648,7 +626,7 @@
     "placeholder": "Posez une question sur une œuvre, un monument, ou envoyez une photo/voix...",
     "send": "Envoyer"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "Débutant",
     "intermediate": "Intermédiaire",
     "expert": "Expert"
@@ -1062,6 +1040,7 @@
     },
     "carnet": {
       "session_card": "{{title}}, {{museum}}, {{date}}, ouvrir la visite",
+      "session_card_no_date": "{{title}}, {{museum}}, ouvrir la visite",
       "continue_hint": "Ouvre cette visite passée en lecture"
     }
   },
@@ -1114,7 +1093,7 @@
     "save": "Sauvegarder",
     "skip": "Passer",
     "saved": "Sauvegardé !",
-    "by": "par",
+    "by": "par {{artist}}",
     "fun_fact": "Le saviez-vous ?",
     "swipeToSave": "Enregistrer"
   },
@@ -1125,7 +1104,8 @@
     "description": "Description",
     "priority": "Priorité",
     "status": "Statut",
-    "messages": "Messages",
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages",
     "noTickets": "Aucun ticket",
     "noTicketsDesc": "Créez un ticket pour obtenir l'aide de notre équipe de support.",
     "createFirst": "Créez votre premier ticket",
@@ -1134,7 +1114,7 @@
     "replyPlaceholder": "Saisissez votre message...",
     "send": "Envoyer",
     "sending": "Envoi...",
-    "created": "Créé",
+    "createdOn": "Créé le {{date}}",
     "noMessages": "Aucun message",
     "submitTicket": "Soumettre le ticket",
     "subjectPlaceholder": "Résumé bref de votre problème",
@@ -1174,7 +1154,15 @@
     "alreadyReviewed": "Vous avez déjà soumis un avis",
     "empty": "Aucun avis pour le moment. Soyez le premier !",
     "reviewCount": "{{count}} avis",
-    "submitFailed": "Échec de l'envoi. Veuillez réessayer."
+    "submitFailed": "Échec de l'envoi. Veuillez réessayer.",
+    "age": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "days": "{{count}} j",
+      "months": "{{count}} mois",
+      "years_one": "{{count}} an",
+      "years_other": "{{count}} ans"
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1220,7 @@
     "error": "Une erreur est survenue. Réessaye plus tard.",
     "dismiss": "Fermer",
     "consent": "J'accepte de recevoir un email à l'ouverture du premium.",
-    "resetsOn": "Réinitialisation le",
+    "resetsOn": "Réinitialisation le {{date}}",
     "analyticsConsent": {
       "title": "Aide-nous à améliorer Musaium",
       "description": "Avec ton accord, nous mesurons de manière anonyme l'usage de l'application (pages vues, fonctionnalités utilisées). Aucune donnée personnelle, aucun traceur publicitaire — uniquement des compteurs agrégés pour comprendre ce qui fonctionne.",

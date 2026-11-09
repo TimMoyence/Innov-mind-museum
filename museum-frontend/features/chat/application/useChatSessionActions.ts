@@ -22,13 +22,6 @@ interface ChatSessionActions {
   onMessageLongPress: (messageId: string) => void;
 }
 
-/**
- * Bundles the chat-session screen's user-action callbacks (report, image
- * refresh, markdown link tap, long-press → context menu). The screen
- * file passes UI state in (messages, setBrowserUrl, etc.) and consumes
- * the resulting handlers; testing each handler in isolation no longer
- * requires standing up the entire screen tree.
- */
 export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSessionActions => {
   const { t } = useTranslation();
   const imageRefreshInFlightRef = useRef(new Set<string>());
@@ -67,21 +60,6 @@ export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSes
     [submitReport, t],
   );
 
-  /**
-   * Markdown link tap handler. `@ronradtke/react-native-markdown-display`'s
-   * contract: returning `true` lets the library call `Linking.openURL(url)`
-   * (system browser); returning `false` suppresses it. To open the link
-   * in the in-app browser without also opening Safari/Chrome, we MUST
-   * return `false` after handling. The action mapping lives in
-   * `decideMarkdownLinkAction` so it can be unit-tested in isolation.
-   *
-   * TD-MD-01 — links inside assistant bubbles are LLM-authored and therefore
-   * prompt-injectable. Auto-opening them (even in the in-app browser) is a
-   * phishing/malware vector. Before opening an `'in-app'` (https) link we
-   * surface a confirm dialog showing the *destination hostname* so the user
-   * can spot a spoof. `'system'` schemes (mailto/tel/sms) are inherently
-   * low-risk and open directly. Everything else is ignored (TD-MD-02).
-   */
   const onMessageLinkPress = useCallback(
     (url: string): boolean => {
       const action = decideMarkdownLinkAction(url);
@@ -103,8 +81,8 @@ export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSes
         ]);
         return false;
       }
-      if (action === 'system') return true; // mailto:, tel:, sms: only (TD-MD-02 allowlist)
-      return false; // ignore empty / http / non-allowlisted schemes
+      if (action === 'system') return true;
+      return false;
     },
     [params, t],
   );
@@ -115,9 +93,7 @@ export const useChatSessionActions = (params: ChatSessionActionsParams): ChatSes
       imageRefreshInFlightRef.current.add(messageId);
       void params
         .refreshMessageImageUrl(messageId)
-        .catch(() => {
-          /* resilient */
-        })
+        .catch(() => undefined)
         .finally(() => {
           imageRefreshInFlightRef.current.delete(messageId);
         });

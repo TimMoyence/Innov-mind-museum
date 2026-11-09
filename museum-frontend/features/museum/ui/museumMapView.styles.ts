@@ -2,10 +2,6 @@ import { StyleSheet } from 'react-native';
 
 import { semantic } from '@/shared/ui/tokens';
 
-/**
- * Styles for `MuseumMapView`. Extracted to keep the component shell under
- * the 300 LOC budget without changing any visual behaviour.
- */
 export const museumMapViewStyles = StyleSheet.create({
   container: {
     flex: 1,

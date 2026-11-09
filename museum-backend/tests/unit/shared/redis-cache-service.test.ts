@@ -2,8 +2,6 @@ import RedisCtor from 'ioredis';
 
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 
-// ── Mock ioredis ──────────────────────────────────────────────────────
-
 const mockRedis = {
   connect: jest.fn().mockResolvedValue(undefined),
   quit: jest.fn().mockResolvedValue('OK'),
@@ -22,8 +20,6 @@ jest.mock('ioredis', () => {
 });
 
 const RedisCtorMock = RedisCtor as unknown as jest.Mock;
-
-// ── Tests ─────────────────────────────────────────────────────────────
 
 describe('RedisCacheService', () => {
   let cache: RedisCacheService;
@@ -61,8 +57,6 @@ describe('RedisCacheService', () => {
     });
   });
 
-  // ── connect / disconnect ──────────────────────────────────────────
-
   describe('connect', () => {
     it('calls redis.connect', async () => {
       await cache.connect();
@@ -76,8 +70,6 @@ describe('RedisCacheService', () => {
       expect(mockRedis.quit).toHaveBeenCalledTimes(1);
     });
   });
-
-  // ── get ────────────────────────────────────────────────────────────
 
   describe('get', () => {
     it('returns deserialized value on cache hit', async () => {
@@ -114,8 +106,6 @@ describe('RedisCacheService', () => {
     });
   });
 
-  // ── set ────────────────────────────────────────────────────────────
-
   describe('set', () => {
     it('stores serialized value with default TTL', async () => {
       await cache.set('key1', { data: 'hello' });
@@ -136,8 +126,6 @@ describe('RedisCacheService', () => {
     });
   });
 
-  // ── del ────────────────────────────────────────────────────────────
-
   describe('del', () => {
     it('deletes the specified key', async () => {
       await cache.del('key1');
@@ -151,8 +139,6 @@ describe('RedisCacheService', () => {
       await expect(cache.del('key')).resolves.toBeUndefined();
     });
   });
-
-  // ── delByPrefix ───────────────────────────────────────────────────
 
   describe('delByPrefix', () => {
     it('scans and deletes all matching keys', async () => {
@@ -183,8 +169,6 @@ describe('RedisCacheService', () => {
     });
   });
 
-  // ── setNx ─────────────────────────────────────────────────────────
-
   describe('setNx', () => {
     it('returns true when key is set successfully', async () => {
       mockRedis.set.mockResolvedValueOnce('OK');
@@ -212,8 +196,6 @@ describe('RedisCacheService', () => {
     });
   });
 
-  // ── ping ──────────────────────────────────────────────────────────
-
   describe('ping', () => {
     it('returns true when redis is reachable', async () => {
       mockRedis.ping.mockResolvedValueOnce('PONG');
@@ -231,8 +213,6 @@ describe('RedisCacheService', () => {
       expect(result).toBe(false);
     });
   });
-
-  // ── default TTL fallback ──────────────────────────────────────────
 
   describe('default TTL', () => {
     it('uses 300s when no defaultTtlSeconds is provided', async () => {

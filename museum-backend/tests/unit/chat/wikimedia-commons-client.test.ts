@@ -69,7 +69,6 @@ describe('WikimediaCommonsClient (C2 v2)', () => {
       width: 800,
       height: 600,
     });
-    // Stage 1 URL hits the search endpoint with namespace 6 (File:)
     const firstUrl = String((fetchMock.mock.calls[0] as unknown[])[0]);
     expect(firstUrl).toContain('list=search');
     expect(firstUrl).toContain('srnamespace=6');
@@ -108,7 +107,6 @@ describe('WikimediaCommonsClient (C2 v2)', () => {
   });
 
   it('aborts on timeout (R5 timeout branch)', async () => {
-    // Both stages are mocked to never resolve so the AbortController fires.
     global.fetch = jest.fn().mockImplementation(
       (_url: string, init?: { signal?: AbortSignal }) =>
         new Promise<Response>((_, reject) => {

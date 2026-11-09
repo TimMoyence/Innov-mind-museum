@@ -6,7 +6,6 @@ import type { MuseumEnrichmentCachePort } from '@modules/museum/domain/ports/mus
 import { InMemoryMuseumRepository } from '../../helpers/museum/inMemoryMuseumRepository';
 import { InMemoryMuseumEnrichmentQueue } from '../../helpers/museum/in-memory-museum-enrichment-queue';
 
-/** In-memory cache double — keyed by `${museumId}:${locale}`. */
 class InMemoryEnrichmentCache implements MuseumEnrichmentCachePort {
   private readonly rows = new Map<string, MuseumEnrichmentView>();
 
@@ -112,7 +111,6 @@ describe('EnrichMuseumUseCase', () => {
     const enqueued = await useCase.execute({ museumId: 1, locale: 'fr' });
     if (enqueued.status !== 'pending') throw new Error('expected pending');
 
-    // Simulate worker completion: cache populated + queue marked completed.
     const persisted = makeView({
       museumId: 1,
       locale: 'fr',

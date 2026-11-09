@@ -4,17 +4,6 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import '../helpers/test-utils';
 import { AiConsentSheetContent } from '@/features/chat/ui/AiConsentSheetContent';
 
-/**
- * Sheet-content variant of the legacy `AiConsentModal` tests, retargeted for
- * the cookie-banner UX (S4-P0-02 amendment 2026-05-20) :
- *  - default `summary` view : reassurance copy + "Accept all" primary CTA +
- *    "Manage" secondary CTA. No switches visible.
- *  - `manage` view (after pressing Manage) : 4 categories × 2 providers = 8
- *    Switches, all default OFF (Apple 5.1.2(i) + GDPR Art. 4(11) "unambiguous
- *    affirmative action"). Save stays disabled with an explicit hint until
- *    the user actively toggles the mandatory `third_party_ai_text_openai`
- *    scope ON.
- */
 describe('AiConsentSheetContent — summary view (default)', () => {
   let defaultProps: {
     close: jest.Mock;
@@ -43,7 +32,6 @@ describe('AiConsentSheetContent — summary view (default)', () => {
     const { getByText, queryAllByRole } = render(<AiConsentSheetContent {...defaultProps} />);
     expect(getByText('consent.accept_all')).toBeTruthy();
     expect(getByText('consent.manage_choices')).toBeTruthy();
-    // Summary view must not expose the granular switches — they live behind Manage.
     expect(queryAllByRole('switch').length).toBe(0);
   });
 
@@ -53,9 +41,6 @@ describe('AiConsentSheetContent — summary view (default)', () => {
     await waitFor(() => {
       expect(defaultProps.onAccept).toHaveBeenCalledTimes(1);
     });
-    // 4 categories × 2 providers = 8 provider scopes + 1 location-data scope
-    // (B9 — `location_to_llm` is a coarse-location data-sharing grant, not a
-    // per-vendor AI grant) — every one granted in one click.
     const grantedScopes = (defaultProps.onAccept.mock.calls[0] ?? [[]])[0] as string[];
     expect(grantedScopes).toEqual(
       expect.arrayContaining([
@@ -98,12 +83,6 @@ describe('AiConsentSheetContent — manage view', () => {
     };
   });
 
-  /**
-   * Render summary then press Manage. The press goes through `LiquidButton`
-   * which awaits `Haptics.selectionAsync()` before invoking onPress — so the
-   * state flip is queued on a microtask. `waitFor` lets it settle before
-   * test code touches the manage-view nodes.
-   */
   const renderManage = async () => {
     const api = render(<AiConsentSheetContent {...defaultProps} />);
     fireEvent.press(api.getByText('consent.manage_choices'));
@@ -116,10 +95,6 @@ describe('AiConsentSheetContent — manage view', () => {
   it('Manage CTA reveals 10 switches all defaulting OFF (8 provider + 2 geo — GDPR Art. 4(11))', async () => {
     const { getAllByRole } = await renderManage();
     const switches = getAllByRole('switch');
-    // 8 provider switches (4 categories × 2 providers) + 2 geo switches:
-    // location_to_llm (full / neighbourhood) + location_coarse_to_llm (coarse /
-    // city) — Cycle 1.5-FE REQ-FE-1, rendered as their own group below the
-    // provider grid (design §2.2).
     expect(switches.length).toBe(10);
     for (const sw of switches) {
       expect(sw.props.value).toBe(false);
@@ -134,8 +109,6 @@ describe('AiConsentSheetContent — manage view', () => {
 
   it('Save is disabled with an explicit hint until the required scope is toggled ON', async () => {
     const { getByText } = await renderManage();
-    // Disabled-state hint must be discoverable (the bug user reported: button
-    // looked tappable but did nothing because the required scope was OFF).
     expect(getByText('consent.save_required_hint')).toBeTruthy();
     fireEvent.press(getByText('consent.save_and_continue'));
     expect(defaultProps.onAccept).not.toHaveBeenCalled();
@@ -151,7 +124,6 @@ describe('AiConsentSheetContent — manage view', () => {
 
     fireEvent(requiredSwitch, 'valueChange', true);
 
-    // Hint disappears once the required scope is granted.
     expect(queryByText('consent.save_required_hint')).toBeNull();
 
     fireEvent.press(getByText('consent.save_and_continue'));
@@ -208,20 +180,11 @@ describe('AiConsentSheetContent — manage view', () => {
       expect(api.getByText('consent.manage_title')).toBeTruthy();
     });
 
-    // After round-tripping, the required scope choice survives.
     const switchesAfter = api.getAllByRole('switch');
     expect(switchesAfter[0]?.props.value).toBe(true);
   });
 });
 
-/**
- * B9 (spec R5 / AC-B9-2, design §9 D1) — the manage view exposes a dedicated
- * "Location" group (NOT under the OpenAI/Google provider grid) for the
- * `location_to_llm` coarse-location data-sharing scope. It defaults OFF, and
- * enabling it (without the required text scope) does NOT satisfy Save — but
- * enabling BOTH the required text scope AND the Location toggle forwards
- * `location_to_llm` in the granted set on Save.
- */
 describe('AiConsentSheetContent — Location group (location_to_llm, B9)', () => {
   let defaultProps: {
     close: jest.Mock;
@@ -246,7 +209,6 @@ describe('AiConsentSheetContent — Location group (location_to_llm, B9)', () =>
     return api;
   };
 
-  /** The Location switch is identified by its `consent.scope_location` a11y label. */
   const findLocationSwitch = <T extends { props: { accessibilityLabel?: string } }>(
     switches: readonly T[],
   ): T | undefined =>
@@ -304,14 +266,6 @@ describe('AiConsentSheetContent — Location group (location_to_llm, B9)', () =>
   });
 });
 
-/**
- * Cycle 1.5-FE (REQ-FE-1/5, T-SHEET-3/4/5) — the manage view exposes a SECOND
- * geo row for `location_coarse_to_llm` (coarse / city-only), distinct from the
- * full neighbourhood `location_to_llm` row. Default OFF. Toggling it ON (plus
- * the required scope) forwards `location_coarse_to_llm` on Save; leaving it OFF
- * does not. Switches are identified by their a11y label = the i18n key (the
- * mock returns the raw key).
- */
 describe('AiConsentSheetContent — Location coarse group (location_coarse_to_llm, Cycle 1.5-FE)', () => {
   let defaultProps: {
     close: jest.Mock;
@@ -391,14 +345,6 @@ describe('AiConsentSheetContent — Location coarse group (location_coarse_to_ll
   });
 });
 
-/**
- * Cycle 1.5-FE (D1 = Option C, REQ-FE-8, T-SHEET-6) — the two geo levels are
- * mutually exclusive in the sheet's local state: enabling full
- * (`location_to_llm`) when coarse is ON turns coarse OFF, and vice-versa. This
- * prevents the misleading "both ON" state (where the BE silently lets full
- * dominate). Asserted via the forwarded granted set on Save (observable state,
- * per lib-docs/react/PATTERNS.md — assert observable state, not internals).
- */
 describe('AiConsentSheetContent — geo exclusivity (D1 Option C, Cycle 1.5-FE)', () => {
   let defaultProps: {
     close: jest.Mock;

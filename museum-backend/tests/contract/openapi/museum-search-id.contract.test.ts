@@ -1,16 +1,3 @@
-/**
- * RED — Museum picker bug (run 2026-06-01-museum-picker-osm-select).
- *
- * Contract guard (spec R4): the `GET /api/museums/search` response item schema
- * MUST document an OPTIONAL integer `id` property (present only for
- * `source:'local'` rows) — listed in `properties` but NOT in `required` (so the
- * change stays additive / non-breaking and OSM rows legitimately omit it).
- *
- * EXPECTED TO FAIL today: the openapi.json search item has no `id` property.
- * Pure document assertion (no DB / no server) — runs in the contract suite and
- * the full module suite.
- */
-
 import openApiSpec from '../../../openapi/openapi.json';
 
 type JsonSchema = {

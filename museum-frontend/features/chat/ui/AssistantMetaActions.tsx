@@ -8,31 +8,17 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
 interface AssistantMetaActionsProps {
-  /** The message ID used for feedback and report callbacks. */
   messageId: string;
-  /** Current feedback value for this message. */
   feedbackValue?: 'positive' | 'negative' | null;
-  /** Called when user taps thumbs up or down. */
   onFeedback?: (messageId: string, value: 'positive' | 'negative') => void;
-  /** Whether TTS audio is currently playing for this message. */
   ttsPlaying: boolean;
-  /** Whether TTS audio is currently loading for this message. */
   ttsLoading: boolean;
-  /** Whether TTS failed for this message (disables the listen button). */
   ttsFailed?: boolean;
-  /**
-   * Whether TTS synthesis was intentionally skipped for this message due to
-   * the active low-data mode. Distinct from `ttsFailed`: we surface a
-   * "data saver" affordance rather than an error state.
-   */
   ttsSkippedLowData?: boolean;
-  /** Called to toggle TTS playback for this message. */
   onToggleTts?: (messageId: string) => Promise<void>;
-  /** Called to report a message. */
   onReport: (messageId: string) => void;
 }
 
-/** Renders the assistant message meta-actions row: thumbs up/down feedback, TTS button, and report button. */
 export const AssistantMetaActions = React.memo(function AssistantMetaActions({
   messageId,
   feedbackValue,

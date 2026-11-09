@@ -29,18 +29,12 @@ import { useStreamingState } from './useStreamingState';
 import { useOfflineSync } from './useOfflineSync';
 import { useSessionLoader } from './useSessionLoader';
 
-// Type-only import: erased at compile, so it never pulls the native expo-speech
-// module into the bundle. The runtime module is still lazy-`require()`d inside
-// the autoplay effect (test/web bundles lack the native module).
-import type * as ExpoSpeech from 'expo-speech';
+import * as Speech from 'expo-speech';
+
+import { reportError } from '@/shared/observability/errorReporting';
 
 export type { ChatUiMessage, ChatUiMessageMetadata };
 
-/**
- * Orchestrates chat session state by composing useSessionLoader, useStreamingState
- * and useOfflineSync, then dispatches outgoing messages to one of four strategies
- * (cache / offline / audio / streaming) via `pickSendStrategy`.
- */
 export const useChatSession = (sessionId: string) => {
   const { t } = useTranslation();
   const cachedSession = useChatSessionStore((s) => s.sessions[sessionId]);
@@ -56,11 +50,6 @@ export const useChatSession = (sessionId: string) => {
   const { locale, museumMode: settingsMuseumMode, guideLevel } = useRuntimeSettings();
   const { latitude, longitude } = useLocation();
   const { isOffline, enqueue, dequeue, peek, pendingCount } = useOfflineQueue();
-  // Canonical connectivity signal (design §D7): a captive portal
-  // ({isConnected:true, isInternetReachable:false}) reads as offline, so the
-  // chat replay never drains the queue into a dead network. We feed this single
-  // `isOnline` value everywhere the connectivity gate was previously the raw
-  // `isConnected` (offline sync drain gate + send strategy selection).
   const { isOnline: isConnected } = useConnectivity();
   const { classifyText } = useArtKeywordsClassifier();
   const { enabled: audioDescriptionMode } = useAudioDescriptionMode();
@@ -73,7 +62,6 @@ export const useChatSession = (sessionId: string) => {
   const { isLoading, error, setError, sessionTitle, museumName, sessionMuseumMode, loadSession } =
     useSessionLoader(sessionId, setMessages);
 
-  // Session-level museumMode takes priority over settings (museum-initiated sessions)
   const museumMode = sessionMuseumMode ?? settingsMuseumMode;
 
   const { streamTextRef, streamingIdRef, flushStreamText, scheduleFlush, resetStreaming } =
@@ -95,7 +83,6 @@ export const useChatSession = (sessionId: string) => {
     setMessages,
   });
 
-  // Sync local messages to persistent Zustand store (skip during streaming)
   const isStreamingRef = useRef(false);
   isStreamingRef.current = isStreaming;
   messagesLengthRef.current = messages.length;
@@ -105,13 +92,6 @@ export const useChatSession = (sessionId: string) => {
     storeUpdateMessages(sessionId, messages);
   }, [messages, sessionId, storeUpdateMessages]);
 
-  // C9.2 (2026-05-17) — Audio-description autoplay.
-  // WCAG 2.1 Level A § 1.1.1 (Non-text content): when audioDescriptionMode is
-  // enabled and the assistant attached an `imageDescription`, immediately read
-  // it aloud via expo-speech (device-native TTS). Bypasses the server TTS path
-  // because the description text lives in metadata, not in the message body.
-  // Once per message: tracked in `autoPlayedImageDescIdsRef` to avoid replay
-  // on re-renders / pagination.
   const autoPlayedImageDescIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!audioDescriptionMode) return;
@@ -120,38 +100,17 @@ export const useChatSession = (sessionId: string) => {
     if (last?.role !== 'assistant') return;
     const desc = last.metadata?.imageDescription;
     if (!desc || autoPlayedImageDescIdsRef.current.has(last.id)) return;
-    // R5 / design §D1 — content-type partition (no double-playback): the
-    // server-TTS path (`useAutoTts`) owns every assistant message that HAS body
-    // text. expo-speech here only auto-reads `imageDescription` for bodyless
-    // messages, so exactly one engine ever auto-plays a given message.
-    // (lib-docs/expo-speech/PATTERNS.md §4 — do NOT route primary replies
-    // through expo-speech.)
     if (last.text.trim()) return;
     autoPlayedImageDescIdsRef.current.add(last.id);
-    let Speech: typeof ExpoSpeech | null = null;
     try {
-      // Lazy-require — mirrors the existing pattern in
-      // `VoiceSessionIntroSheetContent.tsx` so absence of expo-speech in
-      // test/web bundles does not crash the chat screen.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      Speech = require('expo-speech') as typeof ExpoSpeech;
       Speech.speak(desc, { language: locale });
-    } catch {
-      // best-effort autoplay; failure must not break the chat UX.
+    } catch (error) {
+      reportError(error, { component: 'useChatSession', action: 'image_description_speak' });
     }
-    // R3 + R4 — stop in-flight speech in the effect cleanup. expo-speech is
-    // fire-and-forget and `speak()` QUEUES (lib-docs/expo-speech/PATTERNS.md
-    // §1-2 / LESSONS.md:5); `stop()` interrupts + flushes the queue. React runs
-    // this cleanup BEFORE the next effect run, so a new image-description
-    // message stops the previous utterance before the next `speak()` (R4 — no
-    // stacking) AND unmount/blur halts off-screen playback (R3). `stop()`
-    // returns a Promise — fire-and-forget (`void`).
     return () => {
-      try {
-        void Speech?.stop();
-      } catch {
-        // best-effort cleanup.
-      }
+      void Speech.stop().catch((error: unknown) => {
+        reportError(error, { component: 'useChatSession', action: 'image_description_stop' });
+      });
     };
   }, [messages, audioDescriptionMode, locale]);
 
@@ -217,7 +176,6 @@ export const useChatSession = (sessionId: string) => {
         const outcome = await sendMessageCache({ text: trimmedText }, context);
         if (outcome.kind === 'hit' || outcome.kind === 'queued') return true;
         if (outcome.kind === 'failed') return false;
-        // miss → fall through to streaming
       }
 
       if (strategy === 'offline') {
@@ -291,7 +249,7 @@ export const useChatSession = (sessionId: string) => {
 
   const lastAssistantPending = useMemo(() => {
     if (!isSending) return false;
-    if (messages.length === 0) return true; // user just submitted, nothing yet
+    if (messages.length === 0) return true;
     const last = messages[messages.length - 1];
     if (!last) return true;
     if (last.role === 'user') return true;

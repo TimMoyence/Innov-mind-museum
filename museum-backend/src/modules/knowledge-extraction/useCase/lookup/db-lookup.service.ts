@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import { buildLocalKnowledgeBlock } from './db-lookup.prompt';
@@ -5,10 +6,6 @@ import { buildLocalKnowledgeBlock } from './db-lookup.prompt';
 import type { ArtworkKnowledgeRepoPort } from '@modules/knowledge-extraction/domain/ports/artwork-knowledge-repo.port';
 import type { MuseumEnrichmentRepoPort } from '@modules/knowledge-extraction/domain/ports/museum-enrichment-repo.port';
 
-/**
- * 6th enrichment source in the chat pipeline. Fail-open: always returns a
- * string (empty on miss or error).
- */
 export class DbLookupService {
   constructor(
     private readonly artworkRepo: ArtworkKnowledgeRepoPort,
@@ -34,7 +31,7 @@ export class DbLookupService {
     } catch (err) {
       logger.warn('db_lookup_error', {
         searchTerm,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return '';
     }

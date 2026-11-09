@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth, authService, authStorage, clearAccessToken, AUTH_ROUTE } from '@/features/auth';
 import { getErrorMessage } from '@/shared/lib/errors';
 
-/** Manages settings screen actions: biometric toggle, export, logout, delete account. */
 export function useSettingsActions() {
   const { t } = useTranslation();
   const { logout, setIsAuthenticated } = useAuth();

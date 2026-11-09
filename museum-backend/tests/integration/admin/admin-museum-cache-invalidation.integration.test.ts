@@ -1,23 +1,3 @@
-/**
- * C1 Phase 1 PR-A — admin museum cache invalidation contract test.
- *
- * Pins the {@link LlmCacheServiceImpl.invalidateMuseum} contract at the
- * boundary the admin path consumes (museum profile update + admin cache
- * purge route). Spec R9 (`team-state/2026-05-08-c1-chat-fast/spec.md` §3)
- * requires that BOTH `museum-mode` and `personalized` context-class buckets
- * are purged on a single invalidation call — this test asserts both
- * `delByPrefix` invocations carry the canonical key shape
- * `llm:v4:{contextClass}:{museumId}:` so a future refactor that drops one
- * bucket trips a clear failure. (KEY_VERSION bumped v1→v2 on 2026-05-19
- * audit-360-w2 T1-GREEN to isolate pre-F1 canonical-input entries ; bumped
- * v2→v3 on 2026-06-12 for the lowDataMode dimension — US-12.2/INV-21, run
- * undefined-network-detection-reliability.)
- *
- * Lives under `tests/integration/admin/` because the contract is consumed
- * by the admin module ; the cache itself is exercised against a mocked
- * {@link CacheService} (no testcontainer needed — the SQL-level invalidation
- * paths are exhaustively covered in `tests/unit/chat/llm-cache.service.test.ts`).
- */
 import { LlmCacheServiceImpl } from '@modules/chat/useCase/llm/llm-cache.service';
 
 import type { CacheService } from '@shared/cache/cache.port';
@@ -71,9 +51,6 @@ describe('admin → invalidateMuseum cache contract', () => {
   });
 
   it('uses the same key shape the cache lookup writes to', async () => {
-    // Round-trip pin — store something under each context_class for museumId
-    // 7, then invalidate, and confirm the prefix used to delete matches the
-    // prefix the keys were written under.
     const writtenKeys: string[] = [];
     const cache = {
       ...buildMockCache(),

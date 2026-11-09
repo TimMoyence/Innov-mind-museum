@@ -1,15 +1,8 @@
-/**
- * TDD: suggestions[] plumbing through commitAssistantResponse.
- * Verifies sanitization via sanitizePromptInput(s, 60) and omit-when-absent semantics.
- */
-
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeSession, makeMessage } from '../../helpers/chat/message.fixtures';
-
-// ── Minimal CommitDeps stub ─────────────────────────────────────────────
 
 const makeGuardrail = (text: string): GuardrailEvaluationService =>
   ({
@@ -46,8 +39,6 @@ const baseOptions = {
   ownerId: 1,
 };
 
-// ── Tests ───────────────────────────────────────────────────────────────
-
 describe('commitAssistantResponse — suggestions plumbing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -73,7 +64,7 @@ describe('commitAssistantResponse — suggestions plumbing', () => {
 
   it('omits suggestions key when aiResult.suggestions is undefined', async () => {
     const text = 'Voici la Joconde.';
-    const aiResult = baseAiResult(); // no suggestions field
+    const aiResult = baseAiResult();
 
     const result = await commitAssistantResponse(
       {
@@ -91,7 +82,6 @@ describe('commitAssistantResponse — suggestions plumbing', () => {
 
   it('strips zero-width characters and trims whitespace from suggestion strings', async () => {
     const text = 'Response.';
-    // U+200B = zero-width space
     const aiResult = baseAiResult({ suggestions: ['  weird​ text  '] });
 
     const result = await commitAssistantResponse(
@@ -147,8 +137,6 @@ describe('commitAssistantResponse — suggestions plumbing', () => {
 
   it('omits the suggestions field when sanitization collapses every item to empty', async () => {
     const text = 'Response.';
-    // Each item: whitespace + zero-width chars only (U+200B). sanitizePromptInput
-    // strips the zero-width chars and trims, leaving an empty string.
     const aiResult = baseAiResult({ suggestions: ['  ​  ', '​​', '   '] });
 
     const result = await commitAssistantResponse(

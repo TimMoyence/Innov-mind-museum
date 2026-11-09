@@ -1,40 +1,3 @@
-/**
- * T3.1 (RED — Cycle B « Aucun lead perdu » — UFR-022 fresh-context red phase).
- *
- * Pins the persist-then-notify invariant for the B2B lead use-case against a
- * REAL Postgres-backed `ILeadRepository` (test-infra `PgLeadRepositoryHarness`,
- * so the failure is behavioural, not a module-not-found on the green adapter),
- * with the Brevo notifier mocked:
- *
- *   (a) R1 — the lead is persisted `pending` BEFORE the notifier is invoked
- *       (order proven: at the moment `notify` is called, the row already
- *       exists in the DB).
- *   (b) R2 — notifier resolves → row pending → delivered, deliveredAt set,
- *       attempts ≥ 1.
- *   (c) R3 — notifier THROWS → the lead is NEVER lost: the row exists with
- *       status `failed`, attempts = 1. The use-case does NOT rethrow.
- *   (d) R7 — honeypot (`website` non-empty) → 0 row persisted, 0 notify.
- *   (e) R15 — two identical B2B submits (email + museum) → ONE notify only
- *       (2nd recognised as a dedup hit; no duplicate active row).
- *
- * RED reason at baseline: `SubmitB2bLeadUseCase` is stateless — it takes only a
- * notifier and never writes to the DB (`submitB2bLead.useCase.ts:36,97`). So
- * every persistence assertion fails (no row), and on notifier throw the current
- * code rethrows (no `markFailed`). The green phase (T3.3) injects
- * `ILeadRepository` and implements persist-then-notify.
- *
- * The constructor is invoked via the GREEN 2-arg signature `(notifier, repo)`.
- * At baseline the class only accepts `(notifier)`, so the invocation is bridged
- * through a constructor-type cast (sanctioned repo red-phase pattern, mirror
- * `tests/integration/support/ticket-museum-scope.test.ts`) — this keeps tsc
- * green while the RUNTIME persistence assertions fail. The cast becomes a
- * no-op once the green signature lands.
- *
- * Maps: R1, R2, R3, R7, R15.
- *
- * Test discipline — payloads via `makeB2bLeadPayload()`; rows inspected via the
- * real repo + entity. Teardown via `harness.scheduleStop()`.
- */
 import { SubmitB2bLeadUseCase } from '@modules/leads/useCase/submitB2bLead.useCase';
 import {
   createIntegrationHarness,
@@ -55,19 +18,12 @@ import type { Repository } from 'typeorm';
 const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
-/**
- * Constructor surface the GREEN use-case exposes: `(notifier, repo)`. At
- * baseline `SubmitB2bLeadUseCase` only declares `(notifier)`, so we widen the
- * class reference to this type to wire the repo. Runtime assertions are what
- * fail red — the cast only unblocks tsc.
- */
 type B2bUseCaseCtor = new (
   notifier: B2bLeadNotifier,
   repo: ILeadRepository,
 ) => SubmitB2bLeadUseCase;
 
 describeIntegration('SubmitB2bLeadUseCase — persist-then-notify [integration, real PG]', () => {
-
   let harness: IntegrationHarness;
   let repo: ILeadRepository;
   let leadRepo: Repository<Lead>;
@@ -89,7 +45,6 @@ describeIntegration('SubmitB2bLeadUseCase — persist-then-notify [integration, 
     let rowCountAtNotify = -1;
     const notifier: B2bLeadNotifier = {
       notify: jest.fn(async () => {
-        // At the moment notify is called, the pending row must already exist.
         rowCountAtNotify = await leadRepo.count();
       }),
     };
@@ -122,7 +77,6 @@ describeIntegration('SubmitB2bLeadUseCase — persist-then-notify [integration, 
     };
     const useCase = new Ctor(notifier, repo);
 
-    // R5 contract: the use-case does NOT rethrow on notifier failure.
     await expect(useCase.execute(makeB2bLeadPayload())).resolves.toBeUndefined();
 
     const rows = await leadRepo.find();
@@ -155,7 +109,6 @@ describeIntegration('SubmitB2bLeadUseCase — persist-then-notify [integration, 
     await useCase.execute(payload);
 
     expect(notifier.notify).toHaveBeenCalledTimes(1);
-    // No duplicate active (pending|delivered) row for the same dedup key.
     const active = await leadRepo.count({
       where: [{ status: 'pending' }, { status: 'delivered' }],
     });

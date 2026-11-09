@@ -1,31 +1,3 @@
-/**
- * B-R1 (RED) — Network Profile Registry shape + frozen contract, re-ratified
- * at 10 profiles (run `undefined-network-detection-reliability`, spec §10 #4).
- *
- * Contract evolution (documented, NOT a frozen-test breach): the W1 6-profile
- * ratification is superseded by spec US-11.1/US-11.2 — four new profiles
- * (`4g` / `5g` / `wifi-metered` / `cellular-degraded`) and two new data-region
- * fields per profile:
- *   - `metered: boolean`        (COST axis — source of `isConnectionExpensive`)
- *   - `expectedQuality: 'ok' | 'slow' | null` (ENGINE verdict, D-04 — explicit
- *     field, never derived inside a test; `null` = offline, no samples possible)
- *
- * Pins (design.md §2.7 canonical table):
- *   - exactly 10 keys
- *   - the ratified canonical numbers incl. metered + expectedQuality
- *   - Object.isFrozen at record AND per-profile level
- *   - ONLY flapping carries dutyCycle { onlineMs:5000, offlineMs:3000, baseProfile:'3g-lossy' }
- *   - data-region markers intact + new fields/profiles live INSIDE the region
- *     (INV-16 — the BE parity sentinel hashes only the bytes between markers)
- *   - the module imports neither `react` nor `@react-native-community/netinfo`
- *     (purity, EARS R6 — unchanged)
- *
- * lib-docs: @react-native-community/netinfo (PATTERNS.md §1 imports — purity
- *   grep below guards the registry never pulls the lib in).
- *
- * No inline test entities: the CANONICAL table mirrors the locked design table
- * (drift detector), assertions read the registry itself as source of truth.
- */
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';
 
 import type {
@@ -33,8 +5,6 @@ import type {
   NetworkProfileName,
 } from '@/shared/infrastructure/connectivity/networkProfiles';
 
-// Ratified canonical numbers (design.md §2.7 table — DO NOT inline-edit; these
-// mirror the locked table and exist to detect silent drift).
 const CANONICAL: Record<
   NetworkProfileName,
   Omit<NetworkProfile, 'name' | 'label' | 'dutyCycle'>
@@ -204,8 +174,6 @@ describe('NETWORK_PROFILES registry — 10 profiles (B-R1, US-11.1/US-11.2)', ()
     },
   );
 
-  // US-11.2 — COST axis: every cellular profile is metered; plain wifi control
-  // + offline are not; wifi-metered is the Android hotspot/metered-wifi case.
   it('marks every cellular profile metered, offline + plain wifi not metered', () => {
     for (const name of ALL_NAMES) {
       const p = NETWORK_PROFILES[name];
@@ -218,14 +186,12 @@ describe('NETWORK_PROFILES registry — 10 profiles (B-R1, US-11.1/US-11.2)', ()
     expect(NETWORK_PROFILES['wifi-metered'].metered).toBe(true);
   });
 
-  // D-04 — expectedQuality is null ONLY for offline (no samples possible).
   it('declares expectedQuality null only for offline, ok/slow for every online profile', () => {
     expect(NETWORK_PROFILES.offline.expectedQuality).toBeNull();
     for (const name of ALL_NAMES) {
       if (name === 'offline') continue;
       expect(['ok', 'slow']).toContain(NETWORK_PROFILES[name].expectedQuality);
     }
-    // The "5G one-bar basement" case: label says normal, the ENGINE must say slow.
     expect(NETWORK_PROFILES['cellular-degraded'].expectedQuality).toBe('slow');
   });
 

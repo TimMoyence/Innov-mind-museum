@@ -5,8 +5,6 @@ import { useStreamingState } from '@/features/chat/application/useStreamingState
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
 import { makeChatUiMessage } from '@/__tests__/helpers/factories';
 
-// ── Tests ────────────────────────────────────────────────────────────────────
-
 describe('useStreamingState', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -16,7 +14,6 @@ describe('useStreamingState', () => {
     jest.useRealTimers();
   });
 
-  /** Helper that renders useStreamingState wired to a real useState setter. */
   const renderStreamingHook = (initialMessages: ChatUiMessage[] = []) => {
     const { result } = renderHook(() => {
       const [messages, setMessages] = useState(initialMessages);
@@ -91,7 +88,6 @@ describe('useStreamingState', () => {
       result.current.scheduleFlush();
     });
 
-    // Before 40ms: no flush
     expect(result.current.messages[0]?.text).toBe('');
 
     act(() => {
@@ -112,7 +108,6 @@ describe('useStreamingState', () => {
     });
 
     act(() => {
-      // Second call while timer is pending should be ignored
       result.current.streamTextRef.current = 'second';
       result.current.scheduleFlush();
     });
@@ -121,7 +116,6 @@ describe('useStreamingState', () => {
       jest.advanceTimersByTime(40);
     });
 
-    // Should flush with the latest accumulated text
     expect(result.current.messages[0]?.text).toBe('second');
   });
 
@@ -143,7 +137,6 @@ describe('useStreamingState', () => {
     expect(result.current.streamTextRef.current).toBe('');
     expect(result.current.updateTimerRef.current).toBeNull();
 
-    // Timer should have been cancelled — advancing should not flush
     act(() => {
       jest.advanceTimersByTime(100);
     });
@@ -167,7 +160,6 @@ describe('useStreamingState', () => {
 
     unmount();
 
-    // No error should occur when timers fire after unmount
     act(() => {
       jest.advanceTimersByTime(100);
     });
@@ -207,7 +199,6 @@ describe('useStreamingState', () => {
 
     expect(result.current.messages[0]?.text).toBe('batch-1');
 
-    // Now schedule a second flush
     act(() => {
       result.current.streamTextRef.current = 'batch-2';
       result.current.scheduleFlush();

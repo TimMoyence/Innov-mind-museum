@@ -3,7 +3,6 @@ import type { TSESTree } from '@typescript-eslint/utils';
 
 type Options = [
   {
-    /** Path globs that opt in. Conservative default: only files containing `repository` in their name. */
     filePathPatterns?: string[];
   },
 ];
@@ -77,13 +76,11 @@ export default createRule<Options, MessageIds>({
     }
 
     return {
-      // Pattern A: <anything>.set({ field: undefined, ... })
       CallExpression(node) {
         if (node.callee.type !== 'MemberExpression') return;
         const prop = node.callee.property;
         if (prop.type !== 'Identifier') return;
 
-        // Pattern A — .set({...})
         if (prop.name === 'set' && node.arguments.length === 1) {
           const arg = node.arguments[0];
           if (arg?.type === 'ObjectExpression') {
@@ -98,11 +95,6 @@ export default createRule<Options, MessageIds>({
           return;
         }
 
-        // Pattern B — .update(criteria, { field: undefined, ... })
-        // Heuristic: EntityManager / Repository `update` takes (criteria, partial)
-        // and forwards to `.set()`. We only flag the 2-arg signature whose
-        // second arg is an ObjectExpression — `qb.update(Entity)` only takes one
-        // arg and is followed by a separate `.set()` call (covered above).
         if (prop.name === 'update' && node.arguments.length >= 2) {
           const arg = node.arguments[1];
           if (arg?.type === 'ObjectExpression') {

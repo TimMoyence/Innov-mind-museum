@@ -1,21 +1,8 @@
-/**
- * Guard test: ChatSession optimistic-lock policy.
- *
- * Asserts that commitAssistantResponse surfaces a 409 WITHOUT auto-retrying
- * when TypeORM throws OptimisticLockVersionMismatchError.
- *
- * The LLM call already ran against an old session snapshot — retrying
- * persistMessage would commit a reply that disagrees with the refreshed
- * session state. The 409 forces the client to re-prompt instead.
- */
-
 import { commitAssistantResponse } from '@modules/chat/useCase/orchestration/message-commit';
 import type { OrchestratorOutput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 import type { GuardrailEvaluationService } from '@modules/chat/useCase/guardrail/guardrail-evaluation.service';
 import { makeChatRepo } from '../../helpers/chat/repo.fixtures';
 import { makeSession } from '../../helpers/chat/message.fixtures';
-
-// ── Helpers ───────────────────────────────────────────────────────────────
 
 function makeGuardrail(): GuardrailEvaluationService {
   return {
@@ -38,8 +25,6 @@ const baseAiResult: OrchestratorOutput = {
   metadata: {},
   degraded: false,
 };
-
-// ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('commitAssistantResponse — version conflict policy', () => {
   beforeEach(() => {

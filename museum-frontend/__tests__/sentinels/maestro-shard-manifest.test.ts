@@ -30,10 +30,7 @@ function runSentinel(repoRoot: string): { code: number; stdout: string; stderr: 
   }
 }
 
-function setupFakeRepo(opts: {
-  flows: string[];
-  manifestFlows: string[][]; // one inner array per shard
-}): string {
+function setupFakeRepo(opts: { flows: string[]; manifestFlows: string[][] }): string {
   const root = mkdtempSync(join(tmpdir(), 'maestro-sentinel-'));
   const maestroDir = join(root, 'museum-frontend', '.maestro');
   mkdirSync(maestroDir, { recursive: true });

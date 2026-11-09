@@ -1,20 +1,3 @@
-/**
- * RED (W1-L1-04) — helper B `withNetworkSim` + `mulberry32` + `FakeClock`.
- *
- * Proves the absence of the deterministic network-simulation harness:
- * - latency is advanced through an INJECTED FakeClock (no real timers, no Date.now),
- * - packet loss is seeded via mulberry32 (same seed → identical sequence; never Math.random),
- * - a configured delay greater than the axios timeout (`AXIOS_TIMEOUT_MS`, sourced from
- *   `httpClient.ts:172` = 15000) resolves to a Timeout AppError that `isRetryableError`
- *   treats as retryable (spec R5).
- *
- * None of `withNetworkSim` / `mulberry32` / `FakeClock` / `AXIOS_TIMEOUT_MS` exist yet,
- * so the imports resolve to nothing and the suite fails.
- *
- * lib-docs:
- * - @react-native-community/netinfo PATTERNS.md:181 (§4 — default reachability timeout 15s;
- *   a degraded network can stall a request that long).
- */
 import { isRetryableError } from '@/shared/lib/retry';
 import { isAppError } from '@/shared/lib/errors';
 import { NETWORK_PROFILES } from '@/shared/infrastructure/connectivity/networkProfiles';

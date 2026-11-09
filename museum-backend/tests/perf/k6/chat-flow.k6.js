@@ -10,7 +10,6 @@ export const options = {
   },
 };
 
-// Setup: register and login users, return their tokens
 export function setup() {
   const users = [];
   for (let i = 0; i < 5; i++) {
@@ -49,7 +48,6 @@ export default function (data) {
   const user = data.users[__VU % data.users.length];
   const hdrs = authHeaders(user.accessToken);
 
-  // Create session
   const createRes = http.post(
     `${BASE_URL}/api/chat/sessions`,
     JSON.stringify({ title: `Load test session VU${__VU} iter${__ITER}` }),
@@ -69,7 +67,6 @@ export default function (data) {
 
   sleep(0.5);
 
-  // Post 3 messages (text only to avoid LLM/image dependency)
   const messages = [
     'What is impressionism?',
     'Tell me about the Mona Lisa.',
@@ -89,7 +86,6 @@ export default function (data) {
     sleep(1);
   }
 
-  // List sessions
   const listRes = http.get(`${BASE_URL}/api/chat/sessions`, hdrs);
   check(listRes, {
     'list sessions 200': (r) => r.status === 200,
@@ -102,7 +98,6 @@ export default function (data) {
 
   sleep(0.5);
 
-  // Get session detail
   const detailRes = http.get(`${BASE_URL}/api/chat/sessions/${sessionId}`, hdrs);
   check(detailRes, {
     'get session 200': (r) => r.status === 200,
@@ -110,7 +105,6 @@ export default function (data) {
 
   sleep(0.3);
 
-  // Delete session
   const deleteRes = http.del(`${BASE_URL}/api/chat/sessions/${sessionId}`, null, hdrs);
   check(deleteRes, {
     'delete session 2xx': (r) => r.status >= 200 && r.status < 300,

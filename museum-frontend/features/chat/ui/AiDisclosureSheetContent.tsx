@@ -7,20 +7,9 @@ import { semantic, space, radius, fontSize } from '@/shared/ui/tokens';
 
 interface AiDisclosureSheetContentProps {
   close: () => void;
-  /**
-   * Optional handler invoked when the "Learn more" link is tapped. Typically
-   * routes the user to the public AI disclosure page; the parent screen owns
-   * the navigation side-effect and the sheet closes itself.
-   */
   onLearnMore?: () => void;
 }
 
-/**
- * Bottom-sheet content (full-screen, non-blocking) for the on-demand AI
- * disclosure recap. Mounted by `<BottomSheetRouter>` for the `ai-disclosure`
- * route. Replaces the previous `<AiDisclosureModal>` — the centered card
- * layout is preserved inside the router's fullscreen surface.
- */
 export const AiDisclosureSheetContent = ({ close, onLearnMore }: AiDisclosureSheetContentProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();

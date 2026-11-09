@@ -1,21 +1,3 @@
-/**
- * Phase 10 Sprint 10.3 — `BullmqEnrichmentSchedulerAdapter` integration test.
- *
- * Pins the contract of the BullMQ-backed scheduler against a real Redis 7
- * testcontainer (mirrors the Phase 1 Postgres pattern):
- *   - `start()` is idempotent (second call is a no-op).
- *   - `start()` upserts a job scheduler under STALE_ENRICHMENT_SCAN_SCHEDULER_ID.
- *   - The recurring scheduler ticks invoke `RefreshStaleEnrichmentsUseCase.execute`
- *     and (when wired) `PurgeDeadEnrichmentsUseCase.execute(now, thresholdDays)`.
- *   - `stop()` removes the scheduler + closes the worker + queue without throwing.
- *   - `stop()` before `start()` is a no-op.
- *   - Exported constants stay stable (any downstream observability/runbook
- *     reference would break otherwise).
- *
- * Run with:
- *   RUN_INTEGRATION=true pnpm test:integration -- \
- *     --testPathPattern=bullmq-enrichment-scheduler.integration
- */
 import {
   BullmqEnrichmentSchedulerAdapter,
   DEFAULT_STALE_ENRICHMENT_CRON,
@@ -52,11 +34,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
     await container.stop();
   });
 
-  // ── Stub use cases ─────────────────────────────────────────────────────────
-  // The adapter's only collaborators are the two use cases. We stub them with
-  // jest.fn so each tick's effects are observable without spinning up the real
-  // Wikidata + DB pipeline.
-
   const makeRefreshUseCase = () =>
     ({
       execute: jest.fn(async () => ({ scanned: 3, refreshed: 2 })),
@@ -69,8 +46,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
 
   describe('exported constants', () => {
     it('queue name + scheduler id + default cron stay stable for downstream observability', () => {
-      // These three constants land in dashboards, runbooks, and the
-      // BullMQ Bull-Board admin. Renaming them is a breaking change.
       expect(ENRICHMENT_SCHEDULER_QUEUE_NAME).toBe('museum-enrichment-scheduler');
       expect(STALE_ENRICHMENT_SCAN_SCHEDULER_ID).toBe('stale-enrichment-scan');
       expect(DEFAULT_STALE_ENRICHMENT_CRON).toBe('0 3 * * *');
@@ -85,9 +60,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
 
       await adapter.start();
 
-      // Inspect the scheduler list with a side-channel BullMQ Queue handle.
-      // BullMQ persists schedulers as `repeat:<id>` keys in Redis; the high-
-      // level `getJobSchedulers()` API confirms registration.
       const probe = new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {
         connection: container.connection,
       });
@@ -127,8 +99,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
       });
 
       await adapter.start();
-      // Second call must observe the `started` guard and return without
-      // touching the queue.
       await expect(adapter.start()).resolves.toBeUndefined();
 
       await adapter.stop();
@@ -208,10 +178,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
 
       await adapter.start();
 
-      // Inject a manual tick by adding a job under the scheduler's name. The
-      // scheduler upserts under `STALE_ENRICHMENT_SCAN_SCHEDULER_ID` w/ name
-      // 'scan', so a one-off `add('scan', {})` exercises the same worker
-      // handler without waiting for the cron tick.
       const probe = new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {
         connection: container.connection,
       });
@@ -261,8 +227,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
         refreshUseCase,
         { connection: container.connection },
         purgeUseCase,
-        // Intentionally no purgeThresholdDays — the scheduler must NOT call
-        // purge in that case (legacy single-arg constructor compat).
       );
 
       await adapter.start();
@@ -274,7 +238,6 @@ describeIntegration('BullmqEnrichmentSchedulerAdapter (real Redis) [integration]
         await waitFor(() => {
           expect((refreshUseCase.execute as jest.Mock).mock.calls.length).toBeGreaterThan(0);
         });
-        // Refresh fired; purge should NOT have been touched.
         expect((purgeUseCase.execute as jest.Mock).mock.calls).toHaveLength(0);
       } finally {
         await probe.close();

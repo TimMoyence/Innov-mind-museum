@@ -5,6 +5,8 @@ import {
   useDataModePreferenceStore,
   type DataModePreference,
 } from '@/features/settings/dataModeStore';
+import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
+import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
@@ -17,12 +19,12 @@ const OPTION_LABEL_KEY = {
   normal: 'settings.dataMode.normal',
 } as const;
 
-/** Data-mode picker: auto / low / normal with description. */
 export const DataModeSettingsSection = () => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const preference = useDataModePreferenceStore((s) => s.preference);
   const setPreference = useDataModePreferenceStore((s) => s.setPreference);
+  const { refusal, track } = useLatestSaveOutcome();
 
   return (
     <GlassCard style={styles.card} intensity={56}>
@@ -44,7 +46,7 @@ export const DataModeSettingsSection = () => {
                 },
               ]}
               onPress={() => {
-                setPreference(option);
+                void track(setPreference(option));
               }}
               accessibilityRole="radio"
               accessibilityState={{ selected: isSelected }}
@@ -62,6 +64,8 @@ export const DataModeSettingsSection = () => {
           );
         })}
       </View>
+
+      <SaveRefusalNotice refusal={refusal} />
 
       {preference === 'auto' ? (
         <Text style={[styles.description, { color: theme.textSecondary }]}>

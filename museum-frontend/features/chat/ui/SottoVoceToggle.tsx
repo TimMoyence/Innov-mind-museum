@@ -11,25 +11,10 @@ interface SottoVoceToggleProps {
   readonly onToggle: () => void;
 }
 
-/**
- * B5 — Atomic icon toggle for sotto-voce (silent-room) mode. Renders inside
- * `<ChatHeader>` header actions. Tapping flips the global sotto-voce
- * preference (managed by `useSottoVoce`), which the screen uses to gate
- * `useAutoTts.enabled = (...) && !sottoVoce`.
- *
- * - `accessibilityRole="button"` (convention RN Pressable bascule, not
- *   `switch` which is reserved for `<Switch>` native).
- * - `accessibilityState.selected` reflects current state.
- * - Icon `mic-off-outline` (off) / `mic-off` (on).
- * - Telemetry : console.debug only (parity A3-A6, Open Q3 deferred V1.1+).
- *
- * Spec : `docs/chat-ux-refonte/specs/B5.md` §1.2 (R9-R17) + §2.3.
- */
 export const SottoVoceToggle = React.memo(({ enabled, onToggle }: SottoVoceToggleProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
   const handlePress = () => {
-    // B5 telemetry — same pattern as A3/A6 (console.debug only, no Sentry V1).
     console.debug('[chat.sottoVoce]', { next: !enabled });
     onToggle();
   };

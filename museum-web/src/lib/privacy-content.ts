@@ -67,10 +67,6 @@ export function getPrivacyContent(locale: string): PrivacyContent {
   return isPrivacyLocale(locale) ? privacyContentByLocale[locale] : privacyContentByLocale.en;
 }
 
-/**
- * Typed recipients (subprocessors) — exported for the `/subprocessors` route.
- * Returned as a copy so callers cannot mutate the canonical-derived array.
- */
 export function getSubprocessors(locale: string): CanonicalSubprocessor[] {
   const loc: LegalLocale = isPrivacyLocale(locale) ? locale : 'en';
   return typed.locales[loc].recipients.map((r) => ({ ...r }));

@@ -8,7 +8,6 @@ import { fontSize, semantic, space } from '@/shared/ui/tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/** Slide 1 of onboarding v2 Spec B: greeting — "Welcome to Musaium". */
 export const GreetingSlide = () => {
   const { theme } = useTheme();
   const { t } = useTranslation();

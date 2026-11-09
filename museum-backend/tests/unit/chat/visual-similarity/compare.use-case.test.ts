@@ -1,22 +1,3 @@
-/**
- * RED — T5.4 — composition `compareImageUseCase(deps)(input)`.
- *
- * Locks down tasks.md T5.4 + design.md §1 + spec R1, R12:
- *   - Reuses the existing `ImageProcessingService` (NO duplication of EXIF
- *     strip / magic / mime / OCR-guardrail) — R12,
- *   - Calls `VisualSimilarityService.compare` with the sanitised buffer
- *     produced by the image processor,
- *   - Persists the assistant message via `ChatService.appendAssistantMessage`
- *     with `metadata.compareResults` and `metadata.fallbackReason` (when set),
- *   - When the image processor rejects (corrupted image / OCR injection),
- *     re-throws WITHOUT calling the similarity service or persisting anything,
- *   - Empty matches still persist an assistant message that carries the
- *     `fallbackReason` text (R10 + chat audit trail).
- *
- * SUT does not yet exist (Phase 5). Tests are RED until the editor lands
- * `compare.use-case.ts`.
- */
-
 import {
   DEFAULT_MODEL_VERSION,
   makeCompareMatch,
@@ -28,11 +9,6 @@ import { badRequest } from '@shared/errors/app.error';
 
 import type { CompareResult } from '@modules/chat/domain/visual-similarity/compare-result.types';
 
-// ---------------------------------------------------------------------------
-// SUT — Phase 5 file, must not yet exist. Loaded dynamically so the suite
-// produces a "Cannot find module …" RED rather than a compile failure.
-// ---------------------------------------------------------------------------
-
 interface CompareUseCaseInput {
   sessionId: string;
   buffer: Buffer;
@@ -43,7 +19,6 @@ interface CompareUseCaseInput {
   ownerId?: number;
 }
 
-/** Minimal ChatService-like surface the compare use-case depends on. */
 interface ChatServiceLike {
   appendAssistantMessage: (input: {
     sessionId: string;
@@ -52,7 +27,6 @@ interface ChatServiceLike {
   }) => Promise<{ id: string }>;
 }
 
-/** Minimal ImageProcessingService-like surface the compare use-case depends on. */
 interface ImageProcessorLike {
   process: (input: {
     sessionId: string;
@@ -78,16 +52,12 @@ interface CompareUseCaseDeps {
   chatService: ChatServiceLike;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- dynamic SUT load
-const { compareImageUseCase } = require('@modules/chat/useCase/visual-similarity/compare.use-case') as {
-  compareImageUseCase: (
-    deps: CompareUseCaseDeps,
-  ) => (input: CompareUseCaseInput) => Promise<CompareResult>;
-};
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
+const { compareImageUseCase } =
+  require('@modules/chat/useCase/visual-similarity/compare.use-case') as {
+    compareImageUseCase: (
+      deps: CompareUseCaseDeps,
+    ) => (input: CompareUseCaseInput) => Promise<CompareResult>;
+  };
 
 function buildDeps(initialBuffer: Buffer): {
   imageProcessor: { process: jest.Mock };
@@ -175,7 +145,7 @@ describe('compareImageUseCase (T5.4 — orchestration use-case)', () => {
   });
 
   it('R12 — forwards the SANITISED buffer (output of imageProcessor.process) into similarityService.compare', async () => {
-    const sanitised = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a]); // tiny jpeg-ish
+    const sanitised = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a]);
     const { imageProcessor, similarityService, chatService } = buildDeps(buffer);
     imageProcessor.process.mockResolvedValueOnce({ buffer: sanitised, mimeType: 'image/jpeg' });
 
@@ -225,14 +195,9 @@ describe('compareImageUseCase (T5.4 — orchestration use-case)', () => {
 
     const result = await useCase({ ...DEFAULT_INPUT, buffer });
 
-    // The route will map this to a 503; the use case must surface the result
-    // verbatim so the route can branch on the fallbackReason.
     expect(result.matches).toEqual([]);
     expect(result.fallbackReason).toBe('encoder_unavailable');
 
-    // R11 — no ChatMessage is persisted on encoder outage. This is the
-    // contract that prevents the audit trail from showing an assistant
-    // "reply" the user never received.
     expect(chatService.appendAssistantMessage).not.toHaveBeenCalled();
   });
 
@@ -258,11 +223,8 @@ describe('compareImageUseCase (T5.4 — orchestration use-case)', () => {
       metadata?: { compareResults?: unknown; fallbackReason?: string };
     };
     expect(persistArg.metadata).toBeDefined();
-    // fallbackReason MUST surface in the persisted metadata so downstream
-    // (FE rendering, audit) can show the empty-result UX (R10 / Q7).
     expect(
       persistArg.metadata?.fallbackReason ??
-        // Tolerate nesting under metadata.compareResults (impl detail).
         (persistArg.metadata?.compareResults as { fallbackReason?: string } | undefined)
           ?.fallbackReason,
     ).toBe('no_visual_neighbor');

@@ -7,34 +7,7 @@ import { AppDataSource } from '@data/db/data-source';
 import { AUDIT_CHAIN_GENESIS_HASH, type AuditChainRow } from '@shared/audit/audit-chain';
 import { verifyChainAndFormat, type AuditChainCliResult } from '@shared/audit/audit-chain-cli-core';
 import { AuditLog } from '@shared/audit/auditLog.entity';
-
-/**
- * Nightly audit-chain verification CLI.
- *
- * Walks `audit_logs` ordered by (created_at ASC, id ASC) and verifies the
- * SHA-256 prev_hash + row_hash chain is intact. Used by
- * `.github/workflows/audit-chain-nightly.yml`.
- *
- * Why TypeScript and not .cjs:
- *   The Musaium prod image (Dockerfile.prod) copies only `dist/` into the
- *   runtime stage — raw `scripts/` is NOT in the container. By writing this
- *   in TypeScript and adding it to tsconfig.json `include`, the build emits
- *   `dist/scripts/audit-chain-verify.js`, which is present in the container
- *   and can be invoked by the cron workflow via
- *   `docker compose exec backend node dist/scripts/audit-chain-verify.js`.
- *
- * Exit codes:
- *   0 — chain intact
- *   1 — chain break (alerts POSTed in parallel to Slack via DEPLOY_ALERT_SLACK_WEBHOOK
- *       and to Brevo email via BREVO_API_KEY + AUDIT_CHAIN_ALERT_EMAIL when set)
- *   2 — unexpected error (DB connect failure, malformed fixture, etc.)
- *
- * Stdout: a single line of JSON describing the verdict (status + counters).
- *
- * Test mode: set AUDIT_CHAIN_VERIFY_FIXTURE to a JSON file containing an
- * array of AuditChainRow objects (createdAt as ISO 8601 string). The script
- * skips DB connect and runs the verifier on the fixture rows.
- */
+import { errorMessage } from '@shared/errors/error-message';
 
 function emitStdout(payload: AuditChainCliResult['payload']): void {
   process.stdout.write(JSON.stringify(payload) + '\n');
@@ -55,7 +28,7 @@ async function postSlackAlert(webhookUrl: string | undefined, text: string): Pro
       );
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     process.stderr.write(`[audit-chain-verify] slack POST error: ${msg}\n`);
   }
 }
@@ -92,7 +65,7 @@ async function postBrevoAlert(
       );
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     process.stderr.write(`[audit-chain-verify] brevo POST error: ${msg}\n`);
   }
 }
@@ -124,12 +97,8 @@ async function loadDbRows(): Promise<AuditChainRow[]> {
       targetId: r.targetId,
       metadata: r.metadata,
       createdAt: r.createdAt,
-      // Entity column allows null for legacy rows; the canonical chain expects
-      // a string with the genesis sentinel for the very first row.
       prevHash: r.prevHash ?? AUDIT_CHAIN_GENESIS_HASH,
       rowHash: r.rowHash,
-      // Legacy rows predate the hash_version column ⇒ default to v1 so they verify
-      // under the frozen legacy serializer (no false BREAK). New rows carry 2.
       hashVersion: (r.hashVersion ?? 1) as 1 | 2,
     }));
   } finally {
@@ -160,7 +129,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((err: unknown) => {
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = errorMessage(err);
   process.stderr.write(`[audit-chain-verify] ${msg}\n`);
   process.exit(2);
 });

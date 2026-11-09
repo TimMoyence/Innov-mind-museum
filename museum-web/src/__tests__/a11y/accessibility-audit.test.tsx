@@ -1,9 +1,3 @@
-/**
- * Accessibility tests for museum-web components.
- *
- * Uses @testing-library/react queries that map to ARIA roles and attributes,
- * ensuring components expose proper landmarks, labels, and roles.
- */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Header from '@/components/shared/Header';
@@ -11,7 +5,6 @@ import Footer from '@/components/shared/Footer';
 import Button from '@/components/ui/Button';
 import type { Dictionary } from '@/lib/i18n';
 
-// ── Next.js mocks ───────────────────────────────────────────────────────────
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en',
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -35,7 +28,6 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/image', () => ({
   default: ({ alt, ...props }: { alt: string; [key: string]: unknown }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));
@@ -108,10 +100,6 @@ const mockDict: Dictionary = {
   admin: {} as Dictionary['admin'],
 };
 
-// ============================================================================
-// Header accessibility
-// ============================================================================
-
 describe('Header a11y', () => {
   it('has a main navigation landmark with aria-label', () => {
     render(<Header dict={mockDict} locale="en" />);
@@ -146,10 +134,6 @@ describe('Header a11y', () => {
   });
 });
 
-// ============================================================================
-// Footer accessibility
-// ============================================================================
-
 describe('Footer a11y', () => {
   it('has a footer navigation landmark with aria-label', () => {
     render(<Footer dict={mockDict} locale="en" />);
@@ -162,10 +146,6 @@ describe('Footer a11y', () => {
     expect(screen.getByAltText('Musaium')).toBeInTheDocument();
   });
 });
-
-// ============================================================================
-// Button accessibility
-// ============================================================================
 
 describe('Button a11y', () => {
   it('renders as a button element with correct role', () => {

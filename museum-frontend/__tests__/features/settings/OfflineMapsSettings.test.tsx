@@ -3,8 +3,6 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import '../../helpers/test-utils';
 import { nonNull } from '../../helpers/nonNull';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockDownload = jest.fn();
 const mockRemove = jest.fn();
 let mockPacksByCity: Record<string, { status: string; percentage?: number; bytesOnDisk?: number }> =
@@ -65,21 +63,16 @@ describe('OfflineMapsSettings', () => {
     mockRemove.mockResolvedValue(undefined);
   });
 
-  // ── Header / intro ────────────────────────────────────────────────────────
-
   it('renders the title and intro copy from i18n', () => {
     const { getByText } = render(<OfflineMapsSettings />);
     expect(getByText('offlineMaps.title')).toBeTruthy();
     expect(getByText('offlineMaps.intro')).toBeTruthy();
   });
 
-  // ── Auto pre-cache toggle ─────────────────────────────────────────────────
-
   it('renders the auto pre-cache toggle with its label and hint when not loading', () => {
     const { getByText, getByLabelText } = render(<OfflineMapsSettings />);
     expect(getByText('offlineMaps.auto_precache')).toBeTruthy();
     expect(getByText('offlineMaps.auto_precache_hint')).toBeTruthy();
-    // Switch is rendered (not the loading indicator) and is accessible by label.
     expect(getByLabelText('offlineMaps.auto_precache')).toBeTruthy();
   });
 
@@ -93,7 +86,6 @@ describe('OfflineMapsSettings', () => {
   it('hides the Switch and shows a loader while the auto pre-cache flag is loading', () => {
     mockAutoLoading = true;
     const { queryByLabelText } = render(<OfflineMapsSettings />);
-    // Switch is gated behind isAutoPreCacheLoading=false.
     expect(queryByLabelText('offlineMaps.auto_precache')).toBeNull();
   });
 
@@ -106,8 +98,6 @@ describe('OfflineMapsSettings', () => {
     });
   });
 
-  // ── City list rendering ───────────────────────────────────────────────────
-
   it('renders one row per city in CITY_CATALOG when not loading', () => {
     const { getByText } = render(<OfflineMapsSettings />);
     expect(getByText('Paris')).toBeTruthy();
@@ -117,7 +107,6 @@ describe('OfflineMapsSettings', () => {
   it('defaults absent state for cities not present in packsByCity', () => {
     mockPacksByCity = {};
     const { getAllByText } = render(<OfflineMapsSettings />);
-    // Both rows render their Download button (absent state).
     expect(getAllByText('offlineMaps.download')).toHaveLength(2);
   });
 
@@ -127,7 +116,6 @@ describe('OfflineMapsSettings', () => {
     };
     const { getByText, getAllByText } = render(<OfflineMapsSettings />);
     expect(getByText('offlineMaps.delete')).toBeTruthy();
-    // Rome is still absent.
     expect(getAllByText('offlineMaps.download')).toHaveLength(1);
   });
 
@@ -137,8 +125,6 @@ describe('OfflineMapsSettings', () => {
     expect(queryByText('Paris')).toBeNull();
     expect(queryByText('Rome')).toBeNull();
   });
-
-  // ── Download / delete wiring ──────────────────────────────────────────────
 
   it('calls download(city) with the catalog city object on Download press', async () => {
     const { getAllByText } = render(<OfflineMapsSettings />);
@@ -162,8 +148,6 @@ describe('OfflineMapsSettings', () => {
     });
     expect(mockRemove).toHaveBeenCalledWith('rome');
   });
-
-  // ── Error reporting on failed mutations ───────────────────────────────────
 
   it('routes a download failure through reportError with cityId and component context', async () => {
     mockDownload.mockRejectedValueOnce(new Error('disk full'));

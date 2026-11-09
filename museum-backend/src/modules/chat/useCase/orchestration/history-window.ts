@@ -1,6 +1,5 @@
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 
-/** Rough token estimate: ~4 chars per token (English average). */
 const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
 
 export const applyHistoryWindow = (

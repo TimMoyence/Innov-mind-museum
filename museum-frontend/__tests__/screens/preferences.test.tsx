@@ -2,13 +2,9 @@ import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { useRuntimeSettingsStore } from '@/features/settings/infrastructure/runtimeSettingsStore';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-
-const mockSaveDefaultMuseumMode = jest.fn();
-const mockSaveGuideLevel = jest.fn();
-jest.mock('@/features/settings/runtimeSettings', () => ({
-  saveDefaultMuseumMode: (...args: any[]) => mockSaveDefaultMuseumMode(...args),
-  saveGuideLevel: (...args: any[]) => mockSaveGuideLevel(...args),
+const mockSaveProfilePreferences = jest.fn().mockResolvedValue(null);
+jest.mock('@/features/settings/infrastructure/userProfileApi', () => ({
+  saveProfilePreferences: (...args: unknown[]) => mockSaveProfilePreferences(...args),
 }));
 
 jest.mock('@/shared/config/supportedLocales', () => ({
@@ -33,19 +29,15 @@ describe('PreferencesScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useRuntimeSettingsStore.setState({
-      defaultLocale: 'en-US',
       defaultMuseumMode: true,
       guideLevel: 'beginner',
       _hydrated: true,
     });
-    mockSaveDefaultMuseumMode.mockResolvedValue(undefined);
-    mockSaveGuideLevel.mockResolvedValue(undefined);
   });
 
   it('reads settings from the Zustand store on mount', () => {
     render(<PreferencesScreen />);
-    // The screen reads from the store, so guide level buttons should already be visible
-    expect(screen.getByText('beginner')).toBeTruthy();
+    expect(screen.getByText('guideLevel.beginner')).toBeTruthy();
     expect(screen.getByText('preferences.museum_mode_label')).toBeTruthy();
   });
 
@@ -69,9 +61,9 @@ describe('PreferencesScreen', () => {
 
   it('renders guide level buttons after loading', () => {
     render(<PreferencesScreen />);
-    expect(screen.getByText('beginner')).toBeTruthy();
-    expect(screen.getByText('intermediate')).toBeTruthy();
-    expect(screen.getByText('expert')).toBeTruthy();
+    expect(screen.getByText('guideLevel.beginner')).toBeTruthy();
+    expect(screen.getByText('guideLevel.intermediate')).toBeTruthy();
+    expect(screen.getByText('guideLevel.expert')).toBeTruthy();
   });
 
   it('renders museum mode switch after loading', () => {
@@ -84,12 +76,12 @@ describe('PreferencesScreen', () => {
     expect(screen.getByLabelText('a11y.preferences.save')).toBeTruthy();
   });
 
-  it('calls save functions when save button is pressed', async () => {
+  it('writes the chosen level and museum mode on the account when save is pressed', async () => {
     render(<PreferencesScreen />);
     fireEvent.press(screen.getByLabelText('a11y.preferences.save'));
     await waitFor(() => {
-      expect(mockSaveDefaultMuseumMode).toHaveBeenCalled();
-      expect(mockSaveGuideLevel).toHaveBeenCalled();
+      expect(mockSaveProfilePreferences).toHaveBeenCalledWith({ defaultMuseumMode: true });
+      expect(mockSaveProfilePreferences).toHaveBeenCalledWith({ guideLevel: 'beginner' });
     });
   });
 

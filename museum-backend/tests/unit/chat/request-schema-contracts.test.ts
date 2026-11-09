@@ -73,11 +73,9 @@ describe('POST /sessions — parseCreateSessionRequest schema validation', () =>
   });
 
   it('rejects injection attempts in text fields', () => {
-    // Locale with injection attempt should still parse as string
     const result = parseCreateSessionRequest({
       locale: 'en; DROP TABLE sessions;--',
     });
-    // The parser accepts any string for locale (validation happens downstream)
     expect(result.locale).toBe('en; DROP TABLE sessions;--');
   });
 
@@ -147,7 +145,6 @@ describe('POST /sessions/:id/messages — parsePostMessageRequest schema validat
 
   it('handles very long text at boundary', () => {
     const longText = 'A'.repeat(10000);
-    // Parser itself does not enforce max length — that's a route-level concern
     const result = parsePostMessageRequest({ text: longText });
     expect(result.text).toBe(longText);
     expect(result.text?.length).toBe(10000);

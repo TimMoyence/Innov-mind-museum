@@ -1,15 +1,3 @@
-/**
- * Typed fetch mock helpers.
- *
- * Replaces the `jest.fn()...as unknown as typeof fetch` pattern with
- * properly typed MockedFunction<typeof fetch>, eliminating double casts.
- *
- * Usage:
- *   global.fetch = mockFetch({ body: { results: [] } });
- *   global.fetch = mockFetch({ ok: false, status: 503 }, { body: data });
- *   global.fetch = mockFetch(new Error('network down'));
- */
-
 export interface MockResponseInit {
   ok?: boolean;
   status?: number;
@@ -18,7 +6,6 @@ export interface MockResponseInit {
   headers?: Record<string, string | null>;
 }
 
-/** Builds a partial Response whose shape satisfies HTTP client code in tests. */
 export function makePartialResponse(init: MockResponseInit = {}): Response {
   const ok = init.ok ?? true;
   const status = init.status ?? (ok ? 200 : 500);
@@ -42,13 +29,6 @@ export function makePartialResponse(init: MockResponseInit = {}): Response {
 
 type MockResponseOrError = MockResponseInit | Error;
 
-/**
- * Returns a jest.MockedFunction<typeof fetch> that resolves or rejects
- * according to the supplied sequence.
- *
- * - Single entry → `mockResolvedValue` / `mockRejectedValue`
- * - Multiple entries → each queued via `mockResolvedValueOnce` / `mockRejectedValueOnce`
- */
 export function mockFetch(
   first: MockResponseOrError,
   ...rest: MockResponseOrError[]
@@ -74,11 +54,6 @@ export function mockFetch(
   return mock;
 }
 
-/**
- * Returns a jest.MockedFunction<typeof fetch> that always resolves with an HTML page response.
- * Eliminates the verbose `jest.fn().mockResolvedValue(makeHtmlFetchResponse(html)) as unknown as typeof fetch`
- * pattern in scraper tests.
- */
 export function mockHtmlFetch(
   html: string,
   contentType?: string,
@@ -88,22 +63,10 @@ export function mockHtmlFetch(
     .mockResolvedValue(makeHtmlFetchResponse(html, contentType));
 }
 
-/**
- * Returns a bare jest.MockedFunction<typeof fetch> spy with no configured response.
- * Use when you only need to verify the spy was (or was not) called, or when you will
- * configure responses manually via .mockResolvedValueOnce() etc.
- */
 export function makeFetchSpy(): jest.MockedFunction<typeof fetch> {
   return jest.fn() as jest.MockedFunction<typeof fetch>;
 }
 
-/**
- * Builds a Web ReadableStream that yields the supplied bytes as a single
- * chunk then closes. Mirrors the Node 22 `fetch()` `response.body` shape so
- * adapters reading via `body.getReader()` (C4 I-SEC10 streamed scraper)
- * work in tests without a real network. Tracks `read`/`cancel` invocations
- * so tests can assert streaming behaviour when needed.
- */
 function makeWebReadableStream(bytes: Uint8Array): {
   body: { getReader: () => { read: jest.Mock; cancel: jest.Mock; releaseLock: () => void } };
 } {
@@ -125,11 +88,6 @@ function makeWebReadableStream(bytes: Uint8Array): {
   };
 }
 
-/**
- * Builds an HTML page response — used in scraper tests. Exposes both
- * `text()` (legacy callers) and `body.getReader()` (C4 I-SEC10 streamed
- * scraper path) so it survives the migration without per-call branching.
- */
 export function makeHtmlFetchResponse(
   html: string,
   contentType = 'text/html; charset=utf-8',
@@ -149,7 +107,6 @@ export function makeHtmlFetchResponse(
   } as unknown as Response;
 }
 
-/** Builds a 3xx redirect response carrying a Location header. */
 export function makeRedirectFetchResponse(location: string, status = 302): Response {
   const { body } = makeWebReadableStream(new Uint8Array(0));
   return {

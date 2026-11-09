@@ -23,10 +23,6 @@ import {
   makeMockMuseumEnrichmentRepo,
 } from '../../helpers/knowledge-extraction/extraction.fixtures';
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 const TEST_URL = 'https://example.com/mona-lisa';
 const TEST_LOCALE = 'en';
 
@@ -69,10 +65,6 @@ const MUSEUM_CLASSIFICATION: ClassificationResult = {
   confidence: 0.85,
   data: MUSEUM_DATA,
 };
-
-// ---------------------------------------------------------------------------
-// Mock factories
-// ---------------------------------------------------------------------------
 
 const config = { confidenceThreshold: 0.7, reviewThreshold: 0.4, refetchAfterDays: 7 };
 
@@ -118,10 +110,6 @@ function makeService(overrides?: {
   return { service, scraper, classifier, contentRepo, artworkRepo, museumRepo };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('ExtractionJobService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -155,7 +143,7 @@ describe('ExtractionJobService', () => {
   });
 
   it('skips recently scraped URLs (scrapedAt < 7 days ago)', async () => {
-    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     const contentRepo = makeContentRepo({ scrapedAt: recentDate });
     const { service, scraper, classifier } = makeService({ contentRepo });
 
@@ -167,7 +155,7 @@ describe('ExtractionJobService', () => {
   });
 
   it('re-scrapes stale URLs (scrapedAt >= 7 days ago)', async () => {
-    const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
+    const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     const contentRepo = makeContentRepo({ scrapedAt: staleDate });
     const { service, scraper } = makeService({ contentRepo });
 

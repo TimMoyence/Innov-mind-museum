@@ -1,12 +1,3 @@
-/**
- * Integration tests — image EXIF strip pipeline (R8 / I4 / G9).
- *
- * Asserts:
- * - GPS / camera EXIF removed for JPEG / PNG / WebP statics.
- * - Animated GIF / WebP keep their frame count + delays.
- * - An image > maxImageBytes pre-strip but < post-strip is accepted.
- * - Corrupted JPEG → `ImageDecodeError` (400, IMAGE_DECODE_FAILED).
- */
 import exifr from 'exifr';
 import sharp from 'sharp';
 
@@ -36,11 +27,6 @@ describe('image EXIF strip pipeline', () => {
         gps: { latitude: 48.8566, longitude: 2.3522 },
       });
 
-      // Sanity: input carries privacy-sensitive EXIF before strip. Sharp's
-      // typed `Exif` interface only exposes IFD0 (Make/Model/Software/etc.);
-      // GPS sub-block is plumbed at runtime but exifr's recovery depends on
-      // sharp's encoder. We assert at least one privacy-tagged field is
-      // present pre-strip, then prove the strip pipeline removes them all.
       const before = (await exifr.parse(buf, ['Make', 'Model'])) as Record<string, unknown> | null;
       expect(before).toBeTruthy();
       expect(before).toHaveProperty('Make');
@@ -59,7 +45,6 @@ describe('image EXIF strip pipeline', () => {
 
       expect(stripped.mime).toBe('image/png');
       const meta = await sharp(stripped.buffer).metadata();
-      // Sharp re-encodes — exif/iptc/xmp must be empty after strip.
       expect(meta.exif).toBeUndefined();
       expect(meta.iptc).toBeUndefined();
       expect(meta.xmp).toBeUndefined();
@@ -78,9 +63,6 @@ describe('image EXIF strip pipeline', () => {
     it('preserves frame count for animated GIF', async () => {
       const buf = await createAnimatedGif(4);
       const inputMeta = await sharp(buf, { animated: true }).metadata();
-      // Sharp's `pageHeight` raw-input hint does not always survive the GIF
-      // encoder round-trip in CI. Whatever sharp reports for the input is the
-      // baseline the strip MUST preserve; the strip must never *reduce* it.
       const inputFrames = inputMeta.pages ?? 1;
 
       const stripped = await stripExifFromImage(buf, 'image/gif');
@@ -92,8 +74,6 @@ describe('image EXIF strip pipeline', () => {
     it('preserves animation for animated WebP', async () => {
       const buf = await createAnimatedWebp(3);
       const inputMeta = await sharp(buf, { animated: true }).metadata();
-      // Sharp encodes raw frames stacked vertically as animated when input
-      // dimensions imply multiple pages — guard the assumption.
       const inputFrames = inputMeta.pages ?? 1;
       expect(inputFrames).toBeGreaterThanOrEqual(1);
 
@@ -106,10 +86,6 @@ describe('image EXIF strip pipeline', () => {
 
   describe('size behaviour around the strip step', () => {
     it('accepts an image whose pre-strip size exceeds the cap if post-strip fits', async () => {
-      // Build a JPEG bloated by an oversized EXIF payload, then assert that
-      // post-strip the buffer is meaningfully smaller — proving the pipeline
-      // can let through inputs that would have been rejected by a naive
-      // strip-AFTER-size-check ordering.
       const heavyExifBlock = 'X'.repeat(80_000);
       const big = await sharp({
         create: { width: 32, height: 32, channels: 3, background: { r: 1, g: 2, b: 3 } },
@@ -155,8 +131,6 @@ describe('image EXIF strip pipeline', () => {
     }
 
     it('accepts an upload whose pre-strip base64 exceeds maxImageBytes when post-strip fits', async () => {
-      // Force a low cap so the bloated EXIF input is unambiguously oversize
-      // pre-strip. Sharp re-encodes the static raster which fits comfortably.
       const heavyExifBlock = 'X'.repeat(120_000);
       const big = await (
         await import('sharp')
@@ -174,11 +148,8 @@ describe('image EXIF strip pipeline', () => {
 
       const preStripBytes = big.byteLength;
 
-      // Stub env.llm.maxImageBytes by spying on the env import inside the
-      // service — we override the imported module's value for this test.
       const envMod = await import('@src/config/env');
       const originalCap = envMod.env.llm.maxImageBytes;
-      // Cast through unknown to bypass readonly typing.
       (envMod.env.llm as unknown as { maxImageBytes: number }).maxImageBytes = Math.floor(
         preStripBytes / 2,
       );
@@ -223,13 +194,6 @@ describe('image EXIF strip pipeline', () => {
     });
   });
 
-  // ─── P0 #3 (audit F4 §Claim 4): decompression-bomb DoS guard ───
-  // sharp's default `limitInputPixels` is 268_402_689 (~16k×16k). A 3 MB
-  // crafted PNG can decode to 268M pixels ≈ 768 MB heap → SIGKILL the
-  // Node process under concurrent load. We pin sharp to 24 Mpx
-  // (~6000×4000) which exceeds any legit mobile upload (post mobile
-  // optimization) and bounds the attack surface. The pixel-cap error
-  // is wrapped by the existing try/catch → ImageDecodeError 400.
   describe('limitInputPixels DoS guard', () => {
     it('rejects a 7000×4000 PNG (28 Mpx, above 24 Mpx cap) as ImageDecodeError', async () => {
       const oversizePng = await sharp({

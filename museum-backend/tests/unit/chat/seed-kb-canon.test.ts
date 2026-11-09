@@ -1,14 +1,3 @@
-/**
- * C5.3 Phase A — `seedKbCanon` unit test.
- *
- * Exercises the testable core of the `scripts/seed-kb-canon.ts` CLI :
- * counter accuracy, dry-run skip, error resilience (the loop must NEVER
- * short-circuit on a single bad term), and the (term × language) cartesian
- * product expansion. The CLI entry point itself (DataSource init, env
- * parsing) is intentionally untested — its surface is process-shaped and
- * the meaningful logic lives entirely in this function.
- */
-
 import {
   DEFAULT_CANON_LANGUAGES,
   DEFAULT_CANON_TERMS,
@@ -107,10 +96,10 @@ describe('seedKbCanon', () => {
   it('does NOT short-circuit when one provider call throws — counts and continues', async () => {
     const client = makeClient();
     client.lookup
-      .mockResolvedValueOnce(MONA)                // term1/en — hit
-      .mockRejectedValueOnce(new Error('boom'))   // term1/fr — error
-      .mockResolvedValueOnce(VENUS)               // term2/en — hit
-      .mockResolvedValueOnce(null);               // term2/fr — miss
+      .mockResolvedValueOnce(MONA)
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(VENUS)
+      .mockResolvedValueOnce(null);
     const repo = makeRepo();
 
     const result = await seedKbCanon({
@@ -131,9 +120,7 @@ describe('seedKbCanon', () => {
     const client = makeClient();
     client.lookup.mockResolvedValue(MONA);
     const repo = makeRepo();
-    repo.upsert
-      .mockResolvedValueOnce(undefined)        // en — ok
-      .mockRejectedValueOnce(new Error('db')); // fr — error
+    repo.upsert.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('db'));
 
     const result = await seedKbCanon({
       client,

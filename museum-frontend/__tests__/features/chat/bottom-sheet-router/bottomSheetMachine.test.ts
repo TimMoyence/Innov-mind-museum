@@ -1,33 +1,3 @@
-/**
- * Red tests for the pure `bottomSheetReducer` (C4 / AC3).
- *
- * No React, no RN imports — pure data-in / data-out. These tests exercise
- * the full transition graph documented in `docs/chat-ux-refonte/specs/C4.md`
- * §1.2 (R1-R12) and §2.3 (state machine signature).
- *
- * DESIGN DECISION recorded by red-test-agent for green-code-agent:
- *
- * The spec's `BottomSheetState` (§2.3) does NOT carry `blocking` on the
- * `'open' | 'opening' | 'closing'` variants. That means the reducer, on its
- * own, cannot evaluate R6 ("blocking route refuses non-blocking open") nor
- * R11 ("blocking route ignores CLOSE without CTA") — it would need to
- * re-look-up `ROUTES[state.route].blocking`. To keep the reducer pure
- * (testable under Node test runner without dragging the routes registry),
- * we extend the state variants with a `blocking: boolean` field captured
- * from the OPEN event. The reducer thus has all the context it needs.
- *
- * Concretely, the expected state shape is:
- *   { kind: 'idle' }
- *   { kind: 'opening', route, params, blocking }
- *   { kind: 'open',    route, params, blocking }
- *   { kind: 'closing', route, params, blocking, nextQueued: { route, params, blocking } | null }
- *
- * If green-code-agent disagrees and prefers to inject `currentBlocking`
- * via event payload instead, please update these tests AND the spec §2.3
- * in a coordinated commit. Either path satisfies AC3 — the important
- * invariant is that the reducer can decide R6/R11 in isolation.
- */
-
 import {
   bottomSheetReducer,
   type BottomSheetState,
@@ -234,12 +204,6 @@ describe('bottomSheetReducer', () => {
       });
     });
   });
-
-  // ─── Branch backfill — no-op return paths ────────────────────────────────
-  // These exercise the trailing `return state;` and the early-bail blocking
-  // conflict checks that the rule-numbered tests above don't reach (they
-  // mostly drive the happy-path transitions). Covers reducer lines 64, 80,
-  // 103, 133, 151, and 161.
 
   describe('no-op events leave the state untouched', () => {
     it('idle + CLOSE → idle (irrelevant event, no transition)', () => {

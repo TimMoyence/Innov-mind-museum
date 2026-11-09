@@ -125,6 +125,7 @@
     "session_unsaved": "セッションの保存を解除しました",
     "session_saved": "セッションを保存しました",
     "empty_title": "まだ会話がありません",
+    "untitled": "まだメッセージがありません",
     "empty_saved": "保存済みのセッションはまだありません。セッションを長押しして保存できます。",
     "empty_body": "ホームから新しい会話を始めて、最初のセッションを作成しましょう。",
     "message_count": "メッセージ数: {{count}}",
@@ -490,26 +491,6 @@
       "closeSheet": "閉じる",
       "noQuote": "この出典には利用可能な引用がありません。"
     },
-    "citation": {
-      "family": {
-        "museum-catalog": "美術館カタログ",
-        "reference-db": "参照データベース",
-        "web": "Web検索結果",
-        "ai-knowledge": "AIの知識"
-      },
-      "confidence": {
-        "high": "信頼度: 高",
-        "medium": "信頼度: 中",
-        "low": "低 — AIのみ"
-      },
-      "chip": {
-        "a11y_hint": "タップして出典の詳細を表示"
-      },
-      "ai_only": {
-        "disclosure_title": "AIのみの回答",
-        "disclosure_body": "この回答はAIの一般的な知識に基づいており、特定の事実を裏付ける出典は取得されていません。詳細を信頼する前にご確認ください。"
-      }
-    },
     "composer": {
       "a11y": {
         "open_attachments": "添付ファイルを開く",
@@ -551,10 +532,10 @@
     "artworkHero": {
       "untitled": "無題の作品",
       "a11y_label": "作品: {{artist}}の{{title}}、タップで拡大",
+      "a11y_label_no_artist": "作品: {{title}}、タップで拡大",
       "a11y_label_untitled": "無題の作品、タップで拡大",
       "a11y_hint": "全画面を開き、ピンチでズーム",
       "expand": "拡大",
-      "museum_room": "{{museum}} — {{room}}",
       "attribution": {
         "untitled": "識別中"
       },
@@ -569,6 +550,7 @@
       "empty": "類似する作品が見つかりませんでした — もっと鮮明な写真でお試しください",
       "viewArtist": "アーティストを表示",
       "attribution": "出典: Wikimedia Commons",
+      "card_a11y": "類似作品: {{credit}}、{{rationale}}",
       "rationale": {
         "fallback": "類似作品"
       },
@@ -602,10 +584,6 @@
       "headerLabel": "ガイドツアー",
       "suggestionsLabel": "ツアーの提案",
       "suggestionHint": "この提案を次のメッセージとして送信"
-    },
-    "askMore": {
-      "a11y_label": "フォローアップの質問: {{text}}",
-      "a11y_hint": "タップしてこの質問をする"
     },
     "sottoVoce": {
       "a11y_label": "ささやきモード",
@@ -648,7 +626,7 @@
     "placeholder": "美術品や建造物について質問、または音声・写真を送信...",
     "send": "送信"
   },
-  "expertiseBadge": {
+  "guideLevel": {
     "beginner": "初級",
     "intermediate": "中級",
     "expert": "上級"
@@ -1059,6 +1037,7 @@
     },
     "carnet": {
       "session_card": "{{title}}、{{museum}}、{{date}}、訪問を開く",
+      "session_card_no_date": "{{title}}、{{museum}}、訪問を開く",
       "continue_hint": "この過去の訪問を読み取り専用で開きます"
     },
     "bottomSheet": {
@@ -1114,7 +1093,7 @@
     "save": "保存",
     "skip": "スキップ",
     "saved": "保存済み！",
-    "by": "作",
+    "by": "{{artist}}作",
     "fun_fact": "ご存知でしたか？",
     "swipeToSave": "保存"
   },
@@ -1125,7 +1104,7 @@
     "description": "説明",
     "priority": "優先度",
     "status": "ステータス",
-    "messages": "メッセージ",
+    "messageCount": "{{count}}件のメッセージ",
     "noTickets": "チケットはまだありません",
     "noTicketsDesc": "チケットを作成して、サポートチームからの支援を受けましょう。",
     "createFirst": "最初のチケットを作成",
@@ -1134,7 +1113,7 @@
     "replyPlaceholder": "メッセージを入力...",
     "send": "送信",
     "sending": "送信中...",
-    "created": "作成日",
+    "createdOn": "作成日：{{date}}",
     "noMessages": "メッセージはまだありません",
     "submitTicket": "チケットを送信",
     "subjectPlaceholder": "問題の簡単な要約",
@@ -1174,7 +1153,14 @@
     "alreadyReviewed": "すでにレビューを送信済みです",
     "empty": "まだレビューがありません。最初のレビューを書きましょう！",
     "reviewCount": "{{count}}件のレビュー",
-    "submitFailed": "送信に失敗しました。もう一度お試しください。"
+    "submitFailed": "送信に失敗しました。もう一度お試しください。",
+    "age": {
+      "today": "今日",
+      "yesterday": "昨日",
+      "days": "{{count}}日前",
+      "months": "{{count}}か月前",
+      "years": "{{count}}年前"
+    }
   },
   "empty": {
     "chat": {
@@ -1232,7 +1218,7 @@
     "error": "エラーが発生しました。後でもう一度お試しください。",
     "dismiss": "閉じる",
     "consent": "プレミアム提供開始時のメール受信に同意します。",
-    "resetsOn": "リセット日",
+    "resetsOn": "リセット日：{{date}}",
     "analyticsConsent": {
       "title": "Musaiumの改善にご協力ください",
       "description": "ご同意いただけると、アプリの使われ方(閲覧ページ、使用機能)を匿名で計測します。個人データも広告トラッカーも一切なく、何が役立っているかを理解するための集計カウンターのみです。",

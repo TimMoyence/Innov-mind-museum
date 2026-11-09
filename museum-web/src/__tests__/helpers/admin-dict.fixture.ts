@@ -1,6 +1,5 @@
 import type { Dictionary } from '@/lib/i18n';
 
-/** Shared mock admin dictionary for all admin page tests. */
 export const mockAdminDict: Dictionary['admin'] = {
   dashboard: 'Dashboard',
   users: 'Users',

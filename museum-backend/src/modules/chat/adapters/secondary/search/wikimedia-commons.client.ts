@@ -1,3 +1,5 @@
+import { THUMBNAIL_WIDTH_PX } from '@modules/chat/domain/ports/image-source.port';
+
 import type {
   ImageSourceClient,
   ImageSourcePhoto,
@@ -12,7 +14,6 @@ export class WikimediaCommonsClient implements ImageSourceClient {
     this.timeoutMs = timeoutMs;
   }
 
-  /** `query` is LLM-produced (not visitor-controlled). `perPage` capped server-side at 50. */
   async searchPhotos(query: string, perPage = 5): Promise<ImageSourcePhoto[]> {
     const trimmed = query.trim();
     if (!trimmed) return [];
@@ -51,7 +52,7 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       action: 'query',
       list: 'search',
       srsearch: query,
-      srnamespace: '6', // File: namespace
+      srnamespace: '6',
       srlimit: String(Math.min(Math.max(perPage, 1), 50)),
       format: 'json',
       origin: '*',
@@ -73,6 +74,7 @@ export class WikimediaCommonsClient implements ImageSourceClient {
       titles: titles.join('|'),
       prop: 'imageinfo',
       iiprop: 'url|extmetadata|size',
+      iiurlwidth: String(THUMBNAIL_WIDTH_PX),
       format: 'json',
       origin: '*',
     });
@@ -171,13 +173,20 @@ function readMetaValue(field: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-/** Minimal HTML strip — Commons returns rich HTML in extmetadata. */
 function stripHtml(html: string): string {
-  return (
-    html
-      // eslint-disable-next-line sonarjs/slow-regex -- Justification: bounded by negated class `[^>]+` with single quantifier; not nested, no backtracking risk; payload is third-party Commons HTML capped by API response size. Approved-by: tim@2026-05-10
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
+  let text = '';
+  let from = 0;
+  for (let open = html.indexOf('<'); open !== -1; open = html.indexOf('<', from)) {
+    const close = html.indexOf('>', open + 1);
+    if (close === -1) break;
+    if (close === open + 1) {
+      text += html.slice(from, close);
+      from = close;
+      continue;
+    }
+    text += `${html.slice(from, open)} `;
+    from = close + 1;
+  }
+  text += html.slice(from);
+  return text.replace(/\s+/g, ' ').trim();
 }

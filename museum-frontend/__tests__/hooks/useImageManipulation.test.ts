@@ -1,18 +1,16 @@
 import '@/__tests__/helpers/test-utils';
 import { renderHook, act } from '@testing-library/react-native';
 import { useImageManipulation } from '@/features/chat/application/useImageManipulation';
-import { nonNull } from '@/__tests__/helpers/nonNull';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
-const mockManipulateAsync = jest.fn<Promise<{ uri: string }>, [string, unknown[], unknown]>();
+const mockManipulate = jest.fn();
+const mockRotate = jest.fn();
+const mockCrop = jest.fn();
+const mockSaveAsync = jest.fn<Promise<{ uri: string }>, [unknown]>();
 
 jest.mock('expo-image-manipulator', () => ({
-  manipulateAsync: (...args: [string, unknown[], unknown]) => mockManipulateAsync(...args),
+  ImageManipulator: { manipulate: (uri: string) => mockManipulate(uri) },
   SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useImageManipulation', () => {
   const sourceUri = 'file:///tmp/photo.jpg';
@@ -20,7 +18,20 @@ describe('useImageManipulation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockManipulateAsync.mockResolvedValue({ uri: resultUri });
+    const context = {
+      rotate: (degrees: number) => {
+        mockRotate(degrees);
+        return context;
+      },
+      crop: (rect: unknown) => {
+        mockCrop(rect);
+        return context;
+      },
+      renderAsync: () =>
+        Promise.resolve({ saveAsync: (options: unknown) => mockSaveAsync(options) }),
+    };
+    mockManipulate.mockReturnValue(context);
+    mockSaveAsync.mockResolvedValue({ uri: resultUri });
   });
 
   it('starts with isProcessing false', () => {
@@ -37,10 +48,9 @@ describe('useImageManipulation', () => {
     });
 
     expect(rotatedUri).toBe(resultUri);
-    expect(mockManipulateAsync).toHaveBeenCalledWith(sourceUri, [{ rotate: 90 }], {
-      compress: 0.8,
-      format: 'jpeg',
-    });
+    expect(mockManipulate).toHaveBeenCalledWith(sourceUri);
+    expect(mockRotate).toHaveBeenCalledWith(90);
+    expect(mockSaveAsync).toHaveBeenCalledWith({ compress: 0.8, format: 'jpeg' });
   });
 
   it('crops an image with the given region and returns the new URI', async () => {
@@ -53,10 +63,9 @@ describe('useImageManipulation', () => {
     });
 
     expect(croppedUri).toBe(resultUri);
-    expect(mockManipulateAsync).toHaveBeenCalledWith(sourceUri, [{ crop }], {
-      compress: 0.8,
-      format: 'jpeg',
-    });
+    expect(mockManipulate).toHaveBeenCalledWith(sourceUri);
+    expect(mockCrop).toHaveBeenCalledWith(crop);
+    expect(mockSaveAsync).toHaveBeenCalledWith({ compress: 0.8, format: 'jpeg' });
   });
 
   it('sets isProcessing to false after rotation completes', async () => {
@@ -70,50 +79,28 @@ describe('useImageManipulation', () => {
   });
 
   it('resets isProcessing to false even when manipulation throws', async () => {
-    mockManipulateAsync.mockRejectedValue(new Error('Manipulation failed'));
+    mockSaveAsync.mockRejectedValue(new Error('Manipulation failed'));
 
     const { result } = renderHook(() => useImageManipulation());
 
     await act(async () => {
-      try {
-        await result.current.rotateImage(sourceUri);
-      } catch {
-        // Expected to throw
-      }
+      await expect(result.current.rotateImage(sourceUri)).rejects.toThrow('Manipulation failed');
     });
 
     expect(result.current.isProcessing).toBe(false);
   });
 
   it('resets isProcessing to false even when crop throws', async () => {
-    mockManipulateAsync.mockRejectedValue(new Error('Crop failed'));
+    mockSaveAsync.mockRejectedValue(new Error('Crop failed'));
 
     const { result } = renderHook(() => useImageManipulation());
 
     await act(async () => {
-      try {
-        await result.current.cropImage(sourceUri, {
-          originX: 0,
-          originY: 0,
-          width: 50,
-          height: 50,
-        });
-      } catch {
-        // Expected to throw
-      }
+      await expect(
+        result.current.cropImage(sourceUri, { originX: 0, originY: 0, width: 50, height: 50 }),
+      ).rejects.toThrow('Crop failed');
     });
 
     expect(result.current.isProcessing).toBe(false);
-  });
-
-  it('uses JPEG format and 0.8 compression for both operations', async () => {
-    const { result } = renderHook(() => useImageManipulation());
-
-    await act(async () => {
-      await result.current.rotateImage(sourceUri);
-    });
-
-    const callArgs = nonNull(mockManipulateAsync.mock.calls[0]);
-    expect(callArgs[2]).toEqual({ compress: 0.8, format: 'jpeg' });
   });
 });

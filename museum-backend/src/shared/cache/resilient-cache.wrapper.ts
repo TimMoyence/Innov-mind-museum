@@ -1,14 +1,8 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type { CacheService, CacheValueSchema } from './cache.port';
 
-/**
- * Wraps {@link CacheService} so backend failures (ECONNREFUSED, timeouts,
- * malformed payloads) degrade gracefully instead of bubbling 500s. Read ops
- * return null (cache miss); write/delete ops swallow; `ping` returns false.
- * Banking contract: cache is performance accelerator, not primary dep —
- * handlers must work when Redis unreachable.
- */
 export class ResilientCacheWrapper implements CacheService {
   constructor(private readonly inner: CacheService) {}
 
@@ -21,8 +15,7 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains input
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     try {
       await this.inner.set(key, value, ttlSeconds);
     } catch (err) {
@@ -46,8 +39,7 @@ export class ResilientCacheWrapper implements CacheService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- generic interface API where T constrains input
-  async setNx<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
+  async setNx(key: string, value: unknown, ttlSeconds: number): Promise<boolean> {
     try {
       return await this.inner.setNx(key, value, ttlSeconds);
     } catch (err) {
@@ -102,7 +94,7 @@ export class ResilientCacheWrapper implements CacheService {
   private warn(event: string, key: string, err: unknown): void {
     logger.warn(event, {
       key,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage(err),
     });
   }
 }

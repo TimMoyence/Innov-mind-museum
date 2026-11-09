@@ -1,11 +1,3 @@
-/**
- * TR-01 (shell volet) — networkQualityTracker singleton (run
- * undefined-network-detection-reliability, cluster A, task A-R2).
- * Pins design §2.2: Date.now stamped at the edge, AppState gate (D-11 /
- * US-10.2), identity-change reset (US-04.3 / INV-10), notification on
- * transitions ONLY (NFR-02 / design R5), single eviction timer (US-10.4),
- * `__resetNetworkQualityForTests` (NFR-05, pattern currentDataMode).
- */
 import { AppState } from 'react-native';
 
 import { QUALITY_STALE_MS } from '@/shared/infrastructure/connectivity/networkQuality';
@@ -18,12 +10,10 @@ import {
 } from '@/shared/infrastructure/connectivity/networkQualityTracker';
 import { makeQualitySampleInput } from '@/__tests__/helpers/factories/connectivity.factories';
 
-/** The RN jest mock exposes `currentState` as a writable own property. */
 const setAppState = (state: string): void => {
   (AppState as unknown as { currentState: string }).currentState = state;
 };
 
-/** Records `n` samples spaced 1 s apart (fake clock advanced between records). */
 const recordWindow = (n: number, rttMs = 100, ok = true, timedOut = false): void => {
   for (let i = 0; i < n; i += 1) {
     recordQualitySample(makeQualitySampleInput({ rttMs, ok, timedOut }));
@@ -36,9 +26,6 @@ const WIFI_ONLINE = { type: 'wifi', cellularGeneration: null, isConnected: true 
 
 describe('networkQualityTracker', () => {
   beforeEach(() => {
-    // Order matters: fake the clock FIRST so the reset re-anchors the engine
-    // on the fake Date.now (the singleton was created at import time on the
-    // real clock).
     jest.useFakeTimers();
     jest.setSystemTime(0);
     __resetNetworkQualityForTests();
@@ -144,7 +131,6 @@ describe('networkQualityTracker', () => {
     recordWindow(5, 2000);
     expect(getQualityState()).toBe('slow');
 
-    // No further traffic: the scheduled eviction must fire on its own.
     jest.advanceTimersByTime(QUALITY_STALE_MS + 5000);
 
     expect(getQualityState()).toBe('unknown');
@@ -168,7 +154,6 @@ describe('networkQualityTracker', () => {
     expect(getQualityState()).toBe('unknown');
     expect(jest.getTimerCount()).toBe(0);
 
-    // Listener set was cleared: a new transition must not reach the old listener.
     recordWindow(5);
     expect(getQualityState()).toBe('ok');
     expect(listener).toHaveBeenCalledTimes(1);

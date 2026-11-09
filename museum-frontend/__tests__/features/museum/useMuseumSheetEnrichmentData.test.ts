@@ -11,9 +11,6 @@ import type {
 } from '@/features/museum/application/useMuseumEnrichment';
 import type { OpeningHoursDisplay } from '@/features/museum/application/opening-hours.formatter';
 
-// ── Module mocks ─────────────────────────────────────────────────────────────
-// Declared BEFORE the SUT import so jest hoisting wires them correctly.
-
 const mockUseMuseumEnrichment = jest.fn<UseMuseumEnrichmentResult, [number | null, string]>();
 const mockFormatOpeningHours = jest.fn();
 
@@ -29,8 +26,6 @@ jest.mock('@/features/museum/application/opening-hours.formatter', () => ({
 
 import { useMuseumSheetEnrichmentData } from '@/features/museum/application/useMuseumSheetEnrichmentData';
 import { makeMuseumWithDistance as makeMuseum } from '../../helpers/factories/museum.factories';
-
-// ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const makeEnrichment = (overrides?: Partial<MuseumEnrichmentView>): MuseumEnrichmentView => ({
   museumId: 42,
@@ -56,14 +51,11 @@ const setHoursDisplay = (display: OpeningHoursDisplay | null): void => {
   mockFormatOpeningHours.mockReturnValue(display);
 };
 
-// Mirrors test-utils.tsx theme values consumed by the hook.
 const THEME_SUCCESS = '#166534';
 const THEME_WARNING_TEXT = '#92400E';
 const THEME_TEXT_SECONDARY = '#334155';
 
 const tFn = (key: string): string => key;
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useMuseumSheetEnrichmentData', () => {
   beforeEach(() => {

@@ -1,109 +1,73 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: GlobalOfflineBannerHost
-#
-# Connectivity Offline Banner Flow (UFR-021, run 2026-05-21-connectivity-offline-first).
-# Proves the GLOBAL offline banner (mounted once in app/_layout.tsx) surfaces the
-# offline state on a NON-chat screen and persists across a non-chat navigation —
-# i.e. it is no longer chat-screen-only. Covers spec R8/R10 + TD-14 step 3.
-#
-# Platform caveat (lib-docs/@react-native-community/netinfo PATTERNS.md:171,238):
-# the iOS Simulator does NOT reflect host WiFi / airplane toggles, and Maestro's
-# snapshot is silent on iOS connectivity drivers. `setAirplaneMode` is reliable on
-# the Android matrix — this flow targets Android; the iOS run is BEST-EFFORT (the
-# offline assertions below are `optional` so the flow does not red on iOS where
-# the simulator cannot be forced offline).
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 1: Land on the home (non-chat) screen, online
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-# Banner must NOT be visible while online.
 - assertNotVisible:
-    id: "offline-banner"
+    id: 'offline-banner'
 
-# ──────────────────────────────────────────────
-# Phase 2: Go offline (airplane mode) — global banner must appear on home
-# ──────────────────────────────────────────────
-# Android: reliable. iOS sim: no-op (best-effort) — assertion is optional below.
 - setAirplaneMode: enabled
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
     visible:
-      id: "offline-banner"
+      id: 'offline-banner'
     timeout: 10000
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 3: Tap-through — navigate to another NON-chat surface (Settings) and
-# prove the banner persists (global mount, not a per-screen instance)
-# ──────────────────────────────────────────────
 - tapOn:
-    id: "hero-settings-button"
+    id: 'hero-settings-button'
     optional: true
 - waitForAnimationToEnd
 
 - assertVisible:
-    id: "offline-banner"
+    id: 'offline-banner'
     optional: true
 
-# Navigate back to home — banner still present while offline.
 - back
 - waitForAnimationToEnd
 
 - assertVisible:
-    id: "offline-banner"
+    id: 'offline-banner'
     optional: true
 
-# ──────────────────────────────────────────────
-# Phase 4: Restore connectivity — banner disappears
-# ──────────────────────────────────────────────
 - setAirplaneMode: disabled
 - waitForAnimationToEnd
 
 - extendedWaitUntil:
     notVisible:
-      id: "offline-banner"
+      id: 'offline-banner'
     timeout: 15000

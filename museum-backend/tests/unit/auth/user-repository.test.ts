@@ -11,12 +11,10 @@ import { makeUser } from 'tests/helpers/auth/user.fixtures';
 import { makeMockQb } from 'tests/helpers/shared/mock-query-builder';
 import { makeMockTypeOrmRepo } from 'tests/helpers/shared/mock-deps';
 
-// ─── Mock bcrypt ───
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('$2b$12$hashed_result'),
 }));
 
-// ─── TypeORM repo + DataSource mock factory ───
 function buildMocks() {
   const qb = makeMockQb();
   const { repo } = makeMockTypeOrmRepo<User>({ qb });
@@ -51,7 +49,6 @@ describe('UserRepositoryPg', () => {
     sut = new UserRepositoryPg(dataSource);
   });
 
-  // ─── getUserByEmail ───
   describe('getUserByEmail', () => {
     it('returns user when found', async () => {
       const user = makeUser();
@@ -72,7 +69,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── getUserById ───
   describe('getUserById', () => {
     it('returns user when found', async () => {
       const user = makeUser({ id: 42 });
@@ -93,10 +89,9 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── registerUser ───
   describe('registerUser', () => {
     it('hashes password, creates and saves user', async () => {
-      repo.findOne.mockResolvedValue(null); // no existing user
+      repo.findOne.mockResolvedValue(null);
       const created = makeUser({ email: 'new@test.com' });
       repo.create.mockReturnValue(created);
       repo.save.mockResolvedValue(created);
@@ -124,10 +119,6 @@ describe('UserRepositoryPg', () => {
       });
     });
 
-    // Stryker survivor: ConditionalExpression `if (existingUser)` -> `if (!existingUser)`.
-    // Asserts that when an existing user IS found we throw AND we never reach
-    // create/save — flipping the condition would proceed to create() and pass
-    // a weak "throws" check otherwise.
     it('does not create or save user when email already exists', async () => {
       repo.findOne.mockResolvedValue(makeUser({ email: 'taken@test.com' }));
 
@@ -143,10 +134,6 @@ describe('UserRepositoryPg', () => {
       expect(bcrypt.hash).not.toHaveBeenCalled();
     });
 
-    // Stryker survivor companion: when no existing user, creation MUST proceed.
-    // Mirrors the "happy path" but explicitly contrasts the negative branch
-    // above so the conditional cannot be flipped without one of the two
-    // assertions failing.
     it('proceeds to create + save when no existing user is found', async () => {
       repo.findOne.mockResolvedValue(null);
       const created = makeUser({ email: 'fresh@test.com' });
@@ -176,7 +163,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── setResetToken ───
   describe('setResetToken', () => {
     it('updates user with token and expiry, returns updated user', async () => {
       const expires = new Date('2026-12-31');
@@ -203,7 +189,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── getUserByResetToken ───
   describe('getUserByResetToken', () => {
     it('finds user by non-expired reset token', async () => {
       const user = makeUser();
@@ -228,12 +213,6 @@ describe('UserRepositoryPg', () => {
       expect(result).toBeNull();
     });
 
-    // Stryker survivor: EqualityOperator `MoreThan(new Date())` -> `MoreThanOrEqual`.
-    // With fake timers we freeze "now" so the FindOperator value is pinned to
-    // the exact same Date passed to MoreThan. Asserting `_type === 'moreThan'`
-    // (not 'moreThanOrEqual') AND that `_value` strictly equals the frozen
-    // `now` makes the mutation fail: a `MoreThanOrEqual` would carry
-    // `_type === 'moreThanOrEqual'`, which differs from our equality check.
     it('passes MoreThan(now) — boundary token (expires === now) is rejected', async () => {
       jest.useFakeTimers();
       try {
@@ -251,12 +230,8 @@ describe('UserRepositoryPg', () => {
           };
         };
         expect(call.where.reset_token).toBe('reset-tok');
-        // Strict operator type: MoreThanOrEqual would expose 'moreThanOrEqual'.
         expect(call.where.reset_token_expires._type).toBe('moreThan');
         expect(call.where.reset_token_expires._type).not.toBe('moreThanOrEqual');
-        // Value pinned to the frozen "now" — a token whose `expires` equals
-        // `now` would NOT satisfy `MoreThan(now)` (strict >), confirming the
-        // exact-boundary token is rejected.
         expect(call.where.reset_token_expires._value).toEqual(now);
       } finally {
         jest.useRealTimers();
@@ -264,7 +239,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── updatePassword ───
   describe('updatePassword', () => {
     it('hashes new password, clears reset token via raw NULL, returns user', async () => {
       const user = makeUser({ id: 5 });
@@ -274,11 +248,6 @@ describe('UserRepositoryPg', () => {
       const result = await sut.updatePassword(5, 'newPassword');
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newPassword', 12);
-      // `repo.update` forwards through QueryBuilder.set() which silently skips
-      // `undefined` values — we must pass `() => 'NULL'` raw expressions to
-      // actually clear the columns. Asserting object equality with function
-      // references doesn't survive a `toEqual` check; assert structure +
-      // NULL-emitter contract via the captured mock call.
       expect(repo.update).toHaveBeenCalledTimes(1);
       const [idArg, partial] = repo.update.mock.calls[0] as [
         number,
@@ -305,7 +274,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── consumeResetTokenAndUpdatePassword ───
   describe('consumeResetTokenAndUpdatePassword', () => {
     it('updates password and clears reset-token columns via raw NULL, returns user', async () => {
       const user = makeUser();
@@ -314,10 +282,6 @@ describe('UserRepositoryPg', () => {
       const result = await sut.consumeResetTokenAndUpdatePassword('tok', '$2b$12$newhash');
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      // `reset_token` / `reset_token_expires` are passed as `() => 'NULL'` raw
-      // expressions so TypeORM emits `SET ... = NULL`. Function references
-      // can't be compared via `toEqual`; capture the call args and assert the
-      // NULL-emitter contract directly.
       expect(qb.set).toHaveBeenCalledTimes(1);
       const setArg = qb.set.mock.calls[0][0] as {
         password: string;
@@ -353,30 +317,23 @@ describe('UserRepositoryPg', () => {
       expect(result).toBeNull();
     });
 
-    // Stryker survivor: EqualityOperator on the raw SQL `reset_token_expires > NOW()`.
-    // A mutation flipping `>` -> `>=` would accept a token whose expiry equals
-    // NOW() (the exact boundary). We pin the SQL string AND explicitly forbid
-    // `>=` so any operator mutation breaks at least one assertion.
     it('uses strict `> NOW()` (not `>= NOW()`) — boundary token rejected', async () => {
       const user = makeUser();
       qb.execute.mockResolvedValue({ raw: [user] });
 
       await sut.consumeResetTokenAndUpdatePassword('tok', '$2b$12$newhash');
 
-      // Capture SQL fragment + parameter binding from the qb spy.
       const whereCall = qb.where.mock.calls[0] as [string, { token: string }];
       const sql = whereCall[0];
       const params = whereCall[1];
 
       expect(sql).toBe('reset_token = :token AND reset_token_expires > NOW()');
-      // Defense in depth — operator mutation would inject `>=`.
       expect(sql).toMatch(/reset_token_expires\s+>\s+NOW\(\)/);
       expect(sql).not.toMatch(/reset_token_expires\s+>=\s+NOW\(\)/);
       expect(params).toEqual({ token: 'tok' });
     });
   });
 
-  // ─── setVerificationToken ───
   describe('setVerificationToken', () => {
     it('updates user with verification token and expiry', async () => {
       const expires = new Date('2026-06-01');
@@ -391,22 +348,15 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── verifyEmail ───
   describe('verifyEmail', () => {
     it('sets email_verified=true and clears verification token, returns user', async () => {
       const user = makeUser({ email_verified: true });
       qb.execute.mockResolvedValue({ raw: [user] });
 
-      // SEC (H2): caller must SHA-256-hash the raw token before calling verifyEmail.
       const hashedToken = crypto.createHash('sha256').update('verify-tok').digest('hex');
       const result = await sut.verifyEmail(hashedToken);
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      // `verification_token` and `verification_token_expires` are passed as
-      // `() => 'NULL'` raw expressions so TypeORM emits `SET ... = NULL`.
-      // Asserting object shape with function references doesn't survive the
-      // `toEqual` strict comparison; assert payload structure + the NULL
-      // emission contract via `.mock.calls[0][0]`.
       expect(qb.set).toHaveBeenCalledTimes(1);
       const setArg = qb.set.mock.calls[0][0] as {
         email_verified: boolean;
@@ -435,7 +385,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── registerSocialUser ───
   describe('registerSocialUser', () => {
     it('creates user without password, email_verified=true', async () => {
       const user = makeUser({ password: null, email_verified: true });
@@ -470,7 +419,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── setEmailChangeToken ───
   describe('setEmailChangeToken', () => {
     it('stores email change token, pending email, and expiry', async () => {
       const expires = new Date('2026-06-15');
@@ -486,7 +434,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── consumeEmailChangeToken ───
   describe('consumeEmailChangeToken', () => {
     it('promotes pending_email to email and clears token columns via raw NULL', async () => {
       const user = makeUser({ email: 'new@test.com' });
@@ -495,8 +442,6 @@ describe('UserRepositoryPg', () => {
       const result = await sut.consumeEmailChangeToken('hashed-tok');
 
       expect(qb.update).toHaveBeenCalledWith(User);
-      // All 4 set() values are raw `() => '...'` expressions — `email` copies
-      // the pending column literally and the three token columns emit NULL.
       expect(qb.set).toHaveBeenCalledTimes(1);
       const setArg = qb.set.mock.calls[0][0] as {
         email: () => string;
@@ -527,10 +472,6 @@ describe('UserRepositoryPg', () => {
       expect(result).toBeNull();
     });
 
-    // Stryker survivor: EqualityOperator on the raw SQL
-    // `email_change_token_expiry > NOW()`. A `>` -> `>=` mutation would
-    // accept an exact-boundary token. Same dual assertion pattern as
-    // consumeResetTokenAndUpdatePassword.
     it('uses strict `> NOW()` (not `>= NOW()`) — boundary email-change token rejected', async () => {
       const user = makeUser({ email: 'new@test.com' });
       qb.execute.mockResolvedValue({ raw: [user] });
@@ -548,7 +489,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── markOnboardingCompleted ───
   describe('markOnboardingCompleted', () => {
     it('updates onboarding_completed to true', async () => {
       repo.update.mockResolvedValue({ affected: 1 } as UpdateResult);
@@ -559,7 +499,6 @@ describe('UserRepositoryPg', () => {
     });
   });
 
-  // ─── deleteUser ───
   describe('deleteUser', () => {
     it('deletes chat sessions and user in a transaction', async () => {
       txQb.execute.mockResolvedValue({ affected: 1 });
@@ -567,7 +506,6 @@ describe('UserRepositoryPg', () => {
       await sut.deleteUser(5);
 
       expect(dataSource.transaction).toHaveBeenCalled();
-      // Two delete calls: one for chat_sessions, one for User
       expect(txManager.createQueryBuilder).toHaveBeenCalledTimes(2);
       expect(txQb.delete).toHaveBeenCalledTimes(2);
       expect(txQb.from).toHaveBeenCalledWith('chat_sessions');

@@ -7,8 +7,6 @@ import { userToken, makeToken } from 'tests/helpers/auth/token.helpers';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-// ── Mock ChatService ────────────────────────────────────────────────
-
 const mockPostMessage = jest.fn();
 const mockCreateSession = jest.fn();
 const mockListSessions = jest.fn();
@@ -38,8 +36,6 @@ const app = createApp({
   healthCheck: async () => ({ database: 'up' }),
 });
 
-// ── Tests ──────────────────────────────────────────────────────────
-
 describe('chat-message.route — uncovered paths', () => {
   beforeEach(() => {
     resetRateLimits();
@@ -49,8 +45,6 @@ describe('chat-message.route — uncovered paths', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── Non-streaming POST /sessions/:id/messages ──────────────────
 
   describe('POST /api/chat/sessions/:id/messages — non-streaming path', () => {
     it('returns 201 with assistant reply on success', async () => {
@@ -211,22 +205,17 @@ describe('chat-message.route — uncovered paths', () => {
         metadata: {},
       });
 
-      // The auth middleware may reject this; the important thing is we don't crash
       const res = await request(app)
         .post('/api/chat/sessions/session-uuid/messages')
         .set('Authorization', `Bearer ${tokenNoSub}`)
         .send({ text: 'hello' });
 
-      // Either 201 (if auth passes with undefined id) or 401
       expect([201, 401]).toContain(res.status);
     });
   });
 
-  // ── Art keywords endpoints ─────────────────────────────────────
-
   describe('GET /api/chat/art-keywords — no artKeywordRepo', () => {
     it('returns 404 when artKeywordRepo is not provided', async () => {
-      // The app is created without artKeywordRepo, so this should return 404
       const res = await request(app)
         .get('/api/chat/art-keywords')
         .set('Authorization', `Bearer ${userToken()}`);
@@ -238,9 +227,6 @@ describe('chat-message.route — uncovered paths', () => {
 
   describe('POST /api/chat/art-keywords — no artKeywordRepo', () => {
     it('returns 404 when artKeywordRepo is not provided', async () => {
-      // C3 (I-SEC3 R10): POST /art-keywords now requires ADMIN/MODERATOR role
-      // (requireRole gate before handler). Use admin token to reach the 404
-      // handler — visitor token would short-circuit at 403.
       const res = await request(app)
         .post('/api/chat/art-keywords')
         .set('Authorization', `Bearer ${makeToken({ role: 'admin' })}`)

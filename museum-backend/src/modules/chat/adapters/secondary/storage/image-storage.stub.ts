@@ -24,7 +24,6 @@ export const resolveLocalImageFilePath = (
   return path.join(uploadsDir, match[1]);
 };
 
-/** Dev-only — writes files to disk under `tmp/uploads`. */
 export class LocalImageStorage implements ImageStorage {
   constructor(private readonly uploadsDir = DEFAULT_LOCAL_UPLOADS_DIR) {}
 
@@ -39,14 +38,7 @@ export class LocalImageStorage implements ImageStorage {
     return `local://${fileName}`;
   }
 
-  /**
-   * No-op — local refs are flat `local://uuid.ext` (no user prefix); dev-only,
-   * cleanup handled by DB cascade on chat sessions.
-   */
-  async deleteByPrefix(
-    _userId: number | string,
-    _legacyFetcher?: LegacyImageKeyFetcher,
-  ): Promise<void> {
-    // Intentional no-op.
+  deleteByPrefix(_userId: number | string, _legacyFetcher?: LegacyImageKeyFetcher): Promise<void> {
+    return Promise.resolve();
   }
 }

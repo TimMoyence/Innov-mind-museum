@@ -52,8 +52,6 @@ describe('S2-20d: register response shape', () => {
       lastname: 'Doe',
     });
 
-    // Simulate the route handler transformation:
-    // res.status(201).json({ user: { id: user.id, email: user.email } })
     const response = { user: { id: fullUser.id, email: fullUser.email } };
 
     expect(response.user).toEqual({ id: 42, email: 'new@test.com' });

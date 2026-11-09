@@ -15,7 +15,6 @@ export const compareMatchCredit = (match: CompareMatch): string =>
 
 interface ImageCompareCardProps {
   match: CompareMatch;
-  locale: 'fr' | 'en';
   onPress: (qid: string) => void;
 }
 
@@ -23,26 +22,14 @@ const CARD_WIDTH = 220;
 const CARD_MIN_HEIGHT = 260;
 const THUMB_HEIGHT = 140;
 
-/**
- * Renders a single visual-similarity match (C3 / Phase 8) — thumbnail, title,
- * artist, rationale, and an attribution row when the source license requires
- * one (CC-BY-SA per spec.md). Distinct from the C2 `ImageCarousel` thumb
- * (D7 — different surface intent).
- *
- * Accessibility (D5 / UFR-008):
- *   - `accessibilityLabel` follows the localized template
- *     "Œuvre similaire : {compareMatchCredit}, {rationale}" (FR) /
- *     "Similar artwork: {compareMatchCredit}, {rationale}" (EN).
- *   - Pressable touch target ≥ 44×44pt (WCAG 2.5.5).
- */
-export const ImageCompareCard = React.memo(({ match, locale, onPress }: ImageCompareCardProps) => {
+export const ImageCompareCard = React.memo(({ match, onPress }: ImageCompareCardProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
 
-  const a11yLabel =
-    locale === 'fr'
-      ? `Œuvre similaire : ${compareMatchCredit(match)}, ${match.rationale}`
-      : `Similar artwork: ${compareMatchCredit(match)}, ${match.rationale}`;
+  const a11yLabel = t('chat.compare.card_a11y', {
+    credit: compareMatchCredit(match),
+    rationale: match.rationale,
+  });
 
   const handlePress = () => {
     onPress(match.qid);

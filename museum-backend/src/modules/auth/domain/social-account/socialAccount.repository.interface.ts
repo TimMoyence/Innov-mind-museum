@@ -7,7 +7,6 @@ export interface SocialAccountRow {
   createdAt: Date;
 }
 
-/** Port. Implemented by {@link SocialAccountRepositoryPg}. */
 export interface ISocialAccountRepository {
   findByProviderAndProviderUserId(
     provider: string,
@@ -23,6 +22,5 @@ export interface ISocialAccountRepository {
     email?: string | null;
   }): Promise<SocialAccountRow>;
 
-  /** Used during account deletion. */
   deleteByUserId(userId: number): Promise<void>;
 }

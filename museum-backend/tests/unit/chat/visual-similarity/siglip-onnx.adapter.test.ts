@@ -1,24 +1,6 @@
-/**
- * RED — T4.2 — `SiglipOnnxAdapter` (mocked ONNX runtime).
- *
- * Locks down the contract from tasks.md T4.2 and design.md §3:
- *   - encodes a Buffer → 768-dim L2-normalised Float32Array,
- *   - tags the output with `modelVersion: 'siglip2-base-patch16-224@v1'`,
- *   - throws `EncoderUnavailableError` when the ONNX run exceeds the
- *     configured `timeoutMs`,
- *   - lazily initialises the InferenceSession at most once across calls.
- *
- * The SUT does not yet exist. Tests are RED until Phase 4 implementation lands.
- */
-
 import { EncoderUnavailableError } from '@modules/chat/domain/ports/embeddings.port';
 import { makeSiglipJpegBuffer } from '../../../helpers/chat/visual-similarity/image-fixtures';
 
-// ---------------------------------------------------------------------------
-// Mock onnxruntime-node BEFORE the SUT is loaded.
-// `InferenceSession.create` is the lazy entry point the adapter is expected
-// to call once and cache.
-// ---------------------------------------------------------------------------
 const onnxCreateMock = jest.fn();
 const onnxRunMock = jest.fn();
 
@@ -33,17 +15,12 @@ jest.mock('onnxruntime-node', () => ({
   })),
 }));
 
-// Helper: build a deterministic 768-component float32 vector that, AFTER
-// L2-normalisation, has unit norm. We make ONNX return a non-unit vector so
-// the adapter is forced to perform the normalisation step itself.
 const FAKE_RAW_OUTPUT = new Float32Array(768).fill(2);
 
 interface SiglipOnnxAdapterCtorArgs {
   modelPath: string;
   timeoutMs: number;
 }
-
-// SUT — dynamic require keeps jest.mock('onnxruntime-node') hoisting + native-binding lazy semantics.
 
 const { SiglipOnnxAdapter } =
   require('@modules/chat/adapters/secondary/embeddings/siglip-onnx.adapter') as {
@@ -67,9 +44,6 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
     onnxRunMock.mockReset();
     onnxReleaseMock.mockReset();
     onnxReleaseMock.mockResolvedValue(undefined);
-    // TD-ONNX-02/03 — the mock session exposes the full contract the adapter
-    // now relies on : `release()` for teardown + `inputNames`/`outputNames`
-    // for the post-create I/O validation.
     onnxCreateMock.mockResolvedValue({
       run: onnxRunMock,
       release: onnxReleaseMock,
@@ -126,7 +100,6 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
     await adapter.shutdown();
     expect(onnxReleaseMock).toHaveBeenCalledTimes(1);
 
-    // Next encode re-creates the session (cache was dropped).
     await adapter.encode({ buffer, mimeType: 'image/jpeg' });
     expect(onnxCreateMock).toHaveBeenCalledTimes(2);
   });
@@ -170,13 +143,7 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
   });
 
   it('throws EncoderUnavailableError when the ONNX run exceeds timeoutMs', async () => {
-    // Hang the run() forever — short timeoutMs forces EncoderUnavailableError.
-    onnxRunMock.mockImplementation(
-      () =>
-        new Promise(() => {
-          /* never resolves */
-        }),
-    );
+    onnxRunMock.mockImplementation(() => new Promise(() => {}));
 
     const adapter = new SiglipOnnxAdapter({
       modelPath: './models/siglip2-base-patch16-224.onnx',
@@ -203,10 +170,6 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
     expect(onnxRunMock).toHaveBeenCalledTimes(2);
   });
 
-  // Reviewer NIT (2026-05-20) — locks the retry-after-create-failure contract.
-  // A transient FS / native-load failure must drop `sessionPromise` (the
-  // `.catch()` arm in `acquireSession`) so the next `encode()` call rebuilds
-  // the session instead of permanently breaking the adapter.
   it('retries InferenceSession.create after a transient create failure', async () => {
     onnxCreateMock.mockReset();
     onnxCreateMock.mockRejectedValueOnce(new Error('transient FS error')).mockResolvedValue({
@@ -226,7 +189,6 @@ describe('SiglipOnnxAdapter (T4.2)', () => {
       EncoderUnavailableError,
     );
 
-    // Second call must re-attempt `create` (cached promise was dropped) and succeed.
     const result = await adapter.encode({ buffer, mimeType: 'image/jpeg' });
     expect(result.vector).toBeInstanceOf(Float32Array);
     expect(onnxCreateMock).toHaveBeenCalledTimes(2);

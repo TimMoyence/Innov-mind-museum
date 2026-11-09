@@ -1,12 +1,3 @@
-/**
- * E2E regression — password-reset token replay (audit P0 #2, F8 §B1).
- *
- * Verifies the TypeORM `.set()` silent-skip fix:
- * `consumeResetTokenAndUpdatePassword` now writes `() => 'NULL'` instead of
- * `undefined`, so the reset_token and reset_token_expires columns are actually
- * cleared on consume. Without the fix, the token could be replayed for the
- * full TTL after a successful reset.
- */
 import { clearRateLimitBuckets } from '@shared/middleware/rate-limit.middleware';
 
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
@@ -23,19 +14,12 @@ describeE2E('auth password-reset e2e', () => {
   });
 
   beforeEach(() => {
-    // passwordResetLimiter caps /forgot-password + /reset-password at 5 calls
-    // per IP / 5 min. Reset the in-memory bucket between tests so the IP-keyed
-    // counter doesn't accumulate across cases (test harness loops on 127.0.0.1).
     clearRateLimitBuckets();
   });
 
   afterAll(async () => {
     await harness?.stop();
   });
-
-  // forgotPasswordUseCase silently skips unverified users (SEC-HARDENING M16),
-  // so e2e tests must register *and* mark email_verified=true — the shared
-  // `registerUser` helper does both in one call.
 
   async function requestResetToken(email: string): Promise<string> {
     const res = await harness.request('/api/auth/forgot-password', {
@@ -62,7 +46,6 @@ describeE2E('auth password-reset e2e', () => {
     await registerUser(harness, { email });
     const token = await requestResetToken(email);
 
-    // Sanity: reset_token IS populated pre-consume.
     const pre = await fetchResetTokenColumns(email);
     expect(pre.reset_token).not.toBeNull();
     expect(pre.reset_token_expires).not.toBeNull();
@@ -73,9 +56,6 @@ describeE2E('auth password-reset e2e', () => {
     });
     expect(consume.status).toBe(200);
 
-    // The fix: columns must be NULL after consume. Without `() => 'NULL'` the
-    // TypeORM `.set({ field: undefined })` is silently skipped and these rows
-    // would still be populated — allowing replay.
     const post = await fetchResetTokenColumns(email);
     expect(post.reset_token).toBeNull();
     expect(post.reset_token_expires).toBeNull();
@@ -111,7 +91,6 @@ describeE2E('auth password-reset e2e', () => {
     });
     expect(res.status).toBe(400);
 
-    // Tampered token doesn't match → reset_token row remains populated.
     const state = await fetchResetTokenColumns(email);
     expect(state.reset_token).not.toBeNull();
   });

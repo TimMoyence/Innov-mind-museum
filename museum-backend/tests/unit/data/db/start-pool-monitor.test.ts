@@ -1,18 +1,3 @@
-/**
- * T1.7.b4 — coverage for the `hasPgPool` type predicate that replaced the
- * `as unknown as` cast in `startPoolMonitor`. The predicate guards the
- * pg-specific `master` pool stats object before the monitor reads counters.
- *
- * We split coverage between (a) direct unit tests of `hasPgPool` over a
- * matrix of driver shapes, and (b) one integration assertion that
- * `startPoolMonitor` returns a NodeJS.Timeout and tears down cleanly when
- * the predicate is false (driver missing `master`).
- *
- * Direct DataSource bootstrap is out of scope — we only verify that the
- * monitor's `setInterval` callback short-circuits via the predicate, which
- * we exercise by checking `hasPgPool` independently.
- */
-
 import { hasPgPool, startPoolMonitor } from '@data/db/data-source';
 
 describe('hasPgPool — pg pool-stats type predicate', () => {
@@ -58,8 +43,6 @@ describe('hasPgPool — pg pool-stats type predicate', () => {
   it('narrows the input so `.master` counters are typed numbers', () => {
     const driver: unknown = { master: { totalCount: 10, idleCount: 4, waitingCount: 2 } };
     if (hasPgPool(driver)) {
-      // If this compiles, the predicate narrows correctly — no runtime check
-      // needed here, the test is the TS compile path.
       const sum: number = driver.master.totalCount + driver.master.idleCount;
       expect(sum).toBe(14);
     } else {
@@ -70,12 +53,8 @@ describe('hasPgPool — pg pool-stats type predicate', () => {
 
 describe('startPoolMonitor — interval lifecycle', () => {
   it('returns a NodeJS.Timeout handle that can be cleared without firing the callback in tests', () => {
-    // The pool monitor's interval callback short-circuits on the predicate
-    // (no real driver here), so this is a smoke test confirming the
-    // interval handle is well-formed. We clear immediately to avoid leaks.
     const handle = startPoolMonitor(60_000);
     expect(handle).toBeDefined();
-    // NodeJS.Timeout has a `ref` method — check via duck-typing.
     expect(typeof (handle as unknown as { ref?: unknown }).ref).toBe('function');
     clearInterval(handle);
   });

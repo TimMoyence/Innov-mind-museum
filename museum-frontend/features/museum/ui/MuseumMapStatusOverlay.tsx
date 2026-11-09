@@ -7,17 +7,10 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { museumMapViewStyles as styles } from './museumMapView.styles';
 
 interface MuseumMapStatusOverlayProps {
-  /** Empty state takes priority over the map UI when true and no error is showing. */
   isEmpty: boolean;
   hasLoadError: boolean;
 }
 
-/**
- * Renders the optional empty / error overlays for `MuseumMapView`. Extracted
- * from the component shell so the view file stays under the 300 LOC budget;
- * a11y roles + live-region semantics are preserved verbatim so the existing
- * test suite continues to pass without edits.
- */
 export const MuseumMapStatusOverlay = ({ isEmpty, hasLoadError }: MuseumMapStatusOverlayProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

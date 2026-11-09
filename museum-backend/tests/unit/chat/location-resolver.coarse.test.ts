@@ -8,13 +8,10 @@ import * as nominatimClient from '@shared/http/nominatim.client';
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
 import { makeSession } from '../../helpers/chat/message.fixtures';
 
-// Suppress logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-// Mock the raw reverse-geocode client (tests run with no CacheService, so the
-// resolver falls back to the raw client per its constructor wiring).
 jest.mock('@shared/http/nominatim.client', () => ({
   ...jest.requireActual('@shared/http/nominatim.client'),
   reverseGeocodeWithNominatim: jest.fn(),
@@ -24,16 +21,6 @@ const mockedReverseGeocode = nominatimClient.reverseGeocodeWithNominatim as jest
   typeof nominatimClient.reverseGeocodeWithNominatim
 >;
 
-/**
- * Tests the GDPR hardening of {@link LocationResolver} + {@link resolveLocationForMessage}:
- *   1. The resolver exposes a coarse reverse-geocode (city + country only)
- *      that strips street-level PII before reaching the LLM prompt.
- *   2. The fine-grained value is still computed (internal analytics) but
- *      never bundled with street / house-number / postcode details.
- *   3. `resolveLocationForMessage` enforces the `location_to_llm` consent
- *      scope when a consent checker is supplied — no consent → no location
- *      at all, not even the coarse form.
- */
 describe('LocationResolver — GDPR coarse mode + consent gate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,10 +30,11 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
   describe('reverseGeocodeCoarse field', () => {
     it('exposes ONLY city + country in reverseGeocodeCoarse', async () => {
       const repo = makeMuseumRepo({
-        findAll: jest.fn().mockResolvedValue([
-          // Museum ~5km away → outside-museum path is taken
-          makeMuseum({ id: 1, name: 'Far Museum', latitude: 48.9, longitude: 2.4 }),
-        ]),
+        findAll: jest
+          .fn()
+          .mockResolvedValue([
+            makeMuseum({ id: 1, name: 'Far Museum', latitude: 48.9, longitude: 2.4 }),
+          ]),
       });
       mockedReverseGeocode.mockResolvedValue({
         displayName: '12 Rue de Rivoli, 75001 Paris, France',
@@ -63,8 +51,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       const result = await resolver.resolve(48.8606, 2.3376);
 
       expect(result.reverseGeocodeCoarse).toBe('Paris, France');
-      // Sanity: sensitive fields (road, house number, postcode, suburb, POI
-      // name) must NOT appear in the coarse value emitted to the LLM.
       expect(result.reverseGeocodeCoarse).not.toContain('Rue de Rivoli');
       expect(result.reverseGeocodeCoarse).not.toContain('Fontaine');
       expect(result.reverseGeocodeCoarse).not.toContain('Paris Centre');
@@ -89,10 +75,8 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
 
       const result = await resolver.resolve(48.8606, 2.3376);
 
-      // Fine value retains street-level context (internal only).
       expect(result.reverseGeocode).toContain('Rue de Rivoli');
       expect(result.reverseGeocode).toContain('Paris');
-      // The two values are intentionally distinct.
       expect(result.reverseGeocode).not.toBe(result.reverseGeocodeCoarse);
     });
 
@@ -111,7 +95,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
 
       const result = await resolver.resolve(48.886, 2.343);
 
-      // City missing → use suburb as locality.
       expect(result.reverseGeocodeCoarse).toBe('Montmartre, France');
     });
 
@@ -172,7 +155,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       });
 
       expect(result).toBeUndefined();
-      // External Nominatim call MUST NOT happen when consent is missing.
       expect(mockedReverseGeocode).not.toHaveBeenCalled();
       expect(consentChecker.isGranted).toHaveBeenCalledWith(42, 'location_to_llm');
     });
@@ -192,10 +174,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       expect(consentChecker.isGranted).not.toHaveBeenCalled();
     });
 
-    // Cycle 1.5 (RE-RED — intentional contract change vs Cycle 1, NFR-1):
-    // `location_to_llm` granted now means effective level = `full` → the resolved
-    // location carries the NEIGHBOURHOOD field (REQ-6), not merely the coarse city.
-    // The mock checker is bi-scope: `location_to_llm` granted dominates (REQ-1).
     it('emits the FULL (neighbourhood) location when location_to_llm is granted (REQ-6, cycle 1.5)', async () => {
       const repo = makeMuseumRepo({
         findAll: jest
@@ -222,7 +200,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       });
 
       expect(result).toBeDefined();
-      // Full level → neighbourhood label is exposed (finer than the coarse city).
       expect(result?.consentGranularity).toBe('full');
       expect(result?.reverseGeocodeNeighbourhood).toBe('Le Marais, Paris');
     });
@@ -234,18 +211,11 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       const result = await resolveLocationForMessage(resolver, 'lat:48.8606,lng:2.3376', session);
 
       expect(result).toBeDefined();
-      // Cycle 1.5 — legacy/no-checker path is treated as `full` (D-LEGACY), so the
-      // coarse value is still present AND the granularity is full.
       expect(result?.reverseGeocodeCoarse).toBe('Paris, France');
       expect(result?.consentGranularity).toBe('full');
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Cycle 1.5 — neighbourhood composition on resolve() (R1-R6). These prove the
-  // NEW `reverseGeocodeNeighbourhood` field + composition rules (REQ-4/4a/4b,
-  // D-FIELD `neighbourhood ?? suburb`). They FAIL today (field does not exist).
-  // ─────────────────────────────────────────────────────────────────────────
   describe('reverseGeocodeNeighbourhood field (cycle 1.5, R1-R6)', () => {
     const outdoorRepo = (): ReturnType<typeof makeMuseumRepo> =>
       makeMuseumRepo({
@@ -296,8 +266,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
 
       const result = await resolver.resolve(44.8378, -0.5792);
 
-      // REQ-4a: a full-consent user never gets LESS than coarse — falls back to
-      // the city-level composition (== coarse), never a dangling ", ".
       expect(result.reverseGeocodeNeighbourhood).toBe('Bordeaux, France');
       expect(result.reverseGeocodeNeighbourhood).not.toMatch(/,\s*$/);
       expect(result.reverseGeocodeNeighbourhood).not.toMatch(/^\s*,/);
@@ -350,20 +318,13 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
       expect(result.reverseGeocode).toContain('Rue de Rivoli');
       expect(result.reverseGeocodeNeighbourhood).toBe('Le Marais, Paris');
       expect(result.reverseGeocodeCoarse).toBe('Paris, France');
-      // The three values are intentionally distinct granularities.
       expect(result.reverseGeocode).not.toBe(result.reverseGeocodeNeighbourhood);
       expect(result.reverseGeocodeNeighbourhood).not.toBe(result.reverseGeocodeCoarse);
-      // Neighbourhood NEVER leaks the road / house number.
       expect(result.reverseGeocodeNeighbourhood).not.toContain('Rue de Rivoli');
       expect(result.reverseGeocodeNeighbourhood).not.toMatch(/\d/);
     });
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Cycle 1.5 — effective consent level on resolveLocationForMessage (C1-C5,
-  // C-err). 2-scope evaluation → {none|coarse|full}; full dominates (REQ-1);
-  // single Nominatim call (NFR-5); fail-closed `none` on checker error (NFR-6).
-  // ─────────────────────────────────────────────────────────────────────────
   describe('effective consent level on resolveLocationForMessage (cycle 1.5, C1-C5/C-err)', () => {
     const buildOutdoorResolver = (): LocationResolver => {
       const repo = makeMuseumRepo({
@@ -416,7 +377,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
 
       expect(result).toBeDefined();
       expect(result?.consentGranularity).toBe('coarse');
-      // Coarse still carries the city value; the builder will pick coarse over hood.
       expect(result?.reverseGeocodeCoarse).toBe('Paris, France');
       expect(mockedReverseGeocode).toHaveBeenCalledTimes(1);
     });
@@ -459,9 +419,7 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
         consentChecker: checker,
       });
 
-      // full dominates → no need to query the coarse scope (REQ-1 short-circuit).
       expect(checker.isGranted).not.toHaveBeenCalledWith(42, 'location_coarse_to_llm');
-      // And a single reverse-geocode regardless of level (one network call).
       expect(mockedReverseGeocode).toHaveBeenCalledTimes(1);
     });
 
@@ -477,8 +435,6 @@ describe('LocationResolver — GDPR coarse mode + consent gate', () => {
         consentChecker: checker,
       });
 
-      // Fail-closed: an error in the checker must NOT leak a location (vs Cycle 1
-      // which propagated the exception). No location, no external call.
       expect(result).toBeUndefined();
       expect(mockedReverseGeocode).not.toHaveBeenCalled();
     });

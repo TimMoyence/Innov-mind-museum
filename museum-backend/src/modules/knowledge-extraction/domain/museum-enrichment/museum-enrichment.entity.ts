@@ -21,11 +21,6 @@ import { jsonbValidator } from '@shared/db/jsonb-validator';
 
 import type { Relation } from 'typeorm';
 
-/**
- * Aggregated public data (OSM / Wikidata / Wikipedia) keyed by `(name, locale)`.
- * Also persistent cache for the P3 hybrid per-locale enrichment endpoint
- * (fields: summary, wikidataQid, phone, imageUrl, fetchedAt).
- */
 @Entity({ name: 'museum_enrichment' })
 @Index('IDX_museum_enrichment_name_locale', ['name', 'locale'], { unique: true })
 export class MuseumEnrichment {
@@ -35,7 +30,6 @@ export class MuseumEnrichment {
   @ManyToOne(() => Museum, { nullable: true, onDelete: 'SET NULL' })
   museum?: Relation<Museum> | null;
 
-  /** Integer FK to museums.id (matches SQL — see migration 1775852800000). */
   @Index('IDX_museum_enrichment_museumId')
   @Column({ type: 'int', nullable: true })
   museumId!: number | null;
@@ -97,21 +91,15 @@ export class MuseumEnrichment {
   @Column({ type: 'varchar', length: 10 })
   locale!: string;
 
-  // P3 hybrid enrichment fields
-
-  /** Wikipedia REST `/page/summary` extract or Wikidata description. */
   @Column({ type: 'text', nullable: true })
   summary!: string | null;
 
-  /** Wikidata QID (e.g. `Q19675`) — empty when lookup failed. */
   @Column({ type: 'varchar', length: 32, nullable: true })
   wikidataQid!: string | null;
 
-  /** Wikidata P1329. Stored raw, not normalised. */
   @Column({ type: 'varchar', length: 32, nullable: true })
   phone!: string | null;
 
-  /** Commons image URL (Wikidata P18). */
   @Column({ type: 'varchar', length: 500, nullable: true })
   imageUrl!: string | null;
 

@@ -8,7 +8,6 @@ export const hmac = (key: Buffer | string, value: string): Buffer => {
   return crypto.createHmac('sha256', key).update(value).digest();
 };
 
-/** SigV4 signing key for the `s3` service. */
 export const deriveSigningKey = (
   secretAccessKey: string,
   dateStamp: string,
@@ -20,7 +19,6 @@ export const deriveSigningKey = (
   return hmac(kService, 'aws4_request');
 };
 
-/** AMZ date (`YYYYMMDDTHHMMSSZ`) + date stamp (`YYYYMMDD`). */
 export const toAmzDate = (date: Date): { amzDate: string; dateStamp: string } => {
   const iso = date.toISOString().replace(/[:-]|\.\d{3}/g, '');
   return {

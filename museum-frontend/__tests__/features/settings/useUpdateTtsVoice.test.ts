@@ -1,17 +1,7 @@
-/**
- * Tests for {@link useUpdateTtsVoice} (Spec C T2.8).
- *
- * Covers the TanStack mutation hook that posts the chosen TTS voice to
- * `PATCH /api/auth/tts-voice` via {@link authService.updateTtsVoice} and
- * invalidates the `['user', 'me']` profile query on success so the UI
- * re-reads the freshly persisted value.
- */
 import '@/__tests__/helpers/test-utils';
 import { act, waitFor } from '@testing-library/react-native';
 
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
-
-// ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockUpdateTtsVoice = jest.fn();
 
@@ -22,8 +12,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 }));
 
 import { useUpdateTtsVoice } from '@/features/settings/application/useUpdateTtsVoice';
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useUpdateTtsVoice (Spec C T2.8)', () => {
   beforeEach(() => {

@@ -2,6 +2,7 @@ import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { sanitizePromptInput } from '@shared/validation/input';
 
@@ -75,7 +76,6 @@ export class ContentClassifierService implements ContentClassifierPort {
     this.model = llm.withStructuredOutput(classificationSchema);
   }
 
-  /** Returns null on any LLM error. */
   async classify(textContent: string, locale: string): Promise<ClassificationResult | null> {
     if (!textContent.trim()) return null;
     try {
@@ -90,7 +90,7 @@ export class ContentClassifierService implements ContentClassifierPort {
       return result;
     } catch (err) {
       logger.warn('classifier_error', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
       return null;
     }

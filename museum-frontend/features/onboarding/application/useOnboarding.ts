@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 
-/** Hook that manages onboarding step progression. */
 export const useOnboarding = (totalSteps: number) => {
   const [currentStep, setCurrentStep] = useState(0);
 

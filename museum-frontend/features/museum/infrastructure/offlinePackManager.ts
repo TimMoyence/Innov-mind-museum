@@ -7,7 +7,6 @@ import type { CityId } from './cityCatalog';
 
 export interface CityPackRequest {
   cityId: CityId;
-  /** `[west, south, east, north]` in WGS84. Matches MapLibre's LngLatBounds. */
   bounds: [number, number, number, number];
   mapStyleUrl: string;
   minZoom?: number;
@@ -33,10 +32,6 @@ export interface CityPackProgress {
 const DEFAULT_MIN_ZOOM = 10;
 const DEFAULT_MAX_ZOOM = 16;
 
-/**
- * A pack's native id is opaque; we tag metadata with the cityId so the UI can
- * map packs back to the city catalog (Paris, Lyon, Bordeaux, Lisbonne, Rome).
- */
 interface PackMetadata {
   cityId?: CityId;
 }
@@ -60,13 +55,6 @@ const toSummary = async (pack: OfflinePack): Promise<CityPackSummary | null> => 
   };
 };
 
-/**
- * Thin wrapper around `OfflineManager` that speaks in terms of the app's
- * city catalog: requests carry a `cityId`, summaries return the cityId they
- * belong to. Progress events are forwarded to a callback so a React hook or
- * a settings screen can drive the download UX without re-implementing the
- * native listener glue.
- */
 export const offlinePackManager = {
   async listPacks(): Promise<CityPackSummary[]> {
     const packs = await OfflineManager.getPacks();
@@ -88,11 +76,8 @@ export const offlinePackManager = {
 
   async downloadPack(
     request: CityPackRequest,
-    onProgress: (progress: CityPackProgress) => void = () => {
-      /* noop */
-    },
+    onProgress: (progress: CityPackProgress) => void = () => undefined,
   ): Promise<CityPackSummary> {
-    // Check for an existing pack without calling status() on every pack in the catalog.
     const allPacks = await OfflineManager.getPacks();
     const existingPack = allPacks.find((p) => readCityId(p) === request.cityId);
     if (existingPack) {

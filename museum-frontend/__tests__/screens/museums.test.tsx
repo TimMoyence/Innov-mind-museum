@@ -3,11 +3,6 @@ import '../helpers/test-utils';
 import { AccessibilityInfo } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-// ── Screen-specific mocks ────────────────────────────────────────────────────
-// Note: react-native-maps / maplibre / expo-location are NOT loaded — the screen
-// pulls MuseumMapView via a `@/...` alias, which we stub below to avoid the
-// native-module dependency tree.
-
 interface MockLocation {
   latitude: number | null;
   longitude: number | null;
@@ -57,8 +52,6 @@ jest.mock('@/shared/ui/hooks/useReducedMotion', () => ({
   useReducedMotion: () => mockUseReducedMotion(),
 }));
 
-// MuseumDirectoryList stub: exposes onSearchChange + onMuseumPress + onRefresh
-// so the wiring contract from MuseumsScreen can be asserted via fireEvent.
 jest.mock('@/features/museum/ui/MuseumDirectoryList', () => {
   const ReactMock = require('react');
   const { Pressable, View } = require('react-native');
@@ -107,8 +100,6 @@ jest.mock('@/features/museum/ui/MuseumDirectoryList', () => {
   };
 });
 
-// MuseumMapView stub: exposes onMapMoved + onMuseumSelect, captures latest
-// `museums` array length to assert prop wiring on view-mode switch.
 jest.mock('@/features/museum/ui/MuseumMapView', () => {
   const ReactMock = require('react');
   const { Pressable, View } = require('react-native');
@@ -164,7 +155,6 @@ jest.mock('@/features/museum/ui/MuseumMapView', () => {
   };
 });
 
-// ViewModeToggle stub: exposes onToggle so we can drive list↔map transitions.
 jest.mock('@/features/museum/ui/ViewModeToggle', () => {
   const ReactMock = require('react');
   const { Pressable, View } = require('react-native');
@@ -195,8 +185,6 @@ jest.mock('@/features/museum/ui/ViewModeToggle', () => {
   };
 });
 
-// MuseumSheet stub: exposes onStartChat / onOpenInMaps / onViewDetails / onClose
-// so each callback wired by MuseumsScreen can be exercised independently.
 jest.mock('@/features/museum/ui/MuseumSheet', () => {
   const ReactMock = require('react');
   const { Pressable, View } = require('react-native');
@@ -281,8 +269,6 @@ describe('MuseumsScreen', () => {
     });
   });
 
-  // ── Initial render ──────────────────────────────────────────────────────────
-
   it('renders the i18n title key in the header card', () => {
     render(<MuseumsScreen />);
     expect(screen.getByText('museumDirectory.title')).toBeTruthy();
@@ -299,8 +285,6 @@ describe('MuseumsScreen', () => {
     const toggle = screen.getByTestId('view-mode-toggle');
     expect(toggle.props.accessibilityValue).toEqual({ text: 'list' });
   });
-
-  // ── Geo-permission gate ─────────────────────────────────────────────────────
 
   it('hides the location-denied alert when permission is granted', () => {
     render(<MuseumsScreen />);
@@ -321,15 +305,12 @@ describe('MuseumsScreen', () => {
     expect(denied.props.accessibilityLiveRegion).toBe('polite');
   });
 
-  // ── List → Map view-mode transition (reduce-motion path) ───────────────────
-
   it('switches to map view instantly when reduceMotion is enabled', async () => {
     mockUseReducedMotion.mockReturnValue(true);
     render(<MuseumsScreen />);
 
     fireEvent.press(screen.getByTestId('vmt-to-map'));
 
-    // No animation: the map view appears synchronously after the press.
     await waitFor(() => {
       expect(screen.getByTestId('museum-map-view')).toBeTruthy();
     });
@@ -343,7 +324,6 @@ describe('MuseumsScreen', () => {
     fireEvent.press(screen.getByTestId('vmt-to-map'));
     await screen.findByTestId('museum-map-view');
 
-    // Drag the map → bbox set → toggle back to list → bbox cleared.
     fireEvent.press(screen.getByTestId('mmv-map-moved-trigger'));
     fireEvent.press(screen.getByTestId('vmt-to-list'));
 
@@ -357,13 +337,10 @@ describe('MuseumsScreen', () => {
     mockUseReducedMotion.mockReturnValue(true);
     render(<MuseumsScreen />);
 
-    // Already on list — toggling to list must NOT remount or hide it.
     fireEvent.press(screen.getByTestId('vmt-to-list'));
     expect(screen.getByTestId('museum-directory-list')).toBeTruthy();
     expect(screen.queryByTestId('museum-map-view')).toBeNull();
   });
-
-  // ── List → Map view-mode transition (animated path) ────────────────────────
 
   it('completes the animated crossfade and lands on map view', async () => {
     mockUseReducedMotion.mockReturnValue(false);
@@ -371,14 +348,10 @@ describe('MuseumsScreen', () => {
 
     fireEvent.press(screen.getByTestId('vmt-to-map'));
 
-    // Animated.timing in the JS-only RN test env runs its callback on the next
-    // tick; waitFor flushes both fade-out + fade-in callbacks.
     await waitFor(() => {
       expect(screen.getByTestId('museum-map-view')).toBeTruthy();
     });
   });
-
-  // ── Search input wiring (list mode) ─────────────────────────────────────────
 
   it('forwards search query changes from the list to the directory hook', () => {
     render(<MuseumsScreen />);
@@ -391,8 +364,6 @@ describe('MuseumsScreen', () => {
     fireEvent.press(screen.getByTestId('mdl-refresh-trigger'));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
-
-  // ── Sheet selection from list ───────────────────────────────────────────────
 
   it('opens the museum sheet when a list row is pressed', () => {
     render(<MuseumsScreen />);
@@ -408,8 +379,6 @@ describe('MuseumsScreen', () => {
     fireEvent.press(screen.getByTestId('sheet-close'));
     expect(screen.queryByTestId('museum-sheet')).toBeNull();
   });
-
-  // ── Sheet → start chat ──────────────────────────────────────────────────────
 
   it('starts a museum-mode conversation with coordinates when sheet onStartChat fires', () => {
     render(<MuseumsScreen />);
@@ -427,7 +396,6 @@ describe('MuseumsScreen', () => {
         skipSettings: true,
       }),
     );
-    // Sheet closes synchronously before startConversation fires.
     expect(screen.queryByTestId('museum-sheet')).toBeNull();
   });
 
@@ -435,7 +403,6 @@ describe('MuseumsScreen', () => {
     mockUseReducedMotion.mockReturnValue(true);
     render(<MuseumsScreen />);
 
-    // Switch to map mode then select an OSM (id=-1, lat/lng=null) marker.
     fireEvent.press(screen.getByTestId('vmt-to-map'));
     await screen.findByTestId('museum-map-view');
     fireEvent.press(screen.getByTestId('mmv-select-osm-trigger'));
@@ -449,13 +416,10 @@ describe('MuseumsScreen', () => {
       museumName: 'OSM Place',
       skipSettings: true,
     });
-    // id=-1 → museumId omitted; null lat/lng → coordinates omitted.
     expect(callArg.museumId).toBeUndefined();
     expect(callArg.coordinates).toBeUndefined();
     expect(callArg.museumAddress).toBeUndefined();
   });
-
-  // ── Sheet → open in native maps ─────────────────────────────────────────────
 
   it('forwards onOpenInMaps to the openInNativeMaps helper with full museum coords', () => {
     render(<MuseumsScreen />);
@@ -468,8 +432,6 @@ describe('MuseumsScreen', () => {
       name: 'Louvre',
     });
   });
-
-  // ── Sheet → view details ────────────────────────────────────────────────────
 
   it('navigates to museum-detail with stringified params on onViewDetails', () => {
     render(<MuseumsScreen />);
@@ -489,11 +451,8 @@ describe('MuseumsScreen', () => {
         distanceMeters: '1200',
       }),
     });
-    // Sheet closes before navigation.
     expect(screen.queryByTestId('museum-sheet')).toBeNull();
   });
-
-  // ── Map-view interactions ───────────────────────────────────────────────────
 
   it('shows the "search this area" chip only after the user pans the map', async () => {
     mockUseReducedMotion.mockReturnValue(true);
@@ -502,10 +461,8 @@ describe('MuseumsScreen', () => {
     fireEvent.press(screen.getByTestId('vmt-to-map'));
     await screen.findByTestId('museum-map-view');
 
-    // No pan yet → chip absent.
     expect(screen.queryByText('museumDirectory.search_this_area')).toBeNull();
 
-    // After onMapMoved fires the chip surfaces with the i18n key as label.
     fireEvent.press(screen.getByTestId('mmv-map-moved-trigger'));
     await waitFor(() => {
       expect(screen.getByText('museumDirectory.search_this_area')).toBeTruthy();
@@ -540,18 +497,14 @@ describe('MuseumsScreen', () => {
     });
   });
 
-  // ── Result-count a11y announcement ──────────────────────────────────────────
-
   it('announces result count changes via AccessibilityInfo when the dataset changes', () => {
     const announceSpy = jest
       .spyOn(AccessibilityInfo, 'announceForAccessibility')
       .mockImplementation(() => undefined);
 
-    // First render → count=0, no announcement (initial baseline only).
     const { rerender } = render(<MuseumsScreen />);
     expect(announceSpy).not.toHaveBeenCalled();
 
-    // Change dataset → announcement fires with the i18n key.
     mockUseMuseumDirectory.mockReturnValue({
       museums: [makeMuseumWithDistance({ id: 1 }), makeMuseumWithDistance({ id: 2 })],
       isLoading: false,

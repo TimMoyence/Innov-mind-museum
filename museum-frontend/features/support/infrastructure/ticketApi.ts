@@ -27,13 +27,7 @@ interface CreateTicketBody {
   category?: string;
 }
 
-/** Service for support ticket API operations: list, create, detail, and messaging. */
 export const ticketApi = {
-  /**
-   * Lists the current user's support tickets with optional pagination and filters.
-   * @param params - Optional page, limit, status, and priority filters.
-   * @returns Paginated list of tickets.
-   */
   async listTickets(params: ListTicketsParams = {}): Promise<ListTicketsResponse> {
     return openApiRequest({
       path: '/api/support/tickets',
@@ -47,24 +41,14 @@ export const ticketApi = {
     });
   },
 
-  /**
-   * Creates a new support ticket.
-   * @param body - Ticket subject, description, optional priority and category.
-   * @returns The created ticket wrapped in a `ticket` field.
-   */
   async createTicket(body: CreateTicketBody): Promise<{ ticket: TicketDTO }> {
     return openApiRequest({
       path: '/api/support/tickets',
       method: 'post',
-      body: JSON.stringify(body),
+      json: body,
     });
   },
 
-  /**
-   * Fetches a single ticket with its message thread.
-   * @param ticketId - UUID of the ticket.
-   * @returns The ticket detail with messages wrapped in a `ticket` field.
-   */
   async getTicketDetail(ticketId: string): Promise<{ ticket: TicketDetailDTO }> {
     return openApiRequest({
       path: '/api/support/tickets/{id}',
@@ -73,18 +57,12 @@ export const ticketApi = {
     });
   },
 
-  /**
-   * Adds a message to an existing ticket thread.
-   * @param ticketId - UUID of the ticket.
-   * @param text - Message text.
-   * @returns The created message wrapped in a `message` field.
-   */
   async addTicketMessage(ticketId: string, text: string): Promise<{ message: TicketMessageDTO }> {
     return openApiRequest({
       path: '/api/support/tickets/{id}/messages',
       method: 'post',
       pathParams: { id: ticketId },
-      body: JSON.stringify({ text }),
+      json: { text },
     });
   },
 };

@@ -1,14 +1,3 @@
-/**
- * Verifies the `EXTRACTION_WORKER_ENABLED=false` short-circuit in
- * `KnowledgeExtractionModule.build()`. This branch must:
- *  - return the db-lookup-only fallback shape (no `extractionQueue`)
- *  - log `knowledge_extraction_disabled`
- *  - NEVER instantiate the BullMQ-backed `ExtractionWorker` (which would
- *    open ioredis sockets in test environments without Redis).
- *
- * Covered for parity with the e2e harness which pins the flag to false.
- */
-
 jest.mock('@shared/logger/logger', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));

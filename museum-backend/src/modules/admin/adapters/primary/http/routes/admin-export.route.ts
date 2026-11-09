@@ -16,13 +16,6 @@ import { requireRole } from '@shared/middleware/require-role.middleware';
 
 import type { ExportActorRole } from '@modules/admin/domain/export/csv-export.types';
 
-/**
- * Admin CSV export — sessions / reviews / tickets.
- * Pipeline: isAuthenticated → requireRole(admin, museum_manager) → :kind enum
- * validate → use case (awaits audit row BEFORE returning stream, N6/AC10) →
- * BOM + header + data rows. Use case throws 403 for Q1 BLOCKER (manager/admin
- * on reviews/tickets) and R9 NO_MUSEUM_ASSIGNED.
- */
 const adminExportRouter: Router = Router();
 
 const SESSIONS_HEADERS = [
@@ -57,7 +50,6 @@ const TICKETS_HEADERS = [
   'updated_at',
 ] as const;
 
-/** R1 / R13 / N10 — standardised CSV download response headers. */
 function setCsvHeaders(res: Response, kind: 'sessions' | 'reviews' | 'tickets'): void {
   const date = new Date().toISOString().slice(0, 10);
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -74,7 +66,6 @@ function toRecord(headers: readonly string[], row: object): Record<string, strin
   return out;
 }
 
-/** Collapses objects/arrays/nullish to empty so DTO leaks can't render `[object Object]`. */
 function coerceCell(value: unknown): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
@@ -89,7 +80,6 @@ function resolveActor(req: Request): {
   actorRole: ExportActorRole;
   museumScope: number | null;
 } {
-  // Defensive — isAuthenticated already 401s upstream, but narrows the type.
   const user = req.user;
   if (!user) {
     throw forbidden('Authenticated user context missing');
@@ -101,7 +91,6 @@ function resolveActor(req: Request): {
   };
 }
 
-/** BOM → header → data rows. Use case has awaited audit row (N6/AC10). */
 async function streamCsv(
   res: Response,
   headers: readonly string[],
@@ -128,7 +117,6 @@ adminExportRouter.get(
     if (!parsed.success) {
       throw invalidInput('Unsupported export kind');
     }
-    // R10 forward-compat — from/to accepted, V1 ignores (R11 365d default in repo).
     const query = exportQuerySchema.safeParse(req.query);
     if (!query.success) {
       throw invalidInput('Invalid export query');
@@ -137,8 +125,6 @@ adminExportRouter.get(
     const { kind } = parsed.data;
     const actor = resolveActor(req);
 
-    // D4/Risk2 defense-in-depth — redundant RBAC mirror so a future thin
-    // pass-through refactor of the use case cannot leak data.
     if (kind === 'sessions') {
       if (
         (actor.actorRole === 'museum_manager' || actor.actorRole === 'admin') &&
@@ -151,7 +137,6 @@ adminExportRouter.get(
       await streamCsv(res, SESSIONS_HEADERS, stream);
       return;
     }
-    // Q1 BLOCKER — reviews + tickets lack `museum_id`, super_admin only in V1.
     if (actor.actorRole !== 'super_admin') {
       throw forbidden(`${kind} export is restricted to super_admin`);
     }
@@ -161,7 +146,6 @@ adminExportRouter.get(
       await streamCsv(res, REVIEWS_HEADERS, stream);
       return;
     }
-    // kind === 'tickets'
     const stream = await getExportSupportTicketsUseCase().execute(actor);
     setCsvHeaders(res, 'tickets');
     await streamCsv(res, TICKETS_HEADERS, stream);

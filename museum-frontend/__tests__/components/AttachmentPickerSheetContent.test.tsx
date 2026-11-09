@@ -4,15 +4,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import '../helpers/test-utils';
 import { AttachmentPickerSheetContent } from '@/features/chat/ui/AttachmentPickerSheetContent';
 
-/**
- * Red tests for A1 — attachment-picker sheet content.
- *
- * Sheet body that the C4 BottomSheetRouter renders for the `attachment-picker`
- * route. Hosts camera / gallery / record actions and (when audio was recorded)
- * the play + clear preview block migrated from the legacy MediaAttachmentPanel.
- *
- * Spec: docs/chat-ux-refonte/specs/A1.md §1.3, AC10-AC19.
- */
 describe('AttachmentPickerSheetContent (A1)', () => {
   const defaultProps = {
     recordedAudioUri: null as string | null,

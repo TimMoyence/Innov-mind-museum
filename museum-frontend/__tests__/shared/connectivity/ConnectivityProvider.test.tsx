@@ -1,27 +1,7 @@
-/**
- * RED test — T2.1 (run 2026-05-21-connectivity-offline-first).
- *
- * Proves the current `ConnectivityProvider` is NOT tri-state: it coerces
- * `netState.isConnected ?? true` (ConnectivityProvider.tsx:25), types the
- * context `isConnected: boolean` (non-nullable, :7), defaults the initial value
- * to `isConnected: true` (:13,18), and exposes NO derived `isOnline`.
- *
- * Spec R5/R6, design §D2. Target shape:
- *   { isConnected: boolean|null, isInternetReachable: boolean|null, isOnline: boolean }
- * Initial: { isConnected: null, isInternetReachable: null, isOnline: true }.
- *
- * lib-docs cited: @react-native-community/netinfo PATTERNS.md:142,265 (nullable,
- * TD-NI-01 `?? true` fix), PATTERNS.md:181 (don't block render on fetch() —
- * subscribe + render last-known state).
- *
- * RED contract: FAILS before T2.1 because (a) initial `isConnected` is `true`
- * not `null`, and (b) `isOnline` is `undefined` on the context.
- */
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
 import type { NetInfoState } from '@react-native-community/netinfo';
 
-// ── NetInfo mock (capture the addEventListener callback) ──────────────────────
 type NetInfoListener = (state: Partial<NetInfoState>) => void;
 let netInfoListener: NetInfoListener | null = null;
 const mockUnsubscribe = jest.fn();
@@ -91,7 +71,6 @@ describe('ConnectivityProvider — tri-state / nullable — T2.1 / spec R5+R6 / 
     emit({ isConnected: null, isInternetReachable: null });
 
     expect(result.current.isConnected).toBeNull();
-    // null/null is online-optimistic for display.
     expect(result.current.isOnline).toBe(true);
   });
 });

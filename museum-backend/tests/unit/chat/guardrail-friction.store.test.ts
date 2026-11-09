@@ -1,16 +1,3 @@
-/**
- * RUN_ID 2026-06-01-hybrid-gravity-guardrail — phase RED (UFR-022).
- *
- * Unit tests for the new `GuardrailFrictionStore` (design §4). Modelled on the
- * existing `guardrail-budget.test.ts`, but the friction store INVERTS the
- * fail policy: where the budget store is FAIL-CLOSED (Infinity on a Redis
- * outage), the friction store is FAIL-SOFT — a store outage MUST surface as
- * `count() === 0` / `isCoolingDown() === false`, never as an exception and
- * never as a hard block (spec R14 / acceptance criterion 6/9).
- *
- * RED expectation: `@modules/chat/useCase/guardrail/guardrail-friction.store`
- * does not exist yet, so this file fails to compile/import → exit ≠ 0.
- */
 import { type CacheService } from '@shared/cache/cache.port';
 
 import {
@@ -28,7 +15,6 @@ import { InMemoryCacheService } from '../../helpers/cache/inMemoryCacheService';
 
 import type { FrictionScope } from '@modules/chat/useCase/guardrail/guardrail-friction.store';
 
-// Shared scope fixtures (DRY — no inline scope literals, docs/TEST_FACTORIES.md).
 const SESSION_SCOPE: FrictionScope = { kind: 'session', sessionId: 'sess-abc' };
 const USER_SCOPE: FrictionScope = { kind: 'user', userId: 42 };
 const IP_SCOPE: FrictionScope = { kind: 'ip', ipHash: 'a'.repeat(64) };
@@ -84,7 +70,6 @@ describe('guardrail-friction (in-process backend)', () => {
     expect(await isCoolingDown(USER_SCOPE)).toBe(false);
     await armCoolDown(USER_SCOPE);
     expect(await isCoolingDown(USER_SCOPE)).toBe(true);
-    // A different scope is unaffected.
     expect(await isCoolingDown(SESSION_SCOPE)).toBe(false);
   });
 });
@@ -118,8 +103,6 @@ describe('guardrail-friction (redis backend via stub CacheService)', () => {
 
   it('stores the HASHED ip in the key, never the raw value', async () => {
     await recordStrike(IP_SCOPE, 1);
-    // The scope carries an opaque sha256 hex digest; the key must embed exactly
-    // that digest (RGPD — no raw IP ever persisted, spec R12 / NFR-RGPD-1).
     expect(cache.has(`friction:ip:${'a'.repeat(64)}`)).toBe(true);
   });
 
@@ -140,8 +123,6 @@ describe('guardrail-friction (redis backend via stub CacheService)', () => {
     await resetFriction(SESSION_SCOPE);
     expect(cache.has('friction:session:sess-abc')).toBe(false);
   });
-
-  // ---- FAIL-SOFT contract (the inverse of guardrail-budget fail-CLOSED) ----
 
   it('FAIL-SOFT: count() returns 0 (NOT Infinity) when get() throws', async () => {
     const throwingCache = {

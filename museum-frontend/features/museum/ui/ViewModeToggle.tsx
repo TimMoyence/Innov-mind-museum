@@ -12,10 +12,6 @@ interface ViewModeToggleProps {
   onToggle: (mode: ViewMode) => void;
 }
 
-/**
- * Compact two-button toggle for switching between list and map views.
- * Uses Ionicons list-outline / map-outline with themed active/inactive states.
- */
 export const ViewModeToggle = ({ mode, onToggle }: ViewModeToggleProps) => {
   const { theme } = useTheme();
   const { t } = useTranslation();

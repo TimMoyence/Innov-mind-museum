@@ -5,11 +5,6 @@ import type {
 } from '@modules/auth/domain/consent/userConsent.entity';
 import type { IUserConsentRepository } from '@modules/auth/domain/consent/userConsent.repository.interface';
 
-/**
- * In-memory factory for {@link IUserConsentRepository} — DRY helper used by
- * both the use-case unit tests and the HTTP route integration tests. Rows are
- * stored in a local array; grants append, revokes stamp `revokedAt`.
- */
 export function makeUserConsentRepo(): IUserConsentRepository & {
   rows: UserConsent[];
   reset: () => void;

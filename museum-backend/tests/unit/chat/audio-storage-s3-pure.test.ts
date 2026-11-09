@@ -1,12 +1,3 @@
-/**
- * Phase 8 — pin the pure helpers exported from audio-storage.s3.ts.
- *
- * The S3 storage class itself requires AWS signing infra (covered by the
- * integration suite); the two pure functions below are the boundary between
- * the storage layer and the rest of the chat pipeline. A regression here
- * silently breaks ChatMessage.audioUrl resolution.
- */
-
 import {
   buildS3AudioRef,
   parseS3AudioRef,

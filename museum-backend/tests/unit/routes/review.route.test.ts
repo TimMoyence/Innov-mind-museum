@@ -6,12 +6,6 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { userToken } from '../../helpers/auth/token.helpers';
 
-/**
- * Review route integration tests — auth enforcement + validation.
- * No DB required — tests that review routes require authentication and validate inputs.
- * Note: GET /api/reviews and GET /api/reviews/stats are public (no auth).
- */
-
 const { app } = createRouteTestApp();
 
 describe('Review Routes — HTTP Layer', () => {
@@ -23,8 +17,6 @@ describe('Review Routes — HTTP Layer', () => {
     stopRateLimitSweep();
   });
 
-  // ── Unauthenticated access ─────────────────────────────────────
-
   describe('Unauthenticated access', () => {
     it('POST /api/reviews returns 401 without token', async () => {
       const res = await request(app)
@@ -33,20 +25,16 @@ describe('Review Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
 
-    // GET /api/reviews is public — should NOT return 401
     it('GET /api/reviews does NOT return 401 (public endpoint)', async () => {
       const res = await request(app).get('/api/reviews');
       expect(res.status).not.toBe(401);
     });
 
-    // GET /api/reviews/stats is public
     it('GET /api/reviews/stats does NOT return 401 (public endpoint)', async () => {
       const res = await request(app).get('/api/reviews/stats');
       expect(res.status).not.toBe(401);
     });
   });
-
-  // ── Body validation on POST /api/reviews ───────────────────────
 
   describe('POST /api/reviews — validation', () => {
     it('returns 400 for empty body', async () => {
@@ -65,9 +53,6 @@ describe('Review Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
 
-    // Wave B C7 / R-C7b — rating range widened 1-5 → 0-10 (NPS). Out-of-range
-    // guard now fires at -1 (below floor) and 11 (above ceiling). Inside the
-    // 0-10 inclusive band is valid.
     it('returns 400 for rating out of range (-1, below NPS floor)', async () => {
       const res = await request(app)
         .post('/api/reviews')
@@ -100,8 +85,6 @@ describe('Review Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── Error response format ──────────────────────────────────────
 
   describe('Error response format', () => {
     it('401 returns structured JSON with error field', async () => {

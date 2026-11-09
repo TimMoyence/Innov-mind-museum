@@ -6,9 +6,6 @@ import type { ExportReviewsRepository } from '@modules/admin/domain/export/expor
 import type { LogActorActionInput } from '@shared/audit/audit.service';
 import type { AuditLogEntry } from '@shared/audit/audit.types';
 
-// Re-exported (identity-preserving, spec R5) — `ExportReviewsRepository` moved
-// to `domain/export/export-repositories.port.ts` (C1 close, run
-// 2026-06-04-hexagonal-boundaries-enforcement).
 export type { ExportReviewsRepository };
 
 export interface ExportAuditService {
@@ -16,18 +13,6 @@ export interface ExportAuditService {
   logActorAction(input: LogActorActionInput): Promise<void>;
 }
 
-/**
- * Admin CSV export — reviews (R2 R2/R4/R18 + Q1 BLOCKER).
- *
- * super_admin only ; manager/admin/moderator/visitor → 403 BEFORE any repo call
- * (no museum_id column = no scoping possible).
- *
- * `user_id_pseudonym` ALWAYS pseudonymised by repo (R18) — review authors are
- * end-users; raw IDs would let admin pivot back to the visitor account.
- *
- * Ordering: audit awaited BEFORE first row yields (N6/AC10). Metadata never
- * includes free-text PII (N9).
- */
 export class ExportReviewsUseCase {
   constructor(
     private readonly repository: ExportReviewsRepository,
@@ -36,7 +21,6 @@ export class ExportReviewsUseCase {
 
   async execute(input: ExportInput): Promise<AsyncIterable<ExportRowReview>> {
     if (input.actorRole !== 'super_admin') {
-      // Q1 BLOCKER + Q3 + R4 — single 403, route layer differentiates copy.
       throw forbidden('Reviews export is restricted to super_admin');
     }
 

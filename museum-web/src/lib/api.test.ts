@@ -2,10 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ApiError, registerLogoutHandler, apiGet, apiPost, apiPatch, apiPut } from './api';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown> }) {
   const defaults = {
     ok: true,
@@ -17,7 +13,6 @@ function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown>
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(defaults as Response);
 }
 
-/** Sets a csrf_token cookie on the jsdom `document` for the duration of a test. */
 function setCsrfCookie(value: string): void {
   document.cookie = `csrf_token=${value}; Path=/`;
 }
@@ -25,10 +20,6 @@ function setCsrfCookie(value: string): void {
 function clearCsrfCookie(): void {
   document.cookie = 'csrf_token=; Path=/; Max-Age=0';
 }
-
-// ---------------------------------------------------------------------------
-// F7 (2026-04-30) — cookie auth + CSRF double-submit
-// ---------------------------------------------------------------------------
 
 describe('api.ts — ApiError', () => {
   it('has correct status, statusText, and message', () => {
@@ -171,7 +162,6 @@ describe('api.ts — request functions', () => {
     const logoutSpy = vi.fn();
     registerLogoutHandler(logoutSpy);
 
-    // First call → 401, second call (refresh) → 401, then onLogout fires.
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: false,
       status: 401,
@@ -183,13 +173,6 @@ describe('api.ts — request functions', () => {
     expect(logoutSpy).toHaveBeenCalledOnce();
   });
 });
-
-// ---------------------------------------------------------------------------
-// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p1
-// Tests fail until apiPut is exported from ./api (spec U-R4.1..U-R4.3 / AC-16).
-// Mirror the apiPost / apiPatch convention: PUT verb + credentials:include +
-// X-CSRF-Token on state-changing requests + ApiError on !ok.
-// ---------------------------------------------------------------------------
 
 describe('api.ts — apiPut', () => {
   beforeEach(() => {
@@ -248,18 +231,6 @@ describe('api.ts — apiPut', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p3
-// Tests fail until apiGet accepts an optional `{signal}` 2nd argument and
-// forwards it to the underlying fetch() call (design §2, OQ-9).
-//
-// Spec backing :
-//   - design.md §2.2 : apiGet<T>(path, options?: ApiRequestOptions)
-//   - design.md §2.3 : `signal: options?.signal` propagated into fetch()
-//   - design.md §9 R-2 : backward-compat — apiGet<T>(path) without options
-//     must keep working (covered by existing tests in this file above)
-// ---------------------------------------------------------------------------
-
 describe('api.ts — apiGet with abort signal', () => {
   beforeEach(() => {
     clearCsrfCookie();
@@ -270,9 +241,6 @@ describe('api.ts — apiGet with abort signal', () => {
     const spy = mockFetch({ json: () => Promise.resolve({ ok: true }) });
     const controller = new AbortController();
 
-    // 2-arg signature (path, {signal}) — this fails today because apiGet only
-    // accepts (path). TypeScript should error AND runtime fetch will receive
-    // no signal in init.
     await apiGet<{ ok: boolean }>('/api/with-signal', { signal: controller.signal });
 
     const [, init] = requireIndex(spy.mock.calls, 0, 'fetch.calls');
@@ -282,7 +250,6 @@ describe('api.ts — apiGet with abort signal', () => {
   it('apiGet without options still works (backward-compat — no signal in init)', async () => {
     const spy = mockFetch({ json: () => Promise.resolve({ ok: true }) });
 
-    // Existing single-arg call must remain valid.
     const data = await apiGet<{ ok: boolean }>('/api/no-options');
 
     expect(data).toEqual({ ok: true });
@@ -291,7 +258,6 @@ describe('api.ts — apiGet with abort signal', () => {
   });
 
   it('apiGet rejects with AbortError when signal aborts mid-flight', async () => {
-    // Mock fetch that observes the signal and rejects on abort.
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       (_input: RequestInfo | URL, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
@@ -313,7 +279,6 @@ describe('api.ts — apiGet with abort signal', () => {
     const controller = new AbortController();
     const pending = apiGet<unknown>('/api/abortable', { signal: controller.signal });
 
-    // Abort in the next microtask so the listener is registered.
     queueMicrotask(() => {
       controller.abort();
     });
@@ -329,7 +294,6 @@ describe('api.ts — apiGet with abort signal', () => {
             reject(new DOMException('aborted', 'AbortError'));
             return;
           }
-          // never resolves otherwise — test should not reach this branch
         }),
     );
 

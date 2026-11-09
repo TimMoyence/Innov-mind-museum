@@ -5,19 +5,12 @@ import { createDailyArtRouter } from '@modules/daily-art/adapters/primary/http/r
 
 import type { CacheService } from '@shared/cache/cache.port';
 
-// Bypass auth so we exercise the cache-key logic only.
 jest.mock('@shared/middleware/authenticated.middleware', () => ({
   isAuthenticated: (_req: unknown, _res: unknown, next: () => void): void => {
     next();
   },
 }));
 
-/**
- * Builds a `CacheService` double whose `get` always misses (so the route runs
- * `set`). The route only touches `get` + `set`; the remaining interface methods
- * are stubbed so the cast is sound.
- * @returns a jest-mocked CacheService.
- */
 const makeCache = (): jest.Mocked<CacheService> =>
   ({
     get: jest.fn().mockResolvedValue(null),
@@ -31,10 +24,6 @@ const makeCache = (): jest.Mocked<CacheService> =>
     ztop: jest.fn().mockResolvedValue([]),
   }) as unknown as jest.Mocked<CacheService>;
 
-/**
- * QA-08: the daily-art cache key must include the locale so FR and EN responses
- * never collide in the cache.
- */
 describe('GET /api/daily-art — locale-scoped cache key (QA-08)', () => {
   it('includes the locale in the cache key (read + write)', async () => {
     const cache = makeCache();

@@ -70,7 +70,6 @@ describe('UpdateContentPreferencesUseCase', () => {
     const repo = makeUserRepo(makeUser({ id: 42 }));
     const usecase = new UpdateContentPreferencesUseCase(repo);
 
-    // 51 items exceeds the MAX_RAW_PAYLOAD_LENGTH = 50 sanity cap.
     const huge = Array.from({ length: 51 }, () => 'history');
     await expect(usecase.execute(42, huge)).rejects.toMatchObject({ statusCode: 400 });
   });

@@ -23,8 +23,6 @@ function makeMockMuseumRepo(
   return { searchByName: jest.fn().mockResolvedValue(results) };
 }
 
-// ─── buildLocalKnowledgeBlock ───────────────────────────────────────────────
-
 describe('buildLocalKnowledgeBlock', () => {
   it('returns empty string when both arrays are empty', () => {
     expect(buildLocalKnowledgeBlock([], [])).toBe('');
@@ -76,7 +74,6 @@ describe('buildLocalKnowledgeBlock', () => {
   });
 
   it('omits optional artwork fields when they are null', () => {
-    // Build directly — factory uses ?? so null overrides fall through to defaults
     const art = makeArtworkKnowledge({ title: 'Untitled', description: 'Plain artwork.' });
     art.artist = null;
     art.period = null;
@@ -97,7 +94,6 @@ describe('buildLocalKnowledgeBlock', () => {
   });
 
   it('omits optional museum fields when they are null', () => {
-    // Build directly — factory uses ?? so null overrides fall through to defaults
     const museum = makeMuseumEnrichment({ name: 'Minimal Museum' });
     museum.website = null;
     museum.openingHours = null;
@@ -114,9 +110,6 @@ describe('buildLocalKnowledgeBlock', () => {
   });
 
   it('caps output at MAX_BLOCK_LENGTH and appends ellipsis', () => {
-    // Each artwork contributes: header (~10) + title line (~20) + artist (~20) +
-    // description (capped at 400) + context (capped at 300) + other fields (~100) ≈ 850 chars.
-    // Three artworks exceed 1500, triggering the truncation path.
     const artworks = Array.from({ length: 3 }, (_, i) => {
       const art = makeArtworkKnowledge({
         id: `00000000-0000-0000-0000-00000000000${String(i + 1)}`,
@@ -157,8 +150,6 @@ describe('buildLocalKnowledgeBlock', () => {
     expect(block).not.toContain('Museum 3');
   });
 });
-
-// ─── DbLookupService ─────────────────────────────────────────────────────────
 
 describe('DbLookupService', () => {
   beforeEach(() => {

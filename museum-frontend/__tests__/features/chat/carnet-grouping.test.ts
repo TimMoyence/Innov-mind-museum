@@ -1,26 +1,3 @@
-/**
- * Red tests for B1 — pure functions :
- *   - `groupSessionsByMuseumAndDate` (features/chat/domain/carnet.ts)
- *   - `buildVisitCarnetDetail` (features/chat/application/chatSessionLogic.pure.ts)
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B1.md` :
- *
- *   §1.1 R3-R4 — group precedence + sort.
- *   §1.1 R5 — title precedence (`title` → `lastArtworkTitle` → `preview.text` → fallback).
- *   §1.1 R6 — `dateLabel` via Intl Date.toLocaleString (no third-party lib).
- *   §1.5 R30-R33 — `buildVisitCarnetDetail` purity + composition.
- *   §4 AC1, AC3, AC9, AC13 — invariants.
- *
- * At baseline (B1 not yet implemented) :
- *   - `@/features/chat/domain/carnet` does NOT exist
- *     (verified : `ls museum-frontend/features/chat/domain/carnet*` → 0).
- *   - `buildVisitCarnetDetail` is NOT exported from `chatSessionLogic.pure.ts`
- *     (verified : `grep -n buildVisitCarnetDetail` → 0 hits).
- *   → Jest fails with "Cannot find module" / "is not a function".
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.1 R3-R6 ; §1.5 R30-R33 ; §4 AC1, AC3, AC9, AC13.
- */
-
 import {
   buildVisitCarnetDetail,
   type VisitCarnetDetail,
@@ -66,10 +43,8 @@ describe('groupSessionsByMuseumAndDate (B1 pure §1.1 R3-R4 §4 AC1)', () => {
     const groups: VisitCarnetGroup[] = groupSessionsByMuseumAndDate(sessions, 'en-US');
 
     expect(groups.length).toBe(2);
-    // Orsay (s3 = 22 apr) before Louvre (max(21, 20) = 21 apr)
     expect(groups[0]?.museumKey).toBe('museumId:14');
     expect(groups[1]?.museumKey).toBe('museumId:12');
-    // Louvre sessions sorted DESC by updatedAt within
     expect(groups[1]?.sessions.map((s) => s.id)).toEqual(['s1', 's2']);
   });
 
@@ -174,7 +149,6 @@ describe('groupSessionsByMuseumAndDate (B1 pure §1.1 R3-R4 §4 AC1)', () => {
         }),
       ];
       const groups = groupSessionsByMuseumAndDate(sessions, 'en-US');
-      // Pure function returns the i18n KEY (the screen does the actual translation).
       expect(groups[0]?.sessions[0]?.title).toBe('carnet.untitledSession');
     });
   });
@@ -187,7 +161,7 @@ describe('groupSessionsByMuseumAndDate (B1 pure §1.1 R3-R4 §4 AC1)', () => {
       const groups = groupSessionsByMuseumAndDate(sessions, 'en-US');
       const card = groups[0]?.sessions[0];
       expect(typeof card?.dateLabel).toBe('string');
-      expect(card?.dateLabel.length).toBeGreaterThan(0);
+      expect(card?.dateLabel?.length).toBeGreaterThan(0);
     });
   });
 

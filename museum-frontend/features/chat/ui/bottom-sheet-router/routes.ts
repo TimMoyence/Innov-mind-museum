@@ -13,18 +13,10 @@ import { DailyLimitSheetContent } from '@/features/chat/ui/DailyLimitSheetConten
 import { MessageContextMenuSheetContent } from '@/features/chat/ui/MessageContextMenuSheetContent';
 import { VisitSummarySheetContent } from '@/features/chat/ui/VisitSummarySheetContent';
 import { VoiceSessionIntroSheetContent } from '@/features/chat/ui/VoiceSessionIntroSheetContent';
-import { InAppBrowserSheetContent } from './LazyInAppBrowserSheetContent';
+import { InAppBrowserSheetContent } from '@/shared/ui/InAppBrowserSheetContent';
 
-/** Strictly typed i18n key — narrows `t()` calls inside the router. */
 export type TranslationKey = ParseKeys;
 
-/**
- * Identifiers for the sheets the chat surface can route to. Adding a new sheet
- * means: extend this union, declare its params in `BottomSheetRouteParams`,
- * and register a `BottomSheetRouteDefinition` entry under `ROUTES`.
- *
- * See `docs/chat-ux-refonte/specs/C4.md` §2.3.
- */
 export type BottomSheetRouteId =
   | 'browser'
   | 'context-menu'
@@ -62,50 +54,21 @@ export interface BottomSheetRouteParams {
     playRecordedAudio: () => Promise<void> | void;
     clearMedia: () => void;
     onOpenScanner: () => void;
-    /**
-     * Cycle D (Option C) — open the visual-compare flow. The screen wires this
-     * to `useCompareTrigger` (pick image → `POST /chat/compare` → reload the
-     * session so the persisted compare carousel surfaces).
-     */
     onCompareImage: () => void;
   };
   'cartel-scanner': {
-    /**
-     * W3 (T5.2) — invoked with either a sanitised alphanum cartel code
-     * (`string`) OR a parsed Musaium deeplink (`MusaiumDeeplink`). The caller
-     * narrows on `typeof payload === 'string'` to dispatch to the legacy
-     * lookup-template flow vs the W3 session-context propagation.
-     */
     onScanned: (payload: string | MusaiumDeeplink) => void;
   };
 }
 
 export interface BottomSheetRouteDefinition<K extends BottomSheetRouteId> {
   readonly id: K;
-  /**
-   * `sheet` = slide-up from bottom, swipe-down to dismiss.
-   * `fullscreen` = slide-up taking full screen (WebView, consent, voice-intro).
-   * `card` = centered card (summary, daily-limit).
-   */
   readonly presentation: 'sheet' | 'fullscreen' | 'card';
-  /**
-   * When `true`: backdrop tap, swipe-down, and Android back DO NOT close.
-   * Only the primary CTA inside the content can close.
-   */
   readonly blocking: boolean;
-  /** i18n key for `AccessibilityInfo.announceForAccessibility` on mount. */
   readonly a11yAnnounceKey: TranslationKey;
-  /** Function rendering the route content. Receives params + close handle. */
   readonly Content: React.FC<BottomSheetRouteParams[K] & { close: () => void }>;
 }
 
-/**
- * Registry of route definitions. Entries are populated as each *SheetContent
- * component is migrated (C4 T2 → T7). The router reads this map at runtime to
- * resolve `ROUTES[activeRoute].Content`.
- *
- * Mutable on purpose: test harnesses replace entries in `beforeEach`.
- */
 type RoutesMap = {
   [K in BottomSheetRouteId]?: BottomSheetRouteDefinition<K>;
 };

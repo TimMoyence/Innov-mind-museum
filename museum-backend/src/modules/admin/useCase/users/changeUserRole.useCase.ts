@@ -23,7 +23,6 @@ export class ChangeUserRoleUseCase {
       throw invalidInput(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
     }
 
-    // Guard: prevent removing the last admin.
     if (input.newRole !== UserRole.ADMIN) {
       const adminCount = await this.repository.countAdmins();
       if (adminCount <= 1) {

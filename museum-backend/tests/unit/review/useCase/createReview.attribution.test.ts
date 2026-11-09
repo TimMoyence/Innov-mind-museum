@@ -1,33 +1,3 @@
-/**
- * T-API-2 (RED — S-BE-API, UFR-022 fresh-context red phase 2026-05-26).
- *
- * Proves NPS attribution derives `review.museumId` from the VISITED session
- * (`chatSession.museumId`), never from the noter's tenant claim
- * (`authedUser.museumId`) — and that an absent / missing / foreign session is a
- * SILENT NULL (no 400, no existence leak). Spec R1-R4 / Q1.
- *
- * Design (design-c2.md §3, §4 M3): `CreateReviewUseCase` gains an
- * `IReviewSessionLookup` collaborator (2nd constructor arg) and `execute`
- * accepts an optional `sessionId`. The use-case calls
- * `lookup.findSessionMuseum(sessionId, userId)`; a returned session sets
- * `museumId = session.museumId` (NULL ok), `null` (missing/foreign/not-owned)
- * → `museumId = null`.
- *
- * Baseline FAILS (success of red phase per UFR-022): the use-case today takes
- * ONLY a repository, ignores any `sessionId`, and the route passes
- * `authedUser.museumId` (`review.route.ts:67`). The session-lookup collaborator
- * does not exist, so none of the museumId-from-session assertions hold.
- *
- * The local `SessionLookupLike` shape + constructor/input casts are confined to
- * this test file (allowed: not an `as Entity` cast on a domain entity; these are
- * test-input shapes). They let the test COMPILE against the current source
- * (`tsc --noEmit` clean) while asserting the future contract at runtime, so the
- * failure is an honest assertion-fail, not a compile error. After green the
- * casts collapse to the real types.
- *
- * lib-docs/typeorm/PATTERNS.md §9 (hexagonal: UC depends on the port interface,
- * not the chat repo concretely). Test data via local repo mock factory.
- */
 import { CreateReviewUseCase } from '@modules/review/useCase/public/createReview.useCase';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
@@ -63,7 +33,6 @@ function makeRepo(): jest.Mocked<IReviewRepository> {
   };
 }
 
-/** Future `IReviewSessionLookup` port shape (created in green T-API-7). */
 interface SessionLookupLike {
   findSessionMuseum: jest.Mock<
     Promise<{ museumId: number | null } | null>,
@@ -77,7 +46,6 @@ function makeLookup(result: { museumId: number | null } | null): SessionLookupLi
   };
 }
 
-/** Construct the UC with the (future) 2-arg signature without a tsc break. */
 function makeUseCase(repo: IReviewRepository, lookup: SessionLookupLike): CreateReviewUseCase {
   const Ctor = CreateReviewUseCase as unknown as new (
     repo: IReviewRepository,
@@ -91,7 +59,6 @@ interface AttributionExecuteInput {
   rating: number;
   comment: string;
   sessionId?: string | null;
-  /** Present ONLY to assert it is NEVER read by the use-case (R4). */
   museumId?: number | null;
 }
 
@@ -161,7 +128,7 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
 
   it('(d) foreign/missing session (lookup returns null) → museumId null, no throw, no 400 (R3/Q1)', async () => {
     const repo = makeRepo();
-    const lookup = makeLookup(null); // not found / not owned — indistinguishable
+    const lookup = makeLookup(null);
     const uc = makeUseCase(repo, lookup);
 
     const result = await execute(uc, {
@@ -178,10 +145,6 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
 
   it('(f) foreign/inexistent session → sessionId NULL persisted, NOT the raw client id (F2 — FK + existence-oracle guard)', async () => {
     const repo = makeRepo();
-    // lookup returns null: session missing OR owned by another user — the use-case
-    // cannot distinguish, and MUST persist sessionId NULL so a non-existent UUID
-    // can't trip the reviews.session_id → chat_sessions FK (500) and a foreign
-    // session can't be linked cross-user (privacy leak / existence oracle).
     const lookup = makeLookup(null);
     const uc = makeUseCase(repo, lookup);
     const FOREIGN_SESSION = '33333333-3333-4333-8333-333333333333';
@@ -194,7 +157,6 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
     });
 
     const arg = repo.createReview.mock.calls[0]?.[0];
-    // sessionId MUST be coherent with museumId: both NULL when the lookup misses.
     expect(arg?.museumId ?? null).toBeNull();
     expect(arg?.sessionId ?? null).toBeNull();
     expect(arg?.sessionId).not.toBe(FOREIGN_SESSION);
@@ -227,7 +189,7 @@ describe('CreateReviewUseCase — NPS attribution (S-BE-API / T-API-2)', () => {
       rating: 9,
       comment: VALID_COMMENT,
       sessionId: OWNED_SESSION,
-      museumId: 7, // tenant claim — MUST be ignored; attribution comes from session
+      museumId: 7,
     });
 
     const arg = repo.createReview.mock.calls[0]?.[0];

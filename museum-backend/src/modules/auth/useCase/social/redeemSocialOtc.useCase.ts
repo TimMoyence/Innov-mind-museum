@@ -10,15 +10,9 @@ const invalidOtc = (): AppError =>
     code: 'INVALID_OTC',
   });
 
-/**
- * F11-mobile (2026-05) — exchanges OTC (delivered via /google/callback deeplink)
- * for the stashed session payload. Single-use: any replay surfaces as
- * 401 INVALID_OTC (same shape as nonce/token errors so mobile UI needs no new branch).
- */
 export class RedeemSocialOtcUseCase {
   constructor(private readonly otcStore: SocialOtcStore<AuthSessionResponse>) {}
 
-  /** @throws {AppError} 401 INVALID_OTC if unknown, already consumed, or past TTL. */
   async execute(code: string): Promise<AuthSessionResponse> {
     const session = await this.otcStore.consume(code);
     if (!session) {

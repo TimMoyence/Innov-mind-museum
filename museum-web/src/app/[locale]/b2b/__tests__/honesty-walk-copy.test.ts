@@ -1,23 +1,7 @@
-/**
- * R4 RED — UFR-013 honesty check on differentiator #5 ("hors-musée").
- *
- * Pins R4 §0.5 N5 + §4 Q10 + §6 Risk1 down BEFORE implementation: differentiator
- * #5 is about the BEFORE/DURING/AFTER visit pitch but "Walk V1" is NOT shipped
- * by 2026-06-01 launch — pitching it as a present-tense feature would breach
- * the project's honesty doctrine.
- *
- * The 5th differentiator copy MUST therefore be phrased as DESIGN INTENT
- * (future-tense / "designed for" / "à venir") and MUST NOT contain "déjà
- * disponible", "available today", "ready now" or other present-tense claims.
- *
- * MUST FAIL at baseline — `landing.b2b.differentiators` does not exist.
- */
 import { describe, it, expect } from 'vitest';
 import frDict from '@/dictionaries/fr.json';
 import enDict from '@/dictionaries/en.json';
 
-// Phrases that would breach UFR-013 if used in differentiator #5 copy.
-// Lowercased for case-insensitive substring matching.
 const FORBIDDEN_PRESENT_CLAIM_FR = [
   'déjà disponible',
   'disponible aujourd',
@@ -37,7 +21,6 @@ const FORBIDDEN_PRESENT_CLAIM_EN = [
   'works today',
 ];
 
-// Phrases that signal design-intent framing. At least one must be present.
 const REQUIRED_INTENT_MARKER_FR = ['à venir', 'futur', 'pensé pour', 'conçu pour', 'demain'];
 const REQUIRED_INTENT_MARKER_EN = [
   'designed for',

@@ -53,14 +53,12 @@ authPasswordRouter.post(
     await auditService.log({
       action: AUDIT_AUTH_PASSWORD_RESET_REQUEST,
       actorType: 'anonymous',
-      // A1 / GDPR Art. 5(1)(c): domain only, never the raw email.
       metadata: { emailDomain: extractEmailDomain(email) },
       ip: req.ip,
       requestId: req.requestId,
     });
     res.json({
       message: 'If this email exists, a reset link has been sent.',
-      // SEC-HARDENING (L7): debug token only in test env (cf. /change-email).
       ...(env.nodeEnv === 'test' ? { debugResetToken: token } : {}),
     });
   },

@@ -1,20 +1,3 @@
-/**
- * RED — C-R2 (cluster cost-consumers, run undefined-network-detection-reliability).
- *
- * CONTRACT CHANGE (spec §10 invalidated #10, design §2.5/D-06): the chat-send
- * picker (`useImagePicker`) now feeds the adaptive optimizer through
- * `decideCompression(resolveCompressionMode({ resolved, preference, metered }), true)`
- * — the three values read from `useDataMode()`. Matrix:
- * - resolved='low'                          → aggressive 1024 WebP (unchanged);
- * - resolved='normal' + metered, pref 'auto' → aggressive 1024 WebP (US-02.3 —
- *   an upload's volume is a COST; the old contract was unconditionally legacy);
- * - resolved='normal' + non-metered          → LEGACY 1600 JPEG (unchanged);
- * - resolved='normal' + metered, pref 'normal' → LEGACY 1600 JPEG (US-08.2 —
- *   explicit preference bypasses the cost gate, INV-03).
- *
- * `useImagePicker.test.ts` (frozen cases) is NOT touched. This file mocks
- * `useDataMode` + the adaptive optimizer and asserts the arg the picker passes.
- */
 import { renderHook, act } from '@testing-library/react-native';
 
 jest.mock('react-i18next', () => ({
@@ -33,7 +16,6 @@ jest.mock('@/features/chat/application/DataModeProvider', () => ({
     resolved: mockDataMode.resolved,
     isLowData: mockDataMode.resolved === 'low',
     metered: mockDataMode.metered,
-    setPreference: () => undefined,
   }),
 }));
 
@@ -103,7 +85,6 @@ describe('useImagePicker × useDataMode (cost+quality compression, D-06)', () =>
     expect(decision.upload.format).toBe('webp');
   });
 
-  // US-02.3 / INV-02 — metered in auto compresses aggressively even on a healthy network.
   it("resolved='normal' + metered (pref 'auto') → AGGRESSIVE profile (1024 WebP)", async () => {
     setDataMode({ resolved: 'normal', preference: 'auto', metered: true });
 
@@ -126,7 +107,6 @@ describe('useImagePicker × useDataMode (cost+quality compression, D-06)', () =>
     expect(decision.upload.format).toBe('jpeg');
   });
 
-  // US-08.2 / INV-03 — explicit 'normal' preference bypasses the metered cost gate.
   it("resolved='normal' + metered (pref 'normal') → LEGACY profile (1600 JPEG)", async () => {
     setDataMode({ resolved: 'normal', preference: 'normal', metered: true });
 

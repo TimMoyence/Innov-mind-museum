@@ -3,7 +3,6 @@ import { NoopCacheService } from '@shared/cache/noop-cache.service';
 import { InMemoryCacheService } from 'tests/helpers/cache/inMemoryCacheService';
 
 describe('NoopCacheService', () => {
-  // Cast to CacheService interface since Noop declares params-less signatures
   const cache: CacheService = new NoopCacheService();
 
   it('get always returns null', async () => {

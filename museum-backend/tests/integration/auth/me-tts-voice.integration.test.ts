@@ -1,15 +1,3 @@
-/**
- * Spec C T2.4 — `PATCH /auth/tts-voice` route + `GET /auth/me` returns ttsVoice.
- *
- * Boots a real Postgres testcontainer via {@link createE2EHarness} and exercises
- * the full HTTP slice: register + login → PATCH the voice → GET /me echoes it.
- *
- * Gated on `RUN_E2E=true || RUN_INTEGRATION=true` per the existing convention
- * (matches sibling integration suites that boot a real Postgres testcontainer).
- *
- * Run with:
- *   RUN_E2E=true RUN_INTEGRATION=true pnpm test -- --testPathPattern=me-tts-voice
- */
 import { createE2EHarness, type E2EHarness } from 'tests/helpers/e2e/e2e-app-harness';
 import { registerAndLogin } from 'tests/helpers/e2e/e2e-auth.helpers';
 
@@ -27,7 +15,6 @@ describeE2E('PATCH /auth/tts-voice (Spec C T2.4)', () => {
     await harness?.stop();
   });
 
-  // Strong, non-breached password so the register useCase doesn't reject in HIBP check.
   const TEST_PASSWORD = 'Sp3cC-T2.4-Vc!QzPxLm';
 
   it('persists a known voice and returns it on subsequent GET /auth/me', async () => {

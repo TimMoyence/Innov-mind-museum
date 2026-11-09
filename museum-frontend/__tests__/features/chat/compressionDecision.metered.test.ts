@@ -1,21 +1,3 @@
-/**
- * RED — C-R2 (cluster cost-consumers, run undefined-network-detection-reliability).
- *
- * `resolveCompressionMode({ resolved, preference, metered })` — D-06: upload
- * compression sits on the COST+QUALITY axes. Mode is 'low' iff
- * `resolved === 'low'` OR (`preference === 'auto'` AND `metered`), otherwise
- * 'normal'. ADDITIVE to `decideCompression` — its frozen suite
- * (`compressionDecision.pure.test.ts`) is untouched and must stay green (P-09).
- *
- * Invariants covered:
- * - INV-02 — metered drives ONLY cost decisions (here: upload compression);
- * - INV-03 — explicit preferences win on both axes (US-08.1/08.2);
- * - US-02.3 — metered + pref 'auto' + resolved 'normal' ⇒ aggressive profile.
- *
- * The matrix enumerates the RESOLVER-REACHABLE cells only (resolveDataMode
- * guarantees pref 'low' ⇒ resolved 'low' and pref 'normal' ⇒ resolved 'normal';
- * cross combinations are unreachable by construction and left unconstrained).
- */
 import { resolveCompressionMode } from '@/features/chat/application/compressionDecision.pure';
 
 interface MatrixCell {
@@ -27,7 +9,6 @@ interface MatrixCell {
 }
 
 const MATRIX: MatrixCell[] = [
-  // preference 'auto' — both resolved values reachable
   {
     resolved: 'low',
     preference: 'auto',
@@ -56,7 +37,6 @@ const MATRIX: MatrixCell[] = [
     expected: 'normal',
     why: 'healthy non-metered keeps legacy',
   },
-  // preference 'low' ⇒ resolved 'low' (resolver INV-03) — always aggressive (US-08.1)
   {
     resolved: 'low',
     preference: 'low',
@@ -71,7 +51,6 @@ const MATRIX: MatrixCell[] = [
     expected: 'low',
     why: 'US-08.1 explicit low, non-metered',
   },
-  // preference 'normal' ⇒ resolved 'normal' (resolver INV-03) — bypasses cost gate (US-08.2)
   {
     resolved: 'normal',
     preference: 'normal',

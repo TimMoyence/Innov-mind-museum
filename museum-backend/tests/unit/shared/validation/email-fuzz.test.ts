@@ -1,17 +1,3 @@
-/**
- * P3.4 — Email validation fuzz tests.
- *
- * `isEmail` (@musaium/shared, the Zod email rule) is the only email regex of
- * the back and the web. This suite proves empirically that it stays linear
- * against the full adversarial deck — and also serves as a regression net if
- * the regex is ever rewritten.
- *
- * Threshold: 50ms per input (a real ReDoS would blow past seconds).
- *
- * Uses the shared adversarial-strings factory (no inline string fixtures —
- * UFR-002).
- */
-
 import { isEmail } from '@musaium/shared';
 
 import {
@@ -47,8 +33,6 @@ describe('isEmail — fuzz (P3.4)', () => {
       ['leading @', '@example.com'],
       ['trailing @', 'user@'],
       ['only TLD', '@.com'],
-      // Trailing chars after a valid-looking email — kills the mutant that
-      // drops the `$` end-anchor on the email regex.
       ['trailing junk after valid email', 'user@example.com extra'],
       ['non-ASCII local part (TIM-2026-11-08-EMAIL-STRICT)', 'unicode-éàç@example.com'],
     ])('rejects %s', (_label, email) => {
@@ -60,7 +44,6 @@ describe('isEmail — fuzz (P3.4)', () => {
   describe('adversarial deck', () => {
     const deck = buildAdversarialDeck('a');
     it.each(deck.map((s) => [s.name, s.input]))('completes within budget for %s', (name, input) => {
-      // Don't assert truth value — only that it terminates fast.
       const { durationMs } = assertCompletesWithin(() => isEmail(input), MAX_MS, `email:${name}`);
       expect(durationMs).toBeLessThan(MAX_MS);
     });
@@ -97,20 +80,12 @@ describe('isEmail — fuzz (P3.4)', () => {
         MAX_MS,
         'redos:double-at',
       );
-      // The negated character class [^\s@] forbids '@' in local/domain — so
-      // the second @ makes the whole input fail. Still must terminate fast.
       expect(result).toBe(false);
       expect(durationMs).toBeLessThan(MAX_MS);
     });
   });
 
   describe('random fuzz batch', () => {
-    /**
-     * 200 randomly-shaped strings (printable ASCII + a few special bytes).
-     * Asserts every call returns within budget. Run is deterministic via a
-     * fixed seed so test failures reproduce locally.
-     * @param seed
-     */
     function pseudoRandom(seed: number): () => number {
       let s = seed >>> 0;
       return () => {

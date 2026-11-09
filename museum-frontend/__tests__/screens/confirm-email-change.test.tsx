@@ -1,13 +1,3 @@
-/**
- * RED — TD-RNAV-01 cycle 2, T1.4 (R5, R6, R10, R13).
- *
- * The screen `app/(stack)/confirm-email-change.tsx` does NOT exist yet — the
- * suite MUST fail on import (absence of feature), then turn green once the
- * screen is implemented in the GREEN phase.
- *
- * Same auto-submit matrix as verify-email but wired to
- * `authService.confirmEmailChange` (design §6.3).
- */
 import '../helpers/test-utils';
 import { render, screen, waitFor } from '@testing-library/react-native';
 
@@ -23,11 +13,6 @@ jest.mock('@/features/auth/infrastructure/authApi', () => ({
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
 const mockParams: { token?: string } = {};
-// test-utils already installs the shared jest.mock('expo-router') with
-// useLocalSearchParams: () => ({}). Re-declaring jest.mock here would be
-// overwritten by the imported helper's factory (hoist order), so instead we
-// MUTATE the shared mock — same pattern as
-// __tests__/screens/chat-session-deep.test.tsx:57-61.
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
 mockExpoRouter.useLocalSearchParams = () => mockParams;
 mockExpoRouter.router = {

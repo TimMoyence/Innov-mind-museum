@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type { MuseumQaSeedRepository } from '@modules/museum/domain/qa-seed/museumQaSeed.repository.interface';
@@ -25,7 +26,6 @@ export interface LowDataPack {
   entries: LowDataPackEntry[];
 }
 
-/** Merges popular cached answers with seeded Q&A entries. */
 export class LowDataPackService {
   constructor(
     private readonly cache: CacheService,
@@ -57,7 +57,7 @@ export class LowDataPackService {
     } catch (error) {
       logger.warn('low_data_pack_cache_error', {
         museumId,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
 

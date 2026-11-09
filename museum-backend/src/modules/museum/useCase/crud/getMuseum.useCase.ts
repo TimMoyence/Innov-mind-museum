@@ -6,7 +6,6 @@ import type { IMuseumRepository } from '@modules/museum/domain/museum/museum.rep
 export class GetMuseumUseCase {
   constructor(private readonly repository: IMuseumRepository) {}
 
-  /** Throws 404 if not found. */
   async execute(idOrSlug: string): Promise<Museum> {
     const isNumeric = /^\d+$/.test(idOrSlug);
     const museum = isNumeric

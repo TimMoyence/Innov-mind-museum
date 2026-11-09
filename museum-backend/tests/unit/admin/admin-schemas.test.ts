@@ -7,21 +7,6 @@ import {
   stopRateLimitSweep,
 } from '../../helpers/http/route-test-setup';
 
-/**
- * Query-schema validation tests — Finding M7 / H-2 remediation.
- *
- * Asserts that admin routes previously using `parseInt || default` now go
- * through Zod with:
- *   - `z.enum` rejecting unknown values (granularity, status, priority)
- *   - `z.coerce.number().int().min(1).max(N)` rejecting negative / huge values
- *   - default application when the caller omits a param
- *
- * Use-cases are mocked so handlers run without DB — we only care about the
- * validation layer and that clamped values flow to the use-case call-args.
- */
-
-// ── Mock use cases (same pattern as rbac-matrix.test.ts) ────────────────────
-
 const mockGetUsageAnalytics = jest.fn().mockResolvedValue({});
 const mockGetContentAnalytics = jest.fn().mockResolvedValue({});
 const mockGetEngagementAnalytics = jest.fn().mockResolvedValue({});
@@ -47,7 +32,6 @@ jest.mock('@modules/admin/useCase', () => ({
   getUsageAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetUsageAnalytics(...a) },
   getContentAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetContentAnalytics(...a) },
   getEngagementAnalyticsUseCase: { execute: (...a: unknown[]) => mockGetEngagementAnalytics(...a) },
-  // Admin-side facades wrap peer useCases. admin.route uses these, not the peers directly.
   adminReviewFacade: {
     list: (...a: unknown[]) => mockListReviews(...a),
     moderateReview: (...a: unknown[]) => mockModerateReview(...a),
@@ -79,8 +63,6 @@ beforeEach(() => {
 afterAll(() => {
   stopRateLimitSweep();
 });
-
-// ── /analytics/usage — granularity enum + date bounds ──────────────────────
 
 describe('GET /api/admin/analytics/usage — Zod validation', () => {
   it('rejects invalid granularity (SQL injection attempt)', async () => {
@@ -156,8 +138,6 @@ describe('GET /api/admin/analytics/usage — Zod validation', () => {
   });
 });
 
-// ── /analytics/content ──────────────────────────────────────────────────────
-
 describe('GET /api/admin/analytics/content — Zod validation', () => {
   it('rejects limit above max (100)', async () => {
     const res = await request(app)
@@ -175,8 +155,6 @@ describe('GET /api/admin/analytics/content — Zod validation', () => {
   });
 });
 
-// ── /analytics/engagement ───────────────────────────────────────────────────
-
 describe('GET /api/admin/analytics/engagement — Zod validation', () => {
   it('rejects invalid date', async () => {
     const res = await request(app)
@@ -192,8 +170,6 @@ describe('GET /api/admin/analytics/engagement — Zod validation', () => {
     expect(res.status).toBe(200);
   });
 });
-
-// ── /tickets — pagination + enum status/priority ────────────────────────────
 
 describe('GET /api/admin/tickets — Zod validation', () => {
   it('rejects negative page', async () => {
@@ -239,8 +215,6 @@ describe('GET /api/admin/tickets — Zod validation', () => {
   });
 });
 
-// ── /reviews — pagination + enum status ─────────────────────────────────────
-
 describe('GET /api/admin/reviews — Zod validation', () => {
   it('rejects negative page', async () => {
     const res = await request(app).get('/api/admin/reviews?page=-1').set('Authorization', bearer());
@@ -268,14 +242,10 @@ describe('GET /api/admin/reviews — Zod validation', () => {
   });
 });
 
-// ── Defense-in-depth: granularityToTrunc `default: throw` ───────────────────
-
 describe('granularityToTrunc exhaustive default', () => {
   it('throws on unreachable branch (simulating Zod bypass)', async () => {
     const { queryUsageAnalytics } =
       await import('@modules/admin/adapters/secondary/pg/admin-analytics-queries');
-    // Pass in a repo bundle that never gets reached; the granularity coercion
-    // happens synchronously before any DB call.
     const repos = {
       dataSource: {} as never,
       sessionRepo: {} as never,

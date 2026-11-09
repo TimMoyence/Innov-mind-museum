@@ -10,6 +10,7 @@ import { museumRepository } from '@modules/museum';
 import { MemoryCacheService } from '@shared/cache/memory-cache.service';
 import { RedisCacheService } from '@shared/cache/redis-cache.service';
 import { ResilientCacheWrapper } from '@shared/cache/resilient-cache.wrapper';
+import { errorMessage } from '@shared/errors/error-message';
 import { resolveCorsOrigin } from '@shared/http/cors.config';
 import { setupSwagger } from '@shared/http/swagger';
 import { logger } from '@shared/logger/logger';
@@ -19,9 +20,6 @@ import { csrfMiddleware } from '@shared/middleware/csrf.middleware';
 import { dataModeMiddleware } from '@shared/middleware/dataMode.middleware';
 import { errorHandler } from '@shared/middleware/error.middleware';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
-// Namespace import (see mount site below): keeps the middleware token out of
-// this import block so structural ordering checks resolve it at its mount
-// position. lib-docs/express/PATTERNS.md §3.3 (middleware ordering).
 import * as requestDecompression from '@shared/middleware/request-decompression.middleware';
 import { requestIdMiddleware } from '@shared/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
@@ -36,15 +34,8 @@ import { shouldMountNetFault } from '@src/config/net-fault.config';
 import type { ChatModule } from '@modules/chat/chat-module';
 import type { CacheService } from '@shared/cache/cache.port';
 
-/** Optional overrides for dependency injection, primarily used in tests. */
 interface CreateAppOptions {
   chatService?: ReturnType<typeof buildChatService>;
-  /**
-   * When set, replaces the active chat module accessed by `wiring.ts` getters
-   * (used by auth proxies for image cleanup + GDPR export). Lets tests verify
-   * paths that cross the auth/chat boundary without mocking the entire auth
-   * module factory.
-   */
   chatModule?: ChatModule;
   healthCheck?: () => Promise<{ database: 'up' | 'down' }>;
   cacheService?: CacheService;
@@ -52,12 +43,6 @@ interface CreateAppOptions {
 
 const isProd = env.nodeEnv === 'production';
 
-/**
- * W2 (D3) — CORS request headers for the L2 network-fault injector opt-in. Only
- * honored when the TEST-ONLY injector is mounted (never in production — the mount
- * is gated on `shouldMountNetFault`). Allowlisting them at the preflight is
- * harmless in prod (the middleware is absent, so they are simply ignored).
- */
 const NET_FAULT_CORS_HEADERS = [
   'X-Net-Profile',
   'X-Net-Fail-Count',
@@ -78,13 +63,6 @@ const createHealthCheck = async (): Promise<{ database: 'up' | 'down' }> => {
   }
 };
 
-/**
- * F5 (2026-04-30) — explicit CSP + HSTS preload in production. Helmet's defaults
- * are reasonable but we lock down for upcoming admin HTML surfaces and submit to
- * the HSTS preload list (max-age=2y + preload directive). Dev / test keep helmet
- * mostly off so http://localhost works and inline tooling (Sentry replay, etc.)
- * doesn't get blocked during local debugging.
- */
 function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0] {
   if (!isProduction) {
     return { contentSecurityPolicy: false as const, hsts: false as const };
@@ -94,15 +72,8 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        // No 'unsafe-inline' — admin HTML must use nonces or CSS modules.
         scriptSrc: ["'self'"],
-        // 'unsafe-inline' kept for style-src as a stop-gap; remove once admin
-        // CSS migrates off inline tag styles (Phase 2 follow-up).
         styleSrc: ["'self'", "'unsafe-inline'"],
-        // TD-HEL-03 — extend imgSrc allowlist : CloudFront (deferred V1.1 CDN),
-        // musaium.com canonical + subdomains, Wikimedia upload (artwork
-        // thumbnails sourced from `museum-backend/src/modules/daily-art/
-        // artworks.data.ts`). S3 entries kept for direct presigned URLs.
         imgSrc: [
           "'self'",
           'data:',
@@ -113,11 +84,6 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
           'https://*.musaium.com',
           'https://upload.wikimedia.org',
         ],
-        // TD-HEL-02 — extend connectSrc so the admin SPA Sentry browser SDK +
-        // OpenAI direct browser calls (future admin "test prompt" page) +
-        // Stripe (V1.1 billing) can reach their origins. Without these the
-        // Sentry replay+error transport gets CSP-blocked silently in prod
-        // (BLOCKER pre-V1 once admin HTML ships).
         connectSrc: [
           "'self'",
           'https://*.sentry.io',
@@ -135,19 +101,6 @@ function buildHelmetOptions(isProduction: boolean): Parameters<typeof helmet>[0]
   };
 }
 
-/**
- * W2 (D3) — mounts the L2 network-fault injector (TEST-ONLY) and its reset
- * control route, but ONLY when `shouldMountNetFault` returns true. The injector
- * deliberately delays/fails/trickles responses, so it is NEVER mounted in
- * production and its `/api/__test__/net-fault/reset` route is literally not
- * registered there — there is NO escape hatch (Decision D3, stricter than the
- * chaos rate). The `nodeEnv !== 'production'` clause inside `shouldMountNetFault`
- * is defence-in-depth. Called from `applyGlobalMiddleware` AFTER compression (so
- * the trickle pacing patches the compressed res.json) and BEFORE the
- * socket-timeout middleware (the injected delay extends res.setTimeout itself).
- *
- * @param app - The Express application.
- */
 function maybeMountNetFaultInjector(app: Express): void {
   if (shouldMountNetFault(process.env.NET_FAULT_INJECTION_ENABLED, env.nodeEnv)) {
     logger.warn('net_fault_injection_mounted', {
@@ -161,7 +114,6 @@ function maybeMountNetFaultInjector(app: Express): void {
         },
       }),
     );
-    // Control route: reset the in-memory failure counters between fault runs.
     app.post('/api/__test__/net-fault/reset', (_req, res) => {
       resetFailureCounters();
       res.status(204).end();
@@ -169,15 +121,10 @@ function maybeMountNetFaultInjector(app: Express): void {
   }
 }
 
-/** Registers security, compression, timeout, and parsing middleware on the Express app. */
 function applyGlobalMiddleware(app: Express): void {
   app.set('trust proxy', env.trustProxy ? 1 : 0);
 
   app.use(requestIdMiddleware);
-  // TD-HEL-01 — helmet mounted EARLY so 429 / 500 / preflight responses ship
-  // with CSP / HSTS / X-Content-Type-Options / X-Frame-Options. Previously
-  // mounted after rateLimit → 429 leaked plaintext bodies sans headers
-  // (BLOCKER pre-V1). PATTERNS.md helmet §1.
   app.use(helmet(buildHelmetOptions(isProd)));
   app.use(requestLoggerMiddleware);
   app.use(tracePropagationMiddleware);
@@ -194,16 +141,11 @@ function applyGlobalMiddleware(app: Express): void {
         'Authorization',
         'X-Request-Id',
         'X-Data-Mode',
-        // D2 — offline-flush / reconnect dedup. The FE attaches the queued
-        // item id as `Idempotency-Key`; preflight must allowlist it.
         'Idempotency-Key',
-        // W1-GZIP — weak-network FE gzips large JSON request bodies; preflight
-        // must allowlist Content-Encoding so the browser/RN sends it.
         'Content-Encoding',
         'Accept-Language',
         'sentry-trace',
         'baggage',
-        // W2 (D3) — L2 fault-injector opt-in headers; ignored in prod (mount gated).
         ...NET_FAULT_CORS_HEADERS,
       ],
     }),
@@ -233,39 +175,21 @@ function applyGlobalMiddleware(app: Express): void {
     next();
   });
 
-  // W1-GZIP — request-body decompression (PROD-SAFE). Inflates gzip/deflate/br
-  // request bodies (weak-network FE) BEFORE express.json parses them, with a
-  // streaming zip-bomb cap = bytes(env.jsonBodyLimit). MUST mount after
-  // compression()/setTimeout and STRICTLY before express.json so the parser
-  // reads the inflated bytes. lib-docs/express/PATTERNS.md §3.3 (ordering).
   app.use(requestDecompression.requestDecompressionMiddleware);
 
   app.use(express.json({ limit: env.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.jsonBodyLimit }));
-  // F7 (2026-04-30) — populate `req.cookies` BEFORE auth + CSRF run so they
-  // can read the access_token / csrf_token / refresh_token cookies.
   app.use(cookieParserMiddleware);
-  // F7 — CSRF middleware. Skips GET/HEAD/OPTIONS and any request without an
-  // access_token cookie (Bearer/mobile path is exempt). Mounted globally so
-  // every state-changing route inherits protection without per-route wiring.
   app.use(csrfMiddleware);
   app.use(acceptLanguageMiddleware);
   app.use(dataModeMiddleware);
 
-  // Default Cache-Control: prevent CDN/proxy caching of dynamic API responses
   app.use((_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
   });
 }
 
-/**
- * Resolves the cache service from options or environment configuration.
- * The result is always wrapped in {@link ResilientCacheWrapper} so backend
- * failures (Redis unreachable, malformed payload, etc.) degrade to cache-miss
- * semantics instead of bubbling up as 500s. Banking-grade contract enforced
- * by the chaos-redis-down e2e suite.
- */
 function resolveCacheService(options: CreateAppOptions): CacheService {
   if (options.cacheService) {
     return new ResilientCacheWrapper(options.cacheService);
@@ -278,7 +202,7 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
     });
     void redisCacheService.connect().catch((err: unknown) => {
       logger.error('redis_connection_failed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     });
     return new ResilientCacheWrapper(redisCacheService);
@@ -290,12 +214,6 @@ function resolveCacheService(options: CreateAppOptions): CacheService {
   return new ResilientCacheWrapper(new MemoryCacheService());
 }
 
-/**
- * Creates and configures the Express application with all middleware, routers, and error handling.
- *
- * @param options - Optional dependency overrides for testing.
- * @returns Fully configured Express application.
- */
 export const createApp = (options: CreateAppOptions = {}): Express => {
   const app = express();
 

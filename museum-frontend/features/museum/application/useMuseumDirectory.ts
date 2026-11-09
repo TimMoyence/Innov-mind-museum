@@ -9,19 +9,11 @@ import { museumApi } from '../infrastructure/museumApi';
 
 export type { MuseumCategory } from '../infrastructure/museumApi';
 
-/**
- * Museum entry enriched with optional distance from the user.
- *
- * `distanceMeters` is always expressed in meters — matching the backend
- * `searchMuseums` contract. UI components must format it via `formatDistance()`;
- * never assume a unit from the raw number.
- */
 export interface MuseumWithDistance extends MuseumDirectoryEntry {
   distanceMeters: number | null;
   source: 'local' | 'osm';
 }
 
-/** Bounding box ordered as [minLng, minLat, maxLng, maxLat] (WGS84). */
 export type MapBoundingBox = [number, number, number, number];
 
 interface UseMuseumDirectoryResult {
@@ -30,7 +22,6 @@ interface UseMuseumDirectoryResult {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   refresh: () => void;
-  /** Re-fetches museums constrained to a visible map bounding box. */
   searchInBounds: (bbox: MapBoundingBox) => void;
 }
 
@@ -39,19 +30,11 @@ const STALE_TIME_MS = 5 * 60_000;
 const GC_TIME_MS = 30 * 60_000;
 const SEARCH_DEBOUNCE_MS = 500;
 const MIN_SEARCH_CHARS = 2;
-/** GPS-jitter dedup resolution: 2 decimals ≈ 1.1 km at the equator. */
 const COORD_KEY_PRECISION = 100;
 
 const roundCoord = (value: number | null): number | null =>
   value === null ? null : Math.round(value * COORD_KEY_PRECISION) / COORD_KEY_PRECISION;
 
-/**
- * Maps a search result entry to the MuseumWithDistance shape expected by the UI.
- * OSM results lack id/slug/description — synthetic values are used.
- *
- * Backend `searchMuseums` returns `distance` in meters; we preserve the unit
- * and only round to the nearest meter for a stable display value.
- */
 const mapSearchEntryToMuseumWithDistance = (
   entry: MuseumSearchEntry,
   index: number,
@@ -76,27 +59,6 @@ const mapDirectoryEntryToMuseumWithDistance = (
   source: 'local' as const,
 });
 
-/**
- * Hook that fetches the museum directory, enriches entries with distance
- * from the user's location, and supports filtering by name.
- *
- * When geolocation is available, uses the backend search endpoint for
- * server-side geo-sorted results. Falls back to the directory endpoint
- * with client-side distance enrichment when location is unavailable or
- * the search endpoint fails.
- *
- * Cache strategy (react-query):
- * - `['museums','near', roundedLat, roundedLng]` when coords available —
- *   rounded to 2 decimals (~1.1 km) to dedup GPS jitter into the same key.
- * - `['museums','directory']` when no coords.
- * - `['museums','search', q]` for text searches (>= 2 chars, 500 ms debounce).
- * - Bbox searches bypass the cache via `bboxResults` local state — the bbox
- *   itself is ephemeral ("search in this map area") and would otherwise
- *   explode the cache key space.
- *
- * @param userLatitude - Current user latitude (null if unavailable).
- * @param userLongitude - Current user longitude (null if unavailable).
- */
 export const useMuseumDirectory = (
   userLatitude: number | null,
   userLongitude: number | null,
@@ -119,13 +81,7 @@ export const useMuseumDirectory = (
 
   const museumsQuery = useAppQuery<MuseumWithDistance[]>({
     queryKey: nearQueryKey,
-    // TD-TQ-01 / spec R2/R3 / design D1+D6 — forward QueryFunctionContext.signal
-    // through both geo paths and the no-coords fallback so cancellation
-    // propagates on queryKey flip (GPS jitter crossing the rounding boundary).
-    // PATTERNS.md:295.
     queryFn: async ({ signal }) => {
-      // Geo path: prefer search endpoint, fall back to directory if search
-      // errors (keeps the UX working when the search service is degraded).
       if (userLatitude !== null && userLongitude !== null) {
         try {
           const { museums } = await museumApi.searchMuseums(
@@ -150,17 +106,9 @@ export const useMuseumDirectory = (
     gcTime: GC_TIME_MS,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    // Retry policy inherited from the global queryClient's `shouldRetry`,
-    // which already gates on AppError kind.
-    // When the queryKey flips (GPS acquired/lost, user pans to a new region),
-    // keep the previous data on screen while the new fetch resolves instead
-    // of flashing an empty list.
     placeholderData: keepPreviousData,
   });
 
-  // Debounce search query — wait 500 ms after last keystroke before API call.
-  // The query string below short-circuits on length<MIN via `enabled`, so the
-  // effect only needs to PUBLISH a committed value; it never needs to clear it.
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const trimmed = searchQuery.trim();
@@ -177,17 +125,10 @@ export const useMuseumDirectory = (
     };
   }, [searchQuery]);
 
-  // Committed debounced query used by the server-side search — collapses to
-  // empty the moment the user backspaces below MIN_SEARCH_CHARS, so a stale
-  // `debouncedQuery` from a previous input doesn't keep the search query
-  // active.
   const effectiveSearchQuery = searchQuery.trim().length >= MIN_SEARCH_CHARS ? debouncedQuery : '';
 
   const searchQueryResult = useAppQuery<MuseumWithDistance[]>({
     queryKey: ['museums', 'search', effectiveSearchQuery, roundedLat, roundedLng] as const,
-    // TD-TQ-01 / spec R4 / design D1 — forward QueryFunctionContext.signal so
-    // the search request cancels on new debounce / queryKey flip / unmount.
-    // PATTERNS.md:295.
     queryFn: async ({ signal }) => {
       const { museums } = await museumApi.searchMuseums(
         {
@@ -225,7 +166,6 @@ export const useMuseumDirectory = (
       );
     }
 
-    // Sort by distance if available, otherwise alphabetically
     return [...filtered].sort((a, b) => {
       if (a.distanceMeters !== null && b.distanceMeters !== null) {
         return a.distanceMeters - b.distanceMeters;
@@ -241,11 +181,6 @@ export const useMuseumDirectory = (
     void museumsQuery.refetch();
   }, [museumsQuery]);
 
-  /**
-   * Fires the backend search constrained to a map bbox. Stored in local state
-   * (not the react-query cache) because bbox is ephemeral per-interaction and
-   * caching every pan/zoom rectangle would fragment the cache uselessly.
-   */
   const searchInBounds = useCallback((bbox: MapBoundingBox) => {
     setIsBboxLoading(true);
     void museumApi

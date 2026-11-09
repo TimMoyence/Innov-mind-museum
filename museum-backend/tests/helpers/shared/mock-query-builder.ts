@@ -1,17 +1,5 @@
-/**
- * Shared mock SelectQueryBuilder factory.
- *
- * Provides ALL chainable methods found across repository tests.
- * Chainable methods default to `.mockReturnThis()`.
- * Terminal methods (getMany, getOne, etc.) default to sensible no-op returns.
- *
- * Usage:
- *   const qb = makeMockQb();
- *   qb.getMany.mockResolvedValue([entity1, entity2]);
- */
 export function makeMockQb(overrides: Record<string, jest.Mock> = {}): Record<string, jest.Mock> {
   const qb: Record<string, jest.Mock> = {
-    // ── Chainable (SELECT) ──
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     orWhere: jest.fn().mockReturnThis(),
@@ -30,7 +18,6 @@ export function makeMockQb(overrides: Record<string, jest.Mock> = {}): Record<st
     from: jest.fn().mockReturnThis(),
     distinctOn: jest.fn().mockReturnThis(),
 
-    // ── Chainable (INSERT/UPDATE/DELETE) ──
     insert: jest.fn().mockReturnThis(),
     into: jest.fn().mockReturnThis(),
     values: jest.fn().mockReturnThis(),
@@ -40,7 +27,6 @@ export function makeMockQb(overrides: Record<string, jest.Mock> = {}): Record<st
     returning: jest.fn().mockReturnThis(),
     delete: jest.fn().mockReturnThis(),
 
-    // ── Terminal ──
     execute: jest.fn().mockResolvedValue({ affected: 0 }),
     getMany: jest.fn().mockResolvedValue([]),
     getOne: jest.fn().mockResolvedValue(null),
@@ -50,14 +36,11 @@ export function makeMockQb(overrides: Record<string, jest.Mock> = {}): Record<st
     getRawOne: jest.fn().mockResolvedValue(null),
     getRawAndEntities: jest.fn().mockResolvedValue({ entities: [], raw: [] }),
 
-    // ── Utility ──
     clone: jest.fn(),
 
-    // Apply overrides
     ...overrides,
   };
 
-  // clone returns the same qb by default for chaining
   if (!overrides.clone) {
     qb.clone.mockReturnValue(qb);
   }

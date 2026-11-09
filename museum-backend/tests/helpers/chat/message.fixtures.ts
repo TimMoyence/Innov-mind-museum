@@ -2,19 +2,10 @@ import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import type { ChatSessionIntent } from '@modules/chat/domain/chat.types';
 
-/**
- * Creates a minimal ChatSession.user stub for tests that only need `id`.
- * Keeps the inline `as ChatSession['user']` cast out of every call site.
- */
 export function makeSessionUser(id: number): ChatSession['user'] {
   return { id } as ChatSession['user'];
 }
 
-/**
- * Creates a ChatSession entity with sensible defaults.
- * Override any field via the `overrides` parameter.
- * @param overrides
- */
 export function makeSession(overrides: Partial<ChatSession> = {}): ChatSession {
   const session = Object.assign(new ChatSession(), {
     id: 'session-001',
@@ -34,13 +25,6 @@ export function makeSession(overrides: Partial<ChatSession> = {}): ChatSession {
   return session;
 }
 
-/**
- * Creates a ChatMessage entity with sensible defaults.
- * Override any field via the `overrides` parameter.
- *
- * If no `session` is provided, a default session is created via `makeSession()`.
- * @param overrides
- */
 export function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   const session = overrides.session ?? makeSession();
   const message = Object.assign(new ChatMessage(), {

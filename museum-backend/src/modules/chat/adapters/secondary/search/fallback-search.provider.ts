@@ -1,3 +1,4 @@
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 
 import type {
@@ -6,7 +7,6 @@ import type {
   WebSearchQuery,
 } from '@modules/chat/domain/ports/web-search.port';
 
-/** Tries providers sequentially; returns first non-empty result set. Falls through on empty/error. */
 export class FallbackSearchProvider implements WebSearchProvider {
   readonly name = 'fallback';
 
@@ -35,7 +35,7 @@ export class FallbackSearchProvider implements WebSearchProvider {
       } catch (err) {
         logger.warn('fallback_search_provider_error', {
           provider: providerName,
-          error: err instanceof Error ? err.message : String(err),
+          error: errorMessage(err),
           query: query.query,
         });
       }

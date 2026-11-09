@@ -1,24 +1,3 @@
-/**
- * RED tests — C2 Intégrité cost breaker (A6 + A7 + A9 + I-SEC2).
- *
- * RUN_ID 2026-05-21-p0-c2-cost-breaker.
- * Spec §3 R1 (invokeSection cost guard), R3 (walk path cost+latency guards),
- *       R9 (recordFailure HALF_OPEN probe failure signal).
- * Design.md §6 Test plan — `langchain-orchestrator-cost-breaker.spec.ts`.
- *
- * These tests MUST FAIL today because:
- *  - A6: `invokeSection()` does NOT consult `costBreaker.canAttempt()` —
- *        the default-path section call goes through `structured.invoke` even
- *        when the cost breaker is OPEN.
- *  - A7: `generateWalk()` early-returns at `langchain.orchestrator.ts:244-246`
- *        BEFORE the latency guard at :249, and never calls `canAttempt()`.
- *  - R9: `recordFailure()` has no production caller; HALF_OPEN probe failure
- *        is silently dropped.
- *
- * Green phase (T2.3/T2.4) wires `canAttempt()` at both entry sites + the
- * `recordFailure()` catch path. After green, these tests turn green.
- */
-
 jest.mock('@src/config/env', () => ({
   env: {
     llm: {
@@ -79,7 +58,6 @@ import {
 
 import type { OrchestratorInput } from '@modules/chat/domain/ports/chat-orchestrator.port';
 
-/** Minimal valid `OrchestratorInput` factory. */
 function makeInput(overrides: Partial<OrchestratorInput> = {}): OrchestratorInput {
   return {
     history: [],
@@ -93,16 +71,10 @@ function makeInput(overrides: Partial<OrchestratorInput> = {}): OrchestratorInpu
   };
 }
 
-/**
- * Section response shape required by the default-path orchestrator
- * (`MainAssistantOutput`). All non-text fields nullable per the strict-output
- * schema contract.
- */
 const SUCCESS_SECTION_RESPONSE = {
   text: 'The Mona Lisa is a portrait.',
   deeperContext: null,
   openQuestion: null,
-  suggestedFollowUp: null,
   imageDescription: null,
   suggestedImages: null,
   detectedArtwork: null,
@@ -121,11 +93,6 @@ interface FakeModelHandles {
   structuredInvoke: jest.Mock;
 }
 
-/**
- * Fake `ChatModel` exposing `withStructuredOutput().invoke()` — the only
- * surface the orchestrator default path uses post-C9.17 (legacy plain-text
- * retired 2026-05-18). `structuredInvoke` is the jest spy under assertion.
- */
 function makeFakeModel(
   invokeImpl: jest.Mock = jest.fn().mockResolvedValue(SUCCESS_SECTION_RESPONSE),
 ): FakeModelHandles {
@@ -144,18 +111,15 @@ function makeFakeModel(
   };
 }
 
-/** Fake `ChatModel` whose `structured.invoke` rejects — exercises HALF_OPEN probe failure. */
 function makeFailingFakeModel(err: Error): FakeModelHandles {
   return makeFakeModel(jest.fn().mockRejectedValue(err));
 }
 
-/** Walk-path structured-output response. */
 const SUCCESS_WALK_RESPONSE = {
   answer: 'Head north along the Seine.',
   suggestions: ['Pont Neuf'],
 } as const;
 
-/** Walk-path fake model. */
 function makeFakeWalkModel(
   invokeImpl: jest.Mock = jest.fn().mockResolvedValue(SUCCESS_WALK_RESPONSE),
 ): FakeModelHandles {
@@ -183,9 +147,7 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
 
       try {
         await orchestrator.generate(makeInput());
-      } catch {
-        // Expected — fail-CLOSED throw.
-      }
+      } catch {}
 
       expect(structuredInvoke).not.toHaveBeenCalled();
     });
@@ -257,9 +219,7 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
 
       try {
         await orchestrator.generate(makeInput({ intent: 'walk' }));
-      } catch {
-        // Expected — fail-CLOSED throw.
-      }
+      } catch {}
 
       expect(structuredInvoke).not.toHaveBeenCalled();
     });
@@ -270,7 +230,6 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
         windowMs: 60_000,
         openDurationMs: 60_000,
       });
-      // Trip the latency breaker
       latencyBreaker.recordFailure();
       expect(latencyBreaker.getState().state).toBe('OPEN');
 
@@ -301,9 +260,7 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
 
       try {
         await orchestrator.generate(makeInput());
-      } catch {
-        // Expected — section failure surfaces (or is wrapped by section runner).
-      }
+      } catch {}
 
       expect(recordFailure).toHaveBeenCalledTimes(1);
     });
@@ -320,9 +277,7 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
 
       try {
         await orchestrator.generate(makeInput({ intent: 'walk' }));
-      } catch {
-        // Expected — walk path re-throws structured.invoke errors.
-      }
+      } catch {}
 
       expect(recordFailure).toHaveBeenCalledTimes(1);
     });
@@ -343,11 +298,8 @@ describe('LangChainChatOrchestrator — C2 cost-breaker guards (RUN_ID 2026-05-2
 
       try {
         await orchestrator.generate(makeInput({ intent: 'walk' }));
-      } catch {
-        // Expected.
-      }
+      } catch {}
 
-      // CLOSED→failure does not consume a probe; recordFailure must stay silent.
       expect(recordFailure).not.toHaveBeenCalled();
     });
   });

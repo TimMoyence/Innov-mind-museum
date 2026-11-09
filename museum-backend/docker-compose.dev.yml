@@ -1,12 +1,5 @@
 services:
   backend:
-    # Build context widened to the repo root so the Dockerfile can COPY the
-    # `file:../packages/musaium-shared` workspace dependency declared in
-    # museum-backend/package.json (CLAUDE.md "Pièges connus" — the workspace
-    # was reverted to a `file:` dep in commit 641968ea4, so `pnpm install`
-    # MUST see /app/packages/musaium-shared alongside /app/museum-backend).
-    # Root-level `.dockerignore` excludes museum-frontend / museum-web /
-    # ios/Pods to keep context transfer reasonable (~5 MB instead of ~1 GB).
     build:
       context: ..
       dockerfile: museum-backend/Dockerfile.dev
@@ -16,18 +9,7 @@ services:
       - '3000:3000'
     env_file:
       - .env
-    # Inject REDIS_* in `environment:` so the values come from this compose file
-    # (and override anything stale in .env). This mirrors the prod compose
-    # contract (deploy/docker-compose.prod.yml § redis) — TD-44 fix.
-    # If .env later overrides REDIS_PASSWORD, the var substitution below uses
-    # that value; otherwise the dev fallback `dev-redis-password` is used and
-    # matches the `redis` service's `--requirepass` below (single source of
-    # truth for dev/CI smoke).
     environment:
-      # DB_* injected here (same pattern as REDIS_* below) so .env can hold the
-      # HOST-side coords (localhost:5433, used by host-shell `pnpm dev` /
-      # `migration:run`) while the container always talks to the `db` service on
-      # the docker network. Compose `environment:` overrides env_file `.env`.
       DB_HOST: db
       DB_PORT: '5432'
       REDIS_HOST: redis
@@ -40,19 +22,12 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      # Mount the backend source AT /app/museum-backend so the file: symlink
-      # to ../packages/musaium-shared keeps resolving inside the container.
       - .:/app/museum-backend
-      # Anonymous volumes that preserve image-baked node_modules / dist of
-      # the shared package across host source-code edits.
       - /app/museum-backend/node_modules
       - /app/packages/musaium-shared/node_modules
     restart: unless-stopped
 
   db:
-    # pgvector/pgvector:pg16 = Debian Bookworm slim PG16 + pgvector preinstalled.
-    # Required for C3 visual similarity (artwork_embeddings.embedding halfvec(768)).
-    # Data volume from postgres:16-alpine is binary-compatible (same PG major + data dir layout).
     image: pgvector/pgvector:pg16@sha256:1d533553fefe4f12e5d80c7b80622ba0c382abb5758856f52983d8789179f0fb
     container_name: dev-postgres
     environment:
@@ -65,7 +40,7 @@ services:
       - pgdata_dev:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${PGDATABASE:-museumAI}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres} -d ${PGDATABASE:-museumAI}']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -74,30 +49,17 @@ services:
   redis:
     image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
     container_name: dev-redis
-    # Force `--requirepass` so the dev container matches the prod compose
-    # contract (deploy/docker-compose.prod.yml:331-334). Without it, ioredis
-    # in the backend sends AUTH and Redis 7 emits
-    # `[WARN] This Redis server's default user does not require a password,
-    # but a password was supplied` on every connection — 200+ lines/24h of
-    # log noise that masks real errors. TD-44 fix 2026-05-18.
     command:
       - 'redis-server'
       - '--requirepass'
       - '${REDIS_PASSWORD:-dev-redis-password}'
-      # C4 I-SEC1 (2026-05-21) — mirror prod eviction policy so dev
-      # reproduces the same eviction semantics under pressure. Memory cap
-      # (--maxmemory) is optional in dev (WARN-only in compose-parity
-      # sentinel), but the policy is CRITICAL parity. cf design §6 / R6.
       - '--maxmemory-policy'
       - '${REDIS_MAXMEMORY_POLICY:-volatile-ttl}'
     ports:
       - '6379:6379'
     healthcheck:
       test:
-        [
-          'CMD-SHELL',
-          'redis-cli -a "${REDIS_PASSWORD:-dev-redis-password}" PING | grep -q PONG',
-        ]
+        ['CMD-SHELL', 'redis-cli -a "${REDIS_PASSWORD:-dev-redis-password}" PING | grep -q PONG']
       interval: 10s
       timeout: 3s
       retries: 5
@@ -114,14 +76,6 @@ services:
       - '8082:8080'
     restart: unless-stopped
 
-  # Toxiproxy — DEV/CI-ONLY weak-net shaper (Layer 3). Gated behind the `weaknet`
-  # compose profile so the everyday `pnpm dev` (default profile) never starts it.
-  # It proxies the `backend` service so a device/emulator can hit the shaped port
-  # 3100 instead of 3000 and experience a ratified NETWORK_PROFILES condition.
-  #   - 8474 = Toxiproxy admin API (POST toxics here; see
-  #            scripts/net-shaping/profile-to-toxics.mjs <profile> for the JSON).
-  #   - 3100 = the SHAPED listener that forwards upstream to backend:3000.
-  # Toxiproxy MUST NEVER appear in a prod artifact (sentinel:toxiproxy-no-prod).
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.9.0@sha256:b44c283298cea49e2defaba1b3028783798346f2a926684e3a345fd8441af3b8
     container_name: dev-toxiproxy
@@ -129,12 +83,8 @@ services:
     depends_on:
       - backend
     ports:
-      # admin API (create/update toxics)
       - '8474:8474'
-      # shaped listener → upstream backend:3000
       - '3100:3100'
-    # Boot the admin server, then register the `backend` proxy on 0.0.0.0:3100
-    # forwarding to the upstream backend:3000. `toxiproxy-cli` ships in the image.
     entrypoint:
       - /bin/sh
       - -c

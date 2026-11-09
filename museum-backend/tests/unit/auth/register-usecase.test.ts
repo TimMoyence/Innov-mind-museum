@@ -29,8 +29,6 @@ const makeMockEmailService = (): jest.Mocked<EmailService> => ({
   sendEmail: jest.fn().mockResolvedValue(undefined),
 });
 
-// A2 (T2.5G): dateOfBirth is now required by RegisterUseCase (hard-throw on a
-// falsy DOB). Adult DOB so these non-age-gate cases exercise their real intent.
 const ADULT_DOB = '1990-06-13';
 
 describe('RegisterUseCase', () => {
@@ -81,9 +79,6 @@ describe('RegisterUseCase', () => {
     );
   });
 
-  // TD-65: an email held by a soft-deleted account stays reserved — a new
-  // signup must not be able to squat the deleted account's identity. The repo
-  // surfaces this as a CONFLICT (it finds the soft-deleted row by email).
   it('rejects registration when a soft-deleted account already holds the email', async () => {
     const userRepo = makeUserRepo(null, {
       registerUser: jest
@@ -165,10 +160,9 @@ describe('RegisterUseCase', () => {
     expect(userRepo.setVerificationToken).toHaveBeenCalledTimes(1);
     const [userId, storedToken, expires] = userRepo.setVerificationToken.mock.calls[0];
     expect(userId).toBe(5);
-    expect(storedToken).toMatch(/^[a-f0-9]{64}$/); // SHA-256 hex digest
+    expect(storedToken).toMatch(/^[a-f0-9]{64}$/);
     expect(expires).toBeInstanceOf(Date);
 
-    // Extract the raw token from the email link and verify the DB got the hash, not the raw token.
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
     const match = /token=([a-f0-9]+)/.exec(htmlArg);
     expect(match).not.toBeNull();
@@ -198,7 +192,6 @@ describe('RegisterUseCase', () => {
       expect.stringContaining('Verify'),
       expect.stringContaining('verify-email'),
     );
-    // Default locale 'fr' is prepended to the verification URL
     const htmlArg = emailService.sendEmail.mock.calls[0][2];
     expect(htmlArg).toContain('https://app.example.com/fr/verify-email?token=');
   });
@@ -238,7 +231,6 @@ describe('RegisterUseCase', () => {
       dateOfBirth: ADULT_DOB,
     });
 
-    // Registration should still succeed
     expect(result.id).toBe(7);
     expect(result.email).toBe('user@test.com');
   });
@@ -257,7 +249,6 @@ describe('RegisterUseCase', () => {
       dateOfBirth: ADULT_DOB,
     });
 
-    // Registration still succeeds
     expect(result.id).toBe(8);
   });
 
@@ -275,7 +266,6 @@ describe('RegisterUseCase', () => {
     });
 
     expect(result.id).toBe(9);
-    // setVerificationToken is still called
     expect(userRepo.setVerificationToken).toHaveBeenCalledTimes(1);
   });
 });

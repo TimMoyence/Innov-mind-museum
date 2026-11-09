@@ -3,6 +3,7 @@ import { validate as isUuid } from 'uuid';
 import { resolveLocalImageMeta } from '@modules/chat/useCase/image/chat-image.helpers';
 import { ensureMessageAccess } from '@modules/chat/useCase/session/session-access';
 import { AppError, badRequest, invalidInput, notFound } from '@shared/errors/app.error';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { deriveTier } from '@shared/observability/derive-tier';
 import { env } from '@src/config/env';
@@ -38,7 +39,6 @@ export class ChatMediaService {
     this.audioStorage = deps.audioStorage;
   }
 
-  /** @throws {AppError} 400 invalid id, 404 message/image not found. */
   async getMessageImageRef(
     messageId: string,
     currentUserId?: number,
@@ -56,11 +56,6 @@ export class ChatMediaService {
     return this.toImageRefResult(row.message.imageRef);
   }
 
-  /**
-   * Skips session-ownership: signed HMAC token IS authorization (short-lived,
-   * issued to legitimate owner). Use ONLY after `verifySignedChatImageReadUrl`.
-   * UUID path validation still enforced.
-   */
   async getMessageImageRefBySignedToken(messageId: string): Promise<{
     imageRef: string;
     fileName?: string;
@@ -127,7 +122,6 @@ export class ChatMediaService {
     return { messageId, reported: true };
   }
 
-  /** Submitting same value as existing toggles it off. */
   async setMessageFeedback(
     messageId: string,
     currentUserId: number,
@@ -155,28 +149,6 @@ export class ChatMediaService {
     return { messageId, status: existing ? 'updated' : 'created' };
   }
 
-  /**
-   * PR-P0-1 (2026-05-23) — targeted LLM cache invalidation.
-   *
-   * Reads `row.message.cacheKey` (stamped at write time by
-   * `ChatMessageService.tryLlmCacheStore` / `tryLlmCacheLookup` via
-   * `LlmCacheServiceImpl.computeKey`) and purges the exact `llm:{KEY_VERSION}:*` entry
-   * that produced this assistant message — 1 del, exact match, no cartesian.
-   *
-   * Fail-open: a `cache.del` throw produces a WARN log and the HTTP 200
-   * feedback response still succeeds (the underlying `upsertMessageFeedback`
-   * already committed before this method is called).
-   *
-   * Skip-when-null (R4): legacy rows written before the `cache_key` column
-   * existed have `cacheKey === null`, as do non-cached paths (image-only
-   * without visual signature, no `llmCache` configured, etc.). Those skip
-   * the `del` and emit an INFO `llm_cache_invalidate_skipped` log — they
-   * TTL out within ≤ 7 d.
-   *
-   * Closes the sweep started by I-FIX1 (2026-05-21 admin purge fix in
-   * `cache-purge.route.ts:14-31`) — the feedback path was missed there.
-   * See `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.
-   */
   private async invalidateCacheForFeedback(
     messageId: string,
     row: Awaited<ReturnType<typeof ensureMessageAccess>>,
@@ -201,20 +173,11 @@ export class ChatMediaService {
         messageId,
         museumId,
         key: cacheKey,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
-      // fail-open — feedback HTTP 200 still returned
     }
   }
 
-  /**
-   * Cache: Redis `tts:v2:<messageId>:<voiceId>` (default 1d) → fresh synth +
-   * fire-and-forget S3 persistence (audioUrl + voice + ts) on ChatMessage for
-   * offline replay / walk pre-fetch. `v2` prefix bumped 2026-05-17 to make the
-   * key voice-aware (correctness fix TD-28).
-   *
-   * @throws {AppError} 400 not assistant, 501 TTS unavailable, 404 not found/owned.
-   */
   async synthesizeSpeech(
     messageId: string,
     currentUserId?: number,
@@ -247,9 +210,6 @@ export class ChatMediaService {
       }
     }
 
-    // TD-20 (R13a/R12) — per-tenant scope for the TTS-via-chat-media cost path.
-    // `museumId` spread-omit (absent => key omitted, never `null`); `tier`
-    // derived from the session owner via the shared `deriveTier`.
     const result = await this.tts.synthesize({
       text: row.message.text,
       voice: targetVoice,
@@ -266,9 +226,6 @@ export class ChatMediaService {
       );
     }
 
-    // Decoupled persistence (C9.12b 2026-05-17) — don't block the TTS response on
-    // S3 save + DB updateMessageAudio. Existing fail-open semantic preserved
-    // inside the detached promise; failures only emit a warn log.
     if (this.audioStorage) {
       const audioStorage = this.audioStorage;
       const repository = this.repository;
@@ -288,7 +245,7 @@ export class ChatMediaService {
         } catch (error: unknown) {
           logger.warn('audio_storage_persist_failed', {
             messageId,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           });
         }
       })();
@@ -297,7 +254,6 @@ export class ChatMediaService {
     return result;
   }
 
-  /** Direct object-storage download (offline cache, lock-screen, walk pre-fetch). */
   async getMessageAudioUrl(
     messageId: string,
     currentUserId?: number,
@@ -325,10 +281,3 @@ export class ChatMediaService {
     };
   }
 }
-
-// PR-P0-1 (2026-05-23) — removed `buildFeedbackInvalidationKeys` (broken
-// cartesian over `chat:llm:*` namespace targeting 0 real prod keys) and
-// `safeCacheDel` (only caller was the cartesian). Targeted invalidation is
-// now driven by the `cache_key` cookie persisted on the assistant message
-// row at write time. See `invalidateCacheForFeedback` above + spec/design
-// in `team-state/2026-05-23-pr-p0-1-fix-llm-cache-feedback/`.

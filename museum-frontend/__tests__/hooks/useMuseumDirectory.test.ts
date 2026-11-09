@@ -4,8 +4,6 @@ import { useMuseumDirectory } from '@/features/museum/application/useMuseumDirec
 import { makeMuseumListItem, makeGeoLocation } from '@/__tests__/helpers/factories';
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockListMuseumDirectory = jest.fn();
 const mockSearchMuseums = jest.fn();
 
@@ -15,8 +13,6 @@ jest.mock('@/features/museum/infrastructure/museumApi', () => ({
     searchMuseums: (params: unknown) => mockSearchMuseums(params),
   },
 }));
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useMuseumDirectory', () => {
   const louvre = makeMuseumListItem({
@@ -45,7 +41,7 @@ describe('useMuseumDirectory', () => {
           address: '75001 Paris',
           latitude: 48.8606,
           longitude: 2.3376,
-          distance: 500, // meters — backend contract
+          distance: 500,
           source: 'local' as const,
           museumType: 'general' as const,
         },
@@ -74,7 +70,6 @@ describe('useMuseumDirectory', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Without coordinates, distance is null; should sort alphabetically
     expect(result.current.museums[0]?.name).toBe('Louvre');
     expect(result.current.museums[1]?.name).toBe('Musee d Orsay');
   });
@@ -126,7 +121,6 @@ describe('useMuseumDirectory', () => {
       result.current.setSearchQuery('Louvre');
     });
 
-    // Client-side filter is immediate (no debounce for display)
     expect(result.current.museums.length).toBe(1);
     expect(result.current.museums[0]?.name).toBe('Louvre');
   });
@@ -170,16 +164,12 @@ describe('useMuseumDirectory', () => {
 
     const callCountAfterFirst = mockSearchMuseums.mock.calls.length;
 
-    // Re-render with significantly different coordinates — rounded key flips
-    // from [48.86, 2.35] to [49.0, 3.0] so react-query issues a fresh fetch.
     rerender({ lat: 49.0, lng: 3.0 });
 
     await waitFor(() => {
       expect(mockSearchMuseums.mock.calls.length).toBeGreaterThan(callCountAfterFirst);
     });
   });
-
-  // ── Distance threshold (rounded-key GPS jitter suppression) ─────────────────
 
   it('skips re-fetch when coordinates round to the same 2-decimal key', async () => {
     const { result, rerender } = renderHookWithQueryClient(
@@ -193,11 +183,8 @@ describe('useMuseumDirectory', () => {
 
     const callCountAfterFirst = mockSearchMuseums.mock.calls.length;
 
-    // Tiny GPS jitter — both coord sets round to [48.86, 2.35] so react-query
-    // reuses the cached result and does NOT fire a new network request.
     rerender({ lat: 48.8576, lng: 2.3532 });
 
-    // Wait a tick to let any potential effect fire
     await act(async () => {
       await Promise.resolve();
     });
@@ -215,11 +202,9 @@ describe('useMuseumDirectory', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Initial mount without coordinates uses directory endpoint
     expect(mockListMuseumDirectory).toHaveBeenCalledTimes(1);
     expect(mockSearchMuseums).not.toHaveBeenCalled();
 
-    // GPS fix arrives — should trigger search endpoint (first coordinates, no prior ref)
     rerender({ lat: 48.8566, lng: 2.3522 });
 
     await waitFor(() => {
@@ -249,11 +234,6 @@ describe('useMuseumDirectory', () => {
     });
   });
 
-  // ── react-query integration guards ─────────────────────────────────────────
-  // Protects P1 fixes: bbox searches must bypass the near-coords cache key
-  // (keeps pan/zoom from fragmenting the cache) and refresh() must reset the
-  // bbox override so we return to the geo-sorted results.
-
   describe('react-query integration guards', () => {
     it('does NOT call searchMuseums when coords are null and searchQuery is empty', async () => {
       const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
@@ -262,7 +242,6 @@ describe('useMuseumDirectory', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // No coords → directory is the cold-start path; search endpoint stays idle.
       expect(mockListMuseumDirectory).toHaveBeenCalledTimes(1);
       expect(mockSearchMuseums).not.toHaveBeenCalled();
     });
@@ -291,16 +270,11 @@ describe('useMuseumDirectory', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Snapshot the near-coords cache entry BEFORE the bbox call. react-query
-      // stores the raw returned array — we capture the reference identity to
-      // assert it stays untouched.
       const nearKey = ['museums', 'near', 48.86, 2.35] as const;
       const snapshot = client.getQueryData(nearKey);
       expect(snapshot).toBeDefined();
 
       const bbox: [number, number, number, number] = [2.0, 48.0, 3.0, 49.0];
-      // Replace the search mock so we can assert the bbox arg distinct from the
-      // initial near-coords call.
       mockSearchMuseums.mockClear();
       mockSearchMuseums.mockResolvedValue({
         museums: [
@@ -319,7 +293,6 @@ describe('useMuseumDirectory', () => {
 
       await act(async () => {
         result.current.searchInBounds(bbox);
-        // Let the .then()/.finally() chain resolve.
         await Promise.resolve();
         await Promise.resolve();
       });
@@ -329,7 +302,6 @@ describe('useMuseumDirectory', () => {
       });
 
       expect(mockSearchMuseums).toHaveBeenCalledWith({ bbox });
-      // Near-coords cache entry is unchanged by the bbox call.
       expect(client.getQueryData(nearKey)).toBe(snapshot);
       expect(result.current.museums[0]?.name).toBe('Versailles');
     });
@@ -339,27 +311,21 @@ describe('useMuseumDirectory', () => {
       try {
         const { result } = renderHookWithQueryClient(() => useMuseumDirectory(null, null));
 
-        // Let the directory query resolve first (no coords → no search call yet).
         await act(async () => {
           await Promise.resolve();
         });
 
-        // Baseline: confirm the search endpoint was not called during the
-        // coords-less cold start.
         const baselineSearchCalls = mockSearchMuseums.mock.calls.length;
 
         act(() => {
           result.current.setSearchQuery('a');
         });
 
-        // Advance well past the 500 ms debounce — nothing should fire.
         await act(async () => {
           jest.advanceTimersByTime(1000);
           await Promise.resolve();
         });
 
-        // Still no search call: length<2 short-circuits both the debounce effect
-        // AND the `enabled` gate on the search query.
         expect(mockSearchMuseums.mock.calls.length).toBe(baselineSearchCalls);
       } finally {
         jest.useRealTimers();
@@ -374,7 +340,6 @@ describe('useMuseumDirectory', () => {
 
         const { result } = renderHookWithQueryClient(() => useMuseumDirectory(userLat, userLng));
 
-        // Drain the initial near-coords search to isolate the debounce behavior.
         await act(async () => {
           await Promise.resolve();
           await Promise.resolve();
@@ -385,15 +350,12 @@ describe('useMuseumDirectory', () => {
           result.current.setSearchQuery('Louvre');
         });
 
-        // 499 ms in — debounce hasn't fired yet, no new search call.
         await act(async () => {
           jest.advanceTimersByTime(499);
           await Promise.resolve();
         });
         expect(mockSearchMuseums.mock.calls.length).toBe(beforeDebounce);
 
-        // Cross the 500 ms threshold — the debounced query is committed and
-        // useAppQuery fires with {q, lat, lng, radius}.
         await act(async () => {
           jest.advanceTimersByTime(2);
           await Promise.resolve();
@@ -404,8 +366,6 @@ describe('useMuseumDirectory', () => {
           expect(mockSearchMuseums.mock.calls.length).toBeGreaterThan(beforeDebounce);
         });
 
-        // The most recent call is the q-driven one: it includes `q` alongside
-        // the current lat/lng/radius (coords are still available in this branch).
         const lastCall = mockSearchMuseums.mock.calls[mockSearchMuseums.mock.calls.length - 1][0];
         expect(lastCall).toEqual(
           expect.objectContaining({ q: 'Louvre', lat: userLat, lng: userLng, radius: 3_000 }),
@@ -420,13 +380,11 @@ describe('useMuseumDirectory', () => {
       try {
         const { result } = renderHookWithQueryClient(() => useMuseumDirectory(48.8566, 2.3522));
 
-        // Drain initial near-coords fetch.
         await act(async () => {
           await Promise.resolve();
           await Promise.resolve();
         });
 
-        // Type "Lou" → after 500 ms one search fires with q='Lou'.
         act(() => {
           result.current.setSearchQuery('Lou');
         });
@@ -444,9 +402,6 @@ describe('useMuseumDirectory', () => {
 
         const afterFirstSearch = mockSearchMuseums.mock.calls.length;
 
-        // Backspace to "L" — below MIN_SEARCH_CHARS so the `enabled` flag flips
-        // false and no new q-search runs. The effective query collapses back
-        // to '' and the near-coords branch wins again.
         act(() => {
           result.current.setSearchQuery('L');
         });
@@ -455,7 +410,6 @@ describe('useMuseumDirectory', () => {
           await Promise.resolve();
         });
 
-        // No additional q-search call fired for the sub-threshold input.
         const newQCalls = mockSearchMuseums.mock.calls
           .slice(afterFirstSearch)
           .filter((c) => (c[0] as { q?: string }).q === 'L');
@@ -472,10 +426,8 @@ describe('useMuseumDirectory', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Near-coords baseline (Louvre from beforeEach).
       expect(result.current.museums[0]?.name).toBe('Louvre');
 
-      // Flip to bbox results.
       mockSearchMuseums.mockResolvedValue({
         museums: [
           {
@@ -501,8 +453,6 @@ describe('useMuseumDirectory', () => {
         expect(result.current.museums[0]?.name).toBe('Versailles');
       });
 
-      // Restore the near-coords mock and hit refresh — the bbox override must
-      // drop and the near-coords query must win again.
       mockSearchMuseums.mockResolvedValue({
         museums: [
           {

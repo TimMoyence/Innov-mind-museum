@@ -8,22 +8,11 @@ import { useTheme } from '@/shared/ui/ThemeContext';
 import { radius, space } from '@/shared/ui/tokens';
 
 interface MuseumLogoProps {
-  /** Validated HTTPS logo URL (from {@link MuseumBranding}); absent → fallback. */
   logoUrl?: string;
-  /** Museum name — used for the a11y label and the fallback icon's context. */
   museumName: string;
-  /** Optional style override for the logo / fallback container. */
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Renders a museum's co-branding logo. Uses `expo-image` (PREFERRED — cache +
- * `contentFit`; expo-image/PATTERNS.md:8,46) with `cachePolicy="memory-disk"`
- * and an `onError` → fallback flip. When the logo is absent / empty / errors,
- * renders a `business` Ionicon fallback (PNG / Ionicons only — never emoji).
- * a11y: `accessibilityRole="image"` + a name-derived label (react-native
- * PATTERNS.md §7).
- */
 export const MuseumLogo = ({ logoUrl, museumName, style }: MuseumLogoProps): React.JSX.Element => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -36,9 +25,6 @@ export const MuseumLogo = ({ logoUrl, museumName, style }: MuseumLogoProps): Rea
     return (
       <Image
         source={{ uri: logoUrl }}
-        // expo-image expects `ImageStyle`, not `ViewStyle`; the override only
-        // carries box-layout props (width/height/borderRadius) valid in both
-        // (expo-image PATTERNS.md:46,§5 — Image takes its own RNImageStyle-derived type).
         style={[styles.logo, style] as StyleProp<ImageStyle>}
         contentFit="contain"
         cachePolicy="memory-disk"

@@ -1,13 +1,14 @@
-/* eslint-disable react-hooks/refs -- Animated.Value refs are stable objects read once at creation; safe RN pattern */
-import React, { useRef } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 
 import type { ChatUiEnrichedImage } from '@/features/chat/application/chatSessionLogic.pure';
+import { fadeIn } from '@/shared/ui/fadeIn';
+import { HorizontalStrip } from '@/shared/ui/HorizontalStrip';
 import { useReducedMotion } from '@/shared/ui/hooks/useReducedMotion';
 import { useTheme } from '@/shared/ui/ThemeContext';
-import { semantic, space, radius } from '@/shared/ui/tokens';
+import { fontSize, lineHeightPx, semantic, space, radius } from '@/shared/ui/tokens';
 
 const ATTRIBUTION_BG = 'rgba(0,0,0,0.5)';
 const ATTRIBUTION_COLOR = semantic.fullscreenModal.background;
@@ -20,7 +21,6 @@ interface ImageCarouselProps {
 const THUMB_HEIGHT = 120;
 const THUMB_WIDTH = 120;
 
-/** Fade-in thumbnail with loading placeholder. */
 const CarouselThumb = React.memo(
   ({
     image,
@@ -34,24 +34,14 @@ const CarouselThumb = React.memo(
     placeholderBg: string;
   }) => {
     const { t } = useTranslation();
+    const { theme } = useTheme();
     const reduceMotion = useReducedMotion();
-    const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+    const [opacity] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
 
     const handleLoad = () => {
-      if (reduceMotion) {
-        // WCAG 2.3.3: show the thumbnail instantly, no fade-in.
-        opacity.setValue(1);
-        return;
-      }
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      fadeIn(opacity, reduceMotion, 300);
     };
 
-    // C2 v2 (2026-05) — render LLM-authored rationale under the thumb. Falls
-    // back to the i18n string when missing (legacy responses or empty).
     const rationaleResolved =
       image.rationale && image.rationale.trim().length > 0
         ? image.rationale
@@ -88,7 +78,11 @@ const CarouselThumb = React.memo(
           ) : null}
         </View>
         <View style={styles.rationaleContainer}>
-          <Text numberOfLines={2} ellipsizeMode="tail" style={styles.rationaleText}>
+          <Text
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            style={[styles.rationaleText, { color: theme.textSecondary }]}
+          >
             {rationaleResolved}
           </Text>
         </View>
@@ -98,20 +92,11 @@ const CarouselThumb = React.memo(
 );
 CarouselThumb.displayName = 'CarouselThumb';
 
-/**
- * Horizontal image carousel for enriched images in chat messages.
- * Renders thumbnails with fade-in animation and optional Unsplash attribution.
- */
 export const ImageCarousel = React.memo(({ images, onImagePress }: ImageCarouselProps) => {
   const { theme } = useTheme();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
+    <HorizontalStrip contentContainerStyle={styles.contentContainer}>
       {images.map((image, index) => (
         <CarouselThumb
           key={image.url}
@@ -121,15 +106,12 @@ export const ImageCarousel = React.memo(({ images, onImagePress }: ImageCarousel
           placeholderBg={theme.surface}
         />
       ))}
-    </ScrollView>
+    </HorizontalStrip>
   );
 });
 ImageCarousel.displayName = 'ImageCarousel';
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 0,
-  },
   contentContainer: {
     flexDirection: 'row',
   },
@@ -157,15 +139,14 @@ const styles = StyleSheet.create({
   },
   attributionText: {
     color: ATTRIBUTION_COLOR,
-    fontSize: space['2'],
+    fontSize: fontSize['xs-'],
   },
-  // C2 v2 (2026-05) — rationale rendered as a 2-line caption under the thumb.
   rationaleContainer: {
     width: THUMB_WIDTH,
     paddingTop: space['1'],
   },
   rationaleText: {
-    fontSize: space['2'],
-    lineHeight: space['3'],
+    fontSize: fontSize.xs,
+    lineHeight: lineHeightPx['18'],
   },
 });

@@ -1,28 +1,14 @@
-/**
- * A3 — useReducedTransparency hook (sibling of useReducedMotion).
- *
- * Spec : docs/chat-ux-refonte/specs/A3.md §1.1 (R1-R4)
- *
- * Returns `true` when iOS Reduce Transparency is enabled. Drives the fallback
- * from glass (BlurView) to mat (opaque View) on the assistant bubble.
- *
- * These tests MUST FAIL at baseline d4a94f735 (hook not yet implemented).
- */
 import '@/__tests__/helpers/test-utils';
 import { renderHook, waitFor, act } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 
 import { useReducedTransparency } from '@/shared/ui/hooks/useReducedTransparency';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 type ReduceTransparencyListener = (value: boolean) => void;
 
 const subscriptionRemove = jest.fn();
 let capturedListener: ReduceTransparencyListener | null = null;
 
-// `isReduceTransparencyEnabled` exists on RN ≥ 0.73 (Expo SDK 55 covers it).
-// We spy via casting to `any` since TS types may lag the runtime API.
 const isReduceTransparencyEnabledMock = jest.spyOn(
   AccessibilityInfo as unknown as { isReduceTransparencyEnabled: () => Promise<boolean> },
   'isReduceTransparencyEnabled',
@@ -52,8 +38,6 @@ afterAll(() => {
   isReduceTransparencyEnabledMock.mockRestore();
   addEventListenerMock.mockRestore();
 });
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('useReducedTransparency', () => {
   it('returns false until the platform resolves (R1)', async () => {

@@ -6,7 +6,6 @@ import authPasswordRouter from './auth-password.route';
 import authProfileRouter from './auth-profile.route';
 import authSessionRouter from './auth-session.route';
 
-/** Composes sub-routers (session/profile/password/email) — see ADR-003. */
 const authRouter: Router = Router();
 
 authRouter.use(authSessionRouter);

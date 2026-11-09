@@ -6,8 +6,6 @@ import { userToken } from '../../helpers/auth/token.helpers';
 
 import type { ChatService } from '@modules/chat/useCase/orchestration/chat.service';
 
-// ── Build a mock ChatService for happy-path tests ────────────────────
-
 const mockCreateSession = jest.fn();
 const mockListSessions = jest.fn();
 const mockGetSession = jest.fn();
@@ -33,11 +31,6 @@ const app = createApp({
   healthCheck: async () => ({ database: 'up' }),
 });
 
-/**
- * Chat route integration tests — auth enforcement + basic validation + happy-path handler bodies.
- * No DB required — chat service is mocked via createApp({ chatService }).
- */
-
 describe('Chat Routes — HTTP Layer', () => {
   beforeEach(() => {
     resetRateLimits();
@@ -47,8 +40,6 @@ describe('Chat Routes — HTTP Layer', () => {
   afterAll(() => {
     stopRateLimitSweep();
   });
-
-  // ── Unauthenticated access returns 401 ─────────────────────────
 
   describe('Unauthenticated access returns 401', () => {
     it('POST /api/chat/sessions returns 401 without token', async () => {
@@ -108,8 +99,6 @@ describe('Chat Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Invalid token returns 401 ──────────────────────────────────
-
   describe('Invalid token returns 401', () => {
     it('returns 401 for token signed with wrong secret', async () => {
       const badToken = jwt.sign({ sub: '1', type: 'access', jti: 'jti' }, 'wrong-secret', {
@@ -121,8 +110,6 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(res.status).toBe(401);
     });
   });
-
-  // ── POST /api/chat/sessions — validation with auth ─────────────
 
   describe('POST /api/chat/sessions — validation', () => {
     it('returns 400 for invalid museumId (non-integer)', async () => {
@@ -150,8 +137,6 @@ describe('Chat Routes — HTTP Layer', () => {
     });
   });
 
-  // ── POST /api/chat/sessions/:id/messages — validation ──────────
-
   describe('POST /api/chat/sessions/:id/messages — validation', () => {
     it('returns 400 for invalid context.guideLevel', async () => {
       const res = await request(app)
@@ -169,8 +154,6 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  // ── POST /api/chat/messages/:id/report — validation ────────────
 
   describe('POST /api/chat/messages/:id/report — validation', () => {
     it('returns 400 for missing reason', async () => {
@@ -190,8 +173,6 @@ describe('Chat Routes — HTTP Layer', () => {
     });
   });
 
-  // ── Error response format ──────────────────────────────────────
-
   describe('Error response format', () => {
     it('401 returns structured JSON with error field', async () => {
       const res = await request(app).get('/api/chat/sessions');
@@ -200,8 +181,6 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(res.body.error).toHaveProperty('code', 'UNAUTHORIZED');
     });
   });
-
-  // ── Happy-path handler body coverage ─────────────────────────────
 
   describe('Happy-path — handler bodies', () => {
     it('POST /api/chat/sessions creates a new session', async () => {
@@ -265,10 +244,7 @@ describe('Chat Routes — HTTP Layer', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(result);
-      expect(mockListSessions).toHaveBeenCalledWith(
-        expect.objectContaining({}),
-        1, // userId from token
-      );
+      expect(mockListSessions).toHaveBeenCalledWith(expect.objectContaining({}), 1);
     });
 
     it('GET /api/chat/sessions/:id returns session with messages', async () => {
@@ -336,9 +312,9 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(mockPostMessage).toHaveBeenCalledWith(
         'session-uuid',
         expect.objectContaining({ text: 'Tell me about the Mona Lisa' }),
-        expect.any(String), // requestId
-        1, // userId
-        expect.any(String), // ip — threaded into audit on guardrail block (W3.V13)
+        expect.any(String),
+        1,
+        expect.any(String),
       );
     });
 
@@ -356,7 +332,7 @@ describe('Chat Routes — HTTP Layer', () => {
       expect(mockReportMessage).toHaveBeenCalledWith(
         'msg-uuid',
         'offensive',
-        1, // userId
+        1,
         'Inappropriate content',
       );
     });

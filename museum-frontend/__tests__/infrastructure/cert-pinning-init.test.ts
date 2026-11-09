@@ -4,9 +4,6 @@ jest.mock('@sentry/react-native', () => ({
 }));
 
 const mockInitializeSslPinning = jest.fn().mockResolvedValue(undefined);
-// D7 mock-builder: return `{ remove: jest.fn() }` so the green-phase
-// `disposeCertPinning` impl can call `.remove()` on the captured
-// EmitterSubscription (PATTERNS §2 lines 72-84 / §7 lines 200-207).
 const mockAddSslPinningErrorListener = jest.fn().mockReturnValue({ remove: jest.fn() });
 const mockIsSslPinningAvailable = jest.fn().mockReturnValue(true);
 
@@ -221,19 +218,6 @@ describe('initCertPinning', () => {
   });
 });
 
-/**
- * R3 acceptance — listener teardown via `disposeCertPinning`.
- *
- * Cited:
- *   - lib-docs/react-native-ssl-public-key-pinning/PATTERNS.md:72-84
- *     (§2 — always call `.remove()` on the EmitterSubscription returned by
- *     `addSslPinningErrorListener`).
- *
- * The mock-builder change above (`.mockReturnValue({ remove: jest.fn() })`)
- * is a setup-line change — it preserves the 8 pre-existing assertions
- * byte-for-byte while letting the green-phase impl call `.remove()` on
- * the captured subscription. R6 NFR parity preserved.
- */
 describe('disposeCertPinning', () => {
   it('invokes the captured subscription .remove() exactly once after a successful initCertPinning', async () => {
     process.env.EXPO_PUBLIC_CERT_PINNING_ENABLED = 'true';
@@ -256,15 +240,11 @@ describe('disposeCertPinning', () => {
   });
 
   it('is a no-op when no listener was registered (env-disabled boot path)', async () => {
-    // env flag absent → initCertPinning short-circuits without registering
-    // a listener. disposeCertPinning must NOT throw and MUST NOT touch
-    // any subscription.
     const result = await initCertPinning({ apiBaseUrl: 'https://api.example.test' });
     expect(result).toEqual({ kind: 'skipped', reason: 'env-disabled' });
     expect(() => {
       disposeCertPinning();
     }).not.toThrow();
-    // No listener was registered, so the mock factory was never called.
     expect(mockAddSslPinningErrorListener).not.toHaveBeenCalled();
   });
 
@@ -285,7 +265,6 @@ describe('disposeCertPinning', () => {
 
     disposeCertPinning();
     expect(removeSpy).toHaveBeenCalledTimes(1);
-    // Second call must NOT invoke .remove() again — the reference is cleared.
     disposeCertPinning();
     expect(removeSpy).toHaveBeenCalledTimes(1);
   });

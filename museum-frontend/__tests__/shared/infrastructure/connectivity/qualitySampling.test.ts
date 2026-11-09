@@ -1,16 +1,3 @@
-/**
- * TR-01 (sampling volet) — qualitySampling eligibility + axios glue (run
- * undefined-network-detection-reliability, cluster A, task A-R3).
- * Pins design §2.3 / Q-02: central deny-list (LLM chat messages, STT audio,
- * TTS — compute-dominated latencies, INV-09), FormData/multipart exclusion,
- * retry exclusion (`_retryCount > 0`, design P-05), per-request opt-out
- * (`skipQualitySample`), and `recordHttpQualitySample` edge semantics
- * (no-op without a numeric `_startedAt`, rtt = Date.now() − startedAt,
- * outcome pass-through, never throws — US-10.1/US-10.2).
- */
-// Non-virtual: the module exists on disk — virtual registration would key a
-// synthetic module ID and stop binding once another suite resolves the real
-// file first in the same worker (shared `_moduleIDCache`).
 jest.mock('@/shared/infrastructure/connectivity/networkQualityTracker', () => ({
   recordQualitySample: jest.fn(),
 }));
@@ -25,7 +12,6 @@ const recordQualitySampleMock = recordQualitySample as jest.Mock;
 
 const ELIGIBLE_URL = '/museums/42/low-data-pack';
 
-/** Forged axios-like config (transport fragment, not a domain entity). */
 const makeRecordableConfig = (overrides?: Record<string, unknown>): Record<string, unknown> => ({
   url: ELIGIBLE_URL,
   _startedAt: 100_000,
@@ -38,18 +24,15 @@ describe('isQualitySampleEligible — pure deny-list matrix (INV-09 / US-10.2)',
   const eligibleArgs = { isFormData: false, retryCount: 0, skip: false };
 
   it.each([
-    // Deny: latency dominated by LLM/STT/TTS compute, not the network.
     ['/chat/sessions/s-1/messages', false],
     ['/api/chat/sessions/s-1/messages', false],
     ['/chat/sessions/s-1/audio', false],
     ['/api/chat/sessions/s-1/audio', false],
     ['/messages/m-1/tts', false],
     ['/api/messages/m-1/tts', false],
-    // Allow: regular API traffic (deny-list, NOT an allow-list — design Q-02).
     ['/museums/42/low-data-pack', true],
     ['/auth/login', true],
     ['/chat/sessions', true],
-    // Patterns are end-anchored: sub-resources of denied paths stay eligible.
     ['/chat/sessions/s-1/messages/m-1/feedback', true],
   ])('isQualitySampleEligible(%s) === %s', (url, expected) => {
     expect(isQualitySampleEligible({ url, ...eligibleArgs })).toBe(expected);

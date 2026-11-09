@@ -1,18 +1,3 @@
-/**
- * RED (T1.8) — `AuditRepositoryPg.listForActor` for the DSAR export (B3, R12,
- * spec Q6). Returns the audit rows where `actor_id = userId` (the data
- * subject's own actions), read-only on the existing `actor_id` column.
- *
- * The repo reads through `this.dataSource`. We provide a fake DataSource whose
- * `getRepository(AuditLog)` exposes BOTH a `find` and a `createQueryBuilder`
- * path backed by the same in-memory rows filtered by `actorId`, so the green
- * author can implement `listForActor` with either API without breaking this
- * test. The assertion is on the RETURNED rows (actor_id === userId), not on the
- * internal query mechanism.
- *
- * FAILS at red baseline: `listForActor` is not implemented (the accessor
- * returns `undefined`), so the first assertion fails.
- */
 import { AuditRepositoryPg } from '@shared/audit/audit.repository.pg';
 
 import { makeAuditLogEntity } from 'tests/helpers/audit/auditLog.fixtures';
@@ -25,11 +10,6 @@ interface FindWhere {
   actorId?: number;
 }
 
-/**
- * Fake DataSource exposing a single audit-logs repository backed by `rows`.
- * Both `find({ where: { actorId } })` and `createQueryBuilder(...).where(...)
- * .getMany()` honour the actorId filter.
- */
 function makeFakeDataSource(rows: AuditLog[]): DataSource {
   const filterByActor = (actorId: number | undefined): AuditLog[] =>
     typeof actorId === 'number' ? rows.filter((r) => r.actorId === actorId) : [...rows];

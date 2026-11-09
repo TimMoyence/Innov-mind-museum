@@ -11,16 +11,6 @@ import {
 import type { AudioPlayer } from 'expo-audio';
 import { isMaestroAudioFixtureEnabled, resolveMaestroAudioFixtureUri } from './maestroAudioFixture';
 
-/**
- * Hook that manages audio recording and playback for chat voice messages.
- * Handles platform-specific logic for both web (MediaRecorder) and native (expo-audio).
- *
- * Test-only seam: when the `EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE` build flag is set
- * (Maestro E2E only — never in production), `startRecording`/`stopRecording`
- * bypass the live `expo-audio` / `MediaRecorder` path and return a bundled
- * pre-recorded clip so the STT → LLM → TTS round-trip is deterministic on a
- * simulator that has no real microphone. See `./maestroAudioFixture.ts`.
- */
 export const useAudioRecorder = () => {
   const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
@@ -31,14 +21,12 @@ export const useAudioRecorder = () => {
   const isRecordingRef = useRef(false);
   const recordedAudioUriRef = useRef<string | null>(null);
   const isPlayingAudioRef = useRef(false);
-  /* eslint-disable react-hooks/refs -- intentional ref sync for stable callbacks */
-  // Keep refs in sync with state
-  isRecordingRef.current = isRecording;
-  recordedAudioUriRef.current = recordedAudioUri;
-  isPlayingAudioRef.current = isPlayingAudio;
-  /* eslint-enable react-hooks/refs */
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+    recordedAudioUriRef.current = recordedAudioUri;
+    isPlayingAudioRef.current = isPlayingAudio;
+  }, [isRecording, recordedAudioUri, isPlayingAudio]);
 
-  // Native recorder from expo-audio
   const nativeRecorder = useExpoRecorder(RecordingPresets.HIGH_QUALITY);
 
   const webMediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -66,7 +54,6 @@ export const useAudioRecorder = () => {
     webMediaStreamRef.current = null;
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopWebAudioStreamTracks();
@@ -83,9 +70,6 @@ export const useAudioRecorder = () => {
   }, [revokeWebAudioObjectUrl, stopWebAudioStreamTracks]);
 
   const startRecording = useCallback(async () => {
-    // Test-only seam (Maestro E2E): never set in production. Flip the recording
-    // state without driving any real capture device; the fixture URI is resolved
-    // on stop. See ./maestroAudioFixture.ts.
     if (isMaestroAudioFixtureEnabled()) {
       revokeWebAudioObjectUrl();
       setRecordedAudioBlob(null);
@@ -97,8 +81,7 @@ export const useAudioRecorder = () => {
     if (Platform.OS === 'web') {
       if (
         typeof navigator === 'undefined' ||
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- web platform check
-        !navigator.mediaDevices?.getUserMedia ||
+        !(navigator.mediaDevices as MediaDevices | undefined)?.getUserMedia ||
         typeof MediaRecorder === 'undefined'
       ) {
         Alert.alert(t('audio.unavailable_title'), t('audio.unavailable_body'));
@@ -116,8 +99,7 @@ export const useAudioRecorder = () => {
       webMediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive data check
-        if (event.data && event.data.size > 0) {
+        if (event.data.size > 0) {
           webAudioChunksRef.current.push(event.data);
         }
       };
@@ -145,10 +127,6 @@ export const useAudioRecorder = () => {
   }, [nativeRecorder, revokeWebAudioObjectUrl, t]);
 
   const stopRecording = useCallback(async () => {
-    // Test-only seam (Maestro E2E): resolve the bundled fixture clip to a
-    // readable file:// URI instead of reading nativeRecorder.uri. The existing
-    // upload path (appendRnFile → multipart → backend STT) then drives the real
-    // round-trip deterministically. See ./maestroAudioFixture.ts.
     if (isMaestroAudioFixtureEnabled()) {
       const fixtureUri = await resolveMaestroAudioFixtureUri();
       setIsRecording(false);
@@ -243,7 +221,6 @@ export const useAudioRecorder = () => {
         return;
       }
 
-      // Unload any previous playback before creating a new one
       if (nativePlayerRef.current) {
         nativePlayerRef.current.remove();
         nativePlayerRef.current = null;

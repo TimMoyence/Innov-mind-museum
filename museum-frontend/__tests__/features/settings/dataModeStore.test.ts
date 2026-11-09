@@ -1,9 +1,3 @@
-/**
- * Tests for `useDataModePreferenceStore.mergeFromServer` (TD-2 Option B 2026-05-15).
- *
- * Hydrates the data-mode preference (`auto` / `low` / `normal`) from
- * `/auth/me`. Invalid enum values are silently ignored (R5 schema tolerance).
- */
 import '@/__tests__/helpers/test-utils';
 
 import { useDataModePreferenceStore } from '@/features/settings/dataModeStore';

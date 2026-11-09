@@ -22,13 +22,9 @@ export interface EmailTokenFlowDict {
 }
 
 interface EmailTokenFlowProps {
-  /** Backend POST endpoint that exchanges `{ token }` for a confirmation response. */
   endpoint: `/api/${string}`;
-  /** Locale segment already validated by the server page, used for the Back-to-Home link. */
   locale: string;
-  /** Localised strings for all four states. */
   dict: EmailTokenFlowDict;
-  /** Deep-link scheme for the "Open App" CTA. Defaults to the Musaium app scheme. */
   appScheme?: string;
 }
 
@@ -60,7 +56,6 @@ function EmailTokenFlowInner({
     };
   }, [token, endpoint]);
 
-  // Move keyboard focus to the outcome heading once the flow resolves.
   useEffect(() => {
     if (status !== 'loading') headingRef.current?.focus();
   }, [status]);
@@ -161,14 +156,6 @@ function EmailTokenFlowInner({
   );
 }
 
-/**
- * Shared UI flow for one-shot token exchange endpoints (email verification,
- * email-change confirmation). Posts `{ token }` to `endpoint` on mount and
- * renders one of four states: loading / success / invalidToken / error.
- *
- * `useSearchParams` requires a Suspense boundary in Next.js 15 — the default
- * export wraps the inner component accordingly.
- */
 export default function EmailTokenFlow(props: EmailTokenFlowProps) {
   return (
     <Suspense>

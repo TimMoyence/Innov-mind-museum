@@ -12,12 +12,6 @@ import type { SendMessageContext, SendResult } from './sendStrategy.types';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 
-/**
- * Direct audio strategy — non-streaming `postAudioMessage` call.
- * Shows an optimistic voice-placeholder, awaits the backend response, updates
- * the placeholder with the transcription text (if any) and appends the
- * assistant reply.
- */
 export const sendMessageAudio = async (
   attempt: { text?: string; audioUri?: string; audioBlob?: Blob },
   context: SendMessageContext,
@@ -41,8 +35,6 @@ export const sendMessageAudio = async (
       locale: context.locale,
       location: context.locationString,
       audioDescriptionMode: context.audioDescriptionMode ? true : undefined,
-      // C9.10 (2026-05-17) — STT inputs always opt into voice-first prompt
-      // (60-80w prose answer) because the response will be TTS-played back.
       voiceMode: true,
       contentPreferences:
         context.contentPreferences.length > 0
@@ -50,8 +42,7 @@ export const sendMessageAudio = async (
           : undefined,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime API data
-    const assistantMetadata = (response.metadata as ChatUiMessageMetadata) ?? null;
+    const assistantMetadata = response.metadata as ChatUiMessageMetadata;
     const assistantMessage: ChatUiMessage = {
       id: response.message.id,
       role: response.message.role,
@@ -65,8 +56,6 @@ export const sendMessageAudio = async (
           : null,
     };
 
-    // EARS-9 — the optimistic user bubble keeps the transcription unconditionally,
-    // even when the assistant reply is dropped as non-renderable below.
     const transcriptionText = assistantMessage.transcription?.text;
     if (transcriptionText) {
       context.setMessages((prev) =>
@@ -76,9 +65,6 @@ export const sendMessageAudio = async (
       );
     }
 
-    // Cycle 5 (D1/D7) — only append the assistant bubble when it has renderable
-    // content (non-blank text OR enriched media). A blank/whitespace/null audio
-    // reply must not add a phantom empty bubble.
     if (isRenderableAssistantContent(assistantMessage.text, assistantMetadata)) {
       context.setMessages((prev) => sortByTime([...prev, assistantMessage]));
     } else {

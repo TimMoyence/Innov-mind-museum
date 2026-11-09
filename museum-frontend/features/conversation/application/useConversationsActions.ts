@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { chatApi } from '@/features/chat';
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 
-/** Manages conversation actions: sort, filter, share, save, delete. */
 export function useConversationsActions() {
   const { t } = useTranslation();
 
@@ -57,15 +56,11 @@ export function useConversationsActions() {
     [toggleSaved, t],
   );
 
-  // ── Delete helpers ────────────────────────────────────────────────────
-
   const deleteSession = useCallback(
     async (sessionId: string) => {
       try {
         await chatApi.deleteSessionIfEmpty(sessionId);
-      } catch {
-        // Best-effort deletion; remove from UI regardless
-      }
+      } catch {}
       removeItems([sessionId]);
     },
     [removeItems],
@@ -90,9 +85,7 @@ export function useConversationsActions() {
       setIsDeleting(true);
       try {
         await Promise.allSettled(ids.map((id) => chatApi.deleteSessionIfEmpty(id)));
-      } catch {
-        // Best-effort
-      }
+      } catch {}
       removeItems(ids);
       setIsDeleting(false);
     },

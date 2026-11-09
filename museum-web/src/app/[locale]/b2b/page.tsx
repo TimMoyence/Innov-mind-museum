@@ -9,7 +9,6 @@ interface B2bPageProps {
   params: Promise<{ locale: string }>;
 }
 
-/** Generates B2B page metadata (title / description / hreflang / OG) from the locale dict. */
 export async function generateMetadata({ params }: B2bPageProps): Promise<Metadata> {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
@@ -21,11 +20,6 @@ export async function generateMetadata({ params }: B2bPageProps): Promise<Metada
   };
 }
 
-/**
- * R4 B2B pitch page (W4.3). Server component, mirrors `[locale]/support/page.tsx`
- * shape: hero → problem → solution → 5 differentiators → pricing tease → contact
- * form. No fabricated pricing numbers (per project doctrine pre-launch).
- */
 export default async function B2bPage({ params }: B2bPageProps) {
   const { locale } = await params;
   const dict = await getDictionary(locale as Locale);
@@ -33,7 +27,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
 
   return (
     <div className="bg-white">
-      {/* Hero */}
       <section
         aria-labelledby="b2b-hero-title"
         className="bg-gradient-to-b from-primary-50 to-white py-16 text-center sm:py-20"
@@ -63,7 +56,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
         </div>
       </section>
 
-      {/* Problem */}
       <section
         aria-labelledby="b2b-problem-title"
         className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16"
@@ -74,7 +66,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
         <p className="mt-4 text-base text-text-secondary sm:text-lg">{b2b.problem.body}</p>
       </section>
 
-      {/* Solution */}
       <section aria-labelledby="b2b-solution-title" className="bg-primary-50/40">
         <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
           <h2 id="b2b-solution-title" className="text-2xl font-bold text-text-primary sm:text-3xl">
@@ -84,7 +75,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
         </div>
       </section>
 
-      {/* Differentiators */}
       <section
         aria-labelledby="b2b-differentiators-title"
         className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16"
@@ -102,7 +92,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
         </ul>
       </section>
 
-      {/* Pricing tease */}
       <section aria-labelledby="b2b-pricing-title" className="bg-primary-50/40">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 sm:py-16">
           <h2 id="b2b-pricing-title" className="text-2xl font-bold text-text-primary sm:text-3xl">
@@ -120,7 +109,6 @@ export default async function B2bPage({ params }: B2bPageProps) {
         </div>
       </section>
 
-      {/* Contact form */}
       <section
         id="contact"
         aria-labelledby="b2b-contact-title"

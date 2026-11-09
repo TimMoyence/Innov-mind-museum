@@ -10,15 +10,10 @@ import { storage } from '@/shared/infrastructure/storage';
 import { migrateStorageKey } from '@/shared/infrastructure/migrateStorageKey';
 import { applyRTLLayout, needsRTLReload } from '@/shared/i18n/rtl';
 
-let onLanguageChangeCb: ((lang: string) => void) | null = null;
+const LANGUAGE_KEY = 'musaium.runtime.defaultLocale';
 
-/**
- * Registers a callback invoked whenever the user changes the app language.
- * Used to persist the locale preference without coupling shared → features.
- * @param fn - Callback receiving the new language code, or `null` to unregister.
- */
-export const setOnLanguageChange = (fn: ((lang: string) => void) | null): void => {
-  onLanguageChangeCb = fn;
+const persistLanguage = (lang: SupportedLocale): void => {
+  void storage.setItem(LANGUAGE_KEY, lang);
 };
 
 interface I18nContextValue {
@@ -28,9 +23,7 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue>({
   language: 'en',
-  setLanguage: () => {
-    /* noop */
-  },
+  setLanguage: () => undefined,
 });
 
 export const useI18n = () => useContext(I18nContext);
@@ -41,9 +34,7 @@ function detectDeviceLanguage(): SupportedLocale {
     if (locales.length > 0 && locales[0].languageCode) {
       return toSupportedLocale(locales[0].languageCode);
     }
-  } catch {
-    // Fallback silently
-  }
+  } catch {}
   return 'en';
 }
 
@@ -51,32 +42,25 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguageState] = useState<SupportedLocale>('en');
 
   useEffect(() => {
-    // Read the raw stored value — null means "user never chose a language".
-    // Migrate the legacy locale key forward once before reading (TD-AS-01).
-    // Idempotent + no-overwrite, so this is order-safe vs runtimeSettings'
-    // migration of the same key.
-    migrateStorageKey('musaium.runtime.defaultLocale', 'runtime.defaultLocale')
-      .then(() => storage.getItem('musaium.runtime.defaultLocale'))
+    migrateStorageKey(LANGUAGE_KEY, 'runtime.defaultLocale')
+      .then(() => storage.getItem(LANGUAGE_KEY))
       .then((stored) => {
         const lang = stored ? toSupportedLocale(stored) : detectDeviceLanguage();
         setLanguageState(lang);
         void i18n.changeLanguage(lang);
         setHttpLocale(lang);
-        // Persist device-detected language so runtimeSettings stays in sync
         if (!stored) {
-          onLanguageChangeCb?.(lang);
+          persistLanguage(lang);
         }
       })
-      .catch(() => {
-        /* noop */
-      });
+      .catch(() => undefined);
   }, []);
 
   const setLanguage = useCallback(
     (lang: SupportedLocale) => {
       const currentLang = language;
       if (needsRTLReload(currentLang, lang)) {
-        onLanguageChangeCb?.(lang);
+        persistLanguage(lang);
         applyRTLLayout(lang);
         void (async () => {
           try {
@@ -84,10 +68,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
               await Updates.reloadAsync();
               return;
             }
-          } catch {
-            // reloadAsync unavailable (dev/bare workflow) — fall through
-          }
-          // Fallback: apply language without full reload
+          } catch {}
           setLanguageState(lang);
           void i18n.changeLanguage(lang);
           setHttpLocale(lang);
@@ -97,7 +78,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       setLanguageState(lang);
       void i18n.changeLanguage(lang);
       setHttpLocale(lang);
-      onLanguageChangeCb?.(lang);
+      persistLanguage(lang);
     },
     [language],
   );

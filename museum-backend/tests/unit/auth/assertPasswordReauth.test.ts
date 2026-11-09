@@ -1,31 +1,3 @@
-/**
- * UFR-022 red phase — PR-9 assertPasswordReauth helper.
- * RUN_ID: 2026-05-23-pr-9-assertPasswordReauth.
- *
- * Behavioural test of the new shared re-authentication helper introduced to
- * deduplicate the load + social-only-guard + bcrypt.compare(currentPassword)
- * triplet currently inlined in:
- *   - changePassword.useCase.ts (lines 22-34)
- *   - changeEmail.useCase.ts   (lines 28-40)
- *   - disableMfa.useCase.ts    (lines 20-37)
- *
- * Spec/Design sources of truth (read-only inputs to this phase):
- *   .claude/skills/team/team-state/2026-05-23-pr-9-assertPasswordReauth/spec.md §5 (FR-1..FR-6)
- *                                                                              §6.2 (error matrix)
- *                                                                              §7.4 (AC-14, AC-15)
- *   .claude/skills/team/team-state/2026-05-23-pr-9-assertPasswordReauth/design.md §2 (helper shape)
- *                                                                                §4.1 (T-U1..T-U5 matrix)
- *
- * Pre-green expectation: this file FAILS with
- *   `Cannot find module '@modules/auth/useCase/shared/assertPasswordReauth'`
- * because the helper does not yet exist on disk.
- *
- * Post-green expectation: all 5 cases pass (helper implements the matrix).
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * `red-test-manifest.json`. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>`, do NOT touch.
- */
 import bcrypt from 'bcrypt';
 
 import { assertPasswordReauth } from '@modules/auth/useCase/shared/assertPasswordReauth';
@@ -75,7 +47,6 @@ describe('assertPasswordReauth', () => {
       statusCode: 400,
       code: 'SOCIAL_ONLY_ACCOUNT',
     });
-    // FR-2 fast-fail: helper MUST NOT call bcrypt.compare for social-only users.
     expect(bcrypt.compare).not.toHaveBeenCalled();
   });
 

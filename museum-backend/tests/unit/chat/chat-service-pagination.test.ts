@@ -49,7 +49,6 @@ describe('chat service pagination', () => {
           USER,
         );
       }
-      // 3 user + 3 assistant = 6 messages
       const result = await service.getSession(session.id, { limit: 2 }, USER);
       expect(result.page.hasMore).toBe(true);
       expect(result.messages.length).toBe(2);

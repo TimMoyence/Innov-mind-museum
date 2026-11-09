@@ -12,10 +12,6 @@ export class RevokeConsentUseCase {
     private readonly auditSink?: ConsentAuditSink,
   ) {}
 
-  /**
-   * Emits `AUDIT_CONSENT_REVOKED_*` only when a row was effectively revoked.
-   * Idempotent no-op when no active grant exists.
-   */
   async execute(userId: number, scope: string, auditContext?: ConsentAuditContext): Promise<void> {
     if (!isConsentScope(scope)) {
       throw invalidInput(`Unknown consent scope: ${scope}`);

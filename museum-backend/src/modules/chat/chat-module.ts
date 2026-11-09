@@ -1,5 +1,3 @@
-/* eslint-disable max-lines -- JUSTIFIED: composition root for the chat module. The previous split across 6 files (chat-module.ts + compare-wiring + knowledge-router-wiring + wikidata-wiring + singleton + wiring.ts, 922L total) existed only to game ESLint max-lines:400; the inline docblocks of those files admitted as much. Reunifying restores ordering invariants in one place. Cf docs/audit-cleanup-2026-05-12/PROMPT_C.md#C.10 */
-
 import { OpenAiAudioTranscriber } from '@modules/chat/adapters/secondary/audio/audio-transcriber.openai';
 import {
   OpenAiTextToSpeechService,
@@ -69,6 +67,7 @@ import { WebSearchService } from '@modules/chat/useCase/web-search/web-search.se
 import { KnowledgeExtractionModule } from '@modules/knowledge-extraction/index';
 import { auditService } from '@shared/audit';
 import { NoopCacheService } from '@shared/cache/noop-cache.service';
+import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
 import { env } from '@src/config/env';
@@ -100,11 +99,6 @@ import type { DataSource } from 'typeorm';
 export interface BuiltChatModule {
   chatService: ChatService;
   imageStorage: ImageStorage;
-  /**
-   * GDPR erasure (B1) — the active audio storage, exposed so the auth deletion
-   * proxy can `deleteByRef` the user's TTS audio. `undefined` when no S3 backend
-   * is configured (local dev / tests with the local stub still resolves one).
-   */
   audioStorage: AudioStorage | undefined;
   repository: TypeOrmChatRepository;
   ocrService: OcrService;
@@ -117,34 +111,13 @@ export interface BuiltChatModule {
     ownerId: number | undefined,
   ) => Promise<{ museumId: number | null }>;
   knowledgeRouter?: KnowledgeRouterPort;
-  /**
-   * GDPR Art. 22 + AI Act Art. 14 — read-only use-case for
-   * `GET /api/chat/messages/:id/explanation`. See `docs/GDPR_ART22_SCOPE.md`.
-   */
   getMessageExplanationUseCase: GetMessageExplanationUseCase;
-  /**
-   * W3 (T5.3) — patch `current_artwork_id` / `current_room` on a session.
-   * Consumed by `PATCH /api/chat/sessions/:id/context`.
-   */
   updateSessionContextUseCase: UpdateSessionContextUseCase;
 }
-
-// Wikidata stack — composition (outer → inner):
-//   WikidataWriteThroughProvider  ← C5.3 fire-and-forget UPSERT into dump
-//     └─ WikidataBreakerClient    ← C5.1 opossum CB + null fallback
-//          └─ WikidataClient      ← raw HTTP / SPARQL
-// Both KnowledgeBaseService AND KnowledgeRouterService share the same kbProvider
-// reference so breaker state + dump write-through are shared. Pre-launch V1
-// doctrine: no `*_ENABLED` flag, rollback = `git revert` of the wiring.
 
 interface WikidataStack {
   readonly kbProvider: KnowledgeBaseProvider;
   readonly knowledgeBase: KnowledgeBaseService;
-  /**
-   * TD-OP-01 — the concrete breaker, lifted out of the local scope so the
-   * composition root can dispose its opossum rolling-stats timer at graceful
-   * shutdown (`stopWikidataBreaker()`).
-   */
   readonly wikidataBreaker: WikidataBreakerClient;
 }
 
@@ -167,15 +140,6 @@ function buildWikidataStack(dataSource: DataSource, cache?: CacheService): Wikid
   return { kbProvider, knowledgeBase, wikidataBreaker };
 }
 
-// C4.1 KnowledgeRouterService cascade: KB → LLM judge → WebSearch. Per-leg
-// budgets sourced from `env.knowledgeRouter.*` — TUNING-ONLY (D11 / pre-launch
-// V1), NO `*_ENABLED` switch.
-
-// C9.7 — judge takes a raw ChatModel (detached path), not the full orchestrator.
-// C9.13 (2026-05-18) — APPEND-AFTER: KnowledgeRouter now also injects the
-// cross-encoder reranker. V1 production default `env.rerank.provider='null'`
-// selects `NullRerankerAdapter` which always throws → KR's rerank phase
-// fails-open to baseline ordering. Zero behavior change in V1.
 function buildKnowledgeRouter(
   kbProvider: KnowledgeBaseProvider,
   wsProvider: WebSearchProvider,
@@ -195,9 +159,6 @@ function buildKnowledgeRouter(
     },
   });
 }
-
-// C3 Visual Similarity — composition root for `POST /chat/compare`.
-// See `compare.use-case.ts` for the orchestration contract.
 
 function buildCompareImageProcessor(
   imageStorage: ImageStorage,
@@ -221,9 +182,6 @@ function buildCompareImageProcessor(
         },
         input.sessionId,
         input.ownerId,
-        // Compare only needs the EXIF-stripped buffer to encode; it discards the
-        // imageRef. Skip the S3 upload so a misconfigured/unavailable object
-        // store never 500s /chat/compare (prod incident 2026-06-14 — S3 403).
         { skipStorage: true },
       );
       const orchImage = processed.orchestratorImage;
@@ -267,10 +225,6 @@ function buildCompareImageUseCase(
     cache: cacheBackend,
   });
 
-  // C9.13 (2026-05-18) — VisualSimilarityService gains a `reranker` dep. V1
-  // production default `env.rerank.provider='null'` selects the no-op adapter,
-  // so behavior is unchanged. The factory is invoked here (not memoized
-  // outside) because the buildCompareImageUseCase scope is per-boot.
   const rerankerAdapter = createRerankerAdapter(env);
 
   const visualSimilarityService = new VisualSimilarityService({
@@ -300,39 +254,23 @@ function buildCompareSessionAccessVerifier(
   repository: TypeOrmChatRepository,
 ): (sessionId: string, ownerId: number | undefined) => Promise<{ museumId: number | null }> {
   return async (sessionId, ownerId) => {
-    // `ensureSessionAccess` already runs the UUID + lookup + ownership
-    // invariants; returning the loaded session lets us forward its tenant
-    // scope to the route without a second round-trip (OWASP LLM08).
     const session = await ensureSessionAccess(sessionId, repository, ownerId);
     return { museumId: session.museumId ?? null };
   };
 }
 
-/**
- * Encapsulates the chat module dependency graph and lifecycle.
- * Call {@link build} to wire dependencies; access via {@link getBuilt}.
- */
 export class ChatModule {
   private _built: BuiltChatModule | undefined;
   private _orchestrator: LangChainChatOrchestrator | undefined;
-  /**
-   * Scalability primitives (perennial design §11). Cost breaker is
-   * process-scoped (in-memory rolling window).
-   */
   private _llmCostCircuitBreaker: LlmCostCircuitBreaker | undefined;
   private _artKeywordsRefreshTimer: ReturnType<typeof setInterval> | undefined;
   private _knowledgeExtractionClose: (() => Promise<void>) | undefined;
-  /**
-   * TD-OP-01 — concrete Wikidata breaker reference retained so the opossum
-   * rolling-stats timer is released at graceful shutdown (open-handle hygiene).
-   */
   private _wikidataBreaker: WikidataBreakerClient | undefined;
 
   isBuilt(): boolean {
     return this._built !== undefined;
   }
 
-  /** @throws {Error} if {@link build} hasn't been called. */
   getBuilt(): BuiltChatModule {
     if (!this._built) {
       throw new Error('ChatModule.build() must be called before accessing services');
@@ -346,7 +284,6 @@ export class ChatModule {
     return this._orchestrator?.getCircuitBreakerState();
   }
 
-  /** Perennial §11 D9. */
   getLlmCostCircuitBreaker(): LlmCostCircuitBreaker | undefined {
     return this._llmCostCircuitBreaker;
   }
@@ -362,12 +299,6 @@ export class ChatModule {
     await this._knowledgeExtractionClose?.();
   }
 
-  /**
-   * TD-OP-01 — disposes the Wikidata circuit breaker (releases the opossum
-   * rolling-stats `setInterval`). Idempotent at the breaker level; a no-op when
-   * the module was never built. Called from the `index.ts` graceful-shutdown
-   * drain via `safeTeardown`.
-   */
   stopWikidataBreaker(): void {
     this._wikidataBreaker?.dispose();
   }
@@ -419,7 +350,6 @@ export class ChatModule {
     return new LocalAudioStorage();
   }
 
-  /** Always active in V1. */
   private buildUserMemory(
     dataSource: DataSource,
     cache?: CacheService,
@@ -452,15 +382,6 @@ export class ChatModule {
     return new KnowledgeExtractionModule().build(dataSource);
   }
 
-  /**
-   * Shared with `KnowledgeRouterService` (T3.3).
-   * Fallback chain is additive on env-key presence (UFR-015 — no feature flag):
-   *   Tavily → Brave → Google CSE → SearXNG → DuckDuckGo
-   * Each provider is pushed iff its env predicate holds (Google needs BOTH key
-   * and engine id `cx`; SearXNG needs a non-empty operator-vetted instance list);
-   * DuckDuckGo is keyless and always pushed last as the free tail. The C9.15
-   * retirement (2026-05-17, "Tavily + Brave only") was reversed 2026-06-13.
-   */
   private buildWebSearch(cache?: CacheService): {
     service: WebSearchService;
     provider: WebSearchProvider;
@@ -485,7 +406,6 @@ export class ChatModule {
     if (searxngInstances.length > 0) {
       providers.push(new SearxngClient(searxngInstances));
     }
-    // DuckDuckGo Instant Answer — keyless, always-on free tail of the chain.
     providers.push(new DuckDuckGoClient());
 
     logger.info('web_search_providers_configured', {
@@ -520,7 +440,7 @@ export class ChatModule {
         }
       } catch (error) {
         logger.warn('art_keywords_refresh_failed', {
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         });
       }
     };
@@ -540,7 +460,6 @@ export class ChatModule {
     return { dynamicArtKeywords, onArtKeywordDiscovered };
   }
 
-  // eslint-disable-next-line max-lines-per-function -- Justification: composition root that intentionally wires every dependency in one place; ordering invariants documented inline (artKeyword → orchestrator → guardrail-budget → userMemory). Approved-by: tim@2026-05-05
   build(
     dataSource: DataSource,
     cache?: CacheService,
@@ -550,26 +469,17 @@ export class ChatModule {
     const audioStorage = this.buildAudioStorage();
     const repository = new TypeOrmChatRepository(dataSource);
 
-    // Scalability primitives (perennial design §11, 100k clients prep).
-    // Cost breaker = singleton because its rolling window MUST be shared by
-    // every LLM call site (per-callsite breaker would miss system-wide spikes).
-    // Tenant rate limiter singleton for the same fairness reason.
-    // Built BEFORE the orchestrator AND the audio adapters so it can be
-    // injected as a dep (C9.4 text path + M1 W5-C3 voice path).
     this._llmCostCircuitBreaker = new LlmCostCircuitBreaker({
       hourlyThresholdCents: env.guardrails.costCircuitBreaker.hourlyThresholdCents,
       dailyBudgetCents: env.guardrails.costCircuitBreaker.dailyBudgetCents,
       openDurationMs: env.guardrails.costCircuitBreaker.openDurationMs,
     });
 
-    // M1 W5-C3 — feed the SAME singleton into the TTS adapter so voice spend is
-    // observed by the global spike/daily breaker (AC8).
     const tts = env.llm.openAiApiKey
       ? new OpenAiTextToSpeechService(this._llmCostCircuitBreaker)
       : new DisabledTextToSpeechService();
     const ocr = new TesseractOcrService();
     const { kbProvider, knowledgeBase, wikidataBreaker } = buildWikidataStack(dataSource, cache);
-    // TD-OP-01 — retain for graceful-shutdown disposal of the opossum timer.
     this._wikidataBreaker = wikidataBreaker;
     const imageEnrichment = this.buildImageEnrichment();
     const { service: webSearch, provider: wsProvider } = this.buildWebSearch(cache);
@@ -577,8 +487,6 @@ export class ChatModule {
     const artKeywordRepo = new TypeOrmArtKeywordRepository(dataSource);
     this.buildArtKeywordRefresh(artKeywordRepo);
 
-    // C9.7 — share a single ChatModel handle: orchestrator uses it for sections,
-    // judge uses it directly via withStructuredOutput (detached path).
     const llmModel = toModel();
     const orchestrator = new LangChainChatOrchestrator({
       model: llmModel,
@@ -587,15 +495,7 @@ export class ChatModule {
     this._orchestrator = orchestrator;
     const effectiveOrchestrator: ChatOrchestrator = orchestrator;
     configureGuardrailBudget({ cache });
-    // Hybrid-gravity guardrail (2026-06-01) — wire the friction store on the
-    // SAME shared CacheService as the budget / llm-cache. Backend selection is
-    // read dynamically from `GUARDRAIL_FRICTION_BACKEND` (redis in prod). The
-    // injected `frictionStore` is a thin adapter over the module-level
-    // functional API so it shares the very instance configured here.
     configureGuardrailFriction({ cache });
-    // D2 (2026-06-01) — Idempotency-Key dedup on the SAME shared CacheService
-    // as the budget / friction / llm-cache. A CacheService present → Redis
-    // adapter (cross-instance dedup); absent → in-process. FAIL-OPEN.
     configureIdempotency({ cache });
     const frictionStore: IGuardrailFrictionStore = {
       recordStrike: frictionRecordStrike,
@@ -610,10 +510,6 @@ export class ChatModule {
       ? new LocationResolver(museumRepository, cache)
       : undefined;
     const locationConsentChecker = buildLocationConsentChecker();
-    // GDPR Art. 7 — gates text + image LLM dispatch on the granular
-    // `third_party_ai_<text|image>_<provider>` scopes (cluster A R2/R3).
-    // Same lazy-import pattern as `buildLocationConsentChecker` (avoids the
-    // chat ↔ auth init cycle at boot — see `third-party-ai-consent-checker.ts:48-51`).
     const thirdPartyAiConsentChecker = buildThirdPartyAiConsentChecker();
 
     const knowledgeExtraction = this.buildKnowledgeExtraction(dataSource);
@@ -648,7 +544,6 @@ export class ChatModule {
       frictionStore,
     });
 
-
     const compareImageUseCase = buildCompareImageUseCase(
       repository,
       dataSource,
@@ -658,14 +553,11 @@ export class ChatModule {
     );
     const compareSessionAccessVerifier = buildCompareSessionAccessVerifier(repository);
 
-    // GDPR Art. 22 + AI Act Art. 14 — right-to-explanation. TypeORM-backed
-    // audit correlator returns `auditRef` linking to the hash-chained audit row.
     const getMessageExplanationUseCase = new GetMessageExplanationUseCase({
       repository,
       auditCorrelator: new TypeOrmAuditCorrelator(dataSource),
     });
 
-    // W3 (T5.3) — Composed last so it captures the repo we just constructed.
     const updateSessionContextUseCase = new UpdateSessionContextUseCase(repository);
 
     const built: BuiltChatModule = {
@@ -687,17 +579,11 @@ export class ChatModule {
     return built;
   }
 
-  /**
-   * Extracted from build() to keep the orchestration flow (storage → caches →
-   * orchestrator → service) scannable without tripping max-lines-per-function.
-   */
   private buildChatService(deps: {
     repository: TypeOrmChatRepository;
     effectiveOrchestrator: ChatOrchestrator;
-    /** C9.7 — raw ChatModel used by the detached LLM-judge path. */
     judgeModel: ChatModel | null;
     imageStorage: LocalImageStorage | S3CompatibleImageStorage;
-    /** Built once in {@link build} and shared so the GDPR proxy + chat pipeline use one instance. */
     audioStorage: AudioStorage | undefined;
     tts: OpenAiTextToSpeechService | DisabledTextToSpeechService;
     cache?: CacheService;
@@ -712,9 +598,7 @@ export class ChatModule {
     locationConsentChecker?: LocationConsentChecker;
     thirdPartyAiConsentChecker?: ThirdPartyAiConsentChecker;
     knowledgeExtraction: ReturnType<ChatModule['buildKnowledgeExtraction']>;
-    /** W3 (T5.4) — passed-through into the message pipeline for [CURRENT ARTWORK]. */
     artworkKnowledgeRepo?: ArtworkKnowledgeRepoPort;
-    /** Hybrid-gravity (2026-06-01) — 2-level friction counter store (design §5). */
     frictionStore: IGuardrailFrictionStore;
   }): ChatService {
     return new ChatService({
@@ -722,7 +606,6 @@ export class ChatModule {
       orchestrator: deps.effectiveOrchestrator,
       imageStorage: deps.imageStorage,
       imageProcessor: new SharpImageProcessor(),
-      // M1 W5-C3 — same singleton breaker as the TTS adapter + orchestrator (AC8).
       audioTranscriber: new OpenAiAudioTranscriber(this._llmCostCircuitBreaker),
       audioStorage: deps.audioStorage,
       tts: deps.tts,
@@ -734,13 +617,8 @@ export class ChatModule {
       knowledgeRouter: deps.knowledgeRouter,
       imageEnrichment: deps.imageEnrichment,
       webSearch: deps.webSearch,
-      // C9.9 (2026-05-18) — OUTPUT O3 art-topic classifier retired.
-      // Share ONE adapter — local `metrics()` counters + breaker reference
-      // would diverge across instances.
       llmJudgeEnabled: env.guardrails.budgetCentsPerDay > 0,
       frictionStore: deps.frictionStore,
-      // TD-20 (R13c) — forward the optional `{tier, requestId}` scope (museumId
-      // honestly absent on this path, D5) into the judge generation.
       llmJudge: async (message: string, scope?) =>
         await judgeWithLlm(message, {
           model: deps.judgeModel ?? undefined,
@@ -759,10 +637,6 @@ export class ChatModule {
   }
 }
 
-/**
- * GDPR consent checker that gates location propagation to the third-party LLM.
- * Lazy-imports auth to avoid a circular init between chat and auth at boot.
- */
 function buildLocationConsentChecker(): LocationConsentChecker {
   return {
     async isGranted(
@@ -775,30 +649,20 @@ function buildLocationConsentChecker(): LocationConsentChecker {
   };
 }
 
-/**
- * Active chat module. Defaults to a fresh singleton on import so call sites
- * work, but `setActiveChatModule()` lets `createApp()` + tests substitute.
- */
 let active: ChatModule = new ChatModule();
 
 export const getActiveChatModule = (): ChatModule => active;
 
-/** Call at boot inside `createApp()` or in tests. */
 export const setActiveChatModule = (next: ChatModule): void => {
   active = next;
 };
 
-/** For test teardown. */
 export const resetActiveChatModule = (): void => {
   active = new ChatModule();
 };
 
-// Runtime accessors for lazy access at request time (api.router.ts, auth
-// callbacks). For lifecycle management use the main barrel (`@modules/chat`).
-
 export const getImageStorage = (): ImageStorage => getActiveChatModule().getBuilt().imageStorage;
 
-/** GDPR erasure (B1) — active audio storage for the auth deletion proxy. */
 export const getAudioStorage = (): AudioStorage | undefined =>
   getActiveChatModule().getBuilt().audioStorage;
 
@@ -816,11 +680,6 @@ export const getArtKeywordRepository = (): ArtKeywordRepository | undefined =>
 export const getLlmCircuitBreakerState = (): ReturnType<ChatModule['getLlmCircuitBreakerState']> =>
   getActiveChatModule().getLlmCircuitBreakerState();
 
-/**
- * Consumed by `/api/health/deep` (Phase 1 semantic probe). Undefined when
- * module not built OR `GUARDRAILS_V2_LLM_GUARD_URL` unset — both collapse to
- * "no semantic probe available" → empty `checks.guardrails` array.
- */
 export const getArtworkKnowledgeRepo = (): ArtworkKnowledgeRepoPort | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().artworkKnowledgeRepo
@@ -837,19 +696,11 @@ export const getCompareSessionAccessVerifier =
       ? getActiveChatModule().getBuilt().compareSessionAccessVerifier
       : undefined;
 
-/**
- * GDPR Art. 22 + AI Act Art. 14 — `GET /api/chat/messages/:id/explanation`.
- * Undefined when module not built — mount the endpoint conditionally.
- */
 export const getMessageExplanationUseCase = (): GetMessageExplanationUseCase | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().getMessageExplanationUseCase
     : undefined;
 
-/**
- * W3 (T5.3) — `PATCH /api/chat/sessions/:id/context`. Undefined when module
- * not built — mount the endpoint conditionally.
- */
 export const getUpdateSessionContextUseCase = (): UpdateSessionContextUseCase | undefined =>
   getActiveChatModule().isBuilt()
     ? getActiveChatModule().getBuilt().updateSessionContextUseCase

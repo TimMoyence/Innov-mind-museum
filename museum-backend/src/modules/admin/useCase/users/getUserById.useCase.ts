@@ -7,7 +7,6 @@ interface GetUserByIdInput {
   userId: number;
 }
 
-/** Includes soft-deleted rows (admin detail page). */
 export class GetUserByIdUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 

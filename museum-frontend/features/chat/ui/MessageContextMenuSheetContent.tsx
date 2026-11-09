@@ -23,13 +23,6 @@ interface MessageContextMenuSheetContentProps {
   onReport?: (messageId: string) => void;
 }
 
-/**
- * Bottom-sheet content for the long-press message action menu. Mounted by
- * `<BottomSheetRouter>` when route `context-menu` is active. Mirrors the
- * previous `<MessageContextMenu>` modal layout (handle bar, action rows,
- * cancel) with the `<Modal>` wrapper stripped — the router now owns the
- * surface, animation, and backdrop.
- */
 export const MessageContextMenuSheetContent = ({
   message,
   close,

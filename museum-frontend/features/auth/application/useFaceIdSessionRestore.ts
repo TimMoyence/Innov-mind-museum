@@ -7,42 +7,12 @@ import { authSessionService } from '@/features/auth/infrastructure/authSessionSe
 import { useBiometricAuth } from './useBiometricAuth';
 
 interface UseFaceIdSessionRestoreResult {
-  /** True once the precondition checks have completed (refresh token + pref). */
   isReady: boolean;
-  /**
-   * True when there's a stored refresh token AND biometric is enabled AND
-   * the device supports biometric. Drives whether the auth screen renders
-   * the "Continue with Face ID" affordance.
-   */
   canRestore: boolean;
-  /** Human-readable label of the device's biometric kind ("Face ID", "Touch ID", …). */
   biometricLabel: string;
-  /**
-   * Prompts the OS biometric dialog and, on success, runs the silent refresh
-   * to re-establish the session. Returns true iff both steps succeed.
-   */
   restore: () => Promise<boolean>;
 }
 
-/**
- * F11-mobile (2026-05) — auth-screen Face ID affordance.
- *
- * The bootstrap path in {@link AuthContext} already auto-restores a session
- * when a refresh token is present, but in some edge cases (the user lands on
- * the auth screen with a stored refresh token still around) we want to give
- * them a one-tap "Continue with Face ID" option instead of forcing a full
- * password / Google round-trip.
- *
- * The hook composes three primitives:
- *   1. {@link useBiometricAuth} — OS biometric availability + prompt.
- *   2. {@link authStorage.getRefreshToken} — local store presence check.
- *   3. {@link getBiometricEnabled} — user preference flag.
- *
- * `canRestore` is true only when all three line up. The `restore()` action
- * gates an `authSessionService.refresh()` call behind a successful biometric
- * prompt (C1 hexagonal 2026-05-23 — application layer no longer reaches into
- * the shared transport primitive directly).
- */
 export const useFaceIdSessionRestore = (): UseFaceIdSessionRestoreResult => {
   const biometric = useBiometricAuth();
   const [hasStoredRefreshToken, setHasStoredRefreshToken] = useState(false);

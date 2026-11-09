@@ -1,15 +1,3 @@
-/**
- * P3.3 — Mobile transport security shape tests.
- *
- * Asserts that the Expo config produced by `app.config.ts` denies cleartext
- * traffic for non-dev variants and requires Certificate Transparency on iOS
- * production builds. These rules must hold across all 3 variants the EAS
- * build pipeline targets:
- *   - development : LAN backends OK (cleartext allowed, CT off)
- *   - preview     : staging HTTPS, CT off (staging certs may not be CT-logged)
- *   - production  : HTTPS only, CT required
- */
-
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 import appConfig from '../app.config';
 

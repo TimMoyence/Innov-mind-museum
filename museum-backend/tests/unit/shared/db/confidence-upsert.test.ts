@@ -1,46 +1,3 @@
-/**
- * UFR-022 red phase — PR-16 `confidenceUpsert<T>` shared helper.
- * RUN_ID: 2026-05-23-pr-16-confidenceUpsert.
- *
- * Behavioural unit tests for the confidence-based merge helper that PR-16
- * extracts from the two TypeORM repos (B10-#1, ~87 LOC duplicated). The helper
- * is PURE/SYNC: it receives an already-resolved `existing` row + incoming
- * `data` + an explicit options bag, mutates `existing` in place per the
- * confidence branch, and returns it. It does NOT do the find or the save
- * (caller-side, divergent lookup per repo) — see spec §2 + design §1.
- *
- * Scenarios (spec §6 — the helper-pure subset; insert #1 is repo-method scope,
- * covered by the green sweep keeping `repo.create({...data, sourceUrls:[url]})`):
- *   - Higher confidence → overwrite-preserve (id, createdAt, sourceUrls kept).
- *   - Equal confidence (strict `>` ⇒ `==` falls to backfill branch).
- *   - Lower confidence → backfill nulls only (non-null fields untouched).
- *   - sourceUrls dedup-append (immutable spread, order preserved).
- *   - needsReview ALWAYS updated (both branches).
- *   - nullableFields explicit: P3 hybrid cols (summary/...) NOT backfilled.
- *   - preserveFields museumId (museum overwrite keeps museumId).
- *
- * Factories: `makeArtworkKnowledge` / `makeMuseumEnrichment` (DRY — Test
- * Discipline doctrine). No inline `as Entity` (R4.4).
- *
- * Pre-green: this file FAILS — `@shared/db/confidence-upsert` does not exist
- * yet, so the import does not resolve and the whole suite errors out. That is
- * the intended Red signal (absence of feature, not a buggy test).
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify it. Suspected test bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP (re-spawn red), never
- * edit here.
- *
- * libDocsConsulted: ["typeorm"] — lib-docs/typeorm/PATTERNS.md (§3.1 Data-Mapper
- * `repo.save(entity)`, helper mutates a loaded entity then caller persists) +
- * LESSONS.md (no `.set({field: undefined})` — helper uses entity mutation, not
- * `.update`/`.set`, so the silent-skip gotcha does not apply).
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-16-confidenceUpsert/spec.md §2 / §6 / R3
- *   .claude/skills/team/team-state/2026-05-23-pr-16-confidenceUpsert/design.md §1 / §2
- *   .claude/skills/team/team-state/2026-05-23-pr-16-confidenceUpsert/tasks.md T1 / T4
- */
 import { confidenceUpsert } from '@shared/db/confidence-upsert';
 
 import { ArtworkKnowledge } from '@modules/knowledge-extraction/domain/artwork-knowledge/artwork-knowledge.entity';
@@ -51,9 +8,6 @@ import {
   makeMuseumEnrichment,
 } from '../../../helpers/knowledge-extraction/extraction.fixtures';
 
-// Option bags mirroring the two real call-sites (design §3). Declared once so
-// the tests assert the SAME explicit lists the green repos must pass — never a
-// list derived from the entity (spec §2 critical note).
 const ARTWORK_NULLABLE_FIELDS = [
   'artist',
   'period',
@@ -74,14 +28,6 @@ const MUSEUM_NULLABLE_FIELDS = [
 ] as const;
 const MUSEUM_PRESERVE_FIELDS = ['id', 'museumId', 'sourceUrls', 'createdAt'] as const;
 
-/**
- * Builds the `data` payload from an entity factory, stripping the fields the
- * caller's `Omit<...>` excludes so the test object matches the real call-site
- * shape (no `id`/`createdAt`/`updatedAt`; museum also no `museum` relation).
- * The helper only reads business + confidence/needsReview/sourceUrls fields, so
- * the strip keeps the contract honest without inline entity literals (R4.4).
- * @param overrides
- */
 function artworkData(
   overrides?: Partial<ArtworkKnowledge>,
 ): Omit<ArtworkKnowledge, 'id' | 'createdAt' | 'updatedAt'> {
@@ -130,16 +76,11 @@ describe('confidenceUpsert<T> — higher confidence overwrite (R3.1)', () => {
       preserveFields: ARTWORK_PRESERVE_FIELDS,
     });
 
-    // Mutates and returns the same object reference.
     expect(result).toBe(existing);
-    // data overwrites business fields.
     expect(result.artist).toBe('Leonardo da Vinci');
     expect(result.confidence).toBe(0.9);
-    // identity + creation timestamp preserved from existing.
     expect(result.id).toBe('00000000-0000-0000-0000-0000000000aa');
     expect(result.createdAt).toEqual(new Date('2026-01-01T00:00:00Z'));
-    // sourceUrls preserved = the merged existing list (union dedup-append),
-    // NOT the payload's sourceUrls.
     expect(result.sourceUrls).toEqual(['https://existing.example/a', 'https://new.example/source']);
   });
 
@@ -154,7 +95,7 @@ describe('confidenceUpsert<T> — higher confidence overwrite (R3.1)', () => {
     });
     const data = museumData({
       name: 'Louvre Museum',
-      museumId: 999, // higher-confidence payload tries to change it…
+      museumId: 999,
       confidence: 0.95,
     });
 
@@ -165,7 +106,6 @@ describe('confidenceUpsert<T> — higher confidence overwrite (R3.1)', () => {
     });
 
     expect(result.confidence).toBe(0.95);
-    // …but museumId is in preserveFields, so the existing value wins.
     expect(result.museumId).toBe(42);
     expect(result.id).toBe('00000000-0000-0000-0000-0000000000bb');
     expect(result.createdAt).toEqual(new Date('2026-02-02T00:00:00Z'));
@@ -180,9 +120,9 @@ describe('confidenceUpsert<T> — equal confidence falls to backfill branch (R3.
       confidence: 0.7,
     });
     const data = artworkData({
-      artist: 'Replacement Artist', // would win only on strict-greater overwrite
+      artist: 'Replacement Artist',
       period: 'Renaissance',
-      confidence: 0.7, // EQUAL → backfill branch
+      confidence: 0.7,
     });
 
     const result = confidenceUpsert<ArtworkKnowledge>(existing, data, {
@@ -191,9 +131,7 @@ describe('confidenceUpsert<T> — equal confidence falls to backfill branch (R3.
       preserveFields: ARTWORK_PRESERVE_FIELDS,
     });
 
-    // backfill branch: non-null `artist` is NOT overwritten.
     expect(result.artist).toBe('Original Artist');
-    // backfill branch: null `period` IS filled.
     expect(result.period).toBe('Renaissance');
   });
 });
@@ -201,18 +139,16 @@ describe('confidenceUpsert<T> — equal confidence falls to backfill branch (R3.
 describe('confidenceUpsert<T> — lower confidence backfills nulls only (R3.2)', () => {
   it('fills null nullableFields, leaves non-null fields untouched', () => {
     const existing = makeArtworkKnowledge({
-      period: 'Existing Period', // must stay
+      period: 'Existing Period',
       confidence: 0.9,
     });
-    // The factory defaults via `??`, which drops `null` overrides; set the
-    // backfill-target nulls explicitly so `existing` actually holds null.
-    existing.artist = null; // will be backfilled
-    existing.technique = null; // will be backfilled
+    existing.artist = null;
+    existing.technique = null;
     const data = artworkData({
       artist: 'Backfilled Artist',
       period: 'Payload Period (ignored)',
       technique: 'Backfilled Technique',
-      confidence: 0.4, // lower → backfill branch
+      confidence: 0.4,
     });
 
     const result = confidenceUpsert<ArtworkKnowledge>(existing, data, {
@@ -224,7 +160,7 @@ describe('confidenceUpsert<T> — lower confidence backfills nulls only (R3.2)',
     expect(result.artist).toBe('Backfilled Artist');
     expect(result.technique).toBe('Backfilled Technique');
     expect(result.period).toBe('Existing Period');
-    expect(result.confidence).toBe(0.9); // existing confidence untouched
+    expect(result.confidence).toBe(0.9);
   });
 });
 
@@ -235,7 +171,7 @@ describe('confidenceUpsert<T> — sourceUrls dedup-append (R3.4 / R1.5)', () => 
       sourceUrls: original,
       confidence: 0.5,
     });
-    const data = artworkData({ confidence: 0.4 }); // backfill branch, irrelevant to urls
+    const data = artworkData({ confidence: 0.4 });
 
     const result = confidenceUpsert<ArtworkKnowledge>(existing, data, {
       sourceUrl: 'https://c.example/3',
@@ -258,7 +194,7 @@ describe('confidenceUpsert<T> — sourceUrls dedup-append (R3.4 / R1.5)', () => 
     const data = artworkData({ confidence: 0.4 });
 
     const result = confidenceUpsert<ArtworkKnowledge>(existing, data, {
-      sourceUrl: 'https://b.example/2', // already present → dedup
+      sourceUrl: 'https://b.example/2',
       nullableFields: ARTWORK_NULLABLE_FIELDS,
       preserveFields: ARTWORK_PRESERVE_FIELDS,
     });
@@ -301,15 +237,13 @@ describe('confidenceUpsert<T> — nullableFields explicit, P3 hybrid cols exclud
       name: 'Louvre Museum',
       confidence: 0.9,
     });
-    // Factory `??` defaulting drops `null` overrides (and never assigns the P3
-    // hybrid `summary` at all); set both explicitly so the guard is meaningful.
-    existing.summary = null; // nullable BUT not in MUSEUM_NULLABLE_FIELDS
-    existing.website = null; // nullable AND in the backfill list
+    existing.summary = null;
+    existing.website = null;
     const data = museumData({
       name: 'Louvre Museum',
       summary: 'A backfilled summary that must be ignored',
       website: 'https://backfilled.example',
-      confidence: 0.4, // lower → backfill branch
+      confidence: 0.4,
     });
 
     const result = confidenceUpsert<MuseumEnrichment>(existing, data, {
@@ -318,9 +252,7 @@ describe('confidenceUpsert<T> — nullableFields explicit, P3 hybrid cols exclud
       preserveFields: MUSEUM_PRESERVE_FIELDS,
     });
 
-    // P3 hybrid field NOT in nullableFields → stays null.
     expect(result.summary).toBeNull();
-    // field IN nullableFields → backfilled.
     expect(result.website).toBe('https://backfilled.example');
   });
 });

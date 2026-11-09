@@ -2,8 +2,6 @@ import '@/__tests__/helpers/test-utils';
 
 import { makeDashboardSessionCard } from '@/__tests__/helpers/factories';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-
 const mockStorage = new Map<string, string>();
 
 jest.mock('@/shared/infrastructure/storage', () => ({
@@ -29,27 +27,20 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 import { useConversationsStore } from '@/features/conversation/infrastructure/conversationsStore';
 import { storage } from '@/shared/infrastructure/storage';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const resetStore = () => {
   useConversationsStore.setState({
     items: [],
     savedSessionIds: [],
     sortMode: 'recent',
   });
-  // Clear mock storage
   mockStorage.clear();
 };
-
-// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('conversationsStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     resetStore();
   });
-
-  // ── setItems ───────────────────────────────────────────────────────────────
 
   describe('setItems', () => {
     it('replaces the full items list', () => {
@@ -76,8 +67,6 @@ describe('conversationsStore', () => {
     });
   });
 
-  // ── appendItems ────────────────────────────────────────────────────────────
-
   describe('appendItems', () => {
     it('appends items for pagination', () => {
       const firstPage = [makeDashboardSessionCard({ id: 'page1' })];
@@ -99,8 +88,6 @@ describe('conversationsStore', () => {
     });
   });
 
-  // ── clearItems ─────────────────────────────────────────────────────────────
-
   describe('clearItems', () => {
     it('empties the items list', () => {
       useConversationsStore.getState().setItems([makeDashboardSessionCard()]);
@@ -111,8 +98,6 @@ describe('conversationsStore', () => {
       expect(useConversationsStore.getState().items).toHaveLength(0);
     });
   });
-
-  // ── removeItems ────────────────────────────────────────────────────────────
 
   describe('removeItems', () => {
     it('removes specified items from the list', () => {
@@ -148,8 +133,6 @@ describe('conversationsStore', () => {
     });
   });
 
-  // ── toggleSaved ────────────────────────────────────────────────────────────
-
   describe('toggleSaved', () => {
     it('adds session ID to savedSessionIds and returns true', () => {
       const result = useConversationsStore.getState().toggleSaved('sess-1');
@@ -178,8 +161,6 @@ describe('conversationsStore', () => {
     });
   });
 
-  // ── setSortMode ────────────────────────────────────────────────────────────
-
   describe('setSortMode', () => {
     it('switches sort mode to messages', () => {
       useConversationsStore.getState().setSortMode('messages');
@@ -194,8 +175,6 @@ describe('conversationsStore', () => {
       expect(useConversationsStore.getState().sortMode).toBe('recent');
     });
   });
-
-  // ── migrateLegacySavedSessions ─────────────────────────────────────────────
 
   describe('migrateLegacySavedSessions', () => {
     it('imports legacy saved session IDs from storage', async () => {

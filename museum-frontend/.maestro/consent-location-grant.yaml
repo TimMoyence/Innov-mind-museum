@@ -1,131 +1,83 @@
 appId: com.musaium.mobile.preview
 ---
-# screen: AiConsentSheetContent
-#
-# Consent — Location grant happy path (UFR-021 / spec R11 / AC-X-1, B9).
-#
-# Exercises the changed consent surface end-to-end: open chat -> consent sheet
-# -> Manage my choices -> toggle the required Text scope ON + the Location
-# (location_to_llm) scope ON -> Save and continue -> chat reachable. This is the
-# user-facing path that finally lets the visitor's coarse location reach the LLM
-# (the BE consent gate `isGranted(userId, 'location_to_llm')` was previously
-# starved because no FE surface granted the scope).
-#
-# Prerequisites:
-#   - Seeded test account e2e-test-login@test.musaium.dev / TestPassword123!
-#   - Backend running on localhost:3000 with a working LLM provider.
-#   - clearState gives a fresh per-user namespace (no prior consent memo) so the
-#     sheet appears.
-
-# ──────────────────────────────────────────────
-# Phase 0: Launch fresh + log in
-# ──────────────────────────────────────────────
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Bon retour|Welcome back|Pas de compte|Sign up"
+      text: 'Bon retour|Welcome back|Pas de compte|Sign up'
     timeout: 40000
 - extendedWaitUntil:
     visible:
-      id: "analytics-consent-banner"
+      id: 'analytics-consent-banner'
     timeout: 15000
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
 - tapOn:
-    id: "email-input"
-- inputText: "e2e-test-login@test.musaium.dev"
+    id: 'email-input'
+- inputText: 'e2e-test-login@test.musaium.dev'
 - tapOn:
-    id: "password-input"
-- inputText: "TestPassword123!"
+    id: 'password-input'
+- inputText: 'TestPassword123!'
 - hideKeyboard
 - tapOn:
-    id: "auth-submit"
+    id: 'auth-submit'
 - tapOn:
-    text: "Plus tard|Not Now"
+    text: 'Plus tard|Not Now'
     optional: true
 - tapOn:
-    id: "analytics-consent-decline"
+    id: 'analytics-consent-decline'
     optional: true
 - tapOn:
-    text: "Passer|Skip"
+    text: 'Passer|Skip'
     optional: true
 - extendedWaitUntil:
     visible:
-      text: "Votre compagnon de musée|Your museum companion"
+      text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 1: Open the consent sheet via Start Conversation
-# ──────────────────────────────────────────────
-# The home default-conversation CTA sits half-under the bottom tab bar, so its
-# tap lands on the "Musées" tab → nearby-museums directory. Exercise it
-# best-effort, then deterministically start a chat from a museum card → the
-# first-time AI-disclosure consent sheet ("Gérer mes choix") mounts over the
-# chat screen.
-# Navigate straight to the Museums tab (the passing museum-chat-flow does exactly
-# this). The old best-effort "Start a new conversation" tap actually opened a chat
-# on this binary and the AI-disclosure sheet mounted OVER the screen, covering the
-# "Musées" bottom tab so the deterministic tap below failed. The Museums tab is
-# reachable directly from home — no CTA detour needed.
 - tapOn:
-    text: ".*(Musées|Museums).*"
+    text: '.*(Musées|Museums).*'
 - extendedWaitUntil:
     visible:
-      id: "museum-card"
+      id: 'museum-card'
     timeout: 40000
 - tapOn:
-    id: "museum-card"
+    id: 'museum-card'
     index: 0
 - extendedWaitUntil:
     visible:
-      id: "museum-sheet-start-chat"
+      id: 'museum-sheet-start-chat'
     timeout: 40000
 - tapOn:
-    id: "museum-sheet-start-chat"
+    id: 'museum-sheet-start-chat'
 - extendedWaitUntil:
     visible:
-      text: "Gérer mes choix|Manage my choices"
+      text: 'Gérer mes choix|Manage my choices'
     timeout: 40000
 
-# ──────────────────────────────────────────────
-# Phase 2: Manage choices -> reveal the granular switches
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Gérer mes choix|Manage my choices"
+    text: 'Gérer mes choix|Manage my choices'
 - waitForAnimationToEnd
 
-# ──────────────────────────────────────────────
-# Phase 3: Toggle the required Text scope + the Location scope ON
-# ──────────────────────────────────────────────
-# The required text->OpenAI switch must be ON to enable Save (canSave gate).
 - tapOn:
-    id: "consent-switch-third_party_ai_text_openai"
+    id: 'consent-switch-third_party_ai_text_openai'
     optional: true
 
-# The Location (location_to_llm) full-precision switch sits below the OpenAI +
-# Google scope sections — scroll it into view before tapping.
 - scrollUntilVisible:
     element:
-      id: "consent-switch-location_to_llm"
+      id: 'consent-switch-location_to_llm'
     direction: DOWN
     timeout: 20000
     visibilityPercentage: 30
 - tapOn:
-    id: "consent-switch-location_to_llm"
+    id: 'consent-switch-location_to_llm'
 
-# ──────────────────────────────────────────────
-# Phase 4: Save and continue
-# ──────────────────────────────────────────────
 - tapOn:
-    text: "Enregistrer et continuer|Save and continue"
+    text: 'Enregistrer et continuer|Save and continue'
 - waitForAnimationToEnd:
     timeout: 10000
 
-# ──────────────────────────────────────────────
-# Phase 5: Chat is reachable (grant succeeded, sheet dismissed)
-# ──────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      id: "chat-input"
+      id: 'chat-input'
     timeout: 40000

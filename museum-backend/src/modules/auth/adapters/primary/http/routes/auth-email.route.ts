@@ -44,8 +44,6 @@ authEmailRouter.put(
     await auditOwnAccount(req, jwtUser.id, AUDIT_AUTH_EMAIL_CHANGE_REQUEST, { newEmail });
     res.status(200).json({
       message: 'A confirmation email has been sent to the new address.',
-      // SEC-HARDENING (L7): test env only. Leaking in dev (shared staging DBs)
-      // enables account takeover via log inspection.
       ...(env.nodeEnv === 'test' ? { debugToken: token } : {}),
     });
   },

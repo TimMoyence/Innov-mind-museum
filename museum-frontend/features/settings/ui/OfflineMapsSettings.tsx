@@ -12,14 +12,6 @@ import { semantic, space } from '@/shared/ui/tokens';
 
 import { CityPackRow } from './CityPackRow';
 
-/**
- * Settings surface that lists the catalog cities alongside their offline
- * pack status and exposes the auto pre-cache opt-in toggle. Download and
- * delete mutations flow through the `useOfflinePacks` hook; the toggle is
- * persisted via `expo-secure-store`. Geofence auto pre-cache wiring lives
- * in a separate hook (useGeofencePreCache) that consumes the same
- * preference.
- */
 export const OfflineMapsSettings = () => {
   const { theme } = useTheme();
   const { t } = useTranslation();

@@ -55,8 +55,8 @@ describe('HttpWikidataMuseumClient — findMuseumQid', () => {
       jsonResponse({
         results: {
           bindings: [
-            sparqlBinding('Q19675', 'Louvre', 'Point(2.3376 48.8606)'), // Paris
-            sparqlBinding('Q9999', 'Louvre', 'Point(-73.5 45.5)'), // Canada, far
+            sparqlBinding('Q19675', 'Louvre', 'Point(2.3376 48.8606)'),
+            sparqlBinding('Q9999', 'Louvre', 'Point(-73.5 45.5)'),
           ],
         },
       }),
@@ -122,8 +122,6 @@ describe('HttpWikidataMuseumClient — findMuseumQid', () => {
 
     const calledUrl = fetchSpy.mock.calls[0][0] as string;
     const decoded = decodeURIComponent(calledUrl);
-    // Escaped double-quote must appear as \" in the SPARQL literal — no bare
-    // `" }` sequence that could close the rdfs:label string.
     expect(decoded).toContain('\\"');
     expect(decoded).not.toMatch(/rdfs:label "Louvre" \} ; DROP/);
   });
@@ -142,7 +140,6 @@ describe('HttpWikidataMuseumClient — fetchFacts', () => {
   });
 
   it('returns WikidataMuseumFacts with mapped properties (P856, P1329, P18)', async () => {
-    // First call: SPARQL facts; second call: wbgetentities for sitelink title.
     fetchSpy
       .mockResolvedValueOnce(
         jsonResponse({

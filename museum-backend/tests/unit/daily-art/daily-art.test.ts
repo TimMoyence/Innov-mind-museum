@@ -46,13 +46,9 @@ describe('daily-art', () => {
     });
 
     it('cycles through the list deterministically based on day of year', () => {
-      // Day 1 of the year and day 31 should both map to index 1 and index 1
-      // respectively (modulo 30), so day 31 wraps to index 1
       const jan1 = selectArtworkForDate(new Date('2025-01-01'), 'en');
       const jan31 = selectArtworkForDate(new Date('2025-01-31'), 'en');
 
-      // Day-of-year for Jan 1 = 1, Jan 31 = 31
-      // 1 % 30 = 1, 31 % 30 = 1 => same artwork
       expect(jan1.title).toBe(jan31.title);
     });
   });

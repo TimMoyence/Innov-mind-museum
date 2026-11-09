@@ -44,7 +44,7 @@ describe('llm-sections', () => {
     expect(plan[0].prompt).not.toContain('[IMAGE ANALYSIS]');
   });
 
-  it('includes suggestedFollowUp in JSON schema (B3 — singular replaces legacy followUpQuestions)', () => {
+  it('asks for deeperContext and openQuestion, never a follow-up question', () => {
     const plan = createLlmSectionPlan({
       locale: 'en-US',
       museumMode: false,
@@ -52,10 +52,8 @@ describe('llm-sections', () => {
       timeoutSummaryMs: 10000,
     });
 
-    expect(plan[0].prompt).toContain('suggestedFollowUp');
     expect(plan[0].prompt).toContain('deeperContext');
     expect(plan[0].prompt).toContain('openQuestion');
-    // Legacy plural field gone — singularity invariant (B3 NFR13).
     expect(plan[0].prompt).not.toContain('followUpQuestions');
   });
 
@@ -67,22 +65,12 @@ describe('llm-sections', () => {
       timeoutSummaryMs: 10000,
     });
     const prompt = plan[0].prompt;
-    // Quantity tune (1-4 range; 1-2 single-subject; 2-4 multi-subject) —
-    // applies to the structured-output path (the legacy fallback was retired
-    // C9.17). The single-subject cap (≤2) was tightened from the original
-    // "1-4" wording to align with promptfoo c2-enrichment Test 2 (Mona Lisa
-    // expects 1..2 entries).
     expect(prompt).toContain('1-4 short search queries');
     expect(prompt).toContain('single-subject answers');
     expect(prompt).toContain('comparative or multi-subject answers');
     expect(prompt).toContain('2-4 entries');
-    // Structural rationale + caption guidance carried in the prompt (the
-    // structured-output schema enforces the field types; this test asserts
-    // that the behavioural intent — required rationale & caption — is still
-    // expressed in the prompt verbatim).
     expect(prompt).toContain('rationale');
     expect(prompt).toContain('caption');
-    // PII safety guidance for rationale (R12 + GDPR)
     expect(prompt).toContain('Rationale MUST NOT include any visitor PII');
   });
 
@@ -106,12 +94,8 @@ describe('llm-sections', () => {
       guideLevel: 'intermediate',
       timeoutSummaryMs: 10000,
     });
-    // Structured-output path is the default — schema enforces the shape, so
-    // the prompt MUST NOT instruct the model to emit a legacy JSON-tail block.
     expect(plan[0].prompt).not.toContain('[META]');
     expect(plan[0].prompt).not.toContain('"detectedArtwork":{');
-    // But the structured directive that anchors the visitor reply field IS
-    // present.
     expect(plan[0].prompt).toContain('Place your visitor-facing reply in the `text` field');
   });
 
@@ -124,7 +108,6 @@ describe('llm-sections', () => {
     });
 
     expect(plan[0].prompt).toContain('Reply in French.');
-    // Prompts are now English-only with a language directive
     expect(plan[0].prompt).not.toContain('Reponds en francais');
   });
 
@@ -289,25 +272,6 @@ describe('createSummaryFallback — edge cases', () => {
     expect(fallback).not.toContain('You are currently near');
   });
 
-  // -------------------------------------------------------------------------
-  // Cycle 1 (RUN_ID 2026-05-26-chat-pipeline-hardening) — A-04 GPS-leak guard
-  // on the SUMMARY FALLBACK path (text DISPLAYED to the user).
-  //
-  // Bug A-04 (MEDIUM): when the LLM summary section fails/times out,
-  // `createSummaryFallback` interpolates `input.location` verbatim into the
-  // `locationPrefix` ("You are currently near <loc>. "). If `location` is the
-  // raw client GPS string (`"lat:X,lng:Y"`), the user sees their own exact
-  // coordinates. `sanitizePromptInput` does NOT strip them.
-  //
-  // Spec/Design: spec-cycle1.md (REQ-6/7/8, AC-6/7, T7/T8/T10),
-  // design-cycle1.md (chemin fallback résumé F). The non-GPS label case
-  // ("Room 12", T8) above MUST stay green (non-regression, NFR-3).
-  //
-  // Expected status on CURRENT (pre-fix) code:
-  //   - T7  (location = 'lat:48.86,lng:2.33') → FAILS (leaks coords + prefix). Proof of A-04.
-  //   - T10 (location = 'lat:0,lng:0' bounds) → FAILS (parseable coords still leak).
-  // -------------------------------------------------------------------------
-
   it('T7: omits location prefix and never leaks coords when location is a raw GPS string (AC-6, FAILS pre-fix)', () => {
     const fallback = createSummaryFallback({
       history: [makeMessage({ role: 'assistant', text: 'Art details.' })],
@@ -317,9 +281,7 @@ describe('createSummaryFallback — edge cases', () => {
       museumMode: false,
     });
 
-    // No location prefix at all (the coords are not a place label).
     expect(fallback).not.toContain('You are currently near');
-    // And the raw coordinate tokens must never appear in the displayed text.
     expect(fallback).not.toContain('lat:');
     expect(fallback).not.toContain('lng:');
     expect(fallback).not.toContain('48.86');
@@ -340,7 +302,6 @@ describe('createSummaryFallback — edge cases', () => {
     expect(fallback).not.toContain('lng:0');
   });
 
-  // C9.10 (2026-05-17) — voiceMode prompt branch.
   describe('voiceMode (C9.10)', () => {
     it('includes [VOICE_MODE] instruction and 80-word cap when voiceMode=true', () => {
       const plan = createLlmSectionPlan({
@@ -365,7 +326,6 @@ describe('createSummaryFallback — edge cases', () => {
       });
 
       expect(plan[0].prompt).not.toContain('[VOICE_MODE]');
-      // Default non-museum + non-audio mode = 250 word cap.
       expect(plan[0].prompt).toContain('under 250 words');
     });
 
@@ -379,7 +339,6 @@ describe('createSummaryFallback — edge cases', () => {
         voiceMode: true,
       });
 
-      // audioDescriptionMode in museumMode would otherwise be 300w, but voiceMode caps at 80w.
       expect(plan[0].prompt).toContain('under 80 words');
       expect(plan[0].prompt).not.toContain('under 300 words');
     });

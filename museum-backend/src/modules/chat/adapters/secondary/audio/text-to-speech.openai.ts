@@ -1,5 +1,8 @@
+import {
+  chargeFailOpen,
+  type LlmCostCircuitBreaker,
+} from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import { AppError } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
 import {
   ChatPhaseTimer,
   type ChatPhaseErrorType,
@@ -9,7 +12,6 @@ import { env } from '@src/config/env';
 
 import { estimateTtsCostCents } from './voice-cost-pricing';
 
-import type { LlmCostCircuitBreaker } from '@modules/chat/adapters/secondary/llm/llm-cost-circuit-breaker';
 import type { TtsResult, TextToSpeechService } from '@modules/chat/domain/ports/tts.port';
 import type { LlmPathTier } from '@shared/observability/derive-tier';
 
@@ -27,7 +29,6 @@ const requireApiKey = (): string => {
   return apiKey;
 };
 
-/** Wraps timeout/abort → AppError(504). */
 const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise<Response> => {
   try {
     return await fetch('https://api.openai.com/v1/audio/speech', {
@@ -41,8 +42,6 @@ const fetchSpeech = async (apiKey: string, text: string, voice: string): Promise
         input: text,
         voice,
         speed: env.tts.speed,
-        // Opus/OGG container: -40% bandwidth + -50-100ms first-byte vs MP3 (C9.12a
-        // 2026-05-17). Universal mobile support (iOS 14+, Android 5+).
         response_format: 'opus',
       }),
       signal: AbortSignal.timeout(env.llm.timeoutMs),
@@ -76,39 +75,13 @@ const parseSpeechResponse = async (response: Response): Promise<Buffer> => {
   return Buffer.from(arrayBuffer);
 };
 
-
-/** POST https://api.openai.com/v1/audio/speech */
 export class OpenAiTextToSpeechService implements TextToSpeechService {
-  /**
-   * M1 W5-C3 — optional global cost breaker. Nullable so existing tests / dev
-   * paths constructing the adapter without it stay no-op (same contract as the
-   * orchestrator's `deps.costBreaker ?? null`). Observe-only: voice is NEVER
-   * gated on `canAttempt()` (design §D4).
-   */
   private readonly costBreaker: LlmCostCircuitBreaker | null;
 
   constructor(costBreaker?: LlmCostCircuitBreaker | null) {
     this.costBreaker = costBreaker ?? null;
   }
 
-  /**
-   * Fail-open cost charge (mirrors `langchain.orchestrator.ts` `recordSectionCost`).
-   * Sync in-process arithmetic + map write (no I/O); any failure is logged but
-   * NEVER propagates into the synthesis hot path (design §D5/AC5).
-   */
-  private recordVoiceCost(cents: number): void {
-    if (!this.costBreaker) return;
-    try {
-      this.costBreaker.recordCharge(cents);
-    } catch (err) {
-      logger.warn('voice_cost_record_failed', {
-        modality: 'tts',
-        err: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  /** @throws {Error} AppError FEATURE_UNAVAILABLE | UPSTREAM_TTS_ERROR */
   async synthesize(input: {
     text: string;
     voice?: string;
@@ -127,9 +100,12 @@ export class OpenAiTextToSpeechService implements TextToSpeechService {
       const apiKey = requireApiKey();
       const response = await fetchSpeech(apiKey, text, voice);
       const audio = await parseSpeechResponse(response);
-      // M1 W5-C3 — feed the global cost breaker only on billable success, derived
-      // from the (truncated) char count actually sent (design §D1/D3/AC2).
-      this.recordVoiceCost(estimateTtsCostCents(text.length));
+      chargeFailOpen(
+        this.costBreaker,
+        () => estimateTtsCostCents(text.length),
+        'voice_cost_record_failed',
+        { modality: 'tts' },
+      );
       return { audio, contentType: 'audio/ogg' };
     } catch (err) {
       outcome = 'error';
@@ -152,14 +128,14 @@ function classifyTtsError(err: unknown): ChatPhaseErrorType {
   return 'unknown';
 }
 
-/** Always throws — TTS disabled. */
 export class DisabledTextToSpeechService implements TextToSpeechService {
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async synthesize(): Promise<TtsResult> {
-    throw new AppError({
-      message: 'Text-to-speech is not available',
-      statusCode: 501,
-      code: 'FEATURE_UNAVAILABLE',
-    });
+  synthesize(): Promise<TtsResult> {
+    return Promise.reject(
+      new AppError({
+        message: 'Text-to-speech is not available',
+        statusCode: 501,
+        code: 'FEATURE_UNAVAILABLE',
+      }),
+    );
   }
 }

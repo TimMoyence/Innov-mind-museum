@@ -35,18 +35,6 @@ import { LiquidScreen } from '@/shared/ui/LiquidScreen';
 import { pickMuseumBackground } from '@/shared/ui/liquidTheme';
 import { useTheme } from '@/shared/ui/ThemeContext';
 
-/**
- * Orchestrates the authentication screen: toggles between login and
- * registration modes, owns the form state and business handlers, and
- * delegates rendering to the focused sub-components `LoginForm`,
- * `RegisterForm`, and `SocialLoginButtons`.
- *
- * Form binding (ADR-025): react-hook-form + Zod, Controller pattern in the
- * child forms. The root holds `control` + `handleSubmit` + `getValues`; field
- * subscriptions live inside each Controller, so keystrokes do not re-render
- * this orchestrator (TD-RHF-01). Field-level Zod errors surface inline next
- * to each input via `FormInput.error` (TD-RHF-02).
- */
 export default function AuthScreen() {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -65,10 +53,6 @@ export default function AuthScreen() {
   const pendingSessionRef = useRef<Session | null>(null);
   const biometric = useBiometricAuth();
 
-  // Wraps the auth-context loginWithSession so that, on first successful login
-  // when biometrics are available but not enrolled yet, we open the setup
-  // sheet BEFORE flipping isAuthenticated. Otherwise the navigation guard
-  // would unmount the auth screen and the sheet would never display.
   const loginWithSessionWithBiometricPrompt = useCallback(
     async (session: Session): Promise<void> => {
       if (biometric.isAvailable && !biometric.isEnabled) {
@@ -106,10 +90,6 @@ export default function AuthScreen() {
     loginWithSession: loginWithSessionWithBiometricPrompt,
   });
 
-  // F11-mobile (2026-05) — surfaces a "Continue with Face ID" affordance when
-  // a refresh token is still in secure-store and biometric is enabled. The
-  // happy path goes through AuthContext.bootstrap, but this button covers
-  // edge cases where the user lands on auth.tsx with that pair still aligned.
   const faceIdRestore = useFaceIdSessionRestore();
   const handleFaceIdRestore = useCallback(async () => {
     await faceIdRestore.restore();
@@ -150,9 +130,6 @@ export default function AuthScreen() {
   const { handleForgotPassword } = forgot;
   const { handleLogin, handleRegister } = emailPasswordAuth;
 
-  // `handleSubmit` runs the Zod resolver first; the mutation only fires on a
-  // valid form. Invalid submits leave `formState.errors` populated and the
-  // child Controllers surface them inline via `FormInput.error` (TD-RHF-02).
   const onLoginSubmit = useCallback(() => {
     void handleSubmit(() => handleLogin())();
   }, [handleSubmit, handleLogin]);
@@ -306,11 +283,6 @@ interface SocialLoginButtonsGateProps {
   onGooglePress: () => void;
 }
 
-/**
- * Subscribes locally to `gdprAccepted` so toggling GDPR consent in register
- * mode re-renders only this small wrapper, not the whole `AuthScreen`
- * (TD-RHF-01). Social sign-in stays disabled in register mode until consent.
- */
 function SocialLoginButtonsGate({
   control,
   isLogin,

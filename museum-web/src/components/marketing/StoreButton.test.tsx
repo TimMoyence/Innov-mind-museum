@@ -18,22 +18,14 @@ describe('StoreButton', () => {
   });
 
   it('renders Google Play store button', () => {
-    render(
-      <StoreButton
-        store="google"
-        label="Google Play"
-        subLabel="Get it on"
-      />,
-    );
+    render(<StoreButton store="google" label="Google Play" subLabel="Get it on" />);
 
     expect(screen.getByText('Google Play')).toBeInTheDocument();
     expect(screen.getByText('Get it on')).toBeInTheDocument();
   });
 
   it('uses href="#" by default', () => {
-    render(
-      <StoreButton store="apple" label="App Store" subLabel="Download" />,
-    );
+    render(<StoreButton store="apple" label="App Store" subLabel="Download" />);
 
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '#');
@@ -41,12 +33,7 @@ describe('StoreButton', () => {
 
   it('sets href when provided', () => {
     render(
-      <StoreButton
-        store="google"
-        label="Play"
-        subLabel="Get"
-        href="https://play.google.com"
-      />,
+      <StoreButton store="google" label="Play" subLabel="Get" href="https://play.google.com" />,
     );
 
     const link = screen.getByRole('link');
@@ -54,14 +41,7 @@ describe('StoreButton', () => {
   });
 
   it('renders a non-interactive role="link" with aria-disabled when disabled', () => {
-    render(
-      <StoreButton
-        store="google"
-        label="Google Play"
-        subLabel="Coming soon"
-        disabled
-      />,
-    );
+    render(<StoreButton store="google" label="Google Play" subLabel="Coming soon" disabled />);
 
     const node = screen.getByRole('link');
     expect(node).toHaveAttribute('aria-disabled', 'true');

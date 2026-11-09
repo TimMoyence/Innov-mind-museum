@@ -18,7 +18,6 @@ export const grantConsentSchema = z.object({
   version: z.string().min(1).max(32),
 });
 
-/** GDPR Art.7 consent. All authenticated roles may manage their own consents. */
 const consentRouter: Router = Router();
 
 consentRouter.post(

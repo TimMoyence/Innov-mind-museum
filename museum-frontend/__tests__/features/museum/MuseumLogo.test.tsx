@@ -1,25 +1,3 @@
-/**
- * RED-3 — `MuseumLogo` component (C4 co-branding, run 2026-05-26-kr-product).
- *
- * Phase: RED (UFR-022). MUST FAIL — `features/museum/ui/MuseumLogo` does not
- * exist yet.
- *
- * Asserts (spec-c4 R8/R9/R5):
- *   - valid HTTPS logoUrl → renders an `expo-image` <Image> with
- *     `source.uri === logoUrl`, `accessibilityRole === 'image'` and an
- *     `accessibilityLabel` derived from the museum name;
- *   - firing the <Image> `onError` → flips to the no-logo fallback
- *     (`testID="museum-logo-fallback"`, a `business` Ionicon), no crash;
- *   - absent/empty logoUrl → fallback rendered immediately, NO <Image>.
- *
- * lib-docs consulted: expo-image/PATTERNS.md:8,46 (Image, contentFit, onError,
- * accessibilityLabel), react-native/PATTERNS.md §7 (a11y role/label on images).
- *
- * No emoji (PNG / Ionicons only). Logo = expo-image; fallback = Ionicon.
- */
-
-// Local i18n mock that interpolates {{name}} so the a11y label can be asserted
-// against the museum name (the global test-utils mock returns the raw key).
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: { name?: string }) => (opts?.name ? `${opts.name} logo` : key),

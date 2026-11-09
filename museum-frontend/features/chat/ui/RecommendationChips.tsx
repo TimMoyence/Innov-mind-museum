@@ -1,18 +1,17 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
+import { HorizontalStrip } from '@/shared/ui/HorizontalStrip';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
 interface RecommendationChipsProps {
   recommendations: string[];
   onPress: (text: string) => void;
-  /** When true, all chips are disabled (e.g. during an active send). */
   disabled?: boolean;
 }
 
-/** Renders a horizontal scrollable row of recommendation chips that the user can tap to populate the input. */
 export const RecommendationChips = ({
   recommendations,
   onPress,
@@ -27,11 +26,7 @@ export const RecommendationChips = ({
       <Text style={[styles.sectionLabel, { color: theme.placeholderText }]}>
         {t('recommendationChips.section_label')}
       </Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.container}
-      >
+      <HorizontalStrip contentContainerStyle={styles.container}>
         {recommendations.map((recommendation) => (
           <Pressable
             key={recommendation}
@@ -54,7 +49,7 @@ export const RecommendationChips = ({
             </Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </HorizontalStrip>
     </View>
   );
 };
@@ -70,6 +65,7 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: space['1'],
     gap: semantic.chat.gap,
+    alignItems: 'flex-start',
   },
   chip: {
     flexDirection: 'row',
@@ -85,6 +81,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   chipText: {
+    flexShrink: 1,
     fontSize: semantic.form.labelSize,
     fontWeight: '500',
   },

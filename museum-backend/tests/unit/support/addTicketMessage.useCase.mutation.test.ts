@@ -1,19 +1,3 @@
-/**
- * Mutation-coverage tests for AddTicketMessageUseCase.
- *
- * Targets 3 Stryker survivors in
- * `src/modules/support/useCase/ticket-user/addTicketMessage.useCase.ts`:
- *  - L21:37 EqualityOperator `text.length > 2000` → `text.length >= 2000`
- *  - L22 StringLiteral (badRequest message body) → ""
- *  - L30 StringLiteral (notFound message body)   → ""
- *
- * Strategy:
- *  - Exercise the exact boundary length (2000) so the `>=` mutant flips
- *    behaviour at the edge (rejects what the original accepts).
- *  - Assert the *exact* error message text on both the badRequest and
- *    notFound paths to kill the StringLiteral → "" mutants.
- */
-
 import { AddTicketMessageUseCase } from '@modules/support/useCase/ticket-user/addTicketMessage.useCase';
 import { InMemorySupportRepository } from 'tests/helpers/support/inMemorySupportRepository';
 import { makeTicket } from 'tests/helpers/support/ticket.fixtures';

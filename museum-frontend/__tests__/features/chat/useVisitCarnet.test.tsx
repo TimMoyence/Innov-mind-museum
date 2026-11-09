@@ -1,34 +1,6 @@
-/**
- * Red tests for B1 — `useVisitCarnet` hook (visit notebook list data layer :
- * fetch + filter empty + group by museum + sort + telemetry).
- *
- * Asserts the contract documented in `docs/chat-ux-refonte/specs/B1.md` :
- *
- *   §1.1 (R1-R10) — hook shape + fetch + filter + group + sort + error path.
- *   §1.6 (R34) — carnet_list_viewed_total counter on first non-empty render.
- *   §4 (AC1-AC7, AC14) — invariants for groups, empty state, error state.
- *
- * Key invariants :
- *   - Hook returns `{ isLoading, error, groups, refresh }`.
- *   - Calls `chatApi.listSessions({ limit: 50 })` exactly once on mount.
- *   - Filters out sessions with `messageCount === 0`.
- *   - Groups by `museumId` first, then `museumName`, else `unknown`.
- *   - Sorts groups by max(updatedAt) DESC ; sessions within DESC by updatedAt.
- *   - On API throw : `error: string`, `groups: []`, NO throw to caller.
- *   - `refresh()` re-fires the API call.
- *
- * At baseline (B1 not yet implemented) :
- *   - `@/features/chat/application/useVisitCarnet` does NOT exist
- *     (verified : `ls museum-frontend/features/chat/application/useVisitCarnet*` → 0).
- *     → Jest fails with "Cannot find module" at module load time.
- *
- * Spec : `docs/chat-ux-refonte/specs/B1.md` §1.1 R1-R10 ; §1.6 R34 ; §4 AC1-AC7, AC14.
- */
-
 import '../../helpers/test-utils';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-// ── chatApi.listSessions mock — drives BE response ─────────────────────────
 const mockListSessions = jest.fn<Promise<unknown>, [unknown]>();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -37,26 +9,14 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
   },
 }));
 
-// ── Runtime settings — locale ──────────────────────────────────────────────
-jest.mock('@/features/settings/infrastructure/runtimeSettingsStore', () => ({
-  useRuntimeSettingsStore: Object.assign(() => ({ defaultLocale: 'en-US' }), {
-    getState: () => ({ defaultLocale: 'en-US' }),
-  }),
-}));
-
-// ── Telemetry counter spy — drives AC14 ────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- jest.fn typing requires explicit return slot. Approved-by: green-code-agent-2026-05-15-B1-001
-const mockIncrement = jest.fn<void, [string]>();
+const mockIncrement = jest.fn<undefined, [string]>();
 jest.mock('@/features/chat/application/phase-telemetry', () => ({
   incrementCounter: (name: string) => {
     mockIncrement(name);
   },
 }));
 
-// RED ASSERTION — module DOES NOT EXIST at baseline.
 import { useVisitCarnet } from '@/features/chat/application/useVisitCarnet';
-
-// ── helpers ────────────────────────────────────────────────────────────────
 
 function makeSessionListItem(
   overrides: Partial<{
@@ -75,9 +35,6 @@ function makeSessionListItem(
   }> = {},
 ) {
   const now = Date.now();
-  // Spread overrides AFTER defaults so explicit `null` overrides reach the SUT —
-  // `?? 12` would silently swallow the `museumId: null` cases that exercise the
-  // museumName-fallback branch (R3).
   return {
     id: 'sess-default',
     museumMode: true,
@@ -109,9 +66,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     jest.clearAllMocks();
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R10 — hook shape
-  // ────────────────────────────────────────────────────────────────────────
   describe('hook shape (R10)', () => {
     it('returns { isLoading, error, groups, refresh } as documented', () => {
       mockListSessions.mockResolvedValue(listResponse([]));
@@ -128,9 +82,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R1 / §4 AC2 — fetch contract
-  // ────────────────────────────────────────────────────────────────────────
   describe('fetch (R1)', () => {
     it('calls chatApi.listSessions exactly once on mount with limit=50', async () => {
       mockListSessions.mockResolvedValue(listResponse([]));
@@ -151,9 +102,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R2 / §4 AC2 — empty filter
-  // ────────────────────────────────────────────────────────────────────────
   describe('filter empty sessions (R2, AC2)', () => {
     it('filters out sessions with messageCount === 0', async () => {
       mockListSessions.mockResolvedValue(
@@ -174,12 +122,8 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R3-R4 / §4 AC1 — group + sort
-  // ────────────────────────────────────────────────────────────────────────
   describe('grouping and sorting (R3, R4, AC1)', () => {
     it('groups by museumId then museumName, sorts groups by max(updatedAt) DESC', async () => {
-      // s3 (Orsay, 22 apr) > s1 (Louvre, 21 apr) > s2 (Louvre, 20 apr) > s4 (Unknown, 19 apr)
       mockListSessions.mockResolvedValue(
         listResponse([
           makeSessionListItem({
@@ -215,16 +159,13 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
       });
 
       const groups = result.current.groups;
-      // 3 groups : Orsay, Louvre, Unknown — Orsay first
       expect(groups.length).toBe(3);
       expect(groups[0]?.museumKey).toBe('museumId:14');
       expect(groups[0]?.sessions.map((s) => s.id)).toEqual(['s3']);
 
-      // Louvre second, sessions DESC inside
       expect(groups[1]?.museumKey).toBe('museumId:12');
       expect(groups[1]?.sessions.map((s) => s.id)).toEqual(['s1', 's2']);
 
-      // Unknown last
       expect(groups[2]?.museumKey).toBe('unknown');
       expect(groups[2]?.sessions.map((s) => s.id)).toEqual(['s4']);
     });
@@ -258,9 +199,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R7 / §4 AC6 — error path
-  // ────────────────────────────────────────────────────────────────────────
   describe('error path (R7, AC6)', () => {
     it('exposes error: string and groups: [] when API throws', async () => {
       mockListSessions.mockRejectedValueOnce(new Error('Network down'));
@@ -280,9 +218,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.1 R10 — refresh
-  // ────────────────────────────────────────────────────────────────────────
   describe('refresh() (R10)', () => {
     it('refresh() re-fires chatApi.listSessions', async () => {
       mockListSessions.mockResolvedValue(listResponse([]));
@@ -299,9 +234,6 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
     });
   });
 
-  // ────────────────────────────────────────────────────────────────────────
-  // §1.6 R34 / §4 AC14 — telemetry
-  // ────────────────────────────────────────────────────────────────────────
   describe('telemetry (R34, AC14)', () => {
     it('increments carnet_list_viewed_total when groups becomes non-empty', async () => {
       mockListSessions.mockResolvedValue(listResponse([makeSessionListItem({ id: 's1' })]));

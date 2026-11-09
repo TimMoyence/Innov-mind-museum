@@ -73,7 +73,6 @@ describeE2E('api e2e (express + postgres container)', () => {
         }),
       }),
     );
-    // E2E env has no SMTP — bypass verification email so login succeeds.
     await markEmailVerified(harness, email);
 
     const login = await request('/api/auth/login', {
@@ -214,8 +213,6 @@ describeE2E('api e2e (express + postgres container)', () => {
     expect(createSession.status).toBe(201);
     const sessionId = (createSession.body as { session: { id: string } }).session.id;
 
-    // Grant third_party_ai_audio_openai (B6/B7) — without this, POST /audio
-    // is gated 403 by the consent checker wired in chat-media.route.ts.
     const grant = await request(
       '/api/auth/consent',
       {

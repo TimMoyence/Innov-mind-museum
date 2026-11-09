@@ -1,41 +1,12 @@
-/**
- * UFR-022 red phase — PR-13 `ThreeStateCircuit<TStrategy>` primitive unit tests.
- * RUN_ID: 2026-05-23-pr-13-threeStateCircuit.
- *
- * Tests the generic 3-state FSM primitive in ISOLATION using a local mock
- * `CircuitTripStrategy`. The primitive does NOT exist yet — these tests fail
- * with a `Cannot find module '@shared/circuit-breaker/three-state-circuit'`
- * compile/resolve error pre-green (counts as RED).
- *
- * Pre-green failure mode: module not found.
- * Post-green expected: 9 cases pass (see design.md §6.1).
- *
- * Spec sources of truth:
- *   .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/spec.md §7 R1 / §8 NFR-1..6
- *   .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/design.md §3.1 / §3.3 / §3.4 / §3.5
- *   .claude/skills/team/team-state/2026-05-23-pr-13-threeStateCircuit/tasks.md T1 / T7.a
- *
- * Frozen-test discipline (UFR-022): this file is sha256-hashed in
- * red-test-manifest.json. Green phase MUST NOT modify it. Suspected bug →
- * emit `BLOCK-TEST-WRONG <file>:<line> <reason>` and STOP.
- */
 import {
   ThreeStateCircuit,
   type CircuitState,
   type CircuitTripStrategy,
 } from '@shared/circuit-breaker/three-state-circuit';
 
-/**
- * Minimal in-test trip strategy. Drives `shouldTrip` via a public boolean flag
- * controlled by the test. Counts `reset()` / `pruneExpired()` invocations so
- * tests can assert the primitive's delegate calls.
- */
 class MockTripStrategy implements CircuitTripStrategy {
   public tripFlag = false;
   public resetCount = 0;
-  // W1-C1 RED (run 2026-05-26-kr-domains): probe-success must call the new
-  // transient-only reset, NOT the full `reset()`. Counted separately so the
-  // primitive's delegate choice is asserted exactly.
   public resetTransientCount = 0;
   public pruneCount = 0;
   public lastShouldTripNow: number | null = null;
@@ -60,10 +31,6 @@ class MockTripStrategy implements CircuitTripStrategy {
   }
 }
 
-/**
- * Mutable virtual clock helper for deterministic tests (no jest fake timers).
- * @param start
- */
 function makeClock(start = 1_700_000_000_000): {
   now: () => number;
   advance: (ms: number) => void;
@@ -112,25 +79,15 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     expect(circuit.state).toBe('OPEN');
 
     clock.advance(29_999);
-    expect(circuit.state).toBe('OPEN'); // not yet elapsed
+    expect(circuit.state).toBe('OPEN');
 
     clock.advance(2);
-    expect(circuit.state).toBe('HALF_OPEN'); // lazy transition
+    expect(circuit.state).toBe('HALF_OPEN');
     expect(events).toContainEqual(['HALF_OPEN', 'OPEN']);
     expect(circuit.halfOpenedAt).toBe(clock.now());
   });
 
   it('HALF_OPEN + success → CLOSED, strategy.resetTransient called (NOT reset), onStateChange fired', () => {
-    // W1-C1 RED (run 2026-05-26-kr-domains): on probe success the primitive must
-    // call `strategy.resetTransient()` — clearing only the transient spike window
-    // — NOT the full `strategy.reset()`, which would wipe durable accumulators
-    // (the daily cost cap in CostTripStrategy). Asserting the delegate choice here
-    // keeps the cost-money invariant (AC-C1.1) at the primitive boundary.
-    //
-    // RED failure mode at be758ab56: `MockTripStrategy.resetTransient` does not
-    // satisfy the (not-yet-extended) interface AND the primitive still calls
-    // `reset()` on success → `resetTransientCount` stays 0 while `resetCount`
-    // increments. The assertions below invert that → FAIL. Counts as RED.
     const strategy = new MockTripStrategy();
     const clock = makeClock();
     const events: [CircuitState, CircuitState][] = [];
@@ -152,7 +109,6 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     circuit.recordOutcome('success');
 
     expect(circuit.state).toBe('CLOSED');
-    // Probe success → transient-only reset, full reset NOT invoked.
     expect(strategy.resetTransientCount).toBe(resetTransientBefore + 1);
     expect(strategy.resetCount).toBe(resetBefore);
     expect(events).toContainEqual(['CLOSED', 'HALF_OPEN']);
@@ -178,7 +134,6 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     circuit.recordOutcome('failure');
 
     expect(circuit.state).toBe('OPEN');
-    // Re-trip event from HALF_OPEN
     expect(events.slice(eventsBefore)).toContainEqual(['OPEN', 'HALF_OPEN']);
   });
 
@@ -243,11 +198,10 @@ describe('ThreeStateCircuit<TStrategy> — primitive 3-state FSM', () => {
     expect(events.slice(eventsBefore)).toContainEqual(['CLOSED', 'OPEN']);
     expect(strategy.resetCount).toBe(resetBefore + 1);
 
-    // Second reset from CLOSED → strategy.reset still called, no new onStateChange event.
     const eventsBefore2 = events.length;
     const resetBefore2 = strategy.resetCount;
     circuit.reset();
-    expect(events.length).toBe(eventsBefore2); // no new event
+    expect(events.length).toBe(eventsBefore2);
     expect(strategy.resetCount).toBe(resetBefore2 + 1);
   });
 

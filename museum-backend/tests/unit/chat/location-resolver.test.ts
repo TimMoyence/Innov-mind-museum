@@ -4,12 +4,10 @@ import * as nominatimClient from '@shared/http/nominatim.client';
 import { makeMuseum, makeMuseumRepo } from '../../helpers/museum/museum.fixtures';
 import { makeCache } from '../../helpers/chat/cache.fixtures';
 
-// Suppress logger output during tests
 jest.mock('@shared/logger/logger', () => ({
   logger: { warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-// Mock the reverse geocoder
 jest.mock('@shared/http/nominatim.client', () => ({
   ...jest.requireActual('@shared/http/nominatim.client'),
   reverseGeocodeWithNominatim: jest.fn(),
@@ -28,10 +26,11 @@ describe('LocationResolver', () => {
   describe('isInsideMuseum = true (< 200m)', () => {
     it('returns isInsideMuseum=true when nearest museum is within 200m', async () => {
       const repo = makeMuseumRepo({
-        findAll: jest.fn().mockResolvedValue([
-          // Museum very close (~11m away)
-          makeMuseum({ id: 1, name: 'Louvre', latitude: 48.8607, longitude: 2.3376 }),
-        ]),
+        findAll: jest
+          .fn()
+          .mockResolvedValue([
+            makeMuseum({ id: 1, name: 'Louvre', latitude: 48.8607, longitude: 2.3376 }),
+          ]),
       });
       const resolver = new LocationResolver(repo);
 
@@ -74,7 +73,7 @@ describe('LocationResolver', () => {
 
       expect(cache.set).toHaveBeenCalledTimes(1);
       const [, , ttl] = cache.set.mock.calls[0];
-      expect(ttl).toBe(20 * 60); // 20 minutes
+      expect(ttl).toBe(20 * 60);
     });
 
     it('returns cached result on cache hit', async () => {
@@ -100,10 +99,11 @@ describe('LocationResolver', () => {
   describe('isInsideMuseum = false (> 200m)', () => {
     it('calls reverse geocode when outside museum range', async () => {
       const repo = makeMuseumRepo({
-        findAll: jest.fn().mockResolvedValue([
-          // Museum ~5km away
-          makeMuseum({ id: 1, name: 'Far Museum', latitude: 48.9, longitude: 2.4 }),
-        ]),
+        findAll: jest
+          .fn()
+          .mockResolvedValue([
+            makeMuseum({ id: 1, name: 'Far Museum', latitude: 48.9, longitude: 2.4 }),
+          ]),
       });
       mockedReverseGeocode.mockResolvedValue({
         displayName: 'Rue de Rivoli, Paris, France',
@@ -127,12 +127,6 @@ describe('LocationResolver', () => {
     });
 
     it('caches outside-museum reverse geocodes via the injected cached client, keyed on rounded coordinates', async () => {
-      // The LocationResolver MUST NOT hit Nominatim live on every message
-      // when outside a museum — per OSMF policy, reverse-geocode results
-      // must be cached client-side. We verify by injecting an explicit
-      // cached reverse-geocode fn and asserting it was called with the raw
-      // coordinates (the cache layer itself owns the rounded-key logic and
-      // is tested separately in `tests/unit/shared/nominatim-cached-client.test.ts`).
       const repo = makeMuseumRepo({
         findAll: jest
           .fn()
@@ -149,14 +143,8 @@ describe('LocationResolver', () => {
 
       await resolver.resolve(48.8606, 2.3376);
 
-      // The injected cached client was called with the raw coords.
       expect(cachedReverseGeocode).toHaveBeenCalledWith(48.8606, 2.3376);
-      // The raw (uncached) Nominatim client must NOT have been called —
-      // the cached wrapper is the single point of external contact.
       expect(mockedReverseGeocode).not.toHaveBeenCalled();
-      // And the top-level `geo:resolve:` cache is intentionally left alone
-      // for outside-museum cases (nearby-museum distances depend on exact
-      // coordinates; only the external Nominatim call is worth memoising).
       expect(cache.set).not.toHaveBeenCalled();
     });
 
@@ -215,7 +203,6 @@ describe('LocationResolver', () => {
 
       const result = await resolver.resolve(48.8606, 2.3376);
 
-      // name === road, so road is skipped to avoid duplication
       expect(result.reverseGeocode).toBe('Rue de Rivoli, Paris, France');
     });
   });

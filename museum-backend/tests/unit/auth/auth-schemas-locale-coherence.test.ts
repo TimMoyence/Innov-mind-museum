@@ -5,16 +5,6 @@ import {
 } from '@modules/auth/adapters/primary/http/schemas/auth.schemas';
 import { SUPPORTED_LOCALES } from '@shared/i18n/locale';
 
-// P0-5 — `SUPPORTED_LOCALES` diverges across apps. The mobile (FE) app ships
-// 8 user locales including 'ar' (see museum-frontend/shared/config/supportedLocales.ts),
-// but the BE Zod auth schemas hard-code `z.enum(['fr', 'en'])` on the three
-// user-facing locale fields. An Arabic-speaking visitor who signs up, requests
-// a password reset, or changes their email therefore receives an HTTP 400
-// silently. The BE `SUPPORTED_LOCALES` itself only has 7 entries (no 'ar').
-//
-// We hard-code the expected FE set inline rather than importing it: museum-backend
-// and museum-frontend live under separate tsconfigs and the FE module path is
-// not reachable from the BE jest config.
 const FE_SUPPORTED_LOCALES = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ar'] as const;
 
 describe('P0-5 — auth locale enums coherence', () => {
@@ -29,8 +19,6 @@ describe('P0-5 — auth locale enums coherence', () => {
       const result = registerSchema.safeParse({
         email: 'test@example.com',
         password: 'password123',
-        // A2: dateOfBirth is now required (CNIL age gate). This test's intent is
-        // locale coherence, so we supply a valid adult DOB to reach a clean parse.
         dateOfBirth: '1990-06-13',
         locale,
       });

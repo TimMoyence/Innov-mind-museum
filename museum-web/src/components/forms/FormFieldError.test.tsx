@@ -2,12 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { FormFieldError } from './FormFieldError';
 
-// ---------------------------------------------------------------------------
-// RED phase — UFR-022 / RUN_ID 2026-05-23-web-refactor-p1
-// These tests fail until museum-web/src/components/forms/FormFieldError.tsx is created.
-// Spec U-R18.1..U-R18.5 + design §1.5.
-// ---------------------------------------------------------------------------
-
 describe('FormFieldError', () => {
   it('renders null when error is undefined (U-R18.3)', () => {
     const { container } = render(<FormFieldError />);
@@ -45,8 +39,6 @@ describe('FormFieldError', () => {
     render(<FormFieldError error="Boom" className="custom-only" />);
     const node = screen.getByRole('alert');
     expect(node.className).toContain('custom-only');
-    // When the caller supplies a className override, the default is not applied
-    // (design §1.5 default-OR-override semantic).
     expect(node.className).not.toContain('text-red-700');
   });
 });

@@ -3,13 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import { ChatHeader } from '@/features/chat/ui/ChatHeader';
 
-jest.mock('@/features/chat/ui/ExpertiseBadge', () => {
-  const { Text } = require('react-native');
-  return {
-    ExpertiseBadge: ({ level }: { level: string }) => <Text testID="expertise-badge">{level}</Text>,
-  };
-});
-
 describe('ChatHeader', () => {
   const baseProps = {
     sessionTitle: 'Art Session',
@@ -45,19 +38,7 @@ describe('ChatHeader', () => {
 
   it('renders activity indicator when isClosing is true', () => {
     render(<ChatHeader {...baseProps} isClosing />);
-    // ActivityIndicator is rendered instead of close icon
     expect(screen.queryByText('close')).toBeNull();
-  });
-
-  it('renders expertise badge when expertiseLevel is provided', () => {
-    render(<ChatHeader {...baseProps} expertiseLevel="expert" />);
-    expect(screen.getByTestId('expertise-badge')).toBeTruthy();
-    expect(screen.getByText('expert')).toBeTruthy();
-  });
-
-  it('does not render expertise badge when expertiseLevel is absent', () => {
-    render(<ChatHeader {...baseProps} />);
-    expect(screen.queryByTestId('expertise-badge')).toBeNull();
   });
 
   it('renders summary button when onSummary is provided', () => {

@@ -45,7 +45,6 @@ describe('requestLoggerMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(logger.info).not.toHaveBeenCalled();
 
-    // Simulate response finish
     finishHandler?.();
 
     expect(logger.info).toHaveBeenCalledWith(

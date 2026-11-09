@@ -22,12 +22,6 @@ interface InAppBrowserSheetContentProps {
   close: () => void;
 }
 
-/**
- * Bottom-sheet content (full-screen presentation, non-blocking) for the
- * in-app browser. Mounted by `<BottomSheetRouter>` for the `browser` route.
- * Replaces the previous `<InAppBrowser>` modal — the WebView remains
- * full-screen and the URL allowlist behaviour is preserved.
- */
 export const InAppBrowserSheetContent = ({ url, close }: InAppBrowserSheetContentProps) => {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -140,9 +134,6 @@ export const InAppBrowserSheetContent = ({ url, close }: InAppBrowserSheetConten
           setCurrentUrl(nav.url);
         }}
         onShouldStartLoadWithRequest={(request) => {
-          // Scheme allowlist: only http/https in the WebView. Hand off
-          // mailto:/tel: to the system handler; block javascript:/file:/data:
-          // and any other scheme to prevent in-page navigation hijacks.
           const next = request.url;
           if (next.startsWith('http://') || next.startsWith('https://')) return true;
           if (next.startsWith('mailto:') || next.startsWith('tel:')) {
@@ -161,7 +152,6 @@ export const InAppBrowserSheetContent = ({ url, close }: InAppBrowserSheetConten
   );
 };
 
-/** Returns the hostname or the original string if URL parsing fails. */
 function safeHostFromUrl(url: string): string {
   try {
     return new URL(url).hostname;

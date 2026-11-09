@@ -1,24 +1,3 @@
-/**
- * T2.1 (RED — Cycle B « Aucun lead perdu » — UFR-022 fresh-context red phase).
- *
- * Pins the persistence contract of `LeadRepositoryPg` against a REAL Postgres
- * (integration-harness testcontainer), so the SQL behaviour — column shapes,
- * partial indexes, atomic `attempts++`, `DELETE … RETURNING` rowCount — is what
- * is exercised, not a hand-rolled fake.
- *
- * RED reason at baseline: the adapter
- * `src/modules/leads/adapters/secondary/pg/lead.repository.pg.ts` does NOT exist
- * yet (green phase T2.2 adds it). The import below fails to resolve → the suite
- * errors → exit ≠ 0. Foundations (entity, migration, port, factory) DO exist, so
- * the failure is precisely "no adapter impl", not a type/scaffolding gap.
- *
- * Maps: R2, R3, R8, R9, R10, R11, R15, R20.
- *
- * Test discipline (CLAUDE.md §Test Discipline) — rows are created via the
- * repo's own `insertPending()` path + `makeLeadInput()` factory; no inline
- * entity literals. Teardown via `harness.scheduleStop()` (not `.stop()`) per
- * `feedback_integration_test_teardown`.
- */
 import { LeadRepositoryPg } from '@modules/leads/adapters/secondary/pg/lead.repository.pg';
 import {
   createIntegrationHarness,
@@ -36,7 +15,6 @@ const shouldRunIntegration = process.env.RUN_INTEGRATION === 'true';
 const describeIntegration = shouldRunIntegration ? describe : describe.skip;
 
 describeIntegration('LeadRepositoryPg — persistence contract [integration, real PG]', () => {
-
   let harness: IntegrationHarness;
   let repo: LeadRepositoryPg;
   let leadRepo: Repository<Lead>;
@@ -123,7 +101,6 @@ describeIntegration('LeadRepositoryPg — persistence contract [integration, rea
 
     it('does NOT select a lead at attempts >= maxAttempts (R10 terminal state)', async () => {
       const lead = await repo.insertPending(makeLeadInput({ type: 'beta' }));
-      // Drive attempts up to the cap of 2.
       await repo.markFailed(lead.id, 'e1');
       await repo.markFailed(lead.id, 'e2');
 
@@ -150,7 +127,6 @@ describeIntegration('LeadRepositoryPg — persistence contract [integration, rea
       expect(found).not.toBeNull();
       expect(found?.dedupKey).toBe(activeKey);
 
-      // A failed lead with a distinct key must NOT be treated as active.
       const failedKey = 'b2b|other@museum.fr|other';
       const failedLead = await repo.insertPending(
         makeLeadInput({ type: 'b2b', dedupKey: failedKey }),
@@ -171,7 +147,6 @@ describeIntegration('LeadRepositoryPg — persistence contract [integration, rea
     it('hard-deletes delivered leads older than cutoff, keeps pending/failed', async () => {
       const delivered = await repo.insertPending(makeLeadInput({ type: 'beta' }));
       await repo.markDelivered(delivered.id);
-      // Backdate the delivered row well before the cutoff.
       await leadRepo.update(delivered.id, {
         deliveredAt: new Date('2020-01-01T00:00:00.000Z'),
       });
