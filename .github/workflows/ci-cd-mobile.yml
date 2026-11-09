@@ -901,41 +901,6 @@ jobs:
       - name: Build and auto-submit Android internal testing release
         run: eas build --platform android --profile internal --auto-submit-with-profile internal --non-interactive --no-wait
 
-  build-production-ios:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
-    needs: quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: production
-    defaults:
-      run:
-        working-directory: museum-frontend
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6.5.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: museum-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Validate Expo auth
-        run: test -n "$EXPO_TOKEN"
-
-      - name: Install EAS CLI
-        run: npm install -g eas-cli@18.5.0
-
-      - name: Verify EAS CLI
-        run: eas --version
-
-      - name: Build iOS production
-        run: eas build --platform ios --profile production --non-interactive
-
   build-production-android:
     if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     needs: quality
@@ -947,6 +912,8 @@ jobs:
         working-directory: museum-frontend
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      SUBMIT: ${{ github.event.inputs.submit == 'yes' || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
       - name: Setup Node
@@ -961,6 +928,13 @@ jobs:
 
       - name: Validate Expo auth
         run: test -n "$EXPO_TOKEN"
+
+      - name: Prepare Google Play service account key
+        if: env.SUBMIT == 'true'
+        run: |
+          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
+          mkdir -p .secrets
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > .secrets/google-service-account.json
 
       - name: Install EAS CLI
         run: npm install -g eas-cli@18.5.0
@@ -969,94 +943,5 @@ jobs:
         run: eas --version
 
       - name: Build Android production
-        run: eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile production --non-interactive --no-wait ${{ env.SUBMIT == 'true' && '--auto-submit-with-profile production' || '' }}
 
-  submit-production-ios:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') }}
-    needs: build-production-ios
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: production
-    defaults:
-      run:
-        working-directory: museum-frontend
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6.5.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: museum-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Validate iOS submit env
-        run: |
-          test -n "$APPLE_ID"
-          test -n "$ASC_APP_ID"
-          test -n "$APPLE_TEAM_ID"
-
-      - name: Validate Expo auth
-        run: test -n "$EXPO_TOKEN"
-
-      - name: Install EAS CLI
-        run: npm install -g eas-cli@18.5.0
-
-      - name: Verify EAS CLI
-        run: eas --version
-
-      - name: Submit iOS latest production build
-        run: eas submit --platform ios --profile production --latest --non-interactive
-
-  submit-production-android:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'production' && github.event.inputs.submit == 'yes' && (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all')) || (startsWith(github.ref, 'refs/tags/v') && vars.AUTO_TAG_BUILD_ANDROID == 'true') }}
-    needs: build-production-android
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: production
-    defaults:
-      run:
-        working-directory: museum-frontend
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6.5.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: museum-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Validate Android submit env
-        run: |
-          test -n "$GOOGLE_SERVICE_ACCOUNT_JSON"
-
-      - name: Prepare Google Play service account key
-        run: |
-          mkdir -p .secrets
-          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > .secrets/google-service-account.json
-
-      - name: Validate Expo auth
-        run: test -n "$EXPO_TOKEN"
-
-      - name: Install EAS CLI
-        run: npm install -g eas-cli@18.5.0
-
-      - name: Verify EAS CLI
-        run: eas --version
-
-      - name: Submit Android latest production build
-        run: eas submit --platform android --profile production --latest --non-interactive
