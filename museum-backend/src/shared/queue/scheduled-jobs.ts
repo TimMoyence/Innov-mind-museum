@@ -4,6 +4,7 @@ import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
 
+import { reportBullmqErrors } from './bullmq-errors';
 import { handleJobFailure, type JobFailureSinks } from './job-failure.handler';
 
 import type { ConnectionOptions } from 'bullmq';
@@ -15,18 +16,22 @@ export interface ScheduledJobResult {
 
 export interface ScheduledJobConfig {
   name: string;
+  schedulerId?: string;
   cronPattern: string;
-  handler: () => Promise<ScheduledJobResult>;
+  handler: () => Promise<ScheduledJobResult | void>;
   connection: ConnectionOptions;
   attempts?: number;
 }
 
 export interface ScheduledJobHandle {
-  start(): Promise<void>;
+  start(): Promise<boolean>;
   close(): Promise<void>;
 }
 
 const DEFAULT_ATTEMPTS = 1;
+
+const schedulerIdOf = (cfg: ScheduledJobConfig): string =>
+  cfg.schedulerId ?? `${cfg.name}-scheduler`;
 
 export async function safeClose(label: string, step: () => unknown): Promise<void> {
   try {
@@ -39,7 +44,7 @@ export async function safeClose(label: string, step: () => unknown): Promise<voi
 async function registerScheduler(queue: Queue, cfg: ScheduledJobConfig): Promise<boolean> {
   try {
     await queue.upsertJobScheduler(
-      `${cfg.name}-scheduler`,
+      schedulerIdOf(cfg),
       { pattern: cfg.cronPattern },
       { name: cfg.name, data: {}, opts: { removeOnComplete: 100, removeOnFail: 500 } },
     );
@@ -77,8 +82,8 @@ function spawnWorker(cfg: ScheduledJobConfig): Worker {
       logger.info('scheduled_job_completed', {
         job: cfg.name,
         jobId: job.id,
-        rowsAffected: result.rowsAffected,
-        details: result.details,
+        rowsAffected: result?.rowsAffected,
+        details: result?.details,
       });
       return result;
     },
@@ -105,9 +110,7 @@ function spawnWorker(cfg: ScheduledJobConfig): Worker {
     );
   });
 
-  worker.on('error', (err) => {
-    captureExceptionWithContext(err, { queue: cfg.name, kind: 'worker_error' });
-  });
+  reportBullmqErrors(worker, 'worker_error');
 
   return worker;
 }
@@ -121,18 +124,19 @@ export function registerScheduledJob(cfg: ScheduledJobConfig): ScheduledJobHandl
       attempts: cfg.attempts ?? DEFAULT_ATTEMPTS,
     },
   });
+  reportBullmqErrors(queue, 'queue_error');
 
   let worker: Worker | undefined;
 
-  const start = async (): Promise<void> => {
+  const start = async (): Promise<boolean> => {
     const registered = await registerScheduler(queue, cfg);
-    if (!registered) return;
-    worker = spawnWorker(cfg);
+    if (registered) worker = spawnWorker(cfg);
+    return registered;
   };
 
   const close = async (): Promise<void> => {
     await safeClose(`${cfg.name}_scheduler_remove_failed`, () =>
-      queue.removeJobScheduler(`${cfg.name}-scheduler`),
+      queue.removeJobScheduler(schedulerIdOf(cfg)),
     );
     if (worker !== undefined) {
       const w = worker;

@@ -35,6 +35,7 @@ jest.mock('bullmq', () => ({
     name,
     upsertJobScheduler: mockUpsertJobScheduler,
     removeJobScheduler: mockRemoveJobScheduler,
+    on: jest.fn(),
     close: mockQueueClose,
   })),
   Worker: jest
@@ -85,7 +86,7 @@ describe('registerS3OrphanPurgeCron (B5 / R10–R11)', () => {
     await register(FAKE_DATA_SOURCE, baseConfig());
 
     expect(capturedWorker).toBeDefined();
-    await capturedWorker!.callback();
+    await capturedWorker!.callback({ id: 'tick-1' });
 
     expect(runS3OrphanPurge).toHaveBeenCalledTimes(1);
   });

@@ -3,6 +3,7 @@ import { Worker } from 'bullmq';
 import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 import { handleJobFailure } from '@shared/queue/job-failure.handler';
 
 import { runAuditIpAnonymizer } from './audit-ip-anonymizer.job';
@@ -91,13 +92,7 @@ export async function registerAuditCron(
   );
 
   worker.on('failed', onAuditCronJobFailed);
-  worker.on('error', (err) => {
-    captureExceptionWithContext(err, {
-      queue: queue.name,
-      kind: 'worker_error',
-      schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID,
-    });
-  });
+  reportBullmqErrors(worker, 'worker_error', { schedulerId: AUDIT_IP_ANONYMIZE_SCHEDULER_ID });
 
   return {
     stop: async () => {

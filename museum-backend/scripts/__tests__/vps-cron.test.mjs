@@ -74,7 +74,9 @@ describe('RAZ-M11b-VPS-CRON', () => {
 
     expect(code).toBe(0);
     expect(calls.slice(0, 2).sort()).toEqual([
-      expect.stringMatching(/^docker compose exec -T db sh -c pg_dump .*--format=custom/),
+      expect.stringMatching(
+        /^docker compose exec -T db sh -c PGPASSWORD="\$POSTGRES_PASSWORD" pg_dump -U "\$POSTGRES_USER" .*--format=custom/,
+      ),
       expect.stringMatching(/^gpg .*--encrypt --recipient ops@musaium\.com/),
     ]);
     expect(calls[2]).toMatch(
@@ -130,6 +132,63 @@ describe('RAZ-M11b-VPS-CRON', () => {
     ]);
   });
 
+  it.each([
+    ['backup-db.sh', 'BACKUP_HEARTBEAT_URL', {}],
+    [
+      'check-certs.sh',
+      'CERT_HEARTBEAT_URL',
+      { STUB_DOCKER_OUT: '    Expiry Date: 2027-01-04 (VALID: 61 days)\\n' },
+    ],
+  ])(
+    'RAZ-M11b-VPS-CRON · %s réussit sans heartbeat configuré et dit lequel manque',
+    (script, variable, env) => {
+      writeFileSync(
+        join(work, 'backup.env'),
+        [
+          'BACKUP_GPG_RECIPIENT=ops@musaium.com',
+          'BACKUP_HEARTBEAT_URL=',
+          'CERT_HEARTBEAT_URL=',
+          '',
+        ].join('\n'),
+      );
+
+      const { code, calls, stderr } = run(script, env);
+
+      expect(code).toBe(0);
+      expect(calls.some((call) => call.startsWith('curl'))).toBe(false);
+      expect(stderr).toContain(`heartbeat non configuré : ${variable} est vide`);
+    },
+  );
+
+  it('RAZ-M11b-VPS-CRON · un backup.env qui ne déclare pas le heartbeat laisse check-certs réussir et nomme la variable', () => {
+    writeFileSync(join(work, 'backup.env'), 'BACKUP_GPG_RECIPIENT=ops@musaium.com\n');
+
+    const { code, calls, stderr } = run('check-certs.sh', {
+      STUB_DOCKER_OUT: '    Expiry Date: 2027-01-04 (VALID: 61 days)\\n',
+    });
+
+    expect(code).toBe(0);
+    expect(calls.some((call) => call.startsWith('curl'))).toBe(false);
+    expect(stderr).toContain('heartbeat non configuré : CERT_HEARTBEAT_URL est vide');
+  });
+
+  it('RAZ-M11b-VPS-CRON · sans heartbeat configuré, un dump en échec échoue quand même', () => {
+    writeFileSync(
+      join(work, 'backup.env'),
+      [
+        'BACKUP_GPG_RECIPIENT=ops@musaium.com',
+        'BACKUP_HEARTBEAT_URL=',
+        'CERT_HEARTBEAT_URL=',
+        '',
+      ].join('\n'),
+    );
+
+    const { code, calls } = run('backup-db.sh', { STUB_DOCKER_EXIT: '1' });
+
+    expect(code).not.toBe(0);
+    expect(calls.some((call) => call.startsWith('s5cmd') || call.startsWith('curl'))).toBe(false);
+  });
+
   it('RAZ-M11b-VPS-CRON · le cron du VPS trouve s5cmd dans /usr/local/bin, lance la sauvegarde et le contrôle des certificats chaque nuit', () => {
     const cron = readFileSync(join(VPS_DIR, 'musaium.cron'), 'utf8').trim().split('\n');
 
@@ -138,5 +197,22 @@ describe('RAZ-M11b-VPS-CRON', () => {
       '15 2 * * * root /srv/museum/vps/backup-db.sh >> /var/log/musaium-backup.log 2>&1',
       '30 3 * * * root /srv/museum/vps/check-certs.sh >> /var/log/musaium-cert.log 2>&1',
     ]);
+  });
+
+  it('RAZ-M11b-VPS-CRON · aucun script suivi n’appelle un heartbeat sans passer par heartbeat()', () => {
+    const repoRoot = resolve(process.cwd(), '..');
+    const scripts = spawnSync(
+      'git',
+      ['ls-files', '--cached', '--others', '--exclude-standard', '*.sh'],
+      { cwd: repoRoot, encoding: 'utf8' },
+    )
+      .stdout.split('\n')
+      .filter((file) => file && existsSync(join(repoRoot, file)));
+    const direct = scripts.filter((file) => {
+      const text = readFileSync(join(repoRoot, file), 'utf8');
+      return /HEARTBEAT_URL/.test(text) && /\bcurl\b/.test(text);
+    });
+
+    expect(direct).toEqual([]);
   });
 });

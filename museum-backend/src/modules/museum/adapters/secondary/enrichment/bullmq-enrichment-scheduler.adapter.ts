@@ -3,6 +3,7 @@ import { Queue, Worker } from 'bullmq';
 import { errorMessage } from '@shared/errors/error-message';
 import { logger } from '@shared/logger/logger';
 import { captureExceptionWithContext } from '@shared/observability/sentry';
+import { reportBullmqErrors } from '@shared/queue/bullmq-errors';
 
 import type { EnrichmentSchedulerPort } from '@modules/museum/domain/ports/enrichment-scheduler.port';
 import type {
@@ -33,13 +34,16 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
     private readonly purgeUseCase?: PurgeDeadEnrichmentsPort,
     private readonly purgeThresholdDays?: number,
   ) {
-    this.queue = new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {
-      connection: config.connection,
-      defaultJobOptions: {
-        removeOnComplete: 50,
-        removeOnFail: 100,
-      },
-    });
+    this.queue = reportBullmqErrors(
+      new Queue(ENRICHMENT_SCHEDULER_QUEUE_NAME, {
+        connection: config.connection,
+        defaultJobOptions: {
+          removeOnComplete: 50,
+          removeOnFail: 100,
+        },
+      }),
+      'queue_error',
+    );
   }
 
   async start(): Promise<void> {
@@ -69,18 +73,24 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       return;
     }
 
-    this.worker = new Worker(
-      ENRICHMENT_SCHEDULER_QUEUE_NAME,
-      async () => {
-        const result = await this.useCase.execute();
-        let purged = 0;
-        if (this.purgeUseCase && this.purgeThresholdDays !== undefined) {
-          const purgeResult = await this.purgeUseCase.execute(new Date(), this.purgeThresholdDays);
-          purged = purgeResult.deleted;
-        }
-        logger.info('enrichment_scheduler_tick_completed', { ...result, purged });
-      },
-      { connection: this.config.connection, concurrency: 1 },
+    this.worker = reportBullmqErrors(
+      new Worker(
+        ENRICHMENT_SCHEDULER_QUEUE_NAME,
+        async () => {
+          const result = await this.useCase.execute();
+          let purged = 0;
+          if (this.purgeUseCase && this.purgeThresholdDays !== undefined) {
+            const purgeResult = await this.purgeUseCase.execute(
+              new Date(),
+              this.purgeThresholdDays,
+            );
+            purged = purgeResult.deleted;
+          }
+          logger.info('enrichment_scheduler_tick_completed', { ...result, purged });
+        },
+        { connection: this.config.connection, concurrency: 1 },
+      ),
+      'worker_error',
     );
 
     this.worker.on('failed', (job, err) => {
@@ -91,12 +101,6 @@ export class BullmqEnrichmentSchedulerAdapter implements EnrichmentSchedulerPort
       captureExceptionWithContext(err, {
         queue: ENRICHMENT_SCHEDULER_QUEUE_NAME,
         jobId: job?.id,
-      });
-    });
-    this.worker.on('error', (err) => {
-      captureExceptionWithContext(err, {
-        queue: ENRICHMENT_SCHEDULER_QUEUE_NAME,
-        kind: 'worker_error',
       });
     });
     try {
