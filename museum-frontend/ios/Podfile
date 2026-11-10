@@ -4,6 +4,7 @@ require File.join(File.dirname(`node --print "require.resolve('expo/package.json
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 require 'json'
+require_relative 'scripts/relative_pod_paths'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
 def ccache_enabled?(podfile_properties)
@@ -156,5 +157,9 @@ target 'Musaium' do
         config.build_settings['SWIFT_COMPILATION_MODE'] = 'singlefile'
       end
     end
+  end
+
+  post_integrate do |installer|
+    MusaiumPodPaths.relativize(File.join(__dir__, 'Pods'))
   end
 end

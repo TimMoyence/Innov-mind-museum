@@ -46,8 +46,8 @@ with_node \
   --eval "require('expo/bin/autolinking')" \
   expo-modules-autolinking \
   generate-modules-provider  \
-  --target "/Users/moyence/Desktop/all/dev/perso/Innov-mind-museum/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
-  --entitlement "/Users/moyence/Desktop/all/dev/perso/Innov-mind-museum/museum-frontend/ios/Musaium/Musaium.entitlements" \
+  --target "${PODS_ROOT}/Target Support Files/Pods-Musaium/ExpoModulesProvider.swift" \
+  --entitlement "${PODS_ROOT}/../Musaium/Musaium.entitlements" \
    \
   --platform "apple" \
   --packages "@expo/dom-webview" "expo" "expo-apple-authentication" "expo-asset" "expo-audio" "expo-blur" "expo-camera" "expo-clipboard" "expo-constants" "expo-dev-launcher" "expo-dev-menu" "expo-eas-client" "expo-file-system" "expo-font" "expo-glass-effect" "expo-haptics" "expo-image" "expo-image-manipulator" "expo-image-picker" "expo-keep-awake" "expo-linear-gradient" "expo-linking" "expo-local-authentication" "expo-localization" "expo-location" "expo-router" "expo-secure-store" "expo-speech" "expo-splash-screen" "expo-store-review" "expo-symbols" "expo-system-ui" "expo-updates" "expo-web-browser"

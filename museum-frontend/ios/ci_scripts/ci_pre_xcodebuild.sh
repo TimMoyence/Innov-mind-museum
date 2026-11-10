@@ -44,22 +44,4 @@ cd "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios"
 agvtool new-version -all "$TARGET_BUILD"
 echo "Set CFBundleVersion to $TARGET_BUILD (plist floor=$PLIST_FLOOR, CI_BUILD_NUMBER=${CI_BUILD_NUMBER:-unset})"
 
-for XCCONFIG in \
-  "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/Pods-Musaium.debug.xcconfig" \
-  "$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/Pods-Musaium.release.xcconfig"; do
-  if [ -f "$XCCONFIG" ]; then
-    sed -i '' 's|HERMES_CLI_PATH = /.*hermesc$|HERMES_CLI_PATH = $(PODS_ROOT)/hermes-engine/destroot/bin/hermesc|' "$XCCONFIG"
-    echo "Patched HERMES_CLI_PATH in $(basename "$XCCONFIG")"
-  fi
-done
-
-EXPO_SCRIPT="$CI_PRIMARY_REPOSITORY_PATH/museum-frontend/ios/Pods/Target Support Files/Pods-Musaium/expo-configure-project.sh"
-if [ -f "$EXPO_SCRIPT" ]; then
-  sed -i '' \
-    -e 's|--target "[^"]*ios/Pods/|--target "${PODS_ROOT}/|' \
-    -e 's|--entitlement "[^"]*ios/|--entitlement "${PODS_ROOT}/../|' \
-    "$EXPO_SCRIPT"
-  echo "Patched expo-configure-project.sh with PODS_ROOT-relative paths"
-fi
-
 echo "=== ci_pre_xcodebuild.sh done ==="
