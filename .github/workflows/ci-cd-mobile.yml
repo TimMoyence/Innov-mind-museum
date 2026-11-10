@@ -365,7 +365,7 @@ jobs:
           retention-days: 7
 
   maestro-summary:
-    if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    if: ${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: maestro-shard
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -414,7 +414,7 @@ jobs:
           exit 1
 
   maestro-full-alert:
-    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: [maestro-shard, maestro-summary]
     runs-on: ubuntu-latest
     timeout-minutes: 5

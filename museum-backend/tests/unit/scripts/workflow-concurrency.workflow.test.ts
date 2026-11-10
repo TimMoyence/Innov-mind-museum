@@ -33,4 +33,21 @@ describe('WORKFLOW-CONCURRENCY', () => {
       expect(evaluateGithubCondition(cancel ?? 'false', { event: 'pull_request' })).toBe(true);
     },
   );
+
+  it.each(['ci-cd-mobile.yml', 'codeql.yml', 'recall-e2e.yml'])(
+    'WORKFLOW-CONCURRENCY · %s : un run annulé par un plus récent n’écrit ni issue ni commentaire',
+    (file) => {
+      const text = readFileSync(resolve(__dirname, '../../../../.github/workflows', file), 'utf8');
+      const writers = text
+        .split(/^(?= {2}[a-z][a-z0-9-]*:$)/m)
+        .filter((job) => job.includes('github.rest.issues'))
+        .map((job) => ({
+          name: job.slice(2, job.indexOf(':')),
+          condition: /^ {4}if: (.*)$/m.exec(job)?.[1] ?? '',
+        }));
+
+      expect(writers.filter(({ condition }) => condition.includes('always()'))).toEqual([]);
+      expect(writers.filter(({ condition }) => !condition.includes('!cancelled()'))).toEqual([]);
+    },
+  );
 });
