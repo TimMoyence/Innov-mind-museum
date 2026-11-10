@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: recall-e2e-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   recall:
@@ -73,7 +73,7 @@ jobs:
           SIGLIP_ONNX_MODEL_PATH: ./models/siglip2-base-patch16-224.onnx
 
   recall-alert:
-    if: ${{ always() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     needs: [recall]
     runs-on: ubuntu-latest
     timeout-minutes: 5
