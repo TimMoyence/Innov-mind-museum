@@ -65,11 +65,3 @@ describe('MOBILE-DISPATCH', () => {
     expect(buildJobs.map((job) => job.name).filter((name) => name.includes('ios'))).toEqual([]);
   });
 });
-
-describe('MOBILE-DISPATCH-CONCURRENCY', () => {
-  it('MOBILE-DISPATCH-CONCURRENCY · un lancement manuel n’attend jamais derrière un run de push', () => {
-    const group = /^concurrency:\n {2}group: (.*)$/m.exec(WORKFLOW)?.[1] ?? '';
-
-    expect(group).toContain('${{ github.event_name }}');
-  });
-});

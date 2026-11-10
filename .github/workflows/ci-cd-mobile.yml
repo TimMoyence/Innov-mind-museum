@@ -29,8 +29,8 @@ on:
     - cron: '17 3 * * *'
 
 concurrency:
-  group: ci-cd-mobile-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-cd-mobile-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
