@@ -708,7 +708,7 @@ jobs:
             sudo chmod +x /srv/museum/rollback.sh
             sudo rm -rf /srv/museum/vps
             sudo mv /tmp/museum-deploy/vps /srv/museum/vps
-            sudo chmod +x /srv/museum/vps/backup-db.sh /srv/museum/vps/check-certs.sh /srv/museum/vps/set-env.sh /srv/museum/vps/rotate-redis-password.sh
+            sudo chmod +x /srv/museum/vps/backup-db.sh /srv/museum/vps/check-certs.sh /srv/museum/vps/set-env.sh /srv/museum/vps/rotate-redis-password.sh /srv/museum/vps/count-migrations.sh
             sudo rm -rf "${HOME}/.museum-env-backups"
             sudo install -m 0644 -o root -g root /srv/museum/vps/musaium.cron /etc/cron.d/musaium
 
@@ -770,9 +770,9 @@ jobs:
             cd /srv/museum
             sudo chmod +x rollback.sh || true
 
-            IMAGE_REF="ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
             STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
+            rm -f "${STATE_DIR}/pre-count.txt" "${STATE_DIR}/applied-count.txt"
 
             PREV_TAG="$(sudo grep -E '^IMAGE_TAG=' /srv/museum/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '[:space:]' || true)"
             if [ -n "${PREV_TAG}" ]; then
@@ -783,7 +783,7 @@ jobs:
               echo "[pre-deploy] WARN — no IMAGE_TAG in /srv/museum/.env; rollback target unavailable (first deploy?)"
             fi
 
-            PRE_COUNT="$(docker compose exec -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
+            PRE_COUNT="$(/srv/museum/vps/count-migrations.sh)"
             echo "${PRE_COUNT}" > "${STATE_DIR}/pre-count.txt"
             echo "[pre-deploy] pre-migration count: ${PRE_COUNT}"
 
@@ -811,7 +811,6 @@ jobs:
             sudo /srv/museum/vps/set-env.sh IMAGE_TAG "${IMAGE_TAG}" >/dev/null
             echo "[deploy] persisted IMAGE_TAG=${IMAGE_TAG} to /srv/museum/.env"
 
-            IMAGE_REF="ghcr.io/${GHCR_USER}/museum-backend"
             STATE_DIR="${HOME}/.museum-rollback/backend"
             mkdir -p "${STATE_DIR}"
 
@@ -820,8 +819,8 @@ jobs:
             docker compose run --rm --no-deps -T backend \
               node dist/src/data/db/run-migrations.js
 
-            POST_COUNT="$(docker compose run --rm --no-deps -T backend node scripts/count-applied-migrations.cjs 2>/dev/null || echo 0)"
-            PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt" 2>/dev/null || echo 0)"
+            POST_COUNT="$(/srv/museum/vps/count-migrations.sh)"
+            PRE_COUNT="$(cat "${STATE_DIR}/pre-count.txt")"
             APPLIED="$(( POST_COUNT - PRE_COUNT ))"
             if [ "${APPLIED}" -lt 0 ]; then APPLIED=0; fi
             echo "${APPLIED}" > "${STATE_DIR}/applied-count.txt"
@@ -946,7 +945,7 @@ jobs:
             set -e
             cd /srv/museum
             chmod +x rollback.sh
-            ./rollback.sh docker-compose.yml backend "ghcr.io/${{ secrets.GHCR_USER }}/museum-backend"
+            ./rollback.sh docker-compose.yml backend
 
       - name: Notify Sentry of rollback (prod)
         if: failure() && steps.rollback.outcome == 'success' && env.HAS_SENTRY_TOKEN == 'true'

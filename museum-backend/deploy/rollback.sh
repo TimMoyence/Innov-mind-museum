@@ -3,7 +3,6 @@ set -u
 
 COMPOSE_FILE="${1:?compose file path required}"
 SERVICE="${2:?service name required}"
-IMAGE_REF="${3:?image ref required (e.g. ghcr.io/org/museum-backend)}"
 
 STATE_DIR="${HOME}/.museum-rollback/${SERVICE}"
 PRE_FILE="${STATE_DIR}/pre-count.txt"
@@ -22,8 +21,7 @@ if [ -f "${PRE_FILE}" ]; then
   PRE_COUNT="$(cat "${PRE_FILE}" | tr -d '[:space:]')"
 fi
 
-CURRENT_COUNT="$(docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE}" \
-  node scripts/count-applied-migrations.cjs 2>/dev/null | tr -d '[:space:]' || true)"
+CURRENT_COUNT="$(/srv/museum/vps/count-migrations.sh || true)"
 
 if [ -n "${PRE_COUNT}" ] && [ -n "${CURRENT_COUNT}" ] \
    && printf '%s' "${PRE_COUNT}" | grep -qE '^[0-9]+$' \
