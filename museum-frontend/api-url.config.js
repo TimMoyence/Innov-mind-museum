@@ -8,6 +8,9 @@ function resolveVariant(env) {
   if (explicit === 'production' || explicit === 'preview') {
     return explicit;
   }
+  if (explicit === 'e2e') {
+    return 'development';
+  }
   const configuration = typeof env.CONFIGURATION === 'string' ? env.CONFIGURATION.trim() : '';
   return configuration.length > 0 && !/debug/i.test(configuration) ? 'production' : 'development';
 }

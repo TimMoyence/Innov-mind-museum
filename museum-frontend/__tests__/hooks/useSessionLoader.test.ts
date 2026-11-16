@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { useSessionLoader } from '@/features/chat/application/useSessionLoader';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
-import { makeGetSessionResponse } from '@/__tests__/helpers/factories';
+import { makeAppError, makeGetSessionResponse } from '@/__tests__/helpers/factories';
 
 const mockGetSession = jest.fn();
 
@@ -15,13 +15,6 @@ jest.mock('@/features/chat/infrastructure/chatApi', () => ({
 
 jest.mock('@sentry/react-native', () => ({
   captureException: jest.fn(),
-}));
-
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    return String(err);
-  },
 }));
 
 const mockSetSession = jest.fn();
@@ -159,7 +152,7 @@ describe('useSessionLoader', () => {
   });
 
   it('sets error state on API failure', async () => {
-    mockGetSession.mockRejectedValue(new Error('Not found'));
+    mockGetSession.mockRejectedValue(makeAppError({ kind: 'NotFound', status: 404 }));
 
     const result = renderLoader();
 
@@ -167,7 +160,7 @@ describe('useSessionLoader', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe('Not found');
+    expect(result.current.error).toBe('Content not found.');
     expect(result.current.messages).toHaveLength(0);
   });
 
@@ -193,7 +186,7 @@ describe('useSessionLoader', () => {
     const result = renderLoader();
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Oops');
+      expect(result.current.error).toBe('Something went wrong. Please try again.');
     });
 
     act(() => {
@@ -272,13 +265,15 @@ describe('useSessionLoader', () => {
 
   it('loadSession resets error before re-fetching', async () => {
     mockGetSession
-      .mockRejectedValueOnce(new Error('First fail'))
+      .mockRejectedValueOnce(makeAppError({ kind: 'Network' }))
       .mockResolvedValueOnce(makeGetSessionResponse());
 
     const result = renderLoader();
 
     await waitFor(() => {
-      expect(result.current.error).toBe('First fail');
+      expect(result.current.error).toBe(
+        'Network unavailable. Check your connection and try again.',
+      );
     });
 
     await act(async () => {
@@ -305,7 +300,7 @@ describe('useSessionLoader', () => {
       museumName: 'Cached Museum',
       updatedAt: Date.now(),
     };
-    mockGetSession.mockRejectedValue(new Error('Network failure'));
+    mockGetSession.mockRejectedValue(makeAppError({ kind: 'Network' }));
 
     const result = renderLoader();
 
@@ -317,7 +312,7 @@ describe('useSessionLoader', () => {
     expect(result.current.messages[0]?.id).toBe('cached-msg-1');
     expect(result.current.sessionTitle).toBe('Cached Title');
     expect(result.current.museumName).toBe('Cached Museum');
-    expect(result.current.error).toBe('Network failure');
+    expect(result.current.error).toBe('Network unavailable. Check your connection and try again.');
   });
 
   it('leaves messages empty when API fails and no cache entry exists', async () => {
@@ -330,7 +325,7 @@ describe('useSessionLoader', () => {
     });
 
     expect(result.current.messages).toHaveLength(0);
-    expect(result.current.error).toBe('API down');
+    expect(result.current.error).toBe('Something went wrong. Please try again.');
   });
 
   describe('cancellation', () => {

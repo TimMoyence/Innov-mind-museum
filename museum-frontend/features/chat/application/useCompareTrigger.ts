@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useCompareImage } from '@/features/chat/application/useCompareImage';
+import { getErrorMessage } from '@/shared/lib/errors';
 
 interface RnImage {
   uri: string;
@@ -25,7 +26,7 @@ export const useCompareTrigger = ({
   locale,
   reload,
 }: UseCompareTriggerParams): UseCompareTriggerResult => {
-  const mutation = useCompareImage({ retry: false });
+  const mutation = useCompareImage();
   const [error, setError] = useState<string | null>(null);
 
   const sessionIdRef = useRef(sessionId);
@@ -47,7 +48,7 @@ export const useCompareTrigger = ({
           },
           onError: (err: Error) => {
             if (sessionIdRef.current !== triggeredFor) return;
-            setError(err.message);
+            setError(getErrorMessage(err));
           },
         },
       );

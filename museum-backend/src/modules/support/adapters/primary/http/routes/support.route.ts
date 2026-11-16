@@ -101,6 +101,7 @@ supportRouter.get('/tickets/:id', isAuthenticated, async (req: Request, res: Res
     ticketId,
     userId: req.user?.id ?? 0,
     userRole: req.user?.role ?? 'visitor',
+    userMuseumId: req.user?.museumId,
   });
 
   res.json({ ticket });
@@ -119,6 +120,7 @@ supportRouter.post(
       ticketId,
       senderId: req.user?.id ?? 0,
       senderRole: req.user?.role ?? 'visitor',
+      senderMuseumId: req.user?.museumId,
       text,
     });
 

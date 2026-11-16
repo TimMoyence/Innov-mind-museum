@@ -8,7 +8,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import type { UserRole } from './user-role';
+import { UserRole } from './user-role';
+
 import type { UserTier } from './user-tier';
 import type { ContentPreference } from '@modules/auth/domain/consent/content-preference';
 
@@ -23,8 +24,8 @@ export class User {
 
   @Column({
     type: 'enum',
-    enum: ['visitor', 'moderator', 'museum_manager', 'admin', 'super_admin'],
-    default: 'visitor',
+    enum: Object.values(UserRole),
+    default: UserRole.VISITOR,
   })
   role!: UserRole;
 

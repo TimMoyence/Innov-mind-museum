@@ -2,6 +2,7 @@ import '@/__tests__/helpers/test-utils';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Alert, Share } from 'react-native';
 import { useSettingsActions } from '@/features/settings/application/useSettingsActions';
+import { makeAppError } from '@/__tests__/helpers/factories';
 
 const mockLogout = jest.fn<Promise<void>, []>().mockResolvedValue(undefined);
 const mockSetIsAuthenticated = jest.fn();
@@ -95,7 +96,7 @@ describe('useSettingsActions', () => {
   });
 
   it('shows alert when export fails', async () => {
-    mockExportData.mockRejectedValue(new Error('Export failed'));
+    mockExportData.mockRejectedValue(makeAppError({ kind: 'Network' }));
 
     const { result } = renderHook(() => useSettingsActions());
 
@@ -105,7 +106,7 @@ describe('useSettingsActions', () => {
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'common.error',
-      expect.stringContaining('Export failed'),
+      'Network unavailable. Check your connection and try again.',
     );
     expect(result.current.isExporting).toBe(false);
   });

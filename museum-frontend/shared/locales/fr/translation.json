@@ -690,7 +690,9 @@
       "account_suspended": "Votre compte a été suspendu. Contactez le support.",
       "account_deleted": "Ce compte a été supprimé.",
       "locked_out": "Trop de tentatives échouées. Réessayez dans quelques minutes.",
-      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française)."
+      "minor_parental_consent_required": "L'inscription est réservée aux personnes de 15 ans et plus (majorité numérique française).",
+      "last_admin_delete": "Vous êtes le dernier administrateur. Nommez un autre administrateur avant d'effacer votre compte.",
+      "last_super_admin_delete": "Vous êtes le dernier super administrateur. Nommez un autre super administrateur avant d'effacer votre compte."
     },
     "chat": {
       "contract_invalid": "Réponse du serveur invalide. Veuillez réessayer.",
@@ -709,7 +711,6 @@
       "generic": "Impossible de charger les avis pour le moment.",
       "load_failed": "Impossible de charger les avis.",
       "load_more_failed": "Impossible de charger davantage d'avis.",
-      "already_reviewed": "Vous avez déjà soumis un avis.",
       "submit_failed": "L'envoi de l'avis a échoué. Veuillez réessayer."
     }
   },
@@ -1151,10 +1152,8 @@
     "commentPlaceholder": "Partagez votre expérience...",
     "submit": "Envoyer l'avis",
     "success": "Merci pour votre avis !",
-    "alreadyReviewed": "Vous avez déjà soumis un avis",
     "empty": "Aucun avis pour le moment. Soyez le premier !",
     "reviewCount": "{{count}} avis",
-    "submitFailed": "Échec de l'envoi. Veuillez réessayer.",
     "age": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",

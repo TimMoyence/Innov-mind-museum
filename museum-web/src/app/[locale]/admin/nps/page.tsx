@@ -55,7 +55,7 @@ export default function NpsPage() {
         if (err instanceof ApiError && err.status === 403) {
           setError(adminDict.npsPage.noMuseumAssigned);
         } else {
-          setError(err instanceof Error ? err.message : adminDict.common.noData);
+          setError(adminDict.npsPage.errorLoad);
         }
       } finally {
         if (!tick.cancelled) setLoading(false);
@@ -66,7 +66,7 @@ export default function NpsPage() {
     return () => {
       tick.cancelled = true;
     };
-  }, [museumId, adminDict.common.noData, adminDict.npsPage.noMuseumAssigned]);
+  }, [museumId, adminDict.npsPage.errorLoad, adminDict.npsPage.noMuseumAssigned]);
 
   useEffect(() => {
     if (!showSelector) return;

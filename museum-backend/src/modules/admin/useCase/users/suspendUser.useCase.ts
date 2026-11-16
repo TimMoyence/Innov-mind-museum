@@ -1,3 +1,4 @@
+import { refuseRemovingLastAccount } from '@modules/admin/domain/admin/last-admin';
 import { auditService, AUDIT_ADMIN_USER_SUSPENDED } from '@shared/audit';
 import { AppError, notFound } from '@shared/errors/app.error';
 
@@ -23,7 +24,12 @@ export class SuspendUserUseCase {
       });
     }
 
-    const updated = await this.repository.suspendUser(input.userId);
+    const updated = await this.repository.withPrivilegedAccountsLock(async (repository) => {
+      const target = await repository.getUserById(input.userId);
+      if (!target) return null;
+      await refuseRemovingLastAccount(repository, target, 'SUSPEND');
+      return await repository.suspendUser(input.userId);
+    });
     if (!updated) {
       throw notFound('User not found');
     }

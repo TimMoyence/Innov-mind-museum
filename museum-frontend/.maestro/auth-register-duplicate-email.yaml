@@ -13,47 +13,12 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: 'analytics-consent-decline'
 
-- tapOn:
-    text: "Passer à l'inscription|Switch to registration"
-- waitForAnimationToEnd
-- assertVisible:
-    text: 'Create your account|Créez votre compte'
-
-- tapOn:
-    id: 'firstname-input'
-- inputText: 'Maestro'
-
-- tapOn:
-    id: 'lastname-input'
-- inputText: 'Tester'
-
-- tapOn:
-    id: 'email-input'
-- inputText: 'e2e-test-login@test.musaium.dev'
-
-- tapOn:
-    id: 'password-input'
-- inputText: 'Mx7$kq2Lp9vRt4Wz'
-
-- tapOn:
-    id: 'date-of-birth-input'
-- inputText: '10/08/1994'
-
-- tapOn:
-    text: 'Create your account|Créez votre compte'
-
-- tapOn:
-    id: 'gdpr-consent-checkbox'
-
-- extendedWaitUntil:
-    visible:
-      id: 'auth-submit'
-    timeout: 10000
-- tapOn:
-    id: 'auth-submit'
-- tapOn:
-    text: 'Plus tard|Not Now'
-    optional: true
+- runFlow:
+    file: helpers/register-form.yaml
+    env:
+      EMAIL: 'e2e-test-login@test.musaium.dev'
+      PASSWORD: 'Mx7$kq2Lp9vRt4Wz'
+      DOB: '10/08/1994'
 
 - extendedWaitUntil:
     visible:

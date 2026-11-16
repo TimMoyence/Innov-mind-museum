@@ -348,6 +348,7 @@ jobs:
         with:
           name: maestro-shard-${{ matrix.shard }}-logs
           path: museum-frontend/.maestro/logs/
+          include-hidden-files: true
           retention-days: 7
 
       - name: Collect failure diagnostics (backend log + Maestro hierarchy)
@@ -703,9 +704,33 @@ jobs:
             echo "- shaped link: APK baked at 10.0.2.2:3100 → Toxiproxy → backend :3000 (genuine, both streams; seed fails hard)"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  siglip-model:
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: museum-backend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      - name: Login to GHCR (SigLIP base image)
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USER }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Extract the SigLIP ONNX model
+        run: bash scripts/pull-siglip-model.sh
+      - name: Upload the SigLIP ONNX model
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: siglip-model
+          path: museum-backend/models/siglip2-base-patch16-224.onnx
+          retention-days: 1
+
   maestro-ios-nightly:
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-    needs: quality
+    needs: [quality, siglip-model]
     runs-on: macos-26
     timeout-minutes: 300
     defaults:
@@ -714,7 +739,7 @@ jobs:
     env:
       MAESTRO_VERSION: '2.5.1'
       EXPO_PUBLIC_MAESTRO_AUDIO_FIXTURE: 'true'
-      APP_VARIANT: development
+      APP_VARIANT: e2e
       EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
       ENTRY_FILE: node_modules/expo-router/entry.js
       CI_PRIMARY_REPOSITORY_PATH: ${{ github.workspace }}
@@ -746,7 +771,10 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath build \
             PRODUCT_BUNDLE_IDENTIFIER=com.musaium.mobile.preview \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            PROVISIONING_PROFILE_SPECIFIER= \
             build
       - name: Install Maestro CLI
         run: |
@@ -763,6 +791,11 @@ jobs:
           "$PG_BIN"/pg_ctl -D "$RUNNER_TEMP/pgdata" -l "$RUNNER_TEMP/postgres.log" -o "-p 5432" -w start
           "$PG_BIN"/createdb -h localhost -p 5432 -U museum_dev museum_dev
           redis-server --port 6379 --daemonize yes
+      - name: Download the SigLIP ONNX model
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: siglip-model
+          path: museum-backend/models
       - name: Boot backend (local services + migrations + API)
         env:
           SKIP_DOCKER_COMPOSE: '1'
@@ -771,6 +804,7 @@ jobs:
           REDIS_PORT: '6379'
           EXTRACTION_WORKER_ENABLED: 'false'
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHAT_COMPARE_PROVISION: '1'
         run: ./scripts/maestro-runner-setup.sh
       - name: Seed e2e Maestro login accounts (iOS runs the `all` union)
         run: DB_PORT=5432 ./scripts/maestro-seed-accounts.sh
@@ -795,6 +829,7 @@ jobs:
         with:
           name: maestro-ios-nightly-logs
           path: museum-frontend/.maestro/logs/
+          include-hidden-files: true
           retention-days: 7
 
   build-preview-android:

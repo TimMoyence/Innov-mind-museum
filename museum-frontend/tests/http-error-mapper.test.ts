@@ -5,7 +5,6 @@ import {
   mapAxiosError,
   toAxiosLikeError,
   getApiErrorCode,
-  getApiErrorMessage,
   getApiRequestId,
 } from '../shared/infrastructure/httpErrorMapper';
 
@@ -45,7 +44,7 @@ describe('mapAxiosError', () => {
     assert.equal(result.status, 401);
   });
 
-  it('response.status 403 with FORBIDDEN code and "invalid token" message returns Unauthorized', () => {
+  it('response.status 403 FORBIDDEN stays Forbidden whatever its text ("Invalid token provided")', () => {
     const result = mapAxiosError({
       isAxiosError: true,
       response: {
@@ -59,12 +58,12 @@ describe('mapAxiosError', () => {
       },
       config: {},
     });
-    assert.equal(result.kind, 'Unauthorized');
-    assert.equal(result.message, 'Authentication required');
+    assert.equal(result.kind, 'Forbidden');
+    assert.equal(result.message, 'Access denied');
     assert.equal(result.status, 403);
   });
 
-  it('response.status 403 without FORBIDDEN/invalid token returns Forbidden', () => {
+  it('response.status 403 with another code returns Forbidden', () => {
     const result = mapAxiosError({
       isAxiosError: true,
       response: {
@@ -177,14 +176,6 @@ describe('helper functions', () => {
 
   it('getApiErrorCode returns undefined for non-string code', () => {
     assert.equal(getApiErrorCode({ code: 123 }), undefined);
-  });
-
-  it('getApiErrorMessage extracts from nested error.message', () => {
-    assert.equal(getApiErrorMessage({ error: { message: 'Oops' } }), 'Oops');
-  });
-
-  it('getApiErrorMessage extracts from top-level message', () => {
-    assert.equal(getApiErrorMessage({ message: 'Top msg' }), 'Top msg');
   });
 
   it('getApiRequestId extracts from nested error.requestId', () => {

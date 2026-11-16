@@ -19,15 +19,15 @@ import { EmptyChartPlaceholder } from '@/components/admin/EmptyChartPlaceholder'
 import { ExportCsvButton } from '@/components/admin/ExportCsvButton';
 import { Spinner } from '@/components/ui/Spinner';
 import { AlertBanner } from '@/components/ui/AlertBanner';
-import type {
-  UsageAnalytics,
-  ContentAnalytics,
-  EngagementAnalytics,
-  AnalyticsGranularity,
+import {
+  ANALYTICS_GRANULARITIES,
+  type UsageAnalytics,
+  type ContentAnalytics,
+  type EngagementAnalytics,
+  type AnalyticsGranularity,
 } from '@/lib/admin-types';
 
 const DAYS_OPTIONS = [7, 14, 30, 90] as const;
-const GRANULARITY_OPTIONS: AnalyticsGranularity[] = ['daily', 'weekly', 'monthly'];
 
 interface UsageChartPoint {
   date: string;
@@ -106,9 +106,9 @@ export default function AnalyticsPage() {
           setContent(contentData);
           setEngagement(engagementData);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load analytics');
+          setError(adminDict.analyticsPage.errorLoad);
         }
       } finally {
         if (!cancelled) {
@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, [initialUsageQuery]);
+  }, [initialUsageQuery, adminDict.analyticsPage.errorLoad]);
 
   const fetchUsage = useCallback(async () => {
     try {
@@ -129,10 +129,10 @@ export default function AnalyticsPage() {
         `/api/admin/analytics/usage?days=${days}&granularity=${granularity}`,
       );
       setUsage(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load usage analytics');
+    } catch {
+      setError(adminDict.analyticsPage.errorLoadUsage);
     }
-  }, [days, granularity]);
+  }, [days, granularity, adminDict.analyticsPage.errorLoadUsage]);
 
   useEffect(() => {
     if (skipFirstUsageFetch.current) {
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
                 }}
                 className="rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
-                {GRANULARITY_OPTIONS.map((g) => (
+                {ANALYTICS_GRANULARITIES.map((g) => (
                   <option key={g} value={g}>
                     {adminDict.analyticsPage[g]}
                   </option>

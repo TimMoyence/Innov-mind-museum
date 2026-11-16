@@ -1,4 +1,4 @@
-import { UserRole } from '@modules/auth/domain/user/user-role';
+import { hasRole, type UserRole } from '@modules/auth/domain/user/user-role';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -13,7 +13,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
       return;
     }
 
-    if (user.role === UserRole.SUPER_ADMIN || allowedRoles.includes(user.role)) {
+    if (hasRole(user.role, allowedRoles)) {
       next();
       return;
     }

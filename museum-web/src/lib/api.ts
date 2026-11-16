@@ -1,15 +1,26 @@
 import * as Sentry from '@sentry/nextjs';
 
+import type { components } from '@/lib/api/generated/openapi';
+
+type ContractError = Partial<components['schemas']['ApiError']>;
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     message: string,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
+
+export const errorMessage = (
+  err: unknown,
+  actionMessage: string,
+  byCode: Readonly<Record<string, string>> = {},
+): string => (err instanceof ApiError && err.code ? byCode[err.code] : undefined) ?? actionMessage;
 
 let onLogout: (() => void) | null = null;
 
@@ -100,12 +111,12 @@ interface InternalRequestOptions extends ApiRequestOptions {
   isRetry?: boolean;
 }
 
-async function request<T>(
+async function send(
   method: string,
   path: string,
   body?: unknown,
   options?: InternalRequestOptions,
-): Promise<T> {
+): Promise<Response> {
   const baseUrl = getBaseUrl();
   const url = `${baseUrl}${path}`;
 
@@ -141,7 +152,7 @@ async function request<T>(
       throw new ApiError(401, 'Unauthorized', 'Session expired');
     }
 
-    return request<T>(method, path, body, {
+    return send(method, path, body, {
       isRetry: true,
       signal: options?.signal,
       skipAuthRefresh: options?.skipAuthRefresh,
@@ -149,23 +160,40 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    let message = res.statusText;
-    try {
-      const errorBody = (await res.json()) as { message?: string };
-      if (errorBody.message) {
-        message = errorBody.message;
-      }
-    } catch {
-      message = res.statusText;
-    }
-    throw new ApiError(res.status, res.statusText, message);
+    const body = (await res.json().catch(() => ({}))) as ContractError;
+    throw new ApiError(
+      res.status,
+      res.statusText,
+      body.error?.message ?? res.statusText,
+      body.error?.code,
+    );
   }
 
+  return res;
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  options?: InternalRequestOptions,
+): Promise<T> {
+  const res = await send(method, path, body, options);
   if (res.status === 204) {
     return undefined as T;
   }
-
   return res.json() as Promise<T>;
+}
+
+export interface DownloadedFile {
+  blob: Blob;
+  filename: string | null;
+}
+
+export async function apiDownload(path: string): Promise<DownloadedFile> {
+  const res = await send('GET', path);
+  const disposition = /filename="([^"]+)"/i.exec(res.headers.get('Content-Disposition') ?? '');
+  return { blob: await res.blob(), filename: disposition?.[1] ?? null };
 }
 
 export function apiGet<T>(path: string, options?: ApiRequestOptions): Promise<T> {

@@ -6,6 +6,7 @@ import {
 } from '../../helpers/http/route-test-setup';
 import { visitorToken, makeToken } from '../../helpers/auth/token.helpers';
 import { makeExportSessionRow } from '../../helpers/admin/export.fixtures';
+import { forbidden } from '@shared/errors/app.error';
 
 const mockSessions = jest.fn();
 const mockReviews = jest.fn();
@@ -192,6 +193,7 @@ describe('Admin Export Routes — RBAC + headers (R2)', () => {
     });
 
     it('museum_manager w/ no museumId → 403 NO_MUSEUM_ASSIGNED (R9 / AC6)', async () => {
+      mockSessions.mockRejectedValueOnce(forbidden('No museum assigned'));
       const res = await request(app)
         .get('/api/admin/export/sessions.csv')
         .set('Authorization', `Bearer ${museumManagerTok(null)}`);

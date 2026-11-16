@@ -1,5 +1,4 @@
 import { httpRequest } from '@/shared/api/httpRequest';
-import { getErrorMessage } from '@/shared/lib/errors';
 import { createAppError } from '@/shared/types/AppError';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
@@ -93,20 +92,16 @@ export const postAudioMessage = async (
 };
 
 export const synthesizeSpeech = async (messageId: string): Promise<ArrayBuffer | null> => {
-  try {
-    const response: ArrayBuffer | null | undefined = await httpRequest<ArrayBuffer | null>(
-      `${CHAT_BASE}/messages/${messageId}/tts`,
-      {
-        method: 'POST',
-        responseType: 'arraybuffer',
-        timeoutMs: MODEL_REPLY_TIMEOUT_MS,
-      },
-    );
-    if (!response || response.byteLength === 0) {
-      return null;
-    }
-    return response;
-  } catch (error: unknown) {
-    throw new Error(getErrorMessage(error));
+  const response: ArrayBuffer | null | undefined = await httpRequest<ArrayBuffer | null>(
+    `${CHAT_BASE}/messages/${messageId}/tts`,
+    {
+      method: 'POST',
+      responseType: 'arraybuffer',
+      timeoutMs: MODEL_REPLY_TIMEOUT_MS,
+    },
+  );
+  if (!response || response.byteLength === 0) {
+    return null;
   }
+  return response;
 };

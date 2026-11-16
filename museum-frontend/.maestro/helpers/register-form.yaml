@@ -1,0 +1,45 @@
+appId: com.musaium.mobile.preview
+---
+- tapOn:
+    text: "Passer à l'inscription|Switch to registration"
+- waitForAnimationToEnd
+- assertVisible:
+    text: 'Create your account|Créez votre compte'
+
+- tapOn:
+    id: 'firstname-input'
+- inputText: 'Maestro'
+- pressKey: Enter
+
+- tapOn:
+    id: 'lastname-input'
+- inputText: 'Tester'
+- pressKey: Enter
+
+- tapOn:
+    id: 'email-input'
+- inputText: '${EMAIL}'
+- pressKey: Enter
+
+- tapOn:
+    id: 'password-input'
+- inputText: '${PASSWORD}'
+- pressKey: Enter
+
+- tapOn:
+    id: 'date-of-birth-input'
+- inputText: '${DOB}'
+- pressKey: Enter
+
+- tapOn:
+    id: 'gdpr-consent-checkbox'
+
+- extendedWaitUntil:
+    visible:
+      id: 'auth-submit'
+    timeout: 10000
+- tapOn:
+    id: 'auth-submit'
+- tapOn:
+    text: 'Plus tard|Not Now'
+    optional: true

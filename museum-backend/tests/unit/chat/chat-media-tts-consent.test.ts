@@ -114,7 +114,7 @@ describe('POST /api/chat/messages/:messageId/tts — third_party_ai_audio_openai
     stopRateLimitSweep();
   });
 
-  it('returns 403 { error: "consent_required", scope: "third_party_ai_audio_openai" } when scope NOT granted', async () => {
+  it('returns 403 CONSENT_REQUIRED with scope third_party_ai_audio_openai in the contract error body when scope NOT granted', async () => {
     mockSynthesizeSpeech.mockResolvedValue(successTtsReply);
 
     const res = await request(app)
@@ -122,7 +122,10 @@ describe('POST /api/chat/messages/:messageId/tts — third_party_ai_audio_openai
       .set('Authorization', `Bearer ${userToken()}`);
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'consent_required', scope: AUDIO_SCOPE });
+    expect(res.body.error).toMatchObject({
+      code: 'CONSENT_REQUIRED',
+      details: { scope: AUDIO_SCOPE },
+    });
   });
 
   it('does NOT invoke chatService.synthesizeSpeech when scope is denied (short-circuit BEFORE OpenAI TTS)', async () => {
@@ -172,7 +175,10 @@ describe('POST /api/chat/messages/:messageId/tts — third_party_ai_audio_openai
       .set('Authorization', `Bearer ${userToken()}`);
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'consent_required', scope: AUDIO_SCOPE });
+    expect(res.body.error).toMatchObject({
+      code: 'CONSENT_REQUIRED',
+      details: { scope: AUDIO_SCOPE },
+    });
     expect(mockSynthesizeSpeech).not.toHaveBeenCalled();
   });
 });

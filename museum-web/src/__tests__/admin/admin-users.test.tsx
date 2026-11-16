@@ -6,6 +6,7 @@ import UsersPage from '@/app/[locale]/admin/users/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 import type { PaginatedResponse, AdminUserDTO } from '@/lib/admin-types';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/users',
@@ -32,7 +33,8 @@ const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 const mockApiPost = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPatch: (...args: unknown[]) => mockApiPatch(...args) as Promise<unknown>,
   apiPost: (...args: unknown[]) => mockApiPost(...args) as Promise<unknown>,
@@ -274,7 +276,7 @@ describe('UsersPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Server error')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the users.')).toBeInTheDocument();
     });
   });
 

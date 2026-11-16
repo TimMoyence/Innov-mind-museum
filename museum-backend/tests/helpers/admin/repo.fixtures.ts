@@ -1,6 +1,15 @@
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 
-export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository => ({
+export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdminRepository => {
+  const repository: IAdminRepository = {
+    ...baseAdminRepo(),
+    withPrivilegedAccountsLock: (work) => work(repository),
+    ...overrides,
+  };
+  return repository;
+};
+
+const baseAdminRepo = (): Omit<IAdminRepository, 'withPrivilegedAccountsLock'> => ({
   listUsers: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
   getUserById: jest.fn().mockResolvedValue(null),
   changeUserRole: jest.fn().mockResolvedValue(null),
@@ -8,7 +17,8 @@ export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdmin
   suspendUser: jest.fn().mockResolvedValue(null),
   unsuspendUser: jest.fn().mockResolvedValue(null),
   softDeleteUser: jest.fn().mockResolvedValue(null),
-  countAdmins: jest.fn().mockResolvedValue(0),
+  restoreUser: jest.fn().mockResolvedValue(undefined),
+  countActiveAccounts: jest.fn().mockResolvedValue(0),
   listAuditLogs: jest
     .fn()
     .mockResolvedValue({ data: [], total: 0, page: 1, limit: 20, totalPages: 0 }),
@@ -20,5 +30,4 @@ export const makeAdminRepo = (overrides: Partial<IAdminRepository> = {}): IAdmin
   getUsageAnalytics: jest.fn(),
   getContentAnalytics: jest.fn(),
   getEngagementAnalytics: jest.fn(),
-  ...overrides,
 });

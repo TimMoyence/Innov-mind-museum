@@ -3,7 +3,7 @@ import * as WebBrowserNamespace from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import { authService, type LoginResponse } from '@/features/auth/infrastructure/authApi';
-import { resolveInitialApiBaseUrl } from '@/shared/infrastructure/apiConfig';
+import { apiUrl } from '@/shared/infrastructure/apiConfig';
 import { createAppError } from '@/shared/types/AppError';
 
 type WebBrowserModule = typeof WebBrowserNamespace;
@@ -60,8 +60,7 @@ export const signInWithApple = async (
 
 export const signInWithGoogle = async (): Promise<LoginResponse> => {
   const WebBrowser = loadWebBrowser();
-  const baseUrl = resolveInitialApiBaseUrl().replace(/\/$/, '');
-  const authUrl = `${baseUrl}/api/auth/google/initiate?platform=mobile`;
+  const authUrl = apiUrl('/api/auth/google/initiate?platform=mobile');
 
   const result = await WebBrowser.openAuthSessionAsync(authUrl, MOBILE_DEEPLINK_SUCCESS);
 

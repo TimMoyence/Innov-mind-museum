@@ -32,7 +32,7 @@ export default function AuditLogsPage() {
     pagination,
   } = useFetchData<AdminAuditLogDTO[]>(logsUrl, {
     deps: [page, actionFilter],
-    errorFallback: 'Failed to load audit logs',
+    errorFallback: adminDict.auditLogsPage.errorLoad,
   });
 
   const logs = logsPayload ?? [];

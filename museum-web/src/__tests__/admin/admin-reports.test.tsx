@@ -6,6 +6,7 @@ import ReportsPage from '@/app/[locale]/admin/reports/page';
 import type { Report, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/reports',
@@ -31,7 +32,8 @@ vi.mock('next/link', () => ({
 const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPatch: (...args: unknown[]) => mockApiPatch(...args) as Promise<unknown>,
   apiPost: vi.fn(),
@@ -344,7 +346,7 @@ describe('ReportsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the reports.')).toBeInTheDocument();
     });
   });
 
@@ -358,7 +360,7 @@ describe('ReportsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load reports')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the reports.')).toBeInTheDocument();
     });
   });
 

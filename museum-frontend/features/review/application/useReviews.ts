@@ -102,12 +102,12 @@ export const useReviews = (): UseReviewsReturn => {
           .then(setStats)
           .catch(() => undefined);
         return true;
-      } catch (err) {
-        const code =
-          err instanceof Error && err.message.includes('409')
-            ? 'already_reviewed'
-            : 'submit_failed';
-        setSubmitError(getErrorMessage(createAppError({ kind: 'Review', code, message: code })));
+      } catch {
+        setSubmitError(
+          getErrorMessage(
+            createAppError({ kind: 'Review', code: 'submit_failed', message: 'submit_failed' }),
+          ),
+        );
         return false;
       } finally {
         setSubmitLoading(false);

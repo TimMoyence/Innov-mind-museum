@@ -202,18 +202,6 @@ jest.mock('@/shared/ui/ErrorState', () => {
   };
 });
 
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) =>
-    err instanceof Error ? err.message : typeof err === 'string' ? err : String(err),
-  isAppError: (err: unknown): boolean =>
-    !!err && typeof err === 'object' && 'kind' in err && 'message' in err,
-  isDailyLimitError: (err: unknown): boolean =>
-    !!err &&
-    typeof err === 'object' &&
-    'kind' in err &&
-    (err as { kind: unknown }).kind === 'DailyLimitReached',
-}));
-
 jest.mock('@shopify/flash-list', () => {
   const { FlatList } = require('react-native');
   return {

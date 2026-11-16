@@ -15,3 +15,8 @@ export function computeTenantScope(
 
   return null;
 }
+
+export const isOutsideMuseumScope = (
+  scopeMuseumId: number | null | undefined,
+  museumId: number | null,
+): boolean => scopeMuseumId != null && museumId !== scopeMuseumId;

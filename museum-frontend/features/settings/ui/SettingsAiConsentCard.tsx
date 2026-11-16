@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native'
 import { useTranslation } from 'react-i18next';
 
 import { clearConsentAcceptedFlag } from '@/features/chat/application/useAiConsent';
-import { consentApi } from '@/features/chat/infrastructure/consentApi';
+import { consentApi, type ConsentListItem } from '@/features/chat/infrastructure/consentApi';
 import { useLatestSaveOutcome } from '@/features/settings/application/useLatestSaveOutcome';
 import { settleWrite } from '@/features/settings/infrastructure/accountPreference';
 import { SaveRefusalNotice } from '@/features/settings/ui/SaveRefusalNotice';
@@ -17,7 +17,7 @@ import { GlassCard } from '@/shared/ui/GlassCard';
 import { useTheme } from '@/shared/ui/ThemeContext';
 import { semantic, space } from '@/shared/ui/tokens';
 
-interface ConsentRow {
+interface ScopeConsent {
   scope: ThirdPartyAiScope;
   granted: boolean;
   grantedAt: string | null;
@@ -28,12 +28,17 @@ const GEO_SCOPES: readonly ThirdPartyAiScope[] = ['location_to_llm', 'location_c
 const isThirdPartyAiScope = (scope: string): scope is ThirdPartyAiScope =>
   (THIRD_PARTY_AI_SCOPES as readonly string[]).includes(scope);
 
+const scopeConsent = (scope: ThirdPartyAiScope, latest?: ConsentListItem): ScopeConsent => {
+  const granted = latest?.revokedAt === null;
+  return { scope, granted, grantedAt: granted ? latest.grantedAt : null };
+};
+
 export const SettingsAiConsentCard = () => {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
 
-  const [rows, setRows] = useState<readonly ConsentRow[]>(() =>
-    THIRD_PARTY_AI_SCOPES.map((scope) => ({ scope, granted: false, grantedAt: null })),
+  const [rows, setRows] = useState<readonly ScopeConsent[]>(() =>
+    THIRD_PARTY_AI_SCOPES.map((scope) => scopeConsent(scope)),
   );
   const [isLoading, setIsLoading] = useState(true);
   const [pendingScope, setPendingScope] = useState<ThirdPartyAiScope | null>(null);
@@ -42,23 +47,13 @@ export const SettingsAiConsentCard = () => {
   const refresh = useCallback(async () => {
     try {
       const remote = await consentApi.list();
-      const byScope = new Map<ThirdPartyAiScope, { granted: boolean; grantedAt: string | null }>();
+      const latestByScope = new Map<ThirdPartyAiScope, ConsentListItem>();
       for (const row of remote) {
-        if (!isThirdPartyAiScope(row.scope)) continue;
-        if (!byScope.has(row.scope)) {
-          byScope.set(row.scope, {
-            granted: row.revokedAt === null,
-            grantedAt: row.revokedAt === null ? row.grantedAt : null,
-          });
+        if (isThirdPartyAiScope(row.scope) && !latestByScope.has(row.scope)) {
+          latestByScope.set(row.scope, row);
         }
       }
-      setRows(
-        THIRD_PARTY_AI_SCOPES.map((scope) => ({
-          scope,
-          granted: byScope.get(scope)?.granted ?? false,
-          grantedAt: byScope.get(scope)?.grantedAt ?? null,
-        })),
-      );
+      setRows(THIRD_PARTY_AI_SCOPES.map((scope) => scopeConsent(scope, latestByScope.get(scope))));
     } catch {
     } finally {
       setIsLoading(false);
@@ -69,7 +64,7 @@ export const SettingsAiConsentCard = () => {
     void refresh();
   }, [refresh]);
 
-  const grantedOn = (row: ConsentRow): string | null =>
+  const grantedOn = (row: ScopeConsent): string | null =>
     row.granted && row.grantedAt
       ? formatAppDate(row.grantedAt, i18n.language, { dateStyle: 'medium' })
       : null;

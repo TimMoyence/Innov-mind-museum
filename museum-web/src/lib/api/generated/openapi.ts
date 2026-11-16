@@ -425,6 +425,7 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
+    /** @description 409 CANNOT_DELETE_LAST_ADMIN if the caller is the last active admin/super_admin: nothing is erased. 409 CANNOT_DELETE_LAST_SUPER_ADMIN if the caller is the last active super_admin while other admins remain: nothing is erased. */
     delete: {
       parameters: {
         query?: never;
@@ -447,6 +448,7 @@ export interface paths {
         };
         401: components['responses']['Unauthorized'];
         404: components['responses']['NotFound'];
+        409: components['responses']['Conflict'];
       };
     };
     options?: never;
@@ -1777,7 +1779,7 @@ export interface paths {
           /** @description Search by email or name */
           search?: string;
           /** @description Filter by role */
-          role?: string;
+          role?: components['schemas']['UserRole'];
         };
         header?: never;
         path?: never;
@@ -1852,7 +1854,7 @@ export interface paths {
     post?: never;
     /**
      * Soft-delete a user (super_admin only)
-     * @description Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.
+     * @description Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the last active admin/super_admin. 409 CANNOT_DELETE_LAST_SUPER_ADMIN if the target is the last active super_admin.
      */
     delete: {
       parameters: {
@@ -1899,7 +1901,7 @@ export interface paths {
     put?: never;
     /**
      * Suspend a user (super_admin only)
-     * @description Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.
+     * @description Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves. 409 CANNOT_SUSPEND_LAST_ADMIN if the target is the last active admin/super_admin. 409 CANNOT_SUSPEND_LAST_SUPER_ADMIN if the target is the last active super_admin.
      */
     post: {
       parameters: {
@@ -1993,7 +1995,10 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /** Change user role (admin only) */
+    /**
+     * Change user role (admin only)
+     * @description Only a super_admin (read from the database) may grant or remove the super_admin role: otherwise 403 SUPER_ADMIN_REQUIRED. 409 CANNOT_DEMOTE_LAST_ADMIN if the target is the last active admin/super_admin and the new role is not privileged. 409 CANNOT_DEMOTE_LAST_SUPER_ADMIN if the target is the last active super_admin and the new role is not super_admin.
+     */
     patch: {
       parameters: {
         query?: never;
@@ -2007,8 +2012,7 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
-            /** @enum {string} */
-            role: 'visitor' | 'moderator' | 'museum_manager' | 'admin';
+            role: components['schemas']['UserRole'];
           };
         };
       };
@@ -2028,6 +2032,7 @@ export interface paths {
         401: components['responses']['Unauthorized'];
         403: components['responses']['Forbidden'];
         404: components['responses']['NotFound'];
+        409: components['responses']['Conflict'];
       };
     };
     trace?: never;
@@ -3690,6 +3695,446 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/auth/consent': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the caller’s consents, revoked ones included */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Consents of the caller */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              consents: components['schemas']['ConsentListItem'][];
+            };
+          };
+        };
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    put?: never;
+    /** Grant a consent scope at a policy version */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            scope: components['schemas']['ConsentScope'];
+            version: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Consent granted */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              consent: components['schemas']['ConsentRecord'];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/consent/{scope}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Revoke a consent scope */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Consent scope to revoke */
+          scope: components['schemas']['ConsentScope'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Consent revoked */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              revoked: true;
+              scope: string;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/users/{id}/tier': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Change a user’s subscription tier (super_admin only) */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description User ID */
+          id: number;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            tier: 'free' | 'premium';
+          };
+        };
+      };
+      responses: {
+        /** @description User tier updated */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['AdminUserDTO'];
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    trace?: never;
+  };
+  '/api/admin/chat/sessions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read a chat session for moderation (audited) */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Cursor for message pagination */
+          cursor?: string;
+          /** @description Number of messages per page */
+          limit?: number;
+        };
+        header?: never;
+        path: {
+          /** @description Chat session ID */
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Session history */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['GetSessionResponse'];
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/export/{kind}.csv': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Export sessions, reviews or tickets as CSV */
+    get: {
+      parameters: {
+        query?: {
+          from?: string;
+          to?: string;
+        };
+        header?: never;
+        path: {
+          /** @description Dataset to export */
+          kind: 'sessions' | 'reviews' | 'tickets';
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description CSV file */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/csv': string;
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/ke/pending': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List extracted artwork knowledge awaiting review */
+    get: {
+      parameters: {
+        query?: {
+          limit?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Items awaiting review */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              items: components['schemas']['ArtworkKnowledgeDTO'][];
+              count: number;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/admin/ke/{id}/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Approve extracted artwork knowledge so answers may use it */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          /** @description Artwork knowledge ID */
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Item approved */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string;
+              title: string;
+              needsReview: boolean;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        401: components['responses']['Unauthorized'];
+        403: components['responses']['Forbidden'];
+        404: components['responses']['NotFound'];
+      };
+    };
+    trace?: never;
+  };
+  '/api/telemetry/funnel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record a consented funnel analytics event */
+    post: {
+      parameters: {
+        query?: never;
+        header: {
+          'X-Musaium-Analytics-Consent': 'granted';
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['FunnelEvent'];
+        };
+      };
+      responses: {
+        /** @description Event accepted */
+        202: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              /** @enum {boolean} */
+              accepted: true;
+            };
+          };
+        };
+        400: components['responses']['BadRequest'];
+        403: components['responses']['Forbidden'];
+        429: components['responses']['TooManyRequests'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/google/initiate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Start the Google web OAuth flow
+     * @description Issues a nonce, signs the state (nonce, returnTo, platform) and redirects to the Google consent screen. Public endpoint.
+     */
+    get: operations['googleOauthInitiate'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/auth/google/callback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Google web OAuth callback
+     * @description Exchanges the authorization code, verifies the signed state and signs the user in. Mobile: redirects to the app deep link with a one-time code. Web: sets the session cookies and redirects to returnTo. Any failure redirects to the login screen of the platform with a reason.
+     */
+    get: operations['googleOauthCallback'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3723,17 +4168,18 @@ export interface components {
       commitSha?: string;
       responseTimeMs?: number;
     };
+    /**
+     * @description User role for RBAC
+     * @enum {string}
+     */
+    UserRole: 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
     AuthUser: {
       id: number;
       /** Format: email */
       email: string;
       firstname?: string | null;
       lastname?: string | null;
-      /**
-       * @description User role for RBAC
-       * @enum {string}
-       */
-      role: 'visitor' | 'moderator' | 'museum_manager' | 'admin';
+      role: components['schemas']['UserRole'];
       /** @description Whether the user has completed the onboarding flow */
       onboardingCompleted: boolean;
       /**
@@ -4049,7 +4495,7 @@ export interface components {
         id: number;
         /** Format: email */
         email: string;
-        role: string;
+        role: components['schemas']['UserRole'];
         firstname: string | null;
         lastname: string | null;
         locale: string | null;
@@ -4200,7 +4646,7 @@ export interface components {
       email: string;
       firstname?: string | null;
       lastname?: string | null;
-      role: string;
+      role: components['schemas']['UserRole'];
       /** @description B2B museum tenant identifier for museum_manager / admin roles; null for platform-wide accounts. */
       museumId: number | null;
       emailVerified: boolean;
@@ -4378,6 +4824,8 @@ export interface components {
       ticketId: string;
       senderId: number;
       senderRole: string;
+      /** @description True when the sender is not the author of the ticket: only the author and the staff can write on a ticket. */
+      fromStaff: boolean;
       text: string;
       /** Format: date-time */
       createdAt: string;
@@ -4559,6 +5007,66 @@ export interface components {
       status: 'pending';
       jobId: string;
     };
+    /** @enum {string} */
+    ConsentScope:
+      | 'location_to_llm'
+      | 'location_coarse_to_llm'
+      | 'analytics'
+      | 'marketing'
+      | 'tos_privacy'
+      | 'third_party_ai_text_openai'
+      | 'third_party_ai_image_openai'
+      | 'third_party_ai_audio_openai'
+      | 'third_party_ai_profile_openai'
+      | 'third_party_ai_text_google'
+      | 'third_party_ai_image_google'
+      | 'third_party_ai_audio_google'
+      | 'third_party_ai_profile_google';
+    ConsentRecord: {
+      id: number;
+      scope: components['schemas']['ConsentScope'];
+      version: string;
+      /** Format: date-time */
+      grantedAt: string;
+      /** @enum {string} */
+      source: 'ui' | 'api' | 'registration';
+    };
+    ConsentListItem: components['schemas']['ConsentRecord'] & {
+      /** Format: date-time */
+      revokedAt: string | null;
+    };
+    ArtworkKnowledgeDTO: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      artist: string | null;
+      period: string | null;
+      technique: string | null;
+      description: string;
+      historicalContext: string | null;
+      dimensions: string | null;
+      currentLocation: string | null;
+      sourceUrls: string[];
+      confidence: number;
+      needsReview: boolean;
+      locale: string;
+      /** Format: uuid */
+      roomId?: string | null;
+      museumId?: number | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    FunnelEvent: {
+      name: string;
+      url: string;
+      domain: string;
+      referrer?: string;
+      props?: {
+        [key: string]: string | number | boolean;
+      };
+    };
   };
   responses: {
     /** @description Validation error */
@@ -4696,6 +5204,78 @@ export interface operations {
       400: components['responses']['BadRequest'];
       401: components['responses']['Unauthorized'];
       429: components['responses']['TooManyRequests'];
+    };
+  };
+  googleOauthInitiate: {
+    parameters: {
+      query?: {
+        /** @description Client that will receive the session: mobile (deep link) or web (cookies). Anything else means web. */
+        platform?: 'web' | 'mobile';
+        /** @description Relative web path to land on after sign-in; sanitized server-side. */
+        returnTo?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Redirect to the Google authorization endpoint. */
+      302: {
+        headers: {
+          /** @description Redirect target */
+          Location?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components['responses']['TooManyRequests'];
+      /** @description Google web OAuth is not configured on this backend (code GOOGLE_OAUTH_NOT_CONFIGURED). */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
+    };
+  };
+  googleOauthCallback: {
+    parameters: {
+      query?: {
+        /** @description Authorization code returned by Google. */
+        code?: string;
+        /** @description Signed state issued by /api/auth/google/initiate. */
+        state?: string;
+        /** @description Error returned by Google (for example access_denied). */
+        error?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Redirect to the app deep link, the web returnTo, or the login screen with an error reason. */
+      302: {
+        headers: {
+          /** @description Redirect target */
+          Location?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components['responses']['TooManyRequests'];
+      /** @description Google web OAuth is not configured on this backend (code GOOGLE_OAUTH_NOT_CONFIGURED). */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ApiError'];
+        };
+      };
     };
   };
 }

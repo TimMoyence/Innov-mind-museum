@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const u = data.user;
       const nameParts = [u.firstname, u.lastname].filter(Boolean);
       const name = nameParts.length > 0 ? nameParts.join(' ') : u.email;
-      setUser({ id: u.id, email: u.email, name, role: u.role as UserRole });
+      setUser({ id: u.id, email: u.email, name, role: u.role });
     } finally {
       setIsLoading(false);
     }

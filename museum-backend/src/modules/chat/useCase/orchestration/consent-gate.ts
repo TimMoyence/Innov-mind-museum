@@ -1,8 +1,9 @@
-import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
+import { missingThirdPartyAiScope } from '@modules/chat/useCase/require-third-party-ai-consent';
 
 import type { ConsentScope } from '@modules/auth/domain/consent/userConsent.entity';
 import type { PostMessageInput } from '@modules/chat/domain/chat.types';
 import type { PrepareRefused } from '@modules/chat/useCase/orchestration/prepare-message.pipeline';
+import type { DispatchChannel } from '@modules/chat/useCase/orchestration/provider-resolver';
 import type { ThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 
 export interface ConsentGateInput {
@@ -21,26 +22,18 @@ export async function checkThirdPartyAiConsent(args: {
   const { checker, input } = args;
   if (!checker) return null;
 
-  const requiredScopes: ConsentScope[] = [];
-  if (input.text && input.text.length > 0) {
-    requiredScopes.push(resolveActiveProviderForScope('text').scope);
-  }
-  if (input.image) {
-    requiredScopes.push(resolveActiveProviderForScope('image').scope);
-  }
-  if (requiredScopes.length === 0) return null;
+  const channels: DispatchChannel[] = [];
+  if (input.text) channels.push('text');
+  if (input.image) channels.push('image');
 
-  for (const scope of requiredScopes) {
-    const granted = await checker.isGranted(input.currentUserId, scope);
-    if (!granted) {
-      return buildConsentRefusal({
+  const scope = await missingThirdPartyAiScope(checker, input.currentUserId, channels);
+  return scope === null
+    ? null
+    : buildConsentRefusal({
         sessionId: input.sessionId,
         scope,
         requestedLocale: input.requestedLocale,
       });
-    }
-  }
-  return null;
 }
 
 function buildConsentRefusal(params: {

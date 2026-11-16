@@ -1,6 +1,7 @@
 import '@/__tests__/helpers/test-utils';
 
 import {
+  makeAppError,
   makeCreateSessionResponse,
   makeGetSessionResponse,
   makeListSessionsResponse,
@@ -339,10 +340,11 @@ describe('chatApi', () => {
       expect(result).toBeNull();
     });
 
-    it('wraps errors with getErrorMessage', async () => {
-      mockHttpRequest.mockRejectedValue(new Error('Network error'));
+    it('ERREUR-TYPEE · un échec de synthèse vocale remonte son AppError d’origine', async () => {
+      const networkError = makeAppError({ kind: 'Network' });
+      mockHttpRequest.mockRejectedValue(networkError);
 
-      await expect(chatApi.synthesizeSpeech('msg-1')).rejects.toThrow();
+      await expect(chatApi.synthesizeSpeech('msg-1')).rejects.toBe(networkError);
     });
   });
 
@@ -364,23 +366,6 @@ describe('chatApi', () => {
         }),
       );
       expect(result).toEqual(signedResponse);
-    });
-  });
-
-  describe('createSessionOrThrow', () => {
-    it('delegates to createSession on success', async () => {
-      const response = makeCreateSessionResponse();
-      mockOpenApiRequest.mockResolvedValue(response);
-
-      const result = await chatApi.createSessionOrThrow({ locale: 'en' });
-
-      expect(result.session.id).toBe(response.session.id);
-    });
-
-    it('wraps errors as plain Error', async () => {
-      mockOpenApiRequest.mockRejectedValue(new Error('API down'));
-
-      await expect(chatApi.createSessionOrThrow({})).rejects.toThrow();
     });
   });
 

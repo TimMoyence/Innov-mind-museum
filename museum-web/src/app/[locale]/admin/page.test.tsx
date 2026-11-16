@@ -47,6 +47,7 @@ const mockStats: AdminStats = {
 const frenchDict: typeof mockAdminDict = {
   ...mockAdminDict,
   dashboardPage: {
+    errorLoad: 'Impossible de charger les statistiques.',
     subtitle: "Vue d'ensemble de votre plateforme Musaium.",
     stats: {
       totalUsers: 'Utilisateurs totaux',

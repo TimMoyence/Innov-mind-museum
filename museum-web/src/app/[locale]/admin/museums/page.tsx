@@ -1,28 +1,10 @@
 'use client';
 
+import { useAdminDict } from '@/lib/admin-dictionary';
 import Link from 'next/link';
 import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import type { MuseumDTO } from '@/lib/admin-types';
-
-const STRINGS = {
-  title: 'Museums',
-  subtitle: 'Manage B2B-pilot museum tenants. Onboard new museums and configure branding.',
-  newCta: '+ Onboard new museum',
-  loading: 'Loading museums…',
-  empty: 'No museums yet. Click "Onboard new museum" to add the first one.',
-  error: 'Could not load museums.',
-  cols: {
-    name: 'Name',
-    slug: 'Slug',
-    type: 'Type',
-    active: 'Active',
-    actions: 'Actions',
-  },
-  actions: {
-    branding: 'Branding',
-  },
-} as const;
 
 interface ListResponse {
   museums?: MuseumDTO[];
@@ -30,6 +12,8 @@ interface ListResponse {
 }
 
 export default function MuseumsListPage() {
+  const adminDict = useAdminDict();
+  const copy = adminDict.museumsPage;
   const {
     data: museumsPayload,
     loading,
@@ -39,7 +23,7 @@ export default function MuseumsListPage() {
       const r = raw as ListResponse;
       return r.museums ?? r.data ?? [];
     },
-    errorFallback: STRINGS.error,
+    errorFallback: copy.errorLoad,
   });
   const museums = museumsPayload ?? [];
 
@@ -47,23 +31,23 @@ export default function MuseumsListPage() {
     <section className="space-y-6">
       <header className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{STRINGS.title}</h1>
-          <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{copy.title}</h1>
+          <p className="mt-1 text-sm text-gray-600">{copy.subtitle}</p>
         </div>
         <Link
           href="museums/new"
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
-          {STRINGS.newCta}
+          {copy.newCta}
         </Link>
       </header>
 
       {error && <AlertBanner variant="error" message={error} />}
 
-      {loading && <p className="text-sm text-gray-600">{STRINGS.loading}</p>}
+      {loading && <p className="text-sm text-gray-600">{copy.loading}</p>}
 
       {!loading && !error && museums.length === 0 && (
-        <p className="text-sm text-gray-600">{STRINGS.empty}</p>
+        <p className="text-sm text-gray-600">{copy.empty}</p>
       )}
 
       {!loading && museums.length > 0 && (
@@ -72,19 +56,19 @@ export default function MuseumsListPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  {STRINGS.cols.name}
+                  {copy.cols.name}
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  {STRINGS.cols.slug}
+                  {copy.cols.slug}
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  {STRINGS.cols.type}
+                  {copy.cols.type}
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  {STRINGS.cols.active}
+                  {copy.cols.active}
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  {STRINGS.cols.actions}
+                  {copy.cols.actions}
                 </th>
               </tr>
             </thead>
@@ -102,7 +86,7 @@ export default function MuseumsListPage() {
                           : 'inline-block rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600'
                       }
                     >
-                      {m.isActive ? 'active' : 'inactive'}
+                      {m.isActive ? adminDict.common.active : adminDict.common.inactive}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-sm">
@@ -110,7 +94,7 @@ export default function MuseumsListPage() {
                       href={`museums/${m.id}/branding`}
                       className="text-blue-600 hover:underline"
                     >
-                      {STRINGS.actions.branding}
+                      {copy.branding}
                     </Link>
                   </td>
                 </tr>

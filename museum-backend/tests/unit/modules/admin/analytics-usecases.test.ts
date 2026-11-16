@@ -14,7 +14,7 @@ function makeAdminRepo(overrides: Partial<IAdminRepository> = {}): IAdminReposit
   return {
     listUsers: jest.fn(),
     changeUserRole: jest.fn(),
-    countAdmins: jest.fn(),
+    countActiveAccounts: jest.fn(),
     listAuditLogs: jest.fn(),
     getStats: jest.fn(),
     listReports: jest.fn(),

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { apiGet } from '@/lib/api';
+import { apiGet, errorMessage } from '@/lib/api';
 
 export interface UseFetchDataOptions<T> {
   deps?: readonly (string | number | boolean | null | undefined)[];
 
-  errorFallback?: string;
+  errorFallback: string;
 
   parseData?: (response: unknown) => T | { data: T; totalPages?: number; total?: number };
 }
@@ -64,11 +64,9 @@ function isAbortError(err: unknown): boolean {
   return false;
 }
 
-const DEFAULT_ERROR_FALLBACK = 'Failed to load data';
-
 export function useFetchData<T>(
   url: string | null,
-  options?: UseFetchDataOptions<T>,
+  options: UseFetchDataOptions<T>,
 ): UseFetchDataResult<T> {
   const [data, setData] = useState<T | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(url !== null);
@@ -77,10 +75,10 @@ export function useFetchData<T>(
 
   const controllerRef = useRef<AbortController | null>(null);
 
-  const optionsRef = useRef<UseFetchDataOptions<T> | undefined>(options);
+  const optionsRef = useRef<UseFetchDataOptions<T>>(options);
   optionsRef.current = options;
 
-  const depsKey = JSON.stringify(options?.deps ?? []);
+  const depsKey = JSON.stringify(options.deps ?? []);
 
   const refetch = useCallback((): Promise<void> => {
     if (url === null) return Promise.resolve();
@@ -105,8 +103,7 @@ export function useFetchData<T>(
       },
       (err: unknown) => {
         if (signal.aborted || isAbortError(err)) return;
-        const fallback = optionsRef.current?.errorFallback ?? DEFAULT_ERROR_FALLBACK;
-        setError(err instanceof Error ? err.message : fallback);
+        setError(errorMessage(err, optionsRef.current.errorFallback));
         setLoading(false);
       },
     );

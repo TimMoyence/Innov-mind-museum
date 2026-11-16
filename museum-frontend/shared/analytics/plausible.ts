@@ -1,5 +1,6 @@
 import { readEnvString } from '@/shared/lib/env';
 import { hasAnalyticsConsent } from '@/shared/analytics/useAnalyticsConsent';
+import { apiUrl } from '@/shared/infrastructure/apiConfig';
 
 const PII_CANARY_KEYS = new Set([
   'email',
@@ -34,13 +35,6 @@ export function __setHasAnalyticsConsentForTest(fn: (() => boolean) | null): voi
   consentPredicate = fn ?? defaultConsentPredicate;
 }
 
-const resolveEndpoint = (): string | undefined => {
-  const explicit = readEnvString(process.env.EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL);
-  if (explicit) return explicit;
-  const apiBase = readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL);
-  return apiBase ? `${apiBase.replace(/\/$/, '')}/api/telemetry/funnel` : undefined;
-};
-
 const resolveDomain = (): string | undefined =>
   readEnvString(process.env.EXPO_PUBLIC_PLAUSIBLE_DOMAIN);
 
@@ -52,16 +46,13 @@ export async function trackFunnelEvent(
 ): Promise<void> {
   if (!consentPredicate()) return;
 
-  const endpoint = resolveEndpoint();
-  if (!endpoint) return;
-
   const domain = resolveDomain();
   if (!domain) return;
 
   const safeProps = stripPii(props);
 
   try {
-    await fetch(endpoint, {
+    await fetch(apiUrl('/api/telemetry/funnel'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

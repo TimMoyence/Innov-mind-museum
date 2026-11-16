@@ -236,6 +236,15 @@ describe('Admin Routes — RBAC Enforcement', () => {
         .set('Authorization', `Bearer ${adminToken()}`)
         .send({ role: 'superuser' });
       expect(res.status).toBe(400);
+      expect(mockChangeUserRole).not.toHaveBeenCalled();
+    });
+
+    it('GET /api/admin/users?role=root returns 400 without listing anyone', async () => {
+      const res = await request(app)
+        .get('/api/admin/users?role=root')
+        .set('Authorization', `Bearer ${adminToken()}`);
+      expect(res.status).toBe(400);
+      expect(mockListUsers).not.toHaveBeenCalled();
     });
 
     it('PATCH /api/admin/users/1/role returns 400 for empty body', async () => {

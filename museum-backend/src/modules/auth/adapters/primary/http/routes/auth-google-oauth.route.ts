@@ -14,6 +14,7 @@ import {
 import { exchangeGoogleAuthCode } from '@modules/auth/adapters/secondary/social/google-token-exchange';
 import { nonceStore, socialLoginUseCase, socialOtcStore } from '@modules/auth/useCase';
 import { AUDIT_AUTH_SOCIAL_LOGIN } from '@shared/audit/audit.types';
+import { type AppError, serviceUnavailable } from '@shared/errors/app.error';
 import { env } from '@src/config/env';
 
 import type { AuthSessionResponse } from '@modules/auth/useCase/session/authSession.service';
@@ -46,12 +47,10 @@ function resolveWebBaseUrl(): string | null {
   return null;
 }
 
-function respondNotConfigured(res: Response): void {
-  res.status(503).json({
-    error: 'GOOGLE_OAUTH_NOT_CONFIGURED',
-    message: 'Google web OAuth is not configured on this backend.',
+const googleOauthNotConfigured = (): AppError =>
+  serviceUnavailable('Google web OAuth is not configured on this backend.', {
+    code: 'GOOGLE_OAUTH_NOT_CONFIGURED',
   });
-}
 
 function loginErrorRedirect(reason: string): string {
   const webBase = resolveWebBaseUrl();
@@ -186,8 +185,7 @@ authGoogleOauthRouter.get(
     const clientId = oauthConfig?.clientId;
     const redirectUri = oauthConfig?.redirectUri;
     if (!clientId || !redirectUri) {
-      respondNotConfigured(res);
-      return;
+      throw googleOauthNotConfigured();
     }
 
     const platform = parsePlatformQuery(req.query.platform);
@@ -221,8 +219,7 @@ authGoogleOauthRouter.get(
   async (req: Request, res: Response): Promise<void> => {
     const prelude = parseCallback(req);
     if (prelude.kind === 'not_configured') {
-      respondNotConfigured(res);
-      return;
+      throw googleOauthNotConfigured();
     }
     if (prelude.kind === 'redirect') {
       res.redirect(302, errorRedirectFor(null, prelude.reason));

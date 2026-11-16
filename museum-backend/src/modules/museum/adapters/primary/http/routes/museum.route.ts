@@ -1,5 +1,6 @@
 import { type Request, type Response, Router } from 'express';
 
+import { MUSEUM_STAFF_ROLES } from '@modules/auth/domain/user/user-role';
 import {
   createMuseumSchema,
   detectMuseumQuerySchema,
@@ -204,12 +205,7 @@ export const createMuseumRouter = (deps: CreateMuseumRouterDeps = {}): Router =>
     validateBody(createMuseumSchema),
     handleCreateMuseum,
   );
-  museumRouter.get(
-    '/',
-    isAuthenticated,
-    requireRole('admin', 'moderator', 'museum_manager'),
-    handleListMuseums,
-  );
+  museumRouter.get('/', isAuthenticated, requireRole(...MUSEUM_STAFF_ROLES), handleListMuseums);
   museumRouter.get('/:idOrSlug', isAuthenticated, handleGetMuseum);
   museumRouter.put(
     '/:id',

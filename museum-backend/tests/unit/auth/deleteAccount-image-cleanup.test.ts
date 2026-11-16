@@ -6,6 +6,7 @@ import {
 
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
+import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 const makeImageStorage = (): jest.Mocked<ImageCleanupPort> => ({
   deleteByPrefix: jest.fn().mockResolvedValue(undefined),
@@ -36,6 +37,7 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
 
     const useCase = new DeleteAccountUseCase({
       userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
       imageStorage,
       legacyImageRefLookup: lookup,
     });
@@ -58,6 +60,7 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
 
     const useCase = new DeleteAccountUseCase({
       userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
       imageStorage,
       legacyImageRefLookup: lookup,
     });
@@ -80,6 +83,7 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
 
     const useCase = new DeleteAccountUseCase({
       userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
       imageStorage,
       legacyImageRefLookup: lookup,
     });
@@ -98,6 +102,7 @@ describe('DeleteAccountUseCase — image cleanup pipeline', () => {
 
     const useCase = new DeleteAccountUseCase({
       userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
       imageStorage,
     });
     await useCase.execute(5);

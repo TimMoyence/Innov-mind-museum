@@ -1,0 +1,11 @@
+appId: com.musaium.mobile.preview
+---
+- openLink: '${LINK}'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+            text: 'Ouvrir|Open'
+            below: '(Ouvrir dans|Open in) .*Musaium.*'
+            optional: true

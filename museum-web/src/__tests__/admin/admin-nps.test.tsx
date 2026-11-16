@@ -180,7 +180,7 @@ describe('AdminNpsPage', () => {
     expect(screen.queryByText('No museum assigned')).not.toBeInTheDocument();
   });
 
-  it('still shows the raw error message for a non-403 fetch failure', async () => {
+  it('shows the translated load error, never the server text, for a non-403 fetch failure', async () => {
     mockApiGet.mockRejectedValue(new ApiError(500, 'Internal Server Error', 'Boom'));
 
     render(
@@ -190,7 +190,7 @@ describe('AdminNpsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Boom')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the NPS.')).toBeInTheDocument();
     });
     expect(screen.queryByText(mockAdminDict.npsPage.noMuseumAssigned)).not.toBeInTheDocument();
   });

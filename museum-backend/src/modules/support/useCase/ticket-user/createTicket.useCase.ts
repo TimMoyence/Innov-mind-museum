@@ -1,8 +1,10 @@
-import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+import { TEXT_LIMITS } from '@musaium/shared';
 
+import { TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { auditService, AUDIT_SUPPORT_TICKET_CREATED } from '@shared/audit';
-import { invalidInput } from '@shared/errors/app.error';
 import { nonEmpty } from '@shared/utils/defaults';
+import { assertOneOf } from '@shared/validation/one-of';
+import { assertWithinLimit } from '@shared/validation/text-field';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type { CreateTicketInput, TicketDTO } from '@modules/support/domain/ticket/support.types';
@@ -23,24 +25,15 @@ export class CreateTicketUseCase {
 
   async execute(input: CreateTicketUseCaseInput): Promise<TicketDTO> {
     const subject = input.subject.trim();
-    if (!isWithinLimit(subject, TEXT_LIMITS.ticketSubject)) {
-      throw invalidInput(describeLimit('subject', TEXT_LIMITS.ticketSubject));
-    }
+    assertWithinLimit('subject', subject, TEXT_LIMITS.ticketSubject);
 
     const description = input.description.trim();
-    if (!isWithinLimit(description, TEXT_LIMITS.ticketDescription)) {
-      throw invalidInput(describeLimit('description', TEXT_LIMITS.ticketDescription));
-    }
+    assertWithinLimit('description', description, TEXT_LIMITS.ticketDescription);
 
     const category = input.category?.trim() ?? '';
-    if (!isWithinLimit(category, TEXT_LIMITS.ticketCategory)) {
-      throw invalidInput(describeLimit('category', TEXT_LIMITS.ticketCategory));
-    }
+    assertWithinLimit('category', category, TEXT_LIMITS.ticketCategory);
 
-    const validPriorities: string[] = ['low', 'medium', 'high'];
-    if (input.priority && !validPriorities.includes(input.priority)) {
-      throw invalidInput(`priority must be one of: ${validPriorities.join(', ')}`);
-    }
+    if (input.priority) assertOneOf('priority', TICKET_PRIORITIES, input.priority);
 
     const createInput: CreateTicketInput = {
       userId: input.userId,

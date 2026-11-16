@@ -12,7 +12,7 @@ import { BaseModal } from '@/components/ui/BaseModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
-import type { ReviewDTO, ReviewStatus } from '@/lib/admin-types';
+import type { ModerationStatus, ReviewDTO, ReviewStatus } from '@/lib/admin-types';
 import { REVIEW_STATUSES, MODERATION_STATUSES } from '@/lib/admin-types';
 import { adminListUrl } from '@/lib/admin-list-url';
 
@@ -30,7 +30,7 @@ export default function AdminReviewsPage() {
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | ''>('pending');
 
   const [moderating, setModerating] = useState<ReviewDTO | null>(null);
-  const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
+  const [decision, setDecision] = useState<ModerationStatus | null>(null);
   const [saving, setSaving] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export default function AdminReviewsPage() {
     refetch: fetchReviews,
   } = useFetchData<ReviewDTO[]>(reviewsUrl, {
     deps: [page, statusFilter],
-    errorFallback: 'Failed to load reviews',
+    errorFallback: adminDict.reviewsPage.errorLoad,
   });
 
   const reviews = reviewsPayload ?? [];
@@ -67,8 +67,8 @@ export default function AdminReviewsPage() {
       setModerating(null);
       setDecision(null);
       void fetchReviews();
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to moderate review');
+    } catch {
+      setMutationError(adminDict.reviewsPage.errorModerate);
     } finally {
       setSaving(false);
     }

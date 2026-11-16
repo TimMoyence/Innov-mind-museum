@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { apiPatch } from '@/lib/api';
-import { useAdminDict, useAdminLocale } from '@/lib/admin-dictionary';
+import { apiPatch, errorMessage } from '@/lib/api';
+import { useAdminDict, useAdminLocale, userActionRefusals } from '@/lib/admin-dictionary';
 import { useDateLocale, formatDate } from '@/lib/i18n-format';
+import { ROLE_BADGE_CLASSES, USER_ROLES, assignableRoles, canChangeRole } from '@/lib/admin-roles';
 import { useAuth } from '@/lib/auth';
 import { useFetchData } from '@/lib/hooks/useFetchData';
 import { AdminPagination } from '@/components/admin/AdminPagination';
@@ -22,21 +23,6 @@ function displayName(u: AdminUserDTO): string {
   return parts.length > 0 ? parts.join(' ') : u.email;
 }
 
-const ROLE_COLORS: Record<UserRole, string> = {
-  super_admin: 'bg-purple-100 text-purple-800',
-  admin: 'bg-red-100 text-red-700',
-  museum_manager: 'bg-purple-100 text-purple-700',
-  moderator: 'bg-blue-100 text-blue-700',
-  visitor: 'bg-gray-100 text-gray-700',
-};
-
-const ALL_ROLES: Exclude<UserRole, 'super_admin'>[] = [
-  'visitor',
-  'moderator',
-  'museum_manager',
-  'admin',
-];
-
 function useDebouncedValue(value: string, delay: number): string {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -53,7 +39,6 @@ function useDebouncedValue(value: string, delay: number): string {
 export default function UsersPage() {
   const adminDict = useAdminDict();
   const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
   const locale = useAdminLocale();
 
   const [page, setPage] = useState(1);
@@ -86,7 +71,7 @@ export default function UsersPage() {
     refetch: fetchUsers,
   } = useFetchData<AdminUserDTO[]>(usersUrl, {
     deps: [page, debouncedSearch, roleFilter],
-    errorFallback: 'Failed to load users',
+    errorFallback: adminDict.usersPage.errorLoad,
   });
 
   const users = usersPayload ?? [];
@@ -105,7 +90,9 @@ export default function UsersPage() {
       setEditingUser(null);
       void fetchUsers();
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to change role');
+      setMutationError(
+        errorMessage(err, adminDict.usersPage.errorRoleChange, userActionRefusals(adminDict)),
+      );
     } finally {
       setChangingRole(false);
     }
@@ -135,7 +122,7 @@ export default function UsersPage() {
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{adminDict.usersPage.allRoles}</option>
-          {ALL_ROLES.map((r) => (
+          {USER_ROLES.map((r) => (
             <option key={r} value={r}>
               {r}
             </option>
@@ -181,7 +168,7 @@ export default function UsersPage() {
                       <TableDataCell nowrap>{u.email}</TableDataCell>
                       <TableDataCell nowrap>
                         <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role as UserRole]}`}
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_BADGE_CLASSES[u.role]}`}
                         >
                           {u.role}
                         </span>
@@ -213,12 +200,12 @@ export default function UsersPage() {
                           >
                             {adminDict.usersPage.view}
                           </Link>
-                          {isAdmin && (
+                          {canChangeRole(currentUser?.role, u.role) && (
                             <button
                               type="button"
                               onClick={() => {
                                 setEditingUser(u);
-                                setNewRole(u.role as UserRole);
+                                setNewRole(u.role);
                               }}
                               className="rounded-md px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                             >
@@ -277,7 +264,7 @@ export default function UsersPage() {
             }}
             className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
           >
-            {ALL_ROLES.map((r) => (
+            {assignableRoles(currentUser?.role).map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>

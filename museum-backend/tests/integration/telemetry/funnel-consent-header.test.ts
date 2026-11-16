@@ -52,7 +52,7 @@ describe('TD-C5-CONSENT-HEADER-01 — POST /api/telemetry/funnel consent header 
     expect(eventArg?.name).toBe('paywall_modal_shown');
   });
 
-  it('header absent → 403 consent_required + emit NEVER called', async () => {
+  it('header absent → 403 CONSENT_REQUIRED + emit NEVER called', async () => {
     const res = await request(app)
       .post('/api/telemetry/funnel')
       .set('User-Agent', 'MusaiumMobile/1.0 (consent-header-test)')
@@ -60,9 +60,7 @@ describe('TD-C5-CONSENT-HEADER-01 — POST /api/telemetry/funnel consent header 
       .send(validBody());
 
     expect(res.status).toBe(403);
-    const body = res.body as { code?: string; error?: string };
-    const codeOrError = body.code ?? body.error;
-    expect(codeOrError).toBe('consent_required');
+    expect((res.body as { error?: { code?: string } }).error?.code).toBe('CONSENT_REQUIRED');
 
     expect(emit).not.toHaveBeenCalled();
   });

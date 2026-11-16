@@ -21,7 +21,7 @@ esac
 
 LOCK="${ENV_FILE}.lock"
 TRIES="${SET_ENV_LOCK_TRIES:-300}"
-until mkdir "$LOCK" 2>/dev/null; do
+until (set -o noclobber && : > "$LOCK") 2>/dev/null; do
   TRIES=$((TRIES - 1))
   if [ "$TRIES" -le 0 ]; then
     echo "set-env.sh : ${KEY} refusé : ${LOCK} reste tenu ; le supprimer si aucune écriture n'est en cours" >&2
@@ -30,7 +30,7 @@ until mkdir "$LOCK" 2>/dev/null; do
   sleep 0.1
 done
 TMP=""
-trap 'rm -f "$TMP"; rmdir "$LOCK"' EXIT
+trap 'rm -f "$TMP" "$LOCK"' EXIT
 
 umask 077
 mkdir -p "$BACKUP_DIR"

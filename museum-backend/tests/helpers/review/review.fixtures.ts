@@ -1,4 +1,5 @@
 import type { Review } from '@modules/review/domain/review/review.entity';
+import type { ReviewDTO } from '@modules/review/domain/review/review.types';
 import type { DataSource } from 'typeorm';
 
 export const makeReview = (overrides: Partial<Review> = {}): Review =>
@@ -13,6 +14,18 @@ export const makeReview = (overrides: Partial<Review> = {}): Review =>
     updatedAt: new Date('2025-06-01'),
     ...overrides,
   }) as Review;
+
+export const makeReviewDTO = (overrides: Partial<ReviewDTO> = {}): ReviewDTO => ({
+  id: 'review-001',
+  userId: 1,
+  userName: 'Test User',
+  rating: 4,
+  comment: 'Great app!',
+  status: 'pending',
+  museumId: null,
+  createdAt: '2025-06-01T00:00:00.000Z',
+  ...overrides,
+});
 
 export interface InsertReviewRowOptions {
   rating: number;

@@ -9,6 +9,11 @@ import {
 } from '@/features/auth/infrastructure/socialAuthProviders';
 import { getErrorMessage } from '@/shared/lib/errors';
 
+const CANCELLATION_CODES = new Set(['google_cancelled', 'ERR_REQUEST_CANCELED']);
+
+const isCancellation = (error: Error): boolean =>
+  CANCELLATION_CODES.has(String((error as { code?: unknown }).code));
+
 interface SocialMutationResult {
   sessionEstablished: boolean;
 }
@@ -91,14 +96,10 @@ export const useSocialLogin = ({
 
   const isSocialLoading = appleMutation.isPending || googleMutation.isPending;
 
-  const appleError = appleMutation.error ? getErrorMessage(appleMutation.error) : null;
-  const googleError = googleMutation.error ? getErrorMessage(googleMutation.error) : null;
-  const rawError = appleError ?? googleError ?? null;
-
-  const errorMessage =
-    rawError !== null && !rawError.includes('canceled') && !rawError.includes('cancelled')
-      ? rawError
-      : null;
+  const visibleError = [appleMutation.error, googleMutation.error].find(
+    (error) => error !== null && !isCancellation(error),
+  );
+  const errorMessage = visibleError ? getErrorMessage(visibleError) : null;
 
   const clearError = (): void => {
     appleMutation.reset();

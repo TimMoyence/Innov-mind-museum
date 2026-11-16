@@ -1,3 +1,5 @@
+import { In, IsNull, type DataSource, type EntityManager, type Repository } from 'typeorm';
+
 import { User } from '@modules/auth/domain/user/user.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
@@ -28,8 +30,8 @@ import type {
   EngagementAnalytics,
   EngagementAnalyticsFilters,
 } from '@modules/admin/domain/admin/admin.types';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { PaginatedResult } from '@shared/types/pagination';
-import type { DataSource, Repository } from 'typeorm';
 
 function mapUser(user: User): AdminUserDTO {
   return {
@@ -80,6 +82,8 @@ function mapAuditLog(log: AuditLog): AdminAuditLogDTO {
   };
 }
 
+const PRIVILEGED_ACCOUNTS_LOCK = 'admin:privileged-accounts';
+
 export class AdminRepositoryPg implements IAdminRepository {
   private readonly userRepo: Repository<User>;
   private readonly auditRepo: Repository<AuditLog>;
@@ -87,12 +91,24 @@ export class AdminRepositoryPg implements IAdminRepository {
   private readonly sessionRepo: Repository<ChatSession>;
   private readonly messageRepo: Repository<ChatMessage>;
 
-  constructor(private readonly dataSource: DataSource) {
-    this.userRepo = dataSource.getRepository(User);
-    this.auditRepo = dataSource.getRepository(AuditLog);
-    this.reportRepo = dataSource.getRepository(MessageReport);
-    this.sessionRepo = dataSource.getRepository(ChatSession);
-    this.messageRepo = dataSource.getRepository(ChatMessage);
+  constructor(
+    private readonly dataSource: DataSource,
+    manager: Pick<EntityManager, 'getRepository'> = dataSource,
+  ) {
+    this.userRepo = manager.getRepository(User);
+    this.auditRepo = manager.getRepository(AuditLog);
+    this.reportRepo = manager.getRepository(MessageReport);
+    this.sessionRepo = manager.getRepository(ChatSession);
+    this.messageRepo = manager.getRepository(ChatMessage);
+  }
+
+  async withPrivilegedAccountsLock<T>(
+    work: (repository: IAdminRepository) => Promise<T>,
+  ): Promise<T> {
+    return await this.dataSource.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [PRIVILEGED_ACCOUNTS_LOCK]);
+      return await work(new AdminRepositoryPg(this.dataSource, manager));
+    });
   }
 
   async listUsers(filters: ListUsersFilters): Promise<PaginatedResult<AdminUserDTO>> {
@@ -121,11 +137,11 @@ export class AdminRepositoryPg implements IAdminRepository {
     return user ? mapUser(user) : null;
   }
 
-  async changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null> {
+  async changeUserRole(userId: number, newRole: UserRole): Promise<AdminUserDTO | null> {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) return null;
 
-    user.role = newRole as User['role'];
+    user.role = newRole;
     const saved = await this.userRepo.save(user);
     return mapUser(saved);
   }
@@ -162,11 +178,19 @@ export class AdminRepositoryPg implements IAdminRepository {
     return mapUser(saved);
   }
 
-  async countAdmins(): Promise<number> {
-    return (
-      (await this.userRepo.countBy({ role: 'admin' })) +
-      (await this.userRepo.countBy({ role: 'super_admin' }))
+  async restoreUser(userId: number, markedAt: string): Promise<void> {
+    await this.userRepo.update(
+      { id: userId, deletedAt: new Date(markedAt) },
+      { deletedAt: () => 'NULL' },
     );
+  }
+
+  async countActiveAccounts(roles: readonly UserRole[]): Promise<number> {
+    return await this.userRepo.countBy({
+      role: In([...roles]),
+      deletedAt: IsNull(),
+      suspended: false,
+    });
   }
 
   async listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>> {

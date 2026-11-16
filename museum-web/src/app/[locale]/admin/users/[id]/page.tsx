@@ -9,8 +9,9 @@ import { AlertBanner } from '@/components/ui/AlertBanner';
 import { BaseModal } from '@/components/ui/BaseModal';
 import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
-import { useAdminDict } from '@/lib/admin-dictionary';
-import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '@/lib/api';
+import { useAdminDict, userActionRefusals } from '@/lib/admin-dictionary';
+import { ROLE_BADGE_CLASSES, assignableRoles, canChangeRole, isAdminRole } from '@/lib/admin-roles';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, useDateLocale } from '@/lib/i18n-format';
 
@@ -19,21 +20,6 @@ import type { AdminUserDTO, UserRole } from '@/lib/admin-types';
 interface PageProps {
   params: Promise<{ locale: string; id: string }>;
 }
-
-const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
-  super_admin: 'bg-purple-100 text-purple-800',
-  admin: 'bg-red-100 text-red-700',
-  museum_manager: 'bg-purple-100 text-purple-700',
-  moderator: 'bg-blue-100 text-blue-700',
-  visitor: 'bg-gray-100 text-gray-700',
-};
-
-const ASSIGNABLE_ROLES: Exclude<UserRole, 'super_admin'>[] = [
-  'visitor',
-  'moderator',
-  'museum_manager',
-  'admin',
-];
 
 type ModalKind = null | 'role' | 'suspend' | 'unsuspend' | 'delete';
 
@@ -91,7 +77,7 @@ export default function UserDetailPage({ params }: PageProps) {
 
   const userId = Number.parseInt(id, 10);
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isAdmin = isAdminRole(currentUser?.role);
   const isSuperAdmin = currentUser?.role === 'super_admin';
 
   const [user, setUser] = useState<AdminUserDTO | null>(null);
@@ -119,7 +105,7 @@ export default function UserDetailPage({ params }: PageProps) {
       if (err instanceof ApiError && err.status === 404) {
         setError(dict.errorNotFound);
       } else {
-        setError(err instanceof Error ? err.message : dict.errorGeneric);
+        setError(dict.errorGeneric);
       }
     } finally {
       setLoading(false);
@@ -154,22 +140,12 @@ export default function UserDetailPage({ params }: PageProps) {
         setDeleteEmailTyped('');
         onSuccess?.(result?.user);
       } catch (err) {
-        if (err instanceof ApiError) {
-          if (err.status === 409 && err.message.includes('LAST_ADMIN')) {
-            setError(dict.errorLastAdmin);
-          } else if (err.status === 409 && err.message.includes('SELF')) {
-            setError(dict.errorSelfAction);
-          } else {
-            setError(err.message);
-          }
-        } else {
-          setError(err instanceof Error ? err.message : dict.errorGeneric);
-        }
+        setError(errorMessage(err, dict.errorAction, userActionRefusals(adminDict)));
       } finally {
         setBusy(false);
       }
     },
-    [dict.errorLastAdmin, dict.errorSelfAction, dict.errorGeneric],
+    [adminDict, dict.errorAction],
   );
 
   const onConfirmRole = useCallback(() => {
@@ -183,21 +159,19 @@ export default function UserDetailPage({ params }: PageProps) {
     );
   }, [user, userId, newRole, runMutation, dict.successRoleChanged]);
 
-  const onConfirmSuspend = useCallback(() => {
-    void runMutation(
-      () =>
-        apiPost<{ user: AdminUserDTO }>(`/api/admin/users/${String(userId)}/suspend`, undefined),
-      dict.successSuspended,
-    );
-  }, [userId, runMutation, dict.successSuspended]);
-
-  const onConfirmUnsuspend = useCallback(() => {
-    void runMutation(
-      () =>
-        apiPost<{ user: AdminUserDTO }>(`/api/admin/users/${String(userId)}/unsuspend`, undefined),
-      dict.successUnsuspended,
-    );
-  }, [userId, runMutation, dict.successUnsuspended]);
+  const onConfirmSuspension = useCallback(
+    (action: 'suspend' | 'unsuspend') => {
+      void runMutation(
+        () =>
+          apiPost<{ user: AdminUserDTO }>(
+            `/api/admin/users/${String(userId)}/${action}`,
+            undefined,
+          ),
+        action === 'suspend' ? dict.successSuspended : dict.successUnsuspended,
+      );
+    },
+    [userId, runMutation, dict.successSuspended, dict.successUnsuspended],
+  );
 
   const onConfirmDelete = useCallback(() => {
     void runMutation(
@@ -240,7 +214,7 @@ export default function UserDetailPage({ params }: PageProps) {
 
   const isSoftDeleted = user.deletedAt !== null;
   const isSelf = currentUser?.id === user.id;
-  const roleUnchanged = newRole === (user.role as UserRole);
+  const roleUnchanged = newRole === user.role;
   const deleteEmailMatches = deleteEmailTyped === user.email;
 
   return (
@@ -275,7 +249,7 @@ export default function UserDetailPage({ params }: PageProps) {
               valueNode={
                 <span
                   className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    ROLE_BADGE_CLASSES[user.role as UserRole]
+                    ROLE_BADGE_CLASSES[user.role]
                   }`}
                 >
                   {user.role}
@@ -363,7 +337,7 @@ export default function UserDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      {(isAdmin || isSuperAdmin) && !isSoftDeleted && (
+      {isAdmin && !isSoftDeleted && (
         <section
           aria-labelledby="section-actions"
           className="mt-8 rounded-xl border border-primary-100 bg-white p-6"
@@ -375,11 +349,11 @@ export default function UserDetailPage({ params }: PageProps) {
             {dict.actionsTitle}
           </h2>
           <div className="mt-4 flex flex-wrap gap-3">
-            {isAdmin && (
+            {canChangeRole(currentUser?.role, user.role) && (
               <button
                 type="button"
                 onClick={() => {
-                  setNewRole(user.role as UserRole);
+                  setNewRole(user.role);
                   setModal('role');
                 }}
                 className="rounded-lg bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100"
@@ -431,7 +405,7 @@ export default function UserDetailPage({ params }: PageProps) {
           adminDict={adminDict}
           dict={dict}
           targetEmail={user.email}
-          currentRole={user.role as UserRole}
+          roles={assignableRoles(currentUser?.role)}
           newRole={newRole}
           onNewRoleChange={setNewRole}
           unchanged={roleUnchanged}
@@ -449,7 +423,9 @@ export default function UserDetailPage({ params }: PageProps) {
           busy={busy}
           destructive
           onCancel={closeModal}
-          onConfirm={onConfirmSuspend}
+          onConfirm={() => {
+            onConfirmSuspension('suspend');
+          }}
         />
       )}
       {modal === 'unsuspend' && (
@@ -460,7 +436,9 @@ export default function UserDetailPage({ params }: PageProps) {
           cancelLabel={adminDict.common.cancel}
           busy={busy}
           onCancel={closeModal}
-          onConfirm={onConfirmUnsuspend}
+          onConfirm={() => {
+            onConfirmSuspension('unsuspend');
+          }}
         />
       )}
       {modal === 'delete' && (
@@ -530,7 +508,7 @@ function RoleChangeModal({
   adminDict,
   dict,
   targetEmail,
-  currentRole,
+  roles,
   newRole,
   onNewRoleChange,
   unchanged,
@@ -541,7 +519,7 @@ function RoleChangeModal({
   adminDict: ReturnType<typeof useAdminDict>;
   dict: ReturnType<typeof useAdminDict>['userDetailPage'];
   targetEmail: string;
-  currentRole: UserRole;
+  roles: readonly UserRole[];
   newRole: UserRole;
   onNewRoleChange: (r: UserRole) => void;
   unchanged: boolean;
@@ -579,8 +557,7 @@ function RoleChangeModal({
         }}
         className="mt-1 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
       >
-        {currentRole === 'super_admin' && <option value="super_admin">super_admin</option>}
-        {ASSIGNABLE_ROLES.map((r) => (
+        {roles.map((r) => (
           <option key={r} value={r}>
             {r}
           </option>

@@ -36,30 +36,48 @@ export type RefreshResponse = AuthSessionResponse;
 
 export type AuthTokens = Pick<AuthSessionResponse, 'accessToken' | 'refreshToken'>;
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
-export type TicketPriority = 'low' | 'medium' | 'high';
-export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
-export type ReviewStatus = 'pending' | 'approved' | 'rejected';
-export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
+export type TicketStatus = TicketDTO['status'];
+export type TicketPriority = TicketDTO['priority'];
+export type ReportStatus = AdminReportDTO['status'];
+export type ReviewStatus = ReviewDTO['status'];
+export type AnalyticsGranularity = UsageAnalytics['granularity'];
+export type NpsResponse = Schemas['NpsResponse'];
+export type UserRole = Schemas['UserRole'];
 
-export interface NpsResponse {
-  nps: number;
-  promoters: number;
-  passives: number;
-  detractors: number;
-  count: number;
-}
-export type UserRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
+export const allOf = <T extends string>(members: Record<T, true>): readonly T[] =>
+  Object.keys(members) as T[];
 
-export const TICKET_STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
-export const TICKET_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high'];
-export const REVIEW_STATUSES: ReviewStatus[] = ['pending', 'approved', 'rejected'];
-export const MODERATION_STATUSES: Extract<ReviewStatus, 'approved' | 'rejected'>[] = [
-  'approved',
-  'rejected',
-];
-
-export const MUSEUM_TYPES: MuseumType[] = ['art', 'history', 'science', 'specialized', 'general'];
+export const TICKET_STATUSES = allOf<TicketStatus>({
+  open: true,
+  in_progress: true,
+  resolved: true,
+  closed: true,
+});
+export const TICKET_PRIORITIES = allOf<TicketPriority>({ low: true, medium: true, high: true });
+export const REPORT_STATUSES = allOf<ReportStatus>({
+  pending: true,
+  reviewed: true,
+  dismissed: true,
+});
+export const REVIEW_STATUSES = allOf<ReviewStatus>({
+  pending: true,
+  approved: true,
+  rejected: true,
+});
+export type ModerationStatus = Extract<ReviewStatus, 'approved' | 'rejected'>;
+export const MODERATION_STATUSES: readonly ModerationStatus[] = ['approved', 'rejected'];
+export const ANALYTICS_GRANULARITIES = allOf<AnalyticsGranularity>({
+  daily: true,
+  weekly: true,
+  monthly: true,
+});
+export const MUSEUM_TYPES = allOf<MuseumType>({
+  art: true,
+  history: true,
+  science: true,
+  specialized: true,
+  general: true,
+});
 
 export type MuseumBranding = Pick<
   NonNullable<Schemas['MuseumConfigInput']['branding']>,

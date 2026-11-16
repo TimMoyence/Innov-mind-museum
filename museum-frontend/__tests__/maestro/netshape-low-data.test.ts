@@ -36,7 +36,10 @@ describe('weak-net flows drive the data saving mode the release APK can reach', 
 
   it('the data saving helper switches the mode from the Settings screen', () => {
     const helper = executable(DATA_SAVING_HELPER);
-    expect(helper).toMatch(/openLink: (["'])musaium:\/\/\/\(stack\)\/settings\1/);
+    expect(helper).toMatch(
+      /file: open-link\.yaml\n\s+env:\n\s+LINK: (["'])musaium:\/\/\/\(stack\)\/settings\1/,
+    );
+    expect(executable('helpers/open-link.yaml')).toMatch(/openLink: (["'])\$\{LINK\}\1/);
     expect(helper).toMatch(/text: (["'])\$\{MODE\}\1/);
   });
 

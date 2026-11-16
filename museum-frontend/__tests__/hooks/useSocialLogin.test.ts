@@ -2,7 +2,8 @@ import '@/__tests__/helpers/test-utils';
 import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithQueryClient } from '@/__tests__/helpers/data/renderWithQueryClient';
 import { useSocialLogin } from '@/features/auth/application/useSocialLogin';
-import { makeAuthTokens } from '@/__tests__/helpers/factories';
+import { makeAppError, makeAuthTokens } from '@/__tests__/helpers/factories';
+import { setErrorTranslate } from '@/shared/lib/errors';
 
 const mockSignInWithApple = jest.fn<
   Promise<{ provider: 'apple'; idToken: string; nonce?: string }>,
@@ -34,6 +35,7 @@ const defaultOptions = () => ({
 describe('useSocialLogin', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setErrorTranslate((key, opts) => opts?.defaultValue ?? key);
     mockIsAppleSignInAvailable.mockResolvedValue(true);
     mockRequestSocialNonce.mockResolvedValue({ nonce: 'fixed-nonce' });
     mockSignInWithApple.mockResolvedValue({
@@ -102,8 +104,15 @@ describe('useSocialLogin', () => {
     expect(result.current.isSocialLoading).toBe(false);
   });
 
-  it('suppresses error when user cancels Google sign-in', async () => {
-    mockSignInWithGoogle.mockRejectedValue(new Error('User cancelled the sign-in'));
+  it('ANNULATION-SOCIALE · annuler Google n’affiche aucune erreur, même en français', async () => {
+    setErrorTranslate((key, opts) =>
+      key === 'error.socialAuth.google_cancelled'
+        ? 'Connexion Google annulée.'
+        : (opts?.defaultValue ?? key),
+    );
+    mockSignInWithGoogle.mockRejectedValue(
+      makeAppError({ kind: 'SocialAuth', code: 'google_cancelled' }),
+    );
     const opts = defaultOptions();
 
     const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -116,8 +125,12 @@ describe('useSocialLogin', () => {
     expect(result.current.isSocialLoading).toBe(false);
   });
 
-  it('suppresses error when user cancels Apple sign-in', async () => {
-    mockSignInWithApple.mockRejectedValue(new Error('User canceled'));
+  it('ANNULATION-SOCIALE · annuler Apple n’affiche aucune erreur', async () => {
+    mockSignInWithApple.mockRejectedValue(
+      Object.assign(new Error('The user canceled the authorization attempt'), {
+        code: 'ERR_REQUEST_CANCELED',
+      }),
+    );
     const opts = defaultOptions();
 
     const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -130,8 +143,10 @@ describe('useSocialLogin', () => {
     expect(result.current.isSocialLoading).toBe(false);
   });
 
-  it('exposes error message on non-cancellation Google sign-in error', async () => {
-    mockSignInWithGoogle.mockRejectedValue(new Error('Network error'));
+  it('ANNULATION-SOCIALE · un échec Google qui n’est pas une annulation s’affiche', async () => {
+    mockSignInWithGoogle.mockRejectedValue(
+      makeAppError({ kind: 'SocialAuth', code: 'google_unknown' }),
+    );
     const opts = defaultOptions();
 
     const { result } = renderHookWithQueryClient(() => useSocialLogin(opts));
@@ -141,7 +156,7 @@ describe('useSocialLogin', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.errorMessage).toEqual(expect.stringContaining('Network error'));
+      expect(result.current.errorMessage).toBe('Sign-in failed. Please try again.');
     });
     expect(result.current.isSocialLoading).toBe(false);
   });

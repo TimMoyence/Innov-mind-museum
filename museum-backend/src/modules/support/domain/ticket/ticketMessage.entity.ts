@@ -12,7 +12,7 @@ export class TicketMessage {
   @Column({ type: 'integer', name: 'sender_id' })
   senderId!: number;
 
-  @Column({ type: 'varchar', length: 8, name: 'sender_role' })
+  @Column({ type: 'varchar', length: 32, name: 'sender_role' })
   senderRole!: string;
 
   @Column({ type: 'text' })

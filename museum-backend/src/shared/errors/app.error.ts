@@ -78,6 +78,14 @@ export const forbidden = (message: string): AppError => {
   });
 };
 
+export const consentRequired = (details?: { scope: string }): AppError =>
+  new AppError({
+    message: 'Consent required',
+    statusCode: 403,
+    code: 'CONSENT_REQUIRED',
+    details,
+  });
+
 export const tooManyRequests = (
   message: string,
   options?: { retryAfterSec?: number; code?: string; details?: unknown },

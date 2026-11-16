@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { withAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 
 import MuseumBrandingPage from '../page';
 import type * as ApiModule from '@/lib/api';
@@ -43,8 +44,8 @@ describe('M6 · l’aperçu reste lisible pendant la saisie d’une couleur inva
   it.each(['#fff', 'red', '#12345'])(
     'couleur en cours de saisie %s : fond blanc et texte noir, comme un musée sans couleur',
     async (typed) => {
-      render(<MuseumBrandingPage />);
-      fireEvent.change(await screen.findByLabelText('primaryColor hex value'), {
+      render(<MuseumBrandingPage />, withAdminDict);
+      fireEvent.change(await screen.findByLabelText('Primary color hex value'), {
         target: { value: typed },
       });
 

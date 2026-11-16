@@ -21,7 +21,10 @@ import { semantic, space, fontSize, radius } from '@/shared/ui/tokens';
 import { ReviewCard } from '@/features/review/ui/ReviewCard';
 import { NpsScale } from '@/features/review/ui/NpsScale';
 import type { ReviewDTO } from '@/features/review/infrastructure/reviewApi';
-import { useChatSessionStore } from '@/features/chat/infrastructure/chatSessionStore';
+import {
+  sessionsByRecency,
+  useChatSessionStore,
+} from '@/features/chat/infrastructure/chatSessionStore';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { GlassCard } from '@/shared/ui/GlassCard';
 import { LiquidScreen } from '@/shared/ui/LiquidScreen';
@@ -69,9 +72,7 @@ export default function ReviewsScreen() {
   const onSubmit = useCallback(async () => {
     if (!canSubmit) return;
     const { sessions } = useChatSessionStore.getState();
-    const sessionId = Object.entries(sessions).sort(
-      (a, b) => b[1].updatedAt - a[1].updatedAt,
-    )[0]?.[0];
+    const sessionId = sessionsByRecency(sessions)[0]?.[0];
     const ok = await submitReview(rating, comment.trim(), sessionId);
     if (ok) {
       setSubmitted(true);
@@ -114,12 +115,6 @@ export default function ReviewsScreen() {
         <GlassCard style={styles.successCard} intensity={52}>
           <Text style={[styles.successText, { color: theme.success }]}>{t('reviews.success')}</Text>
         </GlassCard>
-      ) : submitError === 'already_reviewed' ? (
-        <GlassCard style={styles.successCard} intensity={52}>
-          <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-            {t('reviews.alreadyReviewed')}
-          </Text>
-        </GlassCard>
       ) : showForm ? (
         <GlassCard style={styles.formCard} intensity={52}>
           <Text style={[styles.formTitle, { color: theme.textPrimary }]}>
@@ -153,10 +148,8 @@ export default function ReviewsScreen() {
             accessibilityLabel={t('a11y.reviews.comment_input')}
           />
 
-          {submitError !== null && submitError !== 'already_reviewed' && (
-            <Text style={[styles.errorText, { color: theme.error }]}>
-              {t('reviews.submitFailed')}
-            </Text>
+          {submitError !== null && (
+            <Text style={[styles.errorText, { color: theme.error }]}>{submitError}</Text>
           )}
 
           <Pressable
@@ -351,9 +344,6 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontWeight: '700',
-    fontSize: fontSize.sm,
-  },
-  infoText: {
     fontSize: fontSize.sm,
   },
   errorText: {

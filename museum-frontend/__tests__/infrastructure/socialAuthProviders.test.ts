@@ -18,14 +18,10 @@ jest.mock('expo-constants', () => ({
   default: {
     expoConfig: {
       extra: {
-        EXPO_PUBLIC_API_BASE_URL: 'https://api.musaium.test',
+        API_BASE_URL: 'https://api.musaium.test',
       },
     },
   },
-}));
-
-jest.mock('@/shared/infrastructure/apiConfig', () => ({
-  resolveInitialApiBaseUrl: () => 'https://api.musaium.test',
 }));
 
 jest.mock('@/features/auth/infrastructure/authApi', () => ({

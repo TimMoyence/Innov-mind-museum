@@ -1,9 +1,10 @@
 'use client';
 
+import { useAdminDict } from '@/lib/admin-dictionary';
 import { useState, type SyntheticEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiPost } from '@/lib/api';
+import { apiPost, errorMessage } from '@/lib/api';
 import type { MuseumDTO, MuseumType } from '@/lib/admin-types';
 import { MUSEUM_TYPES } from '@/lib/admin-types';
 import { isLatitude, isLongitude, isSlug } from '@musaium/shared/museum';
@@ -11,40 +12,6 @@ import { clampChars, TEXT_LIMITS } from '@musaium/shared/validation';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
-
-const STRINGS = {
-  title: 'Onboard a new museum',
-  subtitle:
-    'Create a B2B-pilot tenant. The museum becomes addressable by its slug and may receive branding in a follow-up step.',
-  back: '← Back to museums',
-  fields: {
-    name: 'Name',
-    nameHelp: 'Display name shown in the app. 1–200 characters.',
-    slug: 'Slug',
-    slugHelp:
-      'URL-safe identifier (lowercase, hyphens). Used in API paths. Cannot be changed easily later — pick carefully.',
-    address: 'Address (optional)',
-    description: 'Description (optional)',
-    descriptionHelp: 'Up to 2 000 characters. Shown on the public museum page.',
-    museumType: 'Type',
-    latitude: 'Latitude (optional)',
-    longitude: 'Longitude (optional)',
-    geoHint:
-      'Geographic centre of the museum, used for proximity search. Leave blank for now if you do not have it.',
-  },
-  submit: {
-    idle: 'Create museum',
-    pending: 'Creating…',
-  },
-  errors: {
-    nameRequired: 'Name is required.',
-    slugRequired: 'Slug is required.',
-    slugFormat: 'Slug must be lowercase letters, digits, and hyphens only.',
-    latRange: 'Latitude must be between −90 and 90.',
-    lngRange: 'Longitude must be between −180 and 180.',
-    serverGeneric: 'Could not create museum.',
-  },
-} as const;
 
 interface FormState {
   name: string;
@@ -71,6 +38,8 @@ interface CreateMuseumResponse {
 }
 
 export default function NewMuseumPage() {
+  const adminDict = useAdminDict();
+  const copy = adminDict.museumNewPage;
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -79,15 +48,15 @@ export default function NewMuseumPage() {
 
   function validate(): typeof errors {
     const next: typeof errors = {};
-    if (!form.name.trim()) next.name = STRINGS.errors.nameRequired;
-    if (!form.slug.trim()) next.slug = STRINGS.errors.slugRequired;
-    else if (!isSlug(form.slug.trim())) next.slug = STRINGS.errors.slugFormat;
+    if (!form.name.trim()) next.name = copy.errors.nameRequired;
+    if (!form.slug.trim()) next.slug = copy.errors.slugRequired;
+    else if (!isSlug(form.slug.trim())) next.slug = copy.errors.slugFormat;
 
     if (form.latitude !== '' && !isLatitude(Number(form.latitude))) {
-      next.latitude = STRINGS.errors.latRange;
+      next.latitude = copy.errors.latRange;
     }
     if (form.longitude !== '' && !isLongitude(Number(form.longitude))) {
-      next.longitude = STRINGS.errors.lngRange;
+      next.longitude = copy.errors.lngRange;
     }
     return next;
   }
@@ -114,7 +83,9 @@ export default function NewMuseumPage() {
       const result = await apiPost<CreateMuseumResponse>('/api/museums', body);
       router.push(`${result.museum.id}/branding`);
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : STRINGS.errors.serverGeneric);
+      setServerError(
+        errorMessage(err, copy.errors.serverGeneric, { CONFLICT: copy.errors.slugTaken }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -128,10 +99,10 @@ export default function NewMuseumPage() {
     <section className="mx-auto max-w-2xl space-y-6">
       <header>
         <Link href="../museums" className="text-sm text-blue-600 hover:underline">
-          {STRINGS.back}
+          {copy.back}
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-gray-900">{STRINGS.title}</h1>
-        <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
+        <h1 className="mt-2 text-2xl font-semibold text-gray-900">{copy.title}</h1>
+        <p className="mt-1 text-sm text-gray-600">{copy.subtitle}</p>
       </header>
 
       {serverError && <AlertBanner variant="error" message={serverError} />}
@@ -145,7 +116,7 @@ export default function NewMuseumPage() {
       >
         <div>
           <label htmlFor="m-name" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.name}
+            {copy.fields.name}
           </label>
           <input
             id="m-name"
@@ -156,13 +127,13 @@ export default function NewMuseumPage() {
             }}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.nameHelp}</p>
+          <p className="mt-1 text-xs text-gray-500">{copy.fields.nameHelp}</p>
           <FormFieldError error={errors.name} />
         </div>
 
         <div>
           <label htmlFor="m-slug" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.slug}
+            {copy.fields.slug}
           </label>
           <input
             id="m-slug"
@@ -174,13 +145,13 @@ export default function NewMuseumPage() {
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="louvre"
           />
-          <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.slugHelp}</p>
+          <p className="mt-1 text-xs text-gray-500">{copy.fields.slugHelp}</p>
           <FormFieldError error={errors.slug} />
         </div>
 
         <div>
           <label htmlFor="m-type" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.museumType}
+            {copy.fields.museumType}
           </label>
           <select
             id="m-type"
@@ -200,7 +171,7 @@ export default function NewMuseumPage() {
 
         <div>
           <label htmlFor="m-address" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.address}
+            {copy.fields.address}
           </label>
           <input
             id="m-address"
@@ -215,7 +186,7 @@ export default function NewMuseumPage() {
 
         <div>
           <label htmlFor="m-description" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.description}
+            {copy.fields.description}
           </label>
           <textarea
             id="m-description"
@@ -226,13 +197,13 @@ export default function NewMuseumPage() {
             rows={4}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.descriptionHelp}</p>
+          <p className="mt-1 text-xs text-gray-500">{copy.fields.descriptionHelp}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="m-lat" className="block text-sm font-medium text-gray-700">
-              {STRINGS.fields.latitude}
+              {copy.fields.latitude}
             </label>
             <input
               id="m-lat"
@@ -248,7 +219,7 @@ export default function NewMuseumPage() {
           </div>
           <div>
             <label htmlFor="m-lng" className="block text-sm font-medium text-gray-700">
-              {STRINGS.fields.longitude}
+              {copy.fields.longitude}
             </label>
             <input
               id="m-lng"
@@ -263,17 +234,17 @@ export default function NewMuseumPage() {
             <FormFieldError error={errors.longitude} />
           </div>
         </div>
-        <p className="text-xs text-gray-500">{STRINGS.fields.geoHint}</p>
+        <p className="text-xs text-gray-500">{copy.fields.geoHint}</p>
 
         <div className="flex justify-end gap-3 pt-4">
           <Link
             href="../museums"
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            {adminDict.common.cancel}
           </Link>
           <Button type="submit" variant="primary" size="sm" disabled={submitting}>
-            {submitting ? STRINGS.submit.pending : STRINGS.submit.idle}
+            {submitting ? copy.submit.pending : copy.submit.idle}
           </Button>
         </div>
       </form>

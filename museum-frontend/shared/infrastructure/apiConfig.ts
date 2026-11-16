@@ -13,3 +13,5 @@ export const resolveInitialApiBaseUrl = (): string => {
   const env = { EXPO_PUBLIC_API_BASE_URL: readEnvString(process.env.EXPO_PUBLIC_API_BASE_URL) };
   return resolveApiBaseUrl(resolveVariant(env), env);
 };
+
+export const apiUrl = (path: string): string => `${resolveInitialApiBaseUrl()}${path}`;

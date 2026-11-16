@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { withAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 
 import MuseumBrandingPage from '../page';
 import type * as ApiModule from '@/lib/api';
@@ -50,7 +51,7 @@ describe('M6 · l’aperçu Branding montre la couleur de texte de l’appli', (
     ['#FFEB3B', '#000000'],
   ])('fond %s : texte %s, comme dans l’appli', async (primaryColor, textColor) => {
     mockApiGet.mockResolvedValueOnce(museumWith(primaryColor));
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
 
     const preview = await screen.findByRole('group', { name: 'Preview' });
     const header = preview.querySelector('div');

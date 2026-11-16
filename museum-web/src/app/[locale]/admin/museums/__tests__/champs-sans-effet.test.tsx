@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { withAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 
 import NewMuseumPage from '../new/page';
 import MuseumBrandingPage from '../[id]/branding/page';
@@ -23,7 +24,7 @@ describe('M7 · les champs sans effet disparaissent de l’admin', () => {
   });
 
   it('Nouveau musée : plus de champ KB locale', () => {
-    render(<NewMuseumPage />);
+    render(<NewMuseumPage />, withAdminDict);
 
     expect(screen.getByLabelText('Name')).toBeInTheDocument();
     expect(screen.queryByLabelText(/KB locale/i)).toBeNull();
@@ -46,7 +47,7 @@ describe('M7 · les champs sans effet disparaissent de l’admin', () => {
         updatedAt: '2026-05-17T00:00:00Z',
       },
     });
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
 
     expect(await screen.findByLabelText('Primary color')).toBeInTheDocument();
     expect(screen.getByLabelText('Logo URL')).toBeInTheDocument();

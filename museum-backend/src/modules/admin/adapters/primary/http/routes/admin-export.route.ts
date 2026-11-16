@@ -14,7 +14,7 @@ import { forbidden, invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 
-import type { ExportActorRole } from '@modules/admin/domain/export/csv-export.types';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 
 const adminExportRouter: Router = Router();
 
@@ -77,7 +77,7 @@ function coerceCell(value: unknown): string {
 
 function resolveActor(req: Request): {
   actorId: number;
-  actorRole: ExportActorRole;
+  actorRole: UserRole;
   museumScope: number | null;
 } {
   const user = req.user;
@@ -86,7 +86,7 @@ function resolveActor(req: Request): {
   }
   return {
     actorId: user.id,
-    actorRole: user.role as ExportActorRole,
+    actorRole: user.role,
     museumScope: user.museumId ?? null,
   };
 }
@@ -126,12 +126,6 @@ adminExportRouter.get(
     const actor = resolveActor(req);
 
     if (kind === 'sessions') {
-      if (
-        (actor.actorRole === 'museum_manager' || actor.actorRole === 'admin') &&
-        actor.museumScope === null
-      ) {
-        throw forbidden('No museum assigned');
-      }
       const stream = await getExportChatSessionsUseCase().execute(actor);
       setCsvHeaders(res, 'sessions');
       await streamCsv(res, SESSIONS_HEADERS, stream);

@@ -1,63 +1,88 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { Router } from 'express';
 
-import leadsRouter from '@modules/leads/adapters/primary/http/routes/leads.route';
+import openApiSpec from '../../../openapi/openapi.json';
 
-interface MountedRoute {
-  method: string;
-  path: string;
+import type * as RouteTestSetup from 'tests/helpers/http/route-test-setup';
+
+interface RouterLike {
+  stack: {
+    route?: { path?: unknown; methods?: Record<string, boolean> };
+    handle?: unknown;
+  }[];
 }
 
-function toOpenApiPath(mountPrefix: string, routePath: string): string {
-  const joined = `${mountPrefix}${routePath}`.replace(/\/{2,}/g, '/');
-  return joined.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
-}
+const routerPrototype = (
+  Router as unknown as { prototype: { use: (...args: unknown[]) => unknown } }
+).prototype;
+const mounts = new Map<unknown, string[]>();
+const originalUse = routerPrototype.use;
 
-function enumerateRoutes(
-  router: { stack: Array<Record<string, unknown>> },
-  mountPrefix: string,
-): MountedRoute[] {
-  const out: MountedRoute[] = [];
-  for (const layer of router.stack) {
-    const route = layer.route as { path?: string; methods?: Record<string, boolean> } | undefined;
-    if (!route?.path || !route.methods) continue;
-    for (const [method, enabled] of Object.entries(route.methods)) {
-      if (!enabled || method === '_all') continue;
-      out.push({ method: method.toLowerCase(), path: toOpenApiPath(mountPrefix, route.path) });
-    }
+const isRouter = (handler: unknown): handler is RouterLike =>
+  typeof handler === 'function' && Array.isArray((handler as Partial<RouterLike>).stack);
+
+const recordMounts = jest.spyOn(routerPrototype, 'use').mockImplementation(function (
+  this: unknown,
+  ...args: unknown[]
+) {
+  const prefix = typeof args[0] === 'string' ? args[0] : '/';
+  for (const handler of args.flat()) {
+    if (isRouter(handler)) mounts.set(handler, [...(mounts.get(handler) ?? []), prefix]);
   }
-  return out;
-}
+  return originalUse.apply(this, args);
+});
 
-function loadSpecPaths(): Record<string, Record<string, unknown>> {
-  const specPath = join(__dirname, '..', '..', '..', 'openapi', 'openapi.json');
-  const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
-    paths: Record<string, Record<string, unknown>>;
-  };
-  return spec.paths;
-}
+let setup: typeof RouteTestSetup;
+let app: unknown;
 
-describe('Router↔spec drift sentinel — leads routes documented in openapi.json (R14)', () => {
-  const mounted = enumerateRoutes(
-    leadsRouter as unknown as { stack: Array<Record<string, unknown>> },
-    '/api/leads',
-  );
-  const specPaths = loadSpecPaths();
+beforeAll(async () => {
+  setup = await import('tests/helpers/http/route-test-setup');
+  ({ app } = setup.createRouteTestApp());
+  recordMounts.mockRestore();
+});
 
-  it('enumerates the 3 mounted leads POST routes', () => {
-    const paths = mounted.map((r) => `${r.method.toUpperCase()} ${r.path}`).sort();
-    expect(paths).toEqual([
-      'POST /api/leads/b2b',
-      'POST /api/leads/beta',
-      'POST /api/leads/paywall-interest',
-    ]);
+const urlShape = (path: string): string =>
+  path
+    .split('/')
+    .filter((segment) => segment !== '')
+    .map((segment) => (segment.startsWith(':') || segment.startsWith('{') ? '{}' : segment))
+    .join('/');
+
+const joinPath = (prefix: string, path: string): string => `${prefix}/${path}`;
+
+const mountedRoutes = (router: RouterLike, prefix: string): string[] =>
+  router.stack.flatMap((layer) => {
+    if (layer.route?.methods && typeof layer.route.path === 'string') {
+      const path = joinPath(prefix, layer.route.path);
+      return Object.entries(layer.route.methods)
+        .filter(([method, enabled]) => enabled && method !== '_all')
+        .map(([method]) => `${method} /${urlShape(path)}`);
+    }
+    return isRouter(layer.handle)
+      ? (mounts.get(layer.handle) ?? []).flatMap((mount) =>
+          mountedRoutes(layer.handle as RouterLike, joinPath(prefix, mount)),
+        )
+      : [];
   });
 
-  it('every mounted leads route is documented in openapi.json (no drift)', () => {
-    const undocumented = mounted.filter((r) => {
-      const pathEntry = specPaths[r.path];
-      return !pathEntry || !(r.method in pathEntry);
-    });
-    expect(undocumented).toEqual([]);
+const documented = new Set(
+  Object.entries(openApiSpec.paths as Record<string, Record<string, unknown>>).flatMap(
+    ([path, operations]) => Object.keys(operations).map((method) => `${method} /${urlShape(path)}`),
+  ),
+);
+
+afterAll(() => {
+  setup.stopRateLimitSweep();
+});
+
+describe('CONTRAT-ROUTES', () => {
+  it('CONTRAT-ROUTES · chaque route montée sous /api est documentée dans openapi.json, verbe et forme d’URL compris (le nom d’un paramètre de chemin ne change pas l’URL) : une route hors contrat ne peut être appelée que par une URL et un corps recopiés à la main', () => {
+    const routes = mountedRoutes((app as { router: RouterLike }).router, '').filter((route) =>
+      route.split(' ')[1].startsWith('/api/'),
+    );
+    expect(routes).toContain('post /api/leads/paywall-interest');
+    expect(routes).toContain('get /api/museums/{}');
+    expect(routes).toContain('post /api/auth/login');
+    expect(routes).toContain('get /api/auth/google/initiate');
+    expect(routes.filter((route) => !documented.has(route))).toEqual([]);
   });
 });

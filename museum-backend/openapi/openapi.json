@@ -97,6 +97,11 @@
           }
         }
       },
+      "UserRole": {
+        "type": "string",
+        "enum": ["visitor", "moderator", "museum_manager", "admin", "super_admin"],
+        "description": "User role for RBAC"
+      },
       "AuthUser": {
         "type": "object",
         "required": ["id", "email", "role", "onboardingCompleted"],
@@ -115,9 +120,7 @@
             "type": ["string", "null"]
           },
           "role": {
-            "type": "string",
-            "enum": ["visitor", "moderator", "museum_manager", "admin"],
-            "description": "User role for RBAC"
+            "$ref": "#/components/schemas/UserRole"
           },
           "onboardingCompleted": {
             "type": "boolean",
@@ -881,7 +884,7 @@
                 "format": "email"
               },
               "role": {
-                "type": "string"
+                "$ref": "#/components/schemas/UserRole"
               },
               "firstname": {
                 "type": ["string", "null"]
@@ -1331,7 +1334,7 @@
             "type": ["string", "null"]
           },
           "role": {
-            "type": "string"
+            "$ref": "#/components/schemas/UserRole"
           },
           "museumId": {
             "type": ["integer", "null"],
@@ -1813,7 +1816,7 @@
       },
       "TicketMessageDTO": {
         "type": "object",
-        "required": ["id", "ticketId", "senderId", "senderRole", "text", "createdAt"],
+        "required": ["id", "ticketId", "senderId", "senderRole", "fromStaff", "text", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -1828,6 +1831,10 @@
           },
           "senderRole": {
             "type": "string"
+          },
+          "fromStaff": {
+            "type": "boolean",
+            "description": "True when the sender is not the author of the ticket: only the author and the staff can write on a ticket."
           },
           "text": {
             "type": "string"
@@ -2059,12 +2066,29 @@
         "additionalProperties": false,
         "required": ["code", "tier", "currentCount", "limit", "resetAt", "message"],
         "properties": {
-          "code": { "type": "string", "enum": ["QUOTA_EXCEEDED"] },
-          "tier": { "type": "string", "enum": ["free"] },
-          "currentCount": { "type": "integer", "minimum": 0 },
-          "limit": { "type": "integer", "minimum": 0 },
-          "resetAt": { "type": "string", "format": "date-time" },
-          "message": { "type": "string" }
+          "code": {
+            "type": "string",
+            "enum": ["QUOTA_EXCEEDED"]
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["free"]
+          },
+          "currentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "resetAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string"
+          }
         }
       },
       "CompareErrorResponse": {
@@ -2270,6 +2294,185 @@
           },
           "jobId": {
             "type": "string"
+          }
+        }
+      },
+      "ConsentScope": {
+        "type": "string",
+        "enum": [
+          "location_to_llm",
+          "location_coarse_to_llm",
+          "analytics",
+          "marketing",
+          "tos_privacy",
+          "third_party_ai_text_openai",
+          "third_party_ai_image_openai",
+          "third_party_ai_audio_openai",
+          "third_party_ai_profile_openai",
+          "third_party_ai_text_google",
+          "third_party_ai_image_google",
+          "third_party_ai_audio_google",
+          "third_party_ai_profile_google"
+        ]
+      },
+      "ConsentRecord": {
+        "type": "object",
+        "required": ["id", "scope", "version", "grantedAt", "source"],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ConsentScope"
+          },
+          "version": {
+            "type": "string"
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["ui", "api", "registration"]
+          }
+        }
+      },
+      "ConsentListItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ConsentRecord"
+          },
+          {
+            "type": "object",
+            "required": ["revokedAt"],
+            "properties": {
+              "revokedAt": {
+                "type": ["string", "null"],
+                "format": "date-time"
+              }
+            }
+          }
+        ]
+      },
+      "ArtworkKnowledgeDTO": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "period",
+          "technique",
+          "description",
+          "historicalContext",
+          "dimensions",
+          "currentLocation",
+          "sourceUrls",
+          "confidence",
+          "needsReview",
+          "locale",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": ["string", "null"]
+          },
+          "period": {
+            "type": ["string", "null"]
+          },
+          "technique": {
+            "type": ["string", "null"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "historicalContext": {
+            "type": ["string", "null"]
+          },
+          "dimensions": {
+            "type": ["string", "null"]
+          },
+          "currentLocation": {
+            "type": ["string", "null"]
+          },
+          "sourceUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "needsReview": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "roomId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "museumId": {
+            "type": ["integer", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FunnelEvent": {
+        "type": "object",
+        "required": ["name", "url", "domain"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          },
+          "referrer": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "props": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
           }
         }
       }
@@ -2777,8 +2980,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "409 CANNOT_DELETE_LAST_ADMIN if the caller is the last active admin/super_admin: nothing is erased. 409 CANNOT_DELETE_LAST_SUPER_ADMIN if the caller is the last active super_admin while other admins remain: nothing is erased."
       }
     },
     "/api/auth/forgot-password": {
@@ -4385,7 +4592,7 @@
             "name": "role",
             "required": false,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/UserRole"
             },
             "description": "Filter by role"
           }
@@ -4482,7 +4689,7 @@
       "delete": {
         "tags": ["Admin"],
         "summary": "Soft-delete a user (super_admin only)",
-        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the only remaining admin/super_admin.",
+        "description": "Sets users.deleted_at = NOW(), revokes all refresh tokens. Hard erasure deferred V1.1 (ADR-052). 409 CANNOT_DELETE_LAST_ADMIN if the target is the last active admin/super_admin. 409 CANNOT_DELETE_LAST_SUPER_ADMIN if the target is the last active super_admin.",
         "security": [
           {
             "bearerAuth": []
@@ -4535,7 +4742,7 @@
       "post": {
         "tags": ["Admin"],
         "summary": "Suspend a user (super_admin only)",
-        "description": "Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves.",
+        "description": "Flips users.suspended=true. Blocks login + refresh. Reversible. 409 CANNOT_SUSPEND_SELF if actor targets themselves. 409 CANNOT_SUSPEND_LAST_ADMIN if the target is the last active admin/super_admin. 409 CANNOT_SUSPEND_LAST_SUPER_ADMIN if the target is the last active super_admin.",
         "security": [
           {
             "bearerAuth": []
@@ -4662,8 +4869,7 @@
                 "required": ["role"],
                 "properties": {
                   "role": {
-                    "type": "string",
-                    "enum": ["visitor", "moderator", "museum_manager", "admin"]
+                    "$ref": "#/components/schemas/UserRole"
                   }
                 }
               }
@@ -4698,8 +4904,12 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "Only a super_admin (read from the database) may grant or remove the super_admin role: otherwise 403 SUPER_ADMIN_REQUIRED. 409 CANNOT_DEMOTE_LAST_ADMIN if the target is the last active admin/super_admin and the new role is not privileged. 409 CANNOT_DEMOTE_LAST_SUPER_ADMIN if the target is the last active super_admin and the new role is not super_admin."
       }
     },
     "/api/admin/audit-logs": {
@@ -7013,6 +7223,631 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/auth/consent": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "List the caller’s consents, revoked ones included",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consents of the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["consents"],
+                  "properties": {
+                    "consents": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ConsentListItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Grant a consent scope at a policy version",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["scope", "version"],
+                "properties": {
+                  "scope": {
+                    "$ref": "#/components/schemas/ConsentScope"
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Consent granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["consent"],
+                  "properties": {
+                    "consent": {
+                      "$ref": "#/components/schemas/ConsentRecord"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/consent/{scope}": {
+      "delete": {
+        "tags": ["Auth"],
+        "summary": "Revoke a consent scope",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scope",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ConsentScope"
+            },
+            "description": "Consent scope to revoke"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consent revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["revoked", "scope"],
+                  "properties": {
+                    "revoked": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "scope": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}/tier": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Change a user’s subscription tier (super_admin only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tier"],
+                "properties": {
+                  "tier": {
+                    "type": "string",
+                    "enum": ["free", "premium"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User tier updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user"],
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/AdminUserDTO"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/chat/sessions/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Read a chat session for moderation (audited)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Chat session ID"
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor for message pagination"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of messages per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/admin/export/{kind}.csv": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Export sessions, reviews or tickets as CSV",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["sessions", "reviews", "tickets"]
+            },
+            "description": "Dataset to export"
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/ke/pending": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List extracted artwork knowledge awaiting review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Items awaiting review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["items", "count"],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArtworkKnowledgeDTO"
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/admin/ke/{id}/approve": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Approve extracted artwork knowledge so answers may use it",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Artwork knowledge ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id", "title", "needsReview"],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "needsReview": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/telemetry/funnel": {
+      "post": {
+        "tags": ["Telemetry"],
+        "summary": "Record a consented funnel analytics event",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Musaium-Analytics-Consent",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["granted"]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FunnelEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Event accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["accepted"],
+                  "properties": {
+                    "accepted": {
+                      "type": "boolean",
+                      "enum": [true]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/api/auth/google/initiate": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Start the Google web OAuth flow",
+        "description": "Issues a nonce, signs the state (nonce, returnTo, platform) and redirects to the Google consent screen. Public endpoint.",
+        "operationId": "googleOauthInitiate",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "required": false,
+            "description": "Client that will receive the session: mobile (deep link) or web (cookies). Anything else means web.",
+            "schema": {
+              "type": "string",
+              "enum": ["web", "mobile"]
+            }
+          },
+          {
+            "name": "returnTo",
+            "in": "query",
+            "required": false,
+            "description": "Relative web path to land on after sign-in; sanitized server-side.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the Google authorization endpoint.",
+            "headers": {
+              "Location": {
+                "description": "Redirect target",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Google web OAuth is not configured on this backend (code GOOGLE_OAUTH_NOT_CONFIGURED).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Google web OAuth callback",
+        "description": "Exchanges the authorization code, verifies the signed state and signs the user in. Mobile: redirects to the app deep link with a one-time code. Web: sets the session cookies and redirects to returnTo. Any failure redirects to the login screen of the platform with a reason.",
+        "operationId": "googleOauthCallback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "description": "Authorization code returned by Google.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "Signed state issued by /api/auth/google/initiate.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "description": "Error returned by Google (for example access_denied).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the app deep link, the web returnTo, or the login screen with an error reason.",
+            "headers": {
+              "Location": {
+                "description": "Redirect target",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Google web OAuth is not configured on this backend (code GOOGLE_OAUTH_NOT_CONFIGURED).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }

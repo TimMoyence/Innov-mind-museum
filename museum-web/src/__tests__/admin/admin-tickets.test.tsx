@@ -6,6 +6,7 @@ import TicketsPage from '@/app/[locale]/admin/tickets/page';
 import type { Ticket, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/tickets',
@@ -31,7 +32,8 @@ vi.mock('next/link', () => ({
 const mockApiGet = vi.fn();
 const mockApiPatch = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPatch: (...args: unknown[]) => mockApiPatch(...args) as Promise<unknown>,
   apiPost: vi.fn(),
@@ -401,7 +403,7 @@ describe('TicketsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Server error')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the tickets.')).toBeInTheDocument();
     });
   });
 
@@ -415,7 +417,7 @@ describe('TicketsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load tickets')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the tickets.')).toBeInTheDocument();
     });
   });
 

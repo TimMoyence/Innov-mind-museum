@@ -1,3 +1,4 @@
+import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 import type { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import type { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
 import type { AuditLog } from '@shared/audit/auditLog.entity';
@@ -37,3 +38,19 @@ export const makeAuditLog = (overrides: Partial<AuditLog> = {}): AuditLog =>
     createdAt: new Date('2025-06-01'),
     ...overrides,
   }) as AuditLog;
+
+export const makeAdminUserDTO = (overrides: Partial<AdminUserDTO> = {}): AdminUserDTO => ({
+  id: 1,
+  email: 'user1@example.com',
+  firstname: 'Test',
+  lastname: 'User',
+  role: 'visitor',
+  museumId: null,
+  emailVerified: true,
+  suspended: false,
+  deletedAt: null,
+  tier: 'free',
+  createdAt: '2025-01-01T00:00:00.000Z',
+  updatedAt: '2025-01-01T00:00:00.000Z',
+  ...overrides,
+});

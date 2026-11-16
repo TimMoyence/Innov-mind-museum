@@ -57,7 +57,6 @@ const REQUIRED_KEYS = [
   'error.review.generic',
   'error.review.load_failed',
   'error.review.load_more_failed',
-  'error.review.already_reviewed',
   'error.review.submit_failed',
 ];
 

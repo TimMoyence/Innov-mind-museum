@@ -1,6 +1,8 @@
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
 import { auditService, AUDIT_ADMIN_TICKET_UPDATED } from '@shared/audit';
+import { isOutsideMuseumScope } from '@shared/authz/tenant-scope';
 import { invalidInput, notFound } from '@shared/errors/app.error';
+import { assertOneOf } from '@shared/validation/one-of';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
@@ -24,12 +26,8 @@ export class UpdateTicketStatusUseCase {
   constructor(private readonly repository: ISupportRepository) {}
 
   async execute(input: UpdateTicketStatusInput): Promise<TicketDTO> {
-    if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
-      throw invalidInput(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
-    }
-    if (input.priority && !TICKET_PRIORITIES.includes(input.priority as TicketPriority)) {
-      throw invalidInput(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
-    }
+    if (input.status) assertOneOf('status', TICKET_STATUSES, input.status);
+    if (input.priority) assertOneOf('priority', TICKET_PRIORITIES, input.priority);
 
     if (!input.status && !input.priority && input.assignedTo === undefined) {
       throw invalidInput('At least one of status, priority, or assignedTo must be provided');
@@ -39,7 +37,7 @@ export class UpdateTicketStatusUseCase {
     if (!existing) {
       throw notFound('Ticket not found');
     }
-    if (input.scopeMuseumId != null && existing.museumId !== input.scopeMuseumId) {
+    if (isOutsideMuseumScope(input.scopeMuseumId, existing.museumId)) {
       throw notFound('Ticket not found');
     }
 

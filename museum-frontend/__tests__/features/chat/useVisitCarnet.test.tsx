@@ -1,6 +1,8 @@
 import '../../helpers/test-utils';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
+import { makeAppError } from '../../helpers/factories';
+
 const mockListSessions = jest.fn<Promise<unknown>, [unknown]>();
 
 jest.mock('@/features/chat/infrastructure/chatApi', () => ({
@@ -201,14 +203,16 @@ describe('useVisitCarnet (B1 — visit notebook list data layer)', () => {
 
   describe('error path (R7, AC6)', () => {
     it('exposes error: string and groups: [] when API throws', async () => {
-      mockListSessions.mockRejectedValueOnce(new Error('Network down'));
+      mockListSessions.mockRejectedValueOnce(makeAppError({ kind: 'Network' }));
 
       const { result } = renderHook(() => useVisitCarnet());
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.error).toBe('Network down');
+      expect(result.current.error).toBe(
+        'Network unavailable. Check your connection and try again.',
+      );
       expect(result.current.groups).toEqual([]);
     });
 

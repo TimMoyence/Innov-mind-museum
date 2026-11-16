@@ -7,7 +7,8 @@ import type { QuotaInfo } from '@/shared/types/quota-info';
 import { resolveInitialApiBaseUrl } from './apiConfig';
 import { reportError } from '@/shared/observability/errorReporting';
 import { generateRequestId } from './requestId';
-import { getApiErrorCode, mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
+import { isDailyLimitError } from '@/shared/lib/errors';
+import { mapAxiosError, toAxiosLikeError } from './httpErrorMapper';
 import { getCurrentDataMode } from './dataMode/currentDataMode';
 import { recordHttpQualitySample } from './connectivity/qualitySampling';
 
@@ -232,11 +233,11 @@ httpClient.interceptors.response.use(
       }
     }
 
+    const mapped = mapAxiosError(error);
     const is429 = status === 429;
-    const isDailyLimit =
-      is429 && getApiErrorCode(axiosError?.response?.data) === 'DAILY_LIMIT_REACHED';
     const retryable =
-      !isDailyLimit && (!status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429);
+      !isDailyLimitError(mapped) &&
+      (!status || status >= 500 || axiosError.code === 'ECONNABORTED' || is429);
     const retryCount = config._retryCount ?? 0;
     const maxRetries = is429 ? 3 : 2;
 
@@ -264,7 +265,6 @@ httpClient.interceptors.response.use(
       return httpClient.request(axiosError.config as AxiosRequestConfig);
     }
 
-    const mapped = mapAxiosError(error);
     emitHttpBreadcrumb(config, status, status && status >= 500 ? 'error' : 'warning');
     reportError(mapped);
     return Promise.reject(mapped);
