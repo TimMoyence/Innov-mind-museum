@@ -111,6 +111,8 @@ async function flushMicrotasks(): Promise<void> {
   });
 }
 
+const LOAD = { errorFallback: 'Could not load the data.' };
+
 describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   let harness: FetchHarness;
 
@@ -123,7 +125,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T1: url=null → loading=false, data=undefined, error=null, fetch NOT called (EARS-U-2/U-3/S-2)', async () => {
-    const { result } = renderHook(() => useFetchData<{ id: number }>(null));
+    const { result } = renderHook(() => useFetchData<{ id: number }>(null, LOAD));
 
     expect(result.current.loading).toBe(false);
     expect(result.current.data).toBeUndefined();
@@ -135,7 +137,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T2: success path with non-paginated response sets data and clears loading (EARS-E-3/O-3)', async () => {
-    const { result } = renderHook(() => useFetchData<{ foo: string }>('/api/single'));
+    const { result } = renderHook(() => useFetchData<{ foo: string }>('/api/single', LOAD));
 
     expect(result.current.loading).toBe(true);
     expect(result.current.error).toBeNull();
@@ -154,7 +156,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T3: standard envelope {data, totalPages, total} detected and pagination populated (EARS-O-3)', async () => {
-    const { result } = renderHook(() => useFetchData<number[]>('/api/paginated'));
+    const { result } = renderHook(() => useFetchData<number[]>('/api/paginated', LOAD));
 
     await act(async () => {
       harness.resolveAt(0, { data: [1, 2, 3], totalPages: 5, total: 50 });
@@ -171,6 +173,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   it('T4: parseData returning {data, totalPages, total} wrapper extracts data + pagination (EARS-O-1/O-2)', async () => {
     const { result } = renderHook(() =>
       useFetchData<number[]>('/api/wrap', {
+        ...LOAD,
         parseData: (raw) => {
           const r = raw as { items: number[]; meta: { totalPages: number; total: number } };
           return { data: r.items, totalPages: r.meta.totalPages, total: r.meta.total };
@@ -189,26 +192,26 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
     expect(result.current.pagination).toEqual({ totalPages: 2, total: 20 });
   });
 
-  it('T5: non-2xx response surfaces error message, loading=false, data preserved undefined (EARS-E-4)', async () => {
-    const { result } = renderHook(() => useFetchData<unknown>('/api/oops'));
+  it('T5: non-2xx response shows the screen’s errorFallback, never the server text, loading=false, data preserved undefined (EARS-E-4)', async () => {
+    const { result } = renderHook(() => useFetchData<unknown>('/api/oops', LOAD));
 
     await act(async () => {
       harness.resolveNonOkAt(0, {
         status: 500,
         statusText: 'Internal Server Error',
-        body: { message: 'kaboom' },
+        body: { error: { code: 'INTERNAL_ERROR', message: 'kaboom' } },
       });
     });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-    expect(result.current.error).toBe('kaboom');
+    expect(result.current.error).toBe(LOAD.errorFallback);
     expect(result.current.data).toBeUndefined();
   });
 
-  it('T6: network error rejects with Error → error=err.message, loading=false (EARS-E-4)', async () => {
-    const { result } = renderHook(() => useFetchData<unknown>('/api/net'));
+  it('T6: network error rejects with Error → error=errorFallback, loading=false (EARS-E-4)', async () => {
+    const { result } = renderHook(() => useFetchData<unknown>('/api/net', LOAD));
 
     await act(async () => {
       harness.rejectAt(0, new Error('Network down'));
@@ -217,7 +220,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-    expect(result.current.error).toBe('Network down');
+    expect(result.current.error).toBe(LOAD.errorFallback);
     expect(result.current.data).toBeUndefined();
   });
 
@@ -236,23 +239,10 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
     expect(result.current.error).toBe('Custom fallback msg');
   });
 
-  it('T7b: non-Error rejection without errorFallback uses default "Failed to load data" (EARS-O-4)', async () => {
-    const { result } = renderHook(() => useFetchData<unknown>('/api/weird-default'));
-
-    await act(async () => {
-      harness.rejectAt(0, 'still-weird');
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-    expect(result.current.error).toBe('Failed to load data');
-  });
-
   it('T8: deps change aborts in-flight fetch and uses only the new payload (EARS-E-1/E-5)', async () => {
     let depValue = 'A';
     const { result, rerender } = renderHook(() =>
-      useFetchData<{ tag: string }>(`/api/deps?v=${depValue}`, { deps: [depValue] }),
+      useFetchData<{ tag: string }>(`/api/deps?v=${depValue}`, { ...LOAD, deps: [depValue] }),
     );
 
     expect(result.current.loading).toBe(true);
@@ -283,7 +273,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   it('T9: unmount mid-flight aborts fetch and never emits a React state-update warning (EARS-E-2/E-5/W-1)', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const { unmount } = renderHook(() => useFetchData<unknown>('/api/unmount'));
+    const { unmount } = renderHook(() => useFetchData<unknown>('/api/unmount', LOAD));
 
     expect(harness.deferreds).toHaveLength(1);
     const sig = harness.deferreds[0]?.signal;
@@ -313,7 +303,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T10: refetch() while a fetch is in-flight aborts it and starts a new one (EARS-E-6, OQ-2)', async () => {
-    const { result } = renderHook(() => useFetchData<{ n: number }>('/api/refetch'));
+    const { result } = renderHook(() => useFetchData<{ n: number }>('/api/refetch', LOAD));
 
     expect(harness.deferreds).toHaveLength(1);
     const firstSignal = harness.deferreds[0]?.signal;
@@ -339,7 +329,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
 
   it('T11: refetch identity is stable across renders when url + deps unchanged (EARS-U-5)', async () => {
     const { result, rerender } = renderHook(() =>
-      useFetchData<{ n: number }>('/api/stable', { deps: [] }),
+      useFetchData<{ n: number }>('/api/stable', { ...LOAD, deps: [] }),
     );
 
     const refetch1 = result.current.refetch;
@@ -357,6 +347,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   it('T12: parseData returning T directly (no wrapper) sets data=T, pagination=undefined (EARS-O-1)', async () => {
     const { result } = renderHook(() =>
       useFetchData<string[]>('/api/direct', {
+        ...LOAD,
         parseData: (raw) => {
           const r = raw as { items: string[] };
           return r.items;
@@ -377,7 +368,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
 
   it('T13: url=null at mount then changes to string triggers a fetch (EARS-U-3/E-1)', async () => {
     let url: string | null = null;
-    const { result, rerender } = renderHook(() => useFetchData<{ id: number }>(url));
+    const { result, rerender } = renderHook(() => useFetchData<{ id: number }>(url, LOAD));
 
     expect(result.current.loading).toBe(false);
     expect(harness.spy).not.toHaveBeenCalled();
@@ -401,7 +392,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T14: under <StrictMode> double-mount, first effect aborts and only the second result lands (EARS-W-2)', async () => {
-    const { result } = renderHook(() => useFetchData<{ stage: string }>('/api/strict'), {
+    const { result } = renderHook(() => useFetchData<{ stage: string }>('/api/strict', LOAD), {
       wrapper: StrictMode,
     });
 
@@ -422,7 +413,7 @@ describe('useFetchData<T> — RED phase 2026-05-23-web-refactor-p3', () => {
   });
 
   it('T15: empty paginated response {data:[], totalPages:0, total:0} keeps wrapper detection (EARS-E-3/O-2, R-1)', async () => {
-    const { result } = renderHook(() => useFetchData<number[]>('/api/empty'));
+    const { result } = renderHook(() => useFetchData<number[]>('/api/empty', LOAD));
 
     await act(async () => {
       harness.resolveAt(0, { data: [], totalPages: 0, total: 0 });

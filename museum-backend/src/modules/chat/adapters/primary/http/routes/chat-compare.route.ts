@@ -5,7 +5,7 @@ import {
   upload,
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { compareRequestSchema } from '@modules/chat/adapters/primary/http/schemas/compare.schemas';
-import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
+import { requireThirdPartyAiConsent } from '@modules/chat/useCase/require-third-party-ai-consent';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import {
   AppError,
@@ -94,12 +94,7 @@ function mapUseCaseError(error: unknown): unknown {
 
 function createCompareHandler(deps: CompareRouterDeps, consentChecker: ThirdPartyAiConsentChecker) {
   return async (req: Request, res: Response): Promise<void> => {
-    const { scope } = resolveActiveProviderForScope('image');
-    const granted = await consentChecker.isGranted(getRequestUser(req)?.id, scope);
-    if (!granted) {
-      res.status(403).json({ error: 'consent_required', scope });
-      return;
-    }
+    await requireThirdPartyAiConsent(consentChecker, getRequestUser(req)?.id, 'image');
 
     if (!req.file) {
       throw compareInvalidImage('image file is required', undefined, true);

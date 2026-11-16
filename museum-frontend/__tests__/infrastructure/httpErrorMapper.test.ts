@@ -2,7 +2,6 @@ import {
   toAxiosLikeError,
   toApiErrorPayload,
   getApiErrorCode,
-  getApiErrorMessage,
   getApiRequestId,
   mapAxiosError,
 } from '@/shared/infrastructure/httpErrorMapper';
@@ -76,20 +75,6 @@ describe('getApiErrorCode', () => {
   });
 });
 
-describe('getApiErrorMessage', () => {
-  it('returns nested error.message', () => {
-    expect(getApiErrorMessage({ error: { message: 'Invalid' } })).toBe('Invalid');
-  });
-
-  it('returns flat message as fallback', () => {
-    expect(getApiErrorMessage({ message: 'Not found' })).toBe('Not found');
-  });
-
-  it('returns undefined for non-string message', () => {
-    expect(getApiErrorMessage({ error: { message: 42 } })).toBeUndefined();
-  });
-});
-
 describe('getApiRequestId', () => {
   it('returns nested requestId', () => {
     expect(getApiRequestId({ error: { requestId: 'req-123' } })).toBe('req-123');
@@ -131,7 +116,7 @@ describe('mapAxiosError', () => {
     expect(result.kind).toBe('Forbidden');
   });
 
-  it('maps 403 with invalid token to Unauthorized', () => {
+  it('CODE-PAS-TEXTE · un 403 FORBIDDEN reste Forbidden même si son texte cite « invalid token » : seul un 401 déconnecte', () => {
     const result = mapAxiosError({
       response: {
         status: 403,
@@ -139,7 +124,7 @@ describe('mapAxiosError', () => {
       },
       isAxiosError: true,
     });
-    expect(result.kind).toBe('Unauthorized');
+    expect(result.kind).toBe('Forbidden');
   });
 
   it('maps 404 to NotFound', () => {

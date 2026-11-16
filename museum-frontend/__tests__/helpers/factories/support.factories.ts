@@ -27,6 +27,7 @@ export function makeTicketMessage(overrides: Partial<TicketMessageDTO> = {}): Ti
     ticketId: 'ticket-1',
     senderId: 1,
     senderRole: 'visitor',
+    fromStaff: false,
     text: 'I cannot scan any artworks.',
     createdAt: '2026-03-15T10:00:00.000Z',
     ...overrides,

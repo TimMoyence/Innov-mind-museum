@@ -690,7 +690,9 @@
       "account_suspended": "Dein Konto wurde gesperrt. Wende dich an den Support.",
       "account_deleted": "Dieses Konto wurde gelöscht.",
       "locked_out": "Zu viele fehlgeschlagene Versuche. Bitte in einigen Minuten erneut versuchen.",
-      "minor_parental_consent_required": "Die Registrierung ist für Nutzer ab 15 Jahren vorgesehen (französische digitale Volljährigkeit)."
+      "minor_parental_consent_required": "Die Registrierung ist für Nutzer ab 15 Jahren vorgesehen (französische digitale Volljährigkeit).",
+      "last_admin_delete": "Du bist der letzte Administrator. Ernenne einen anderen Administrator, bevor du dein Konto löschst.",
+      "last_super_admin_delete": "Du bist der letzte Super-Administrator. Ernenne einen anderen Super-Administrator, bevor du dein Konto löschst."
     },
     "chat": {
       "contract_invalid": "Unerwartete Serverantwort. Bitte erneut versuchen.",
@@ -709,7 +711,6 @@
       "generic": "Bewertungen können derzeit nicht geladen werden.",
       "load_failed": "Bewertungen konnten nicht geladen werden.",
       "load_more_failed": "Weitere Bewertungen konnten nicht geladen werden.",
-      "already_reviewed": "Sie haben bereits eine Bewertung abgegeben.",
       "submit_failed": "Bewertung konnte nicht gesendet werden. Bitte erneut versuchen."
     }
   },
@@ -1151,10 +1152,8 @@
     "commentPlaceholder": "Teile deine Erfahrung...",
     "submit": "Bewertung abschicken",
     "success": "Vielen Dank für deine Bewertung!",
-    "alreadyReviewed": "Du hast bereits eine Bewertung abgegeben",
     "empty": "Noch keine Bewertungen. Sei der Erste!",
     "reviewCount": "{{count}} Bewertungen",
-    "submitFailed": "Senden fehlgeschlagen. Bitte erneut versuchen.",
     "age": {
       "today": "Heute",
       "yesterday": "Gestern",

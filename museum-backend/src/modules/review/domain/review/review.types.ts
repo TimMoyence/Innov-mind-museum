@@ -1,8 +1,8 @@
 import type { PaginationParams } from '@shared/types/pagination';
 
-export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+export const REVIEW_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
-export const REVIEW_STATUSES: ReviewStatus[] = ['pending', 'approved', 'rejected'];
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 
 export interface CreateReviewInput {
   userId: number;

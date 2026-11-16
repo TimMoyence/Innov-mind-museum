@@ -62,7 +62,7 @@ export default function TicketsPage() {
     refetch: fetchTickets,
   } = useFetchData<Ticket[]>(ticketsUrl, {
     deps: [page, statusFilter, priorityFilter],
-    errorFallback: 'Failed to load tickets',
+    errorFallback: adminDict.ticketsPage.errorLoad,
   });
 
   const tickets = ticketsPayload ?? [];
@@ -81,8 +81,8 @@ export default function TicketsPage() {
       });
       setEditingTicket(null);
       void fetchTickets();
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to update ticket');
+    } catch {
+      setMutationError(adminDict.ticketsPage.errorUpdate);
     } finally {
       setSaving(false);
     }

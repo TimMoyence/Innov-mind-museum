@@ -1,13 +1,14 @@
+import { isActiveAccount, refuseRemovingLastAccount } from '@modules/admin/domain/admin/last-admin';
 import { UserRole } from '@modules/auth/domain/user/user-role';
 import { auditService, AUDIT_ADMIN_ROLE_CHANGE } from '@shared/audit';
-import { conflict, invalidInput, notFound } from '@shared/errors/app.error';
+import { AppError, notFound } from '@shared/errors/app.error';
 
 import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { AdminUserDTO } from '@modules/admin/domain/admin/admin.types';
 
 interface ChangeUserRoleInput {
   userId: number;
-  newRole: string;
+  newRole: UserRole;
   actorId: number;
   ip?: string;
   requestId?: string;
@@ -17,27 +18,23 @@ export class ChangeUserRoleUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
   async execute(input: ChangeUserRoleInput): Promise<AdminUserDTO> {
-    const validRoles: string[] = Object.values(UserRole);
-
-    if (!validRoles.includes(input.newRole)) {
-      throw invalidInput(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
-    }
-
-    if (input.newRole !== UserRole.ADMIN) {
-      const adminCount = await this.repository.countAdmins();
-      if (adminCount <= 1) {
-        const result = await this.repository.listUsers({
-          pagination: { page: 1, limit: 1 },
-          role: UserRole.ADMIN,
-          search: undefined,
-        });
-        if (result.total <= 1 && result.data.length > 0 && result.data[0].id === input.userId) {
-          throw conflict('Cannot remove the last admin');
+    const updated = await this.repository.withPrivilegedAccountsLock(async (repository) => {
+      const target = await repository.getUserById(input.userId);
+      if (input.newRole === UserRole.SUPER_ADMIN || target?.role === UserRole.SUPER_ADMIN) {
+        const actor = await repository.getUserById(input.actorId);
+        if (actor?.role !== UserRole.SUPER_ADMIN || !isActiveAccount(actor)) {
+          throw new AppError({
+            message: 'SUPER_ADMIN_REQUIRED',
+            statusCode: 403,
+            code: 'SUPER_ADMIN_REQUIRED',
+          });
         }
       }
-    }
-
-    const updated = await this.repository.changeUserRole(input.userId, input.newRole);
+      if (target) {
+        await refuseRemovingLastAccount(repository, target, 'DEMOTE', input.newRole);
+      }
+      return await repository.changeUserRole(input.userId, input.newRole);
+    });
     if (!updated) {
       throw notFound('User not found');
     }

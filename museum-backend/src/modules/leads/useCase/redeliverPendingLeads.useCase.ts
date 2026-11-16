@@ -1,4 +1,4 @@
-import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
+import { deliverLead } from '@modules/leads/useCase/deliver-lead';
 import { logger } from '@shared/logger/logger';
 import { randomSource } from '@shared/utils/random';
 
@@ -56,25 +56,19 @@ export class RedeliverPendingLeadsUseCase {
     let stillFailed = 0;
 
     for (const lead of eligible) {
-      try {
-        await deliver(this.resolveNotifier(lead.type), lead);
-        await this.repository.markDelivered(lead.id);
-        delivered += 1;
-        logger.info('lead_delivered', { leadId: lead.id, type: lead.type, via: 'redelivery' });
-      } catch (err) {
-        await this.repository.markFailed(lead.id, toSanitizedLeadError(err));
-        await this.repository.scheduleNextAttempt(
-          lead.id,
-          computeNextEligibleAt(lead.attempts + 1, backoffBaseMs, backoffCapMs),
-        );
-        stillFailed += 1;
-        logger.warn('lead_delivery_failed', {
-          leadId: lead.id,
-          type: lead.type,
-          via: 'redelivery',
-          errorClass: err instanceof Error ? err.name : 'unknown',
-        });
-      }
+      const delivery = await deliverLead({
+        repository: this.repository,
+        lead,
+        send: () => deliver(this.resolveNotifier(lead.type), lead),
+        context: { via: 'redelivery' },
+        onFailed: () =>
+          this.repository.scheduleNextAttempt(
+            lead.id,
+            computeNextEligibleAt(lead.attempts + 1, backoffBaseMs, backoffCapMs),
+          ),
+      });
+      if (delivery.delivered) delivered += 1;
+      else stillFailed += 1;
     }
 
     const cutoffIso = new Date(Date.now() - retentionDays * MS_PER_DAY).toISOString();

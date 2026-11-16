@@ -9,8 +9,10 @@ appId: com.musaium.mobile.preview
     id: 'analytics-consent-decline'
     optional: true
 
-- openLink:
-    link: 'musaium:///(stack)/confirm-email-change?token=e2e-confirm-token'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/confirm-email-change?token=e2e-confirm-token'
 - waitForAnimationToEnd:
     timeout: 10000
 

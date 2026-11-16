@@ -6,6 +6,7 @@ import AnalyticsPage from '@/app/[locale]/admin/analytics/page';
 import type { UsageAnalytics, ContentAnalytics, EngagementAnalytics } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
 import { requireIndex } from '../helpers/require-index';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/analytics',
@@ -49,7 +50,8 @@ vi.mock('recharts', () => ({
 
 const mockApiGet = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPost: vi.fn(),
   registerLogoutHandler: vi.fn(),
@@ -323,7 +325,7 @@ describe('AnalyticsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Analytics unavailable')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the analytics.')).toBeInTheDocument();
     });
 
     expect(screen.queryByText('Avg Messages')).not.toBeInTheDocument();
@@ -339,7 +341,7 @@ describe('AnalyticsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load analytics')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the analytics.')).toBeInTheDocument();
     });
   });
 

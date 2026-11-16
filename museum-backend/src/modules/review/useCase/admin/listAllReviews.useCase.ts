@@ -1,6 +1,6 @@
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
-import { invalidInput } from '@shared/errors/app.error';
 import { assertPagination } from '@shared/types/pagination';
+import { assertOneOf } from '@shared/validation/one-of';
 
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
 import type {
@@ -23,9 +23,7 @@ export class ListAllReviewsUseCase {
   async execute(input: ListAllReviewsInput): Promise<PaginatedResult<ReviewDTO>> {
     const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
-    if (input.status && !REVIEW_STATUSES.includes(input.status as ReviewStatus)) {
-      throw invalidInput(`status must be one of: ${REVIEW_STATUSES.join(', ')}`);
-    }
+    if (input.status) assertOneOf('status', REVIEW_STATUSES, input.status);
 
     const filters: ListReviewsFilters = {
       status: input.status as ReviewStatus | undefined,

@@ -13,10 +13,15 @@ beforeEach(() => {
   (globalThis as { fetch?: unknown }).fetch = fetchMock as unknown as typeof fetch;
 });
 
+const STAMPED_API_BASE_URL = 'https://musaium.com';
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: { API_BASE_URL: STAMPED_API_BASE_URL } } },
+}));
+
 beforeAll(() => {
-  process.env.EXPO_PUBLIC_API_BASE_URL = 'https://api.test.musaium.local';
-  process.env.EXPO_PUBLIC_PLAUSIBLE_ENDPOINT_URL =
-    'https://api.test.musaium.local/api/telemetry/funnel';
+  delete process.env.EXPO_PUBLIC_API_BASE_URL;
   process.env.EXPO_PUBLIC_PLAUSIBLE_DOMAIN = 'musaium.test';
 });
 
@@ -88,6 +93,15 @@ describe('Wave C5 / T-C52 — Plausible consent gate (FE)', () => {
     expect((body.domain as string).length).toBeGreaterThan(0);
 
     expect(body.props).toEqual(expect.objectContaining({ tier: 'free' }));
+  });
+
+  it('FUNNEL-API · le funnel part vers l’API inscrite au build, comme le reste de l’app', async () => {
+    const sut = loadPlausibleSut();
+    sut.__setHasAnalyticsConsentForTest(() => true);
+
+    await sut.trackFunnelEvent('paywall_modal_shown', { tier: 'free' });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${STAMPED_API_BASE_URL}/api/telemetry/funnel`);
   });
 
   it('R-C5 anti-PII — consent granted + props.email supplied → emitted body MUST NOT contain email (defense-in-depth)', async () => {

@@ -55,8 +55,16 @@ appId: com.musaium.mobile.preview
     visible:
       id: 'museum-sheet-start-chat'
     timeout: 15000
-- assertVisible:
-    id: 'museum-sheet-backdrop'
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: 'museum-sheet-backdrop'
+- extendedWaitUntil:
+    notVisible:
+      text: '(Chargement des informations|Loading information).*'
+    timeout: 15000
 - tapOn:
     id: 'museum-sheet-close'
 - extendedWaitUntil:

@@ -75,7 +75,7 @@ describe('POST /chat/compare — third-party AI image consent gate (B-03)', () =
     stopRateLimitSweep();
   });
 
-  it('returns 403 consent_required (image scope) when the image scope is not granted', async () => {
+  it('returns 403 CONSENT_REQUIRED (image scope) when the image scope is not granted', async () => {
     const compareImageUseCase = buildHappyUseCase();
     const app = buildApp(compareImageUseCase);
 
@@ -88,7 +88,10 @@ describe('POST /chat/compare — third-party AI image consent gate (B-03)', () =
       .attach('image', imageBuffer, { filename: 'fixture.jpg', contentType: 'image/jpeg' });
 
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'consent_required', scope: IMAGE_SCOPE });
+    expect(res.body.error).toMatchObject({
+      code: 'CONSENT_REQUIRED',
+      details: { scope: IMAGE_SCOPE },
+    });
     expect(compareImageUseCase).not.toHaveBeenCalled();
   });
 

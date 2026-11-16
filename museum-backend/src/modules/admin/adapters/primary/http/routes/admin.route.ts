@@ -40,15 +40,18 @@ import {
   adminSupportFacade,
 } from '@modules/admin/useCase';
 import { getChatSessionForModerationUseCase } from '@modules/admin/useCase/chat/composition';
+import { MUSEUM_STAFF_ROLES } from '@modules/auth/domain/user/user-role';
 import { moderateReviewSchema } from '@modules/review/adapters/primary/http/schemas/review.schemas';
 import { getNpsUseCase } from '@modules/review/useCase';
 import { computeTenantScope } from '@shared/authz/tenant-scope';
-import { forbidden, invalidInput } from '@shared/errors/app.error';
+import { invalidInput } from '@shared/errors/app.error';
 import { isAuthenticated } from '@shared/middleware/authenticated.middleware';
 import { parseStringParam } from '@shared/middleware/parseStringParam';
 import { requireRole } from '@shared/middleware/require-role.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
 import { validateQuery } from '@shared/middleware/validate-query.middleware';
+
+import type { z } from 'zod';
 
 const adminRouter: Router = Router();
 
@@ -66,12 +69,9 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   validateQuery(listUsersQuerySchema),
   async (_req: Request, res: Response) => {
-    const { page, limit, search, role } = res.locals.validatedQuery as {
-      page: number;
-      limit: number;
-      search?: string;
-      role?: string;
-    };
+    const { page, limit, search, role } = res.locals.validatedQuery as z.infer<
+      typeof listUsersQuerySchema
+    >;
 
     const result = await listUsersUseCase.execute({
       search,
@@ -104,7 +104,7 @@ adminRouter.patch(
   async (req: Request, res: Response) => {
     const userId = parseUserIdParam(req);
 
-    const { role } = req.body as { role: string };
+    const { role } = req.body as z.infer<typeof changeUserRoleSchema>;
 
     const updated = await changeUserRoleUseCase.execute({
       userId,
@@ -140,58 +140,38 @@ adminRouter.patch(
   },
 );
 
-adminRouter.post(
-  '/users/:id/suspend',
-  isAuthenticated,
-  requireRole('super_admin'),
+const userAccountAction =
+  (useCase: typeof suspendUserUseCase | typeof unsuspendUserUseCase | typeof deleteUserUseCase) =>
   async (req: Request, res: Response) => {
-    const userId = parseUserIdParam(req);
-
-    const updated = await suspendUserUseCase.execute({
-      userId,
+    const user = await useCase.execute({
+      userId: parseUserIdParam(req),
       actorId: req.user?.id ?? 0,
       ip: req.ip,
       requestId: req.requestId,
     });
 
-    res.json({ user: updated });
-  },
+    res.json({ user });
+  };
+
+adminRouter.post(
+  '/users/:id/suspend',
+  isAuthenticated,
+  requireRole('super_admin'),
+  userAccountAction(suspendUserUseCase),
 );
 
 adminRouter.post(
   '/users/:id/unsuspend',
   isAuthenticated,
   requireRole('super_admin'),
-  async (req: Request, res: Response) => {
-    const userId = parseUserIdParam(req);
-
-    const updated = await unsuspendUserUseCase.execute({
-      userId,
-      actorId: req.user?.id ?? 0,
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-
-    res.json({ user: updated });
-  },
+  userAccountAction(unsuspendUserUseCase),
 );
 
 adminRouter.delete(
   '/users/:id',
   isAuthenticated,
   requireRole('super_admin'),
-  async (req: Request, res: Response) => {
-    const userId = parseUserIdParam(req);
-
-    const deleted = await deleteUserUseCase.execute({
-      userId,
-      actorId: req.user?.id ?? 0,
-      ip: req.ip,
-      requestId: req.requestId,
-    });
-
-    res.json({ user: deleted });
-  },
+  userAccountAction(deleteUserUseCase),
 );
 
 adminRouter.get(
@@ -248,19 +228,12 @@ adminRouter.get(
 adminRouter.get(
   '/stats',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateQuery(statsQuerySchema),
   async (req: Request, res: Response) => {
-    const { museumId: queryMuseumId } = res.locals.validatedQuery as StatsQuery;
-
-    let scopedMuseumId: number | undefined = queryMuseumId;
-    if (req.user?.role === 'museum_manager') {
-      scopedMuseumId = req.user.museumId ?? undefined;
-    }
-
     const stats = await getStatsUseCase.execute({
       role: req.user?.role,
-      museumId: scopedMuseumId,
+      museumId: req.user?.museumId ?? undefined,
     });
     res.json(stats);
   },
@@ -269,18 +242,12 @@ adminRouter.get(
 adminRouter.get(
   '/nps',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateQuery(statsQuerySchema),
   async (req: Request, res: Response) => {
     const { museumId: queryMuseumId } = res.locals.validatedQuery as StatsQuery;
 
-    let scopedMuseumId: number | undefined = queryMuseumId;
-    if (req.user?.role === 'museum_manager') {
-      if (req.user.museumId == null) {
-        throw forbidden('Museum scope required');
-      }
-      scopedMuseumId = req.user.museumId;
-    }
+    const scopedMuseumId = computeTenantScope(req.user?.role, req.user?.museumId) ?? queryMuseumId;
 
     const nps = await getNpsUseCase.execute({ museumId: scopedMuseumId });
     res.json(nps);
@@ -293,14 +260,9 @@ adminRouter.get(
   requireRole('admin', 'moderator'),
   validateQuery(listReportsQuerySchema),
   async (_req: Request, res: Response) => {
-    const { page, limit, status, reason, dateFrom, dateTo } = res.locals.validatedQuery as {
-      page: number;
-      limit: number;
-      status?: 'pending' | 'reviewed' | 'dismissed';
-      reason?: string;
-      dateFrom?: string;
-      dateTo?: string;
-    };
+    const { page, limit, status, reason, dateFrom, dateTo } = res.locals.validatedQuery as z.infer<
+      typeof listReportsQuerySchema
+    >;
 
     const result = await listReportsUseCase.execute({
       status,
@@ -390,7 +352,7 @@ adminRouter.get(
 adminRouter.get(
   '/tickets',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateQuery(listTicketsQuerySchema),
   async (req: Request, res: Response) => {
     const { page, limit, status, priority } = res.locals.validatedQuery as ListTicketsQuery;
@@ -412,7 +374,7 @@ adminRouter.get(
 adminRouter.patch(
   '/tickets/:id',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateBody(updateTicketSchema),
   async (req: Request, res: Response) => {
     const ticketId = parseStringParam(req, 'id');
@@ -443,7 +405,7 @@ adminRouter.patch(
 adminRouter.get(
   '/reviews',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateQuery(listReviewsQuerySchema),
   async (req: Request, res: Response) => {
     const { page, limit, status } = res.locals.validatedQuery as ListReviewsQuery;
@@ -464,7 +426,7 @@ adminRouter.get(
 adminRouter.patch(
   '/reviews/:id',
   isAuthenticated,
-  requireRole('admin', 'moderator', 'museum_manager'),
+  requireRole(...MUSEUM_STAFF_ROLES),
   validateBody(moderateReviewSchema),
   async (req: Request, res: Response) => {
     const reviewId = parseStringParam(req, 'id');

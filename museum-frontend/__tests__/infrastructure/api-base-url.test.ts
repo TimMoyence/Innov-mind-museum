@@ -25,6 +25,17 @@ describe('RAZ-M14-API-URL', () => {
     ).toBe('http://10.0.2.2:3000');
   });
 
+  it('RAZ-M14-API-URL · le variant e2e du nightly Maestro vise EXPO_PUBLIC_API_BASE_URL même en Release', () => {
+    const env = {
+      CONFIGURATION: 'Release',
+      APP_VARIANT: 'e2e',
+      EXPO_PUBLIC_API_BASE_URL: 'http://localhost:3000/',
+    };
+
+    expect(apiUrlConfig.resolveVariant(env)).toBe('development');
+    expect(urlFor(env)).toBe(LOCAL);
+  });
+
   it('RAZ-M14-API-URL · un placeholder EAS non substitué retombe sur le backend local', () => {
     expect(urlFor({ EXPO_PUBLIC_API_BASE_URL: '$EXPO_PUBLIC_API_BASE_URL' })).toBe(LOCAL);
   });

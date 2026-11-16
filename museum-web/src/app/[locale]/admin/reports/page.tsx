@@ -13,7 +13,7 @@ import { ModalActions } from '@/components/ui/ModalActions';
 import { Spinner } from '@/components/ui/Spinner';
 import { TableHeaderCell } from '@/components/ui/TableHeaderCell';
 import { TableDataCell } from '@/components/ui/TableDataCell';
-import type { Report, ReportStatus } from '@/lib/admin-types';
+import { REPORT_STATUSES, type Report, type ReportStatus } from '@/lib/admin-types';
 import { adminListUrl } from '@/lib/admin-list-url';
 
 const STATUS_COLORS: Record<ReportStatus, string> = {
@@ -21,8 +21,6 @@ const STATUS_COLORS: Record<ReportStatus, string> = {
   reviewed: 'bg-green-100 text-green-700',
   dismissed: 'bg-gray-100 text-gray-600',
 };
-
-const ALL_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
 
 export default function ReportsPage() {
   const adminDict = useAdminDict();
@@ -52,7 +50,7 @@ export default function ReportsPage() {
     refetch: fetchReports,
   } = useFetchData<Report[]>(reportsUrl, {
     deps: [page, statusFilter],
-    errorFallback: 'Failed to load reports',
+    errorFallback: adminDict.reportsPage.errorLoad,
   });
 
   const reports = reportsPayload ?? [];
@@ -71,8 +69,8 @@ export default function ReportsPage() {
       });
       setEditingReport(null);
       void fetchReports();
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to update report');
+    } catch {
+      setMutationError(adminDict.reportsPage.errorUpdate);
     } finally {
       setSubmitting(false);
     }
@@ -93,7 +91,7 @@ export default function ReportsPage() {
           className="rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
         >
           <option value="">{adminDict.common.allStatuses}</option>
-          {ALL_STATUSES.map((s) => (
+          {REPORT_STATUSES.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
@@ -231,7 +229,7 @@ export default function ReportsPage() {
             }}
             className="mt-4 w-full rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm text-text-primary focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
           >
-            {ALL_STATUSES.map((s) => (
+            {REPORT_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

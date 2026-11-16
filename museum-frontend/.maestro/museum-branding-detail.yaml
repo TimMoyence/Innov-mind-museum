@@ -56,8 +56,10 @@ appId: com.musaium.mobile.preview
     timeout: 40000
 - assertVisible:
     text: 'Démarrer un chat ici|Start Chat Here'
-- openLink:
-    link: 'musaium:///(stack)/museum-detail'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/museum-detail'
 - extendedWaitUntil:
     visible:
       text: 'Démarrer un chat ici|Start Chat Here'

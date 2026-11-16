@@ -4,37 +4,19 @@ import {
   CONSENT_POLICY_VERSION,
   type ThirdPartyAiScope,
 } from '@/features/chat/domain/consentScopes';
+import type { components, paths } from '@/shared/api/generated/openapi';
 
-export interface ConsentRow {
-  id: number;
-  scope: string;
-  version: string;
-  grantedAt: string;
-  revokedAt: string | null;
-  source: string;
-}
+export type ConsentListItem = components['schemas']['ConsentListItem'];
 
-interface ListConsentResponse {
-  consents: ConsentRow[];
-}
-
-interface GrantConsentResponse {
-  consent: {
-    id: number;
-    scope: string;
-    version: string;
-    grantedAt: string;
-    source: string;
-  };
-}
-
-interface RevokeConsentResponse {
-  revoked: true;
-  scope: string;
-}
+type ListConsentResponse =
+  paths['/api/auth/consent']['get']['responses'][200]['content']['application/json'];
+type GrantConsentResponse =
+  paths['/api/auth/consent']['post']['responses'][201]['content']['application/json'];
+type RevokeConsentResponse =
+  paths['/api/auth/consent/{scope}']['delete']['responses'][200]['content']['application/json'];
 
 export const consentApi = {
-  async list(): Promise<ConsentRow[]> {
+  async list(): Promise<ConsentListItem[]> {
     const res = await httpRequest<ListConsentResponse>('/api/auth/consent', {
       method: 'GET',
       requiresAuth: true,

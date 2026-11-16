@@ -26,10 +26,6 @@ const PRIORITY_COLORS: Record<TicketPriority, string> = {
   high: 'bg-red-100 text-red-700',
 };
 
-function isStaffRole(role: string): boolean {
-  return role === 'admin' || role === 'moderator' || role === 'museum_manager';
-}
-
 export default function AdminSupportPage() {
   const adminDict = useAdminDict();
   const searchParams = useSearchParams();
@@ -50,7 +46,7 @@ export default function AdminSupportPage() {
   } = useFetchData<TicketDetail>(ticketId ? '/api/support/tickets/' + ticketId : null, {
     deps: [ticketId],
     parseData: (raw) => (raw as { ticket: TicketDetail }).ticket,
-    errorFallback: 'Failed to load ticket',
+    errorFallback: adminDict.supportPage.errorLoad,
   });
   const combinedError = error ?? mutationError;
 
@@ -64,8 +60,8 @@ export default function AdminSupportPage() {
       });
       setReplyText('');
       void fetchTicket();
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to send message');
+    } catch {
+      setMutationError(adminDict.supportPage.errorSend);
     } finally {
       setSending(false);
     }
@@ -184,7 +180,7 @@ export default function AdminSupportPage() {
         )}
 
         {ticket.messages.map((msg: TicketMessage) => {
-          const staff = isStaffRole(msg.senderRole);
+          const staff = msg.fromStaff;
           return (
             <div
               key={msg.id}

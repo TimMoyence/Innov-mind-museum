@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useChatSession } from '@/features/chat/application/useChatSession';
 import type { ChatUiMessage } from '@/features/chat/application/chatSessionLogic.pure';
+import { makeAppError } from '@/__tests__/helpers/factories';
 import { makePostMessageResponse } from '@/__tests__/helpers/factories/session.factories';
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -257,7 +258,7 @@ describe('useChatSession', () => {
   });
 
   it('clearError() resets the error state', async () => {
-    mockGetSession.mockRejectedValue(new Error('Network failure'));
+    mockGetSession.mockRejectedValue(makeAppError({ kind: 'Network' }));
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
@@ -265,7 +266,7 @@ describe('useChatSession', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe('Network failure');
+    expect(result.current.error).toBe('Network unavailable. Check your connection and try again.');
 
     act(() => {
       result.current.clearError();
@@ -334,7 +335,9 @@ describe('useChatSession', () => {
   });
 
   it('sets error when sendMessage() API call fails', async () => {
-    mockSendMessageSmart.mockRejectedValue(new Error('Server error'));
+    mockSendMessageSmart.mockRejectedValue(
+      makeAppError({ kind: 'Unknown', message: 'Unexpected server error', status: 500 }),
+    );
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
@@ -346,7 +349,7 @@ describe('useChatSession', () => {
       await result.current.sendMessage({ text: 'will fail' });
     });
 
-    expect(result.current.error).toBe('Server error');
+    expect(result.current.error).toBe('Something went wrong. Please try again.');
     expect(result.current.isSending).toBe(false);
   });
 
@@ -838,7 +841,9 @@ describe('useChatSession', () => {
   });
 
   it('postAudioMessage error sets error string and resets isSending/isStreaming', async () => {
-    mockPostAudioMessage.mockRejectedValue(new Error('Audio codec unsupported'));
+    mockPostAudioMessage.mockRejectedValue(
+      makeAppError({ kind: 'Validation', status: 400, message: 'Audio codec unsupported' }),
+    );
 
     const { result } = renderHook(() => useChatSession(SESSION_ID));
 
@@ -851,7 +856,7 @@ describe('useChatSession', () => {
     });
 
     expect(sendResult).toBe(false);
-    expect(result.current.error).toBe('Audio codec unsupported');
+    expect(result.current.error).toBe('Please review your input and try again.');
     expect(result.current.isSending).toBe(false);
     expect(result.current.isStreaming).toBe(false);
     const streamingMsgs = result.current.messages.filter((m: ChatUiMessage) =>

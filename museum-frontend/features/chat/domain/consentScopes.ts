@@ -1,3 +1,5 @@
+import type { components } from '@/shared/api/generated/openapi';
+
 export const THIRD_PARTY_AI_SCOPES = [
   'third_party_ai_text_openai',
   'third_party_ai_image_openai',
@@ -9,7 +11,7 @@ export const THIRD_PARTY_AI_SCOPES = [
   'third_party_ai_profile_google',
   'location_to_llm',
   'location_coarse_to_llm',
-] as const;
+] as const satisfies readonly components['schemas']['ConsentScope'][];
 
 export type ThirdPartyAiScope = (typeof THIRD_PARTY_AI_SCOPES)[number];
 

@@ -690,7 +690,9 @@
       "account_suspended": "Il tuo account è stato sospeso. Contatta l'assistenza.",
       "account_deleted": "Questo account è stato eliminato.",
       "locked_out": "Troppi tentativi falliti. Riprova tra qualche minuto.",
-      "minor_parental_consent_required": "La registrazione è riservata agli utenti di età pari o superiore a 15 anni (maggiore età digitale francese)."
+      "minor_parental_consent_required": "La registrazione è riservata agli utenti di età pari o superiore a 15 anni (maggiore età digitale francese).",
+      "last_admin_delete": "Sei l'ultimo amministratore. Nomina un altro amministratore prima di eliminare il tuo account.",
+      "last_super_admin_delete": "Sei l'ultimo super amministratore. Nomina un altro super amministratore prima di eliminare il tuo account."
     },
     "chat": {
       "contract_invalid": "Risposta del server non valida. Riprova.",
@@ -709,7 +711,6 @@
       "generic": "Impossibile caricare le recensioni al momento.",
       "load_failed": "Impossibile caricare le recensioni.",
       "load_more_failed": "Impossibile caricare altre recensioni.",
-      "already_reviewed": "Hai già inviato una recensione.",
       "submit_failed": "Invio della recensione non riuscito. Riprova."
     }
   },
@@ -1151,10 +1152,8 @@
     "commentPlaceholder": "Condividi la tua esperienza...",
     "submit": "Invia recensione",
     "success": "Grazie per la tua recensione!",
-    "alreadyReviewed": "Hai già inviato una recensione",
     "empty": "Ancora nessuna recensione. Sii il primo!",
     "reviewCount": "{{count}} recensioni",
-    "submitFailed": "Invio fallito. Riprova.",
     "age": {
       "today": "Oggi",
       "yesterday": "Ieri",

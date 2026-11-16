@@ -5,6 +5,7 @@ import {
   setErrorTranslate,
 } from '@/shared/lib/errors';
 import type { AppError } from '@/shared/types/AppError';
+import { makeAppError } from '@/__tests__/helpers/factories';
 
 describe('errors', () => {
   afterEach(() => {
@@ -82,9 +83,9 @@ describe('errors', () => {
       expect(getErrorMessage(err)).toBe('Request timed out. Please try again.');
     });
 
-    it('returns error.message for plain Error', () => {
-      const err = new Error('Something specific broke');
-      expect(getErrorMessage(err)).toBe('Something specific broke');
+    it('ERREUR-GENERIQUE · une Error inattendue affiche le message générique, jamais son texte technique', () => {
+      const err = new Error('Keychain write denied: errSecMissingEntitlement -34018');
+      expect(getErrorMessage(err)).toBe('Something went wrong. Please try again.');
     });
 
     it('returns generic fallback for non-Error/non-AppError', () => {
@@ -105,9 +106,20 @@ describe('errors', () => {
       expect(getErrorMessage(err)).toBe('Daily message limit reached. Come back tomorrow!');
     });
 
-    it('returns error.message for unknown AppError kind when message is non-empty', () => {
+    it('ERREUR-GENERIQUE · une AppError inconnue affiche le message générique, jamais son texte technique', () => {
+      expect(
+        getErrorMessage(makeAppError({ kind: 'Unknown', message: 'Unexpected server error' })),
+      ).toBe('Something went wrong. Please try again.');
       const err = { kind: 'Mystery', message: 'specific bespoke detail' } as unknown as AppError;
-      expect(getErrorMessage(err)).toBe('specific bespoke detail');
+      expect(getErrorMessage(err)).toBe('Something went wrong. Please try again.');
+    });
+
+    it('ERREUR-GENERIQUE · l’encodeur de comparaison indisponible affiche son message dédié', () => {
+      expect(
+        getErrorMessage(
+          makeAppError({ kind: 'Unknown', code: 'COMPARE_ENCODER_UNAVAILABLE', status: 503 }),
+        ),
+      ).toBe('Visual similarity is temporarily unavailable. Please try again in a moment.');
     });
 
     it('returns generic fallback for unknown AppError kind when message is empty', () => {
@@ -120,10 +132,6 @@ describe('errors', () => {
     it('returns true for AppError of kind DailyLimitReached', () => {
       const err: AppError = { kind: 'DailyLimitReached', message: '' };
       expect(isDailyLimitError(err)).toBe(true);
-    });
-
-    it('returns true for plain Error with DAILY_LIMIT_REACHED in message', () => {
-      expect(isDailyLimitError(new Error('Server: DAILY_LIMIT_REACHED — try tomorrow'))).toBe(true);
     });
 
     it('returns false for AppError of other kinds', () => {
@@ -243,7 +251,6 @@ describe('errors', () => {
       it.each([
         ['load_failed', 'Failed to load reviews.'],
         ['load_more_failed', 'Failed to load more reviews.'],
-        ['already_reviewed', 'You have already submitted a review.'],
         ['submit_failed', 'Review submission failed. Please try again.'],
       ])('code=%s → %s', (code, expected) => {
         expect(getErrorMessage(make('Review', code))).toBe(expected);

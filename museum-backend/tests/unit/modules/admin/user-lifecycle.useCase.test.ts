@@ -82,6 +82,7 @@ describe('SuspendUserUseCase', () => {
 
   it('suspends the user and logs ADMIN_USER_SUSPENDED', async () => {
     const repo = makeAdminRepo({
+      getUserById: jest.fn().mockResolvedValue(makeDto()),
       suspendUser: jest.fn().mockResolvedValue(makeDto({ suspended: true })),
     });
     const sut = new SuspendUserUseCase(repo);
@@ -167,7 +168,7 @@ describe('DeleteUserUseCase', () => {
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
       softDeleteUser: jest.fn().mockResolvedValue(deleted),
-      countAdmins: jest.fn().mockResolvedValue(5),
+      countActiveAccounts: jest.fn().mockResolvedValue(5),
     });
     const refreshRepo = makeRefreshTokenRepoMock();
     const sut = new DeleteUserUseCase(repo, refreshRepo);
@@ -186,7 +187,7 @@ describe('DeleteUserUseCase', () => {
     const target = makeDto({ id: 1, role: 'admin' });
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
-      countAdmins: jest.fn().mockResolvedValue(1),
+      countActiveAccounts: jest.fn().mockResolvedValue(1),
     });
     const refreshRepo = makeRefreshTokenRepoMock();
     const sut = new DeleteUserUseCase(repo, refreshRepo);
@@ -204,7 +205,7 @@ describe('DeleteUserUseCase', () => {
     const target = makeDto({ id: 1, role: 'super_admin' });
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
-      countAdmins: jest.fn().mockResolvedValue(1),
+      countActiveAccounts: jest.fn().mockResolvedValue(1),
     });
     const sut = new DeleteUserUseCase(repo, makeRefreshTokenRepoMock());
 
@@ -220,7 +221,7 @@ describe('DeleteUserUseCase', () => {
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
       softDeleteUser: jest.fn().mockResolvedValue(deleted),
-      countAdmins: jest.fn().mockResolvedValue(0),
+      countActiveAccounts: jest.fn().mockResolvedValue(0),
     });
     const sut = new DeleteUserUseCase(repo, makeRefreshTokenRepoMock());
 
@@ -246,7 +247,7 @@ describe('DeleteUserUseCase', () => {
     const repo = makeAdminRepo({
       getUserById: jest.fn().mockResolvedValue(target),
       softDeleteUser: jest.fn().mockResolvedValue(null),
-      countAdmins: jest.fn().mockResolvedValue(5),
+      countActiveAccounts: jest.fn().mockResolvedValue(5),
     });
     const refreshRepo = makeRefreshTokenRepoMock();
     const sut = new DeleteUserUseCase(repo, refreshRepo);

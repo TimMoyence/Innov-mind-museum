@@ -15,16 +15,10 @@ interface AxiosLikeError {
 interface ApiErrorPayload {
   error?: {
     code?: unknown;
-    message?: unknown;
     requestId?: unknown;
   };
   code?: unknown;
-  message?: unknown;
 }
-
-type HttpRequestConfig = {
-  requiresAuth?: boolean;
-} & Record<string, unknown>;
 
 export const toAxiosLikeError = (error: unknown): AxiosLikeError | null => {
   if (!error || typeof error !== 'object') {
@@ -52,19 +46,13 @@ export const toApiErrorPayload = (value: unknown): ApiErrorPayload | null => {
   return value as ApiErrorPayload;
 };
 
-const pickApiErrorField = (value: unknown, field: 'code' | 'message'): string | undefined => {
+export const getApiErrorCode = (value: unknown): string | undefined => {
   const payload = toApiErrorPayload(value);
-  const nested = payload?.error?.[field];
+  const nested = payload?.error?.code;
   if (typeof nested === 'string') return nested;
-  const flat = payload?.[field];
+  const flat = payload?.code;
   return typeof flat === 'string' ? flat : undefined;
 };
-
-export const getApiErrorCode = (value: unknown): string | undefined =>
-  pickApiErrorField(value, 'code');
-
-export const getApiErrorMessage = (value: unknown): string | undefined =>
-  pickApiErrorField(value, 'message');
 
 export const getApiRequestId = (value: unknown): string | undefined => {
   const payload = toApiErrorPayload(value);
@@ -110,9 +98,6 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   const status = axiosLike.response?.status;
   const responseData = axiosLike.response?.data;
   const apiErrorCode = getApiErrorCode(responseData);
-  const apiErrorMessage = (getApiErrorMessage(responseData) ?? '').toLowerCase();
-  const _requestRequiresAuth =
-    ((axiosLike.config ?? {}) as HttpRequestConfig).requiresAuth !== false;
   const requestId = getApiRequestId(responseData);
 
   if (status === 401) {
@@ -127,17 +112,6 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   }
 
   if (status === 403) {
-    if (apiErrorCode === 'FORBIDDEN' && apiErrorMessage.includes('invalid token')) {
-      return createAppError({
-        kind: 'Unauthorized',
-        message: 'Authentication required',
-        code: apiErrorCode,
-        status,
-        details: responseData,
-        requestId,
-      });
-    }
-
     return createAppError({
       kind: 'Forbidden',
       message: 'Access denied',
@@ -192,6 +166,7 @@ export const mapAxiosError = (error: unknown): AppError & Error => {
   return createAppError({
     kind: 'Unknown',
     message: 'Unexpected server error',
+    code: apiErrorCode,
     status,
     details: axiosLike.response?.data ?? axiosLike,
     requestId,

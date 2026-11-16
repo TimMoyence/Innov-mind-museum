@@ -130,6 +130,18 @@ describe('ReviewsScreen', () => {
     expect(screen.queryByLabelText('a11y.reviews.name_input')).toBeNull();
   });
 
+  it('AVIS-ERREUR · l’écran affiche le message d’échec que rend le hook, sous le formulaire qui reste ouvert pour réessayer', () => {
+    mockUseReviews.mockReturnValue({
+      ...defaultHookReturn,
+      submitError: 'Review submission failed. Please try again.',
+    });
+    render(<ReviewsScreen />);
+    fireEvent.press(screen.getByLabelText('reviews.writeReview'));
+
+    expect(screen.getByText('Review submission failed. Please try again.')).toBeTruthy();
+    expect(screen.getByLabelText('reviews.submit')).toBeTruthy();
+  });
+
   it('uses NpsScale (not the 5-star StarRating) as the rating input', () => {
     render(<ReviewsScreen />);
     fireEvent.press(screen.getByLabelText('reviews.writeReview'));

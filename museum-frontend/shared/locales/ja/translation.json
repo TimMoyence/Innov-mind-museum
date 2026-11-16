@@ -690,7 +690,9 @@
       "account_suspended": "アカウントは停止されました。サポートにご連絡ください。",
       "account_deleted": "このアカウントは削除されました。",
       "locked_out": "失敗回数が多すぎます。数分後に再度お試しください。",
-      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。"
+      "minor_parental_consent_required": "登録は15歳以上のユーザーに限られます（フランスのデジタル成人年齢）。",
+      "last_admin_delete": "あなたは最後の管理者です。アカウントを削除する前に、別の管理者を任命してください。",
+      "last_super_admin_delete": "あなたは最後のスーパー管理者です。アカウントを削除する前に、別のスーパー管理者を任命してください。"
     },
     "chat": {
       "contract_invalid": "サーバーの応答が無効です。もう一度お試しください。",
@@ -709,7 +711,6 @@
       "generic": "現在、レビューを読み込めません。",
       "load_failed": "レビューを読み込めませんでした。",
       "load_more_failed": "追加のレビューを読み込めませんでした。",
-      "already_reviewed": "すでにレビューを投稿しています。",
       "submit_failed": "レビューの送信に失敗しました。もう一度お試しください。"
     }
   },
@@ -1150,10 +1151,8 @@
     "commentPlaceholder": "体験を共有してください...",
     "submit": "レビューを送信",
     "success": "レビューありがとうございます！",
-    "alreadyReviewed": "すでにレビューを送信済みです",
     "empty": "まだレビューがありません。最初のレビューを書きましょう！",
     "reviewCount": "{{count}}件のレビュー",
-    "submitFailed": "送信に失敗しました。もう一度お試しください。",
     "age": {
       "today": "今日",
       "yesterday": "昨日",

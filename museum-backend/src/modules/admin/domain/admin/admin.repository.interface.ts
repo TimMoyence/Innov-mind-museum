@@ -14,6 +14,7 @@ import type {
   EngagementAnalytics,
   EngagementAnalyticsFilters,
 } from './admin.types';
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { PaginatedResult } from '@shared/types/pagination';
 
 export interface IAdminRepository {
@@ -21,7 +22,7 @@ export interface IAdminRepository {
 
   getUserById(userId: number): Promise<AdminUserDTO | null>;
 
-  changeUserRole(userId: number, newRole: string): Promise<AdminUserDTO | null>;
+  changeUserRole(userId: number, newRole: UserRole): Promise<AdminUserDTO | null>;
 
   changeUserTier(userId: number, newTier: 'free' | 'premium'): Promise<AdminUserDTO | null>;
 
@@ -31,7 +32,11 @@ export interface IAdminRepository {
 
   softDeleteUser(userId: number): Promise<AdminUserDTO | null>;
 
-  countAdmins(): Promise<number>;
+  restoreUser(userId: number, markedAt: string): Promise<void>;
+
+  countActiveAccounts(roles: readonly UserRole[]): Promise<number>;
+
+  withPrivilegedAccountsLock<T>(work: (repository: IAdminRepository) => Promise<T>): Promise<T>;
 
   listAuditLogs(filters: ListAuditLogsFilters): Promise<PaginatedResult<AdminAuditLogDTO>>;
 

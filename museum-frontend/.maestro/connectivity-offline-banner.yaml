@@ -57,7 +57,8 @@ appId: com.musaium.mobile.preview
     id: 'offline-banner'
     optional: true
 
-- back
+- runFlow:
+    file: helpers/back.yaml
 - waitForAnimationToEnd
 
 - assertVisible:

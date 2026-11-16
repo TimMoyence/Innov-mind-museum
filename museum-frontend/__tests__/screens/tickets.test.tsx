@@ -1,6 +1,7 @@
 import '../helpers/test-utils';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { makeAppError } from '../helpers/factories';
 import { makeSupportTicket } from '../helpers/factories/support.factories';
 
 const mockListTickets = jest.fn();
@@ -209,13 +210,15 @@ describe('TicketsScreen', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/(stack)/create-ticket');
   });
 
-  it('shows the error notice with the thrown error message when loading fails', async () => {
-    mockListTickets.mockRejectedValue(new Error('Network down'));
+  it('shows the error notice with the mapped error message when loading fails', async () => {
+    mockListTickets.mockRejectedValue(makeAppError({ kind: 'Network' }));
     render(<TicketsScreen />);
     await waitFor(() => {
       expect(screen.getByTestId('error-notice')).toBeTruthy();
     });
-    expect(screen.getByText('Network down')).toBeTruthy();
+    expect(
+      screen.getByText('Network unavailable. Check your connection and try again.'),
+    ).toBeTruthy();
   });
 
   it('clearing the error via dismiss removes the error notice', async () => {

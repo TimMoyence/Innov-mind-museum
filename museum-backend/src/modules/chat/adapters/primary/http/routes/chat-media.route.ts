@@ -18,7 +18,7 @@ import {
 } from '@modules/chat/adapters/primary/http/helpers/chat-route.helpers';
 import { isS3ImageRef } from '@modules/chat/adapters/secondary/storage/image-storage.s3';
 import { resolveLocalImageFilePath } from '@modules/chat/adapters/secondary/storage/image-storage.stub';
-import { resolveActiveProviderForScope } from '@modules/chat/useCase/orchestration/provider-resolver';
+import { requireThirdPartyAiConsent } from '@modules/chat/useCase/require-third-party-ai-consent';
 import { buildThirdPartyAiConsentChecker } from '@modules/chat/useCase/third-party-ai-consent-checker';
 import { badRequest, invalidInput } from '@shared/errors/app.error';
 import { requireUser } from '@shared/http/requireUser';
@@ -58,12 +58,7 @@ function createAudioHandler(chatService: ChatService, consentChecker: ThirdParty
       throw invalidInput('session id param is required');
     }
 
-    const { scope: audioScope } = resolveActiveProviderForScope('audio');
-    const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
-    if (!granted) {
-      res.status(403).json({ error: 'consent_required', scope: audioScope });
-      return;
-    }
+    await requireThirdPartyAiConsent(consentChecker, currentUser?.id, 'audio');
 
     const result = await chatService.postAudioMessage(
       sessionId,
@@ -202,12 +197,7 @@ function createTtsHandler(chatService: ChatService, consentChecker: ThirdPartyAi
       throw invalidInput(MESSAGE_ID_REQUIRED);
     }
 
-    const { scope: audioScope } = resolveActiveProviderForScope('audio');
-    const granted = await consentChecker.isGranted(currentUser?.id, audioScope);
-    if (!granted) {
-      res.status(403).json({ error: 'consent_required', scope: audioScope });
-      return;
-    }
+    await requireThirdPartyAiConsent(consentChecker, currentUser?.id, 'audio');
 
     const result = await chatService.synthesizeSpeech(messageId, currentUser?.id);
     if (!result) {

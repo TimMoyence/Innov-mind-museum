@@ -98,32 +98,7 @@ describe('useCompareImage (T8.1)', () => {
     expect(result.current.data).toBeUndefined();
   });
 
-  it('maps a 503 COMPARE_ENCODER_UNAVAILABLE response to a user-friendly error message', async () => {
-    const err = Object.assign(new Error('encoder down'), {
-      response: {
-        status: 503,
-        data: { error: { code: 'COMPARE_ENCODER_UNAVAILABLE', message: 'Encoder offline' } },
-      },
-    });
-    mockCompare.mockRejectedValue(err);
-
-    const useCompareImage = loadHook();
-    const { result } = renderHookWithQueryClient(() => useCompareImage());
-
-    await act(async () => {
-      await result.current.mutateAsync(sampleInput).catch(() => undefined);
-    });
-
-    await waitFor(() => {
-      expect(result.current.isError).toBe(true);
-    });
-    const message = result.current.error?.message ?? '';
-    expect(message.length).toBeGreaterThan(0);
-    expect(message).not.toMatch(/Network Error/i);
-    expect(message).not.toBe('encoder down');
-  });
-
-  it('does NOT retry on a 4xx (client error) — single attempt only', async () => {
+  it('never retries a failed compare — the HTTP client already retried transient errors', async () => {
     const err = Object.assign(new Error('bad request'), {
       response: {
         status: 400,

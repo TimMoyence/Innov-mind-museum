@@ -1,6 +1,6 @@
 import { TICKET_STATUSES, TICKET_PRIORITIES } from '@modules/support/domain/ticket/support.types';
-import { invalidInput } from '@shared/errors/app.error';
 import { assertPagination } from '@shared/types/pagination';
+import { assertOneOf } from '@shared/validation/one-of';
 
 import type { ISupportRepository } from '@modules/support/domain/ticket/support.repository.interface';
 import type {
@@ -25,12 +25,8 @@ export class ListAllTicketsUseCase {
   async execute(input: ListAllTicketsInput): Promise<PaginatedResult<TicketDTO>> {
     const { page, limit } = assertPagination({ page: input.page, limit: input.limit });
 
-    if (input.status && !TICKET_STATUSES.includes(input.status as TicketStatus)) {
-      throw invalidInput(`status must be one of: ${TICKET_STATUSES.join(', ')}`);
-    }
-    if (input.priority && !TICKET_PRIORITIES.includes(input.priority as TicketPriority)) {
-      throw invalidInput(`priority must be one of: ${TICKET_PRIORITIES.join(', ')}`);
-    }
+    if (input.status) assertOneOf('status', TICKET_STATUSES, input.status);
+    if (input.priority) assertOneOf('priority', TICKET_PRIORITIES, input.priority);
 
     const filters: ListTicketsFilters = {
       status: input.status as TicketStatus | undefined,

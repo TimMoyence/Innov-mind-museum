@@ -90,22 +90,22 @@ export default function TicketDetailScreen() {
 
   const renderMessage = useCallback(
     ({ item }: { item: TicketMessageDTO }) => {
-      const isVisitor = item.senderRole === 'visitor';
+      const fromAuthor = !item.fromStaff;
       return (
         <View
           style={[
             styles.messageBubble,
-            isVisitor ? styles.visitorBubble : styles.staffBubble,
+            fromAuthor ? styles.visitorBubble : styles.staffBubble,
             {
-              backgroundColor: isVisitor ? theme.assistantBubble : theme.userBubble,
-              borderColor: isVisitor ? theme.assistantBubbleBorder : theme.userBubbleBorder,
+              backgroundColor: fromAuthor ? theme.assistantBubble : theme.userBubble,
+              borderColor: fromAuthor ? theme.assistantBubbleBorder : theme.userBubbleBorder,
             },
           ]}
         >
           <Text
             style={[
               styles.messageText,
-              { color: isVisitor ? theme.textPrimary : theme.primaryContrast },
+              { color: fromAuthor ? theme.textPrimary : theme.primaryContrast },
             ]}
           >
             {item.text}
@@ -113,7 +113,7 @@ export default function TicketDetailScreen() {
           <Text
             style={[
               styles.messageTime,
-              isVisitor ? { color: theme.textSecondary } : styles.staffMessageTimeColor,
+              fromAuthor ? { color: theme.textSecondary } : styles.staffMessageTimeColor,
             ]}
           >
             {formatTicketDateTime(item.createdAt, i18n.language)}
@@ -268,7 +268,8 @@ export default function TicketDetailScreen() {
 
 const msgSepStyle = { height: semantic.chat.gap } as const;
 const MessageSeparator = () => <View style={msgSepStyle} />;
-const getTicketMessageType = (item: TicketMessageDTO): string => item.senderRole;
+const getTicketMessageType = (item: TicketMessageDTO): string =>
+  item.fromStaff ? 'staff' : 'author';
 
 const styles = StyleSheet.create({
   screen: {

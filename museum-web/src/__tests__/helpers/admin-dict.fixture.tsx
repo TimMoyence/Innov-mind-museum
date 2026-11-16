@@ -1,3 +1,7 @@
+import type { ReactNode } from 'react';
+
+import en from '@/dictionaries/en.json';
+import { AdminDictProvider } from '@/lib/admin-dictionary';
 import type { Dictionary } from '@/lib/i18n';
 
 export const mockAdminDict: Dictionary['admin'] = {
@@ -43,8 +47,15 @@ export const mockAdminDict: Dictionary['admin'] = {
     conversations: 'Conversations',
     active: 'Active',
     inactive: 'Inactive',
+    errorDemoteLastAdmin: 'The last admin cannot lose the admin role.',
+    errorSuperAdminRequired: 'Only a super admin can grant or remove the super admin role.',
+    errorSuspendLastAdmin: 'The last admin cannot be suspended.',
+    errorDeleteLastSuperAdmin: 'The last super admin cannot be deleted.',
+    errorDemoteLastSuperAdmin: 'The last super admin cannot lose the super admin role.',
+    errorSuspendLastSuperAdmin: 'The last super admin cannot be suspended.',
   },
   dashboardPage: {
+    errorLoad: 'Could not load the statistics.',
     subtitle: 'Overview of your Musaium platform.',
     stats: {
       totalUsers: 'Total Users',
@@ -55,6 +66,7 @@ export const mockAdminDict: Dictionary['admin'] = {
     },
   },
   auditLogsPage: {
+    errorLoad: 'Could not load the audit logs.',
     subtitle: 'Review system audit logs.',
     filterPlaceholder: 'Filter by action...',
     columnUser: 'User',
@@ -65,6 +77,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     tableAriaLabel: 'Audit logs table (scroll horizontally)',
   },
   usersPage: {
+    errorLoad: 'Could not load the users.',
+    errorRoleChange: 'Could not change the role.',
     subtitle: 'Manage platform users.',
     searchPlaceholder: 'Search...',
     allRoles: 'All roles',
@@ -78,6 +92,7 @@ export const mockAdminDict: Dictionary['admin'] = {
     viewAria: 'View user details',
   },
   userDetailPage: {
+    errorAction: 'This action failed. Please try again.',
     subtitle: 'Detailed user view.',
     backToList: 'Back to users',
     loading: 'Loading user…',
@@ -139,6 +154,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     },
   },
   reportsPage: {
+    errorLoad: 'Could not load the reports.',
+    errorUpdate: 'Could not update the report.',
     subtitle: '',
     reason: 'Reason',
     message: 'Message',
@@ -150,6 +167,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     noReports: 'No reports',
   },
   ticketsPage: {
+    errorLoad: 'Could not load the tickets.',
+    errorUpdate: 'Could not update the ticket.',
     subtitle: '',
     update: 'Update',
     view: 'View',
@@ -157,6 +176,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     noTickets: 'No tickets',
   },
   reviewsPage: {
+    errorLoad: 'Could not load the reviews.',
+    errorModerate: 'Could not moderate the review.',
     subtitle: 'Manage visitor reviews and moderate content.',
     filterStatus: 'Filter by status',
     rating: 'Rating',
@@ -173,6 +194,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     noReviews: 'No reviews found.',
   },
   supportPage: {
+    errorLoad: 'Could not load the ticket.',
+    errorSend: 'Could not send the message.',
     subtitle: '',
     selectTicket: 'Select a ticket',
     viewTickets: 'View Tickets',
@@ -186,6 +209,8 @@ export const mockAdminDict: Dictionary['admin'] = {
     sending: 'Sending...',
   },
   analyticsPage: {
+    errorLoad: 'Could not load the analytics.',
+    errorLoadUsage: 'Could not load the usage data.',
     subtitle: 'Monitor usage and engagement metrics.',
     avgMessages: 'Avg Messages',
     avgDuration: 'Avg Duration',
@@ -206,6 +231,7 @@ export const mockAdminDict: Dictionary['admin'] = {
     guardrailBlockRate: 'Block Rate',
   },
   npsPage: {
+    errorLoad: 'Could not load the NPS.',
     subtitle: 'Track visitor recommendation sentiment.',
     score: 'NPS score',
     promoters: 'Promoters',
@@ -222,4 +248,15 @@ export const mockAdminDict: Dictionary['admin'] = {
     reviews: { label: 'CSV reviews', downloading: 'Preparing', error: 'Failed' },
     tickets: { label: 'CSV tickets', downloading: 'Preparing', error: 'Failed' },
   },
+  museumsPage: en.admin.museumsPage,
+  museumNewPage: en.admin.museumNewPage,
+  museumBrandingPage: en.admin.museumBrandingPage,
+};
+
+export const withAdminDict = {
+  wrapper: ({ children }: { children: ReactNode }) => (
+    <AdminDictProvider dict={mockAdminDict} locale="en">
+      {children}
+    </AdminDictProvider>
+  ),
 };

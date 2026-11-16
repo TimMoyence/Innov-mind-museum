@@ -62,12 +62,18 @@ appId: com.musaium.mobile.preview
 - tapOn:
     id: 'quota-upsell-email'
 - inputText: 'qa+paywall@musaium.test'
-- hideKeyboard
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - tapOn:
     id: 'quota-upsell-consent'
 - tapOn:
     id: 'quota-upsell-submit'
-- waitForAnimationToEnd:
+- extendedWaitUntil:
+    visible:
+      text: "Merci — on revient vers toi.|Thanks — we'll be in touch."
     timeout: 15000
 
 - tapOn:

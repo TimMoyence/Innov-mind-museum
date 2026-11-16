@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { withAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 
 import en from '@/dictionaries/en.json';
 import NewMuseumPage from '@/app/[locale]/admin/museums/new/page';
@@ -19,13 +20,13 @@ function typeInto(field: HTMLElement, value: string): string {
 
 describe('L3 · les champs du site comptent en caractères, comme le serveur', () => {
   it('nouveau musée : le nom garde 200 emoji sur 201 saisis', () => {
-    render(<NewMuseumPage />);
+    render(<NewMuseumPage />, withAdminDict);
 
     expect(typeInto(screen.getByLabelText('Name'), EMOJI.repeat(201))).toBe(EMOJI.repeat(200));
   });
 
   it('nouveau musée : la description garde 2 000 emoji sur 2 001 saisis', () => {
-    render(<NewMuseumPage />);
+    render(<NewMuseumPage />, withAdminDict);
 
     expect(typeInto(screen.getByLabelText('Description (optional)'), EMOJI.repeat(2001))).toBe(
       EMOJI.repeat(2000),

@@ -1,4 +1,5 @@
 import { AppDataSource } from '@data/db/data-source';
+import { AdminRepositoryPg } from '@modules/admin/adapters/secondary/pg/admin.repository.pg';
 import { RefreshTokenRepositoryPg } from '@modules/auth/adapters/secondary/pg/refresh-token.repository.pg';
 import { SocialAccountRepositoryPg } from '@modules/auth/adapters/secondary/pg/social-account.repository.pg';
 import { UserRepositoryPg } from '@modules/auth/adapters/secondary/pg/user.repository.pg';
@@ -155,6 +156,7 @@ const leadErasureProxy: LeadErasurePort = {
 
 const deleteAccountUseCase = new DeleteAccountUseCase({
   userRepository,
+  privilegedAccounts: new AdminRepositoryPg(AppDataSource),
   imageStorage: imageCleanupProxy,
   legacyImageRefLookup: legacyImageRefLookupProxy,
   audioCleanup: audioCleanupProxy,

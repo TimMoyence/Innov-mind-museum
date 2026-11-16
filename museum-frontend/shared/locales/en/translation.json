@@ -690,7 +690,9 @@
       "account_suspended": "Your account has been suspended. Contact support.",
       "account_deleted": "This account has been deleted.",
       "locked_out": "Too many failed attempts. Try again in a few minutes.",
-      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority)."
+      "minor_parental_consent_required": "Sign-up is reserved for users aged 15 and over (French digital majority).",
+      "last_admin_delete": "You are the last administrator. Appoint another administrator before deleting your account.",
+      "last_super_admin_delete": "You are the last super administrator. Appoint another super administrator before deleting your account."
     },
     "chat": {
       "contract_invalid": "Unexpected server response. Please try again.",
@@ -709,7 +711,6 @@
       "generic": "Unable to load reviews right now.",
       "load_failed": "Failed to load reviews.",
       "load_more_failed": "Failed to load more reviews.",
-      "already_reviewed": "You have already submitted a review.",
       "submit_failed": "Review submission failed. Please try again."
     }
   },
@@ -1151,10 +1152,8 @@
     "commentPlaceholder": "Share your experience...",
     "submit": "Submit Review",
     "success": "Thank you for your review!",
-    "alreadyReviewed": "You have already submitted a review",
     "empty": "No reviews yet. Be the first!",
     "reviewCount": "{{count}} reviews",
-    "submitFailed": "Failed to submit review. Please try again.",
     "age": {
       "today": "Today",
       "yesterday": "Yesterday",

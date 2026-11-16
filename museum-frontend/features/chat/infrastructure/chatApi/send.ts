@@ -1,6 +1,5 @@
 import { httpRequest } from '@/shared/api/httpRequest';
 import { openApiRequest } from '@/shared/api/openapiClient';
-import { getErrorMessage } from '@/shared/lib/errors';
 import type { ContentPreference } from '@/shared/types/content-preference';
 import type { GuideLevel } from '@/features/settings/runtimeSettings';
 
@@ -55,16 +54,6 @@ export const createSession = async (
   });
 
   return ensureContract(data, isCreateSessionResponseDTO, 'create-session');
-};
-
-export const createSessionOrThrow = async (
-  payload: CreateSessionRequestDTO,
-): Promise<CreateSessionResponseDTO> => {
-  try {
-    return await createSession(payload);
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
 };
 
 export const postMessage = async (params: PostMessageParams): Promise<PostMessageResponseDTO> => {

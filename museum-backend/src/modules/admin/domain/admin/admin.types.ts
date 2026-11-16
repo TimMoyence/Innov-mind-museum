@@ -1,3 +1,4 @@
+import type { UserRole } from '@modules/auth/domain/user/user-role';
 import type { PaginationParams } from '@shared/types/pagination';
 
 export interface AdminUserDTO {
@@ -5,7 +6,7 @@ export interface AdminUserDTO {
   email: string;
   firstname: string | null;
   lastname: string | null;
-  role: string;
+  role: UserRole;
   museumId: number | null;
   emailVerified: boolean;
   suspended: boolean;
@@ -17,7 +18,7 @@ export interface AdminUserDTO {
 
 export interface ListUsersFilters {
   search?: string;
-  role?: string;
+  role?: UserRole;
   pagination: PaginationParams;
 }
 
@@ -51,7 +52,9 @@ export interface AdminStats {
   recentSignups?: number;
 }
 
-export type ReportStatus = 'pending' | 'reviewed' | 'dismissed';
+export const REPORT_STATUSES = ['pending', 'reviewed', 'dismissed'] as const;
+
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 export interface AdminReportDTO {
   id: string;
@@ -84,7 +87,9 @@ export interface ResolveReportInput {
   reviewedBy: number;
 }
 
-export type AnalyticsGranularity = 'daily' | 'weekly' | 'monthly';
+export const ANALYTICS_GRANULARITIES = ['daily', 'weekly', 'monthly'] as const;
+
+export type AnalyticsGranularity = (typeof ANALYTICS_GRANULARITIES)[number];
 
 interface TimeSeriesPoint {
   date: string;

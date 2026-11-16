@@ -4,6 +4,9 @@ import {
 } from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { makeUser } from '../../helpers/auth/user.fixtures';
 import { makeUserRepo } from '../../helpers/auth/user-repo.mock';
+import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
+import { makeAdminUserDTO } from 'tests/helpers/admin/admin.fixtures';
+import { logger } from '@shared/logger/logger';
 
 const makeImageStorage = (): jest.Mocked<ImageCleanupPort> => ({
   deleteByPrefix: jest.fn().mockResolvedValue(undefined),
@@ -17,7 +20,11 @@ describe('DeleteAccountUseCase', () => {
   it('deletes user and cleans up images when imageStorage is provided', async () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
-    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+      imageStorage,
+    });
 
     await useCase.execute(1);
 
@@ -28,7 +35,10 @@ describe('DeleteAccountUseCase', () => {
 
   it('deletes user without image cleanup when imageStorage is not provided', async () => {
     const repo = makeUserRepo(makeUser());
-    const useCase = new DeleteAccountUseCase({ userRepository: repo });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+    });
 
     await useCase.execute(1);
 
@@ -38,7 +48,10 @@ describe('DeleteAccountUseCase', () => {
 
   it('throws 404 when user does not exist', async () => {
     const repo = makeUserRepo(null);
-    const useCase = new DeleteAccountUseCase({ userRepository: repo });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+    });
 
     await expect(useCase.execute(999)).rejects.toMatchObject({
       message: 'User not found',
@@ -52,7 +65,11 @@ describe('DeleteAccountUseCase', () => {
     const repo = makeUserRepo(makeUser());
     const imageStorage = makeImageStorage();
     imageStorage.deleteByPrefix.mockRejectedValue(new Error('S3 connection timeout'));
-    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+      imageStorage,
+    });
 
     await useCase.execute(1);
 
@@ -72,7 +89,11 @@ describe('DeleteAccountUseCase', () => {
       callOrder.push('deleteUser');
     });
 
-    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+      imageStorage,
+    });
 
     await useCase.execute(1);
 
@@ -82,7 +103,11 @@ describe('DeleteAccountUseCase', () => {
   it('passes the numeric userId through to deleteByPrefix', async () => {
     const repo = makeUserRepo(makeUser({ id: 42 }));
     const imageStorage = makeImageStorage();
-    const useCase = new DeleteAccountUseCase({ userRepository: repo, imageStorage });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+      imageStorage,
+    });
 
     await useCase.execute(42);
 
@@ -92,9 +117,58 @@ describe('DeleteAccountUseCase', () => {
   it('does not call deleteUser when getUserById throws', async () => {
     const repo = makeUserRepo(makeUser());
     repo.getUserById.mockRejectedValue(new Error('DB connection lost'));
-    const useCase = new DeleteAccountUseCase({ userRepository: repo });
+    const useCase = new DeleteAccountUseCase({
+      userRepository: repo,
+      privilegedAccounts: makeAdminRepo(),
+    });
 
     await expect(useCase.execute(1)).rejects.toThrow('DB connection lost');
     expect(repo.deleteUser).not.toHaveBeenCalled();
+  });
+
+  describe('when the final deletion fails after the erasure mark', () => {
+    const MARK = '2026-11-16T10:00:00.000Z';
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    const markedErasure = (restoreUser: jest.Mock, deletedBefore: string | null = null) => {
+      const repo = makeUserRepo(makeUser());
+      repo.deleteUser.mockRejectedValue(new Error('database unavailable'));
+      const privilegedAccounts = makeAdminRepo({
+        getUserById: jest.fn().mockResolvedValue(makeAdminUserDTO({ deletedAt: deletedBefore })),
+        softDeleteUser: jest.fn().mockResolvedValue(makeAdminUserDTO({ deletedAt: MARK })),
+        restoreUser,
+      });
+      return new DeleteAccountUseCase({ userRepository: repo, privilegedAccounts });
+    };
+
+    it('never restores an account that was already deleted before the erasure', async () => {
+      const restoreUser = jest.fn().mockResolvedValue(undefined);
+
+      await expect(
+        markedErasure(restoreUser, '2026-11-01T00:00:00.000Z').execute(1),
+      ).rejects.toThrow('database unavailable');
+      expect(restoreUser).not.toHaveBeenCalled();
+    });
+
+    it('removes exactly the mark it set, then rethrows the original error', async () => {
+      const restoreUser = jest.fn().mockResolvedValue(undefined);
+
+      await expect(markedErasure(restoreUser).execute(1)).rejects.toThrow('database unavailable');
+      expect(restoreUser).toHaveBeenCalledWith(1, MARK);
+    });
+
+    it('logs delete_account_mark_restore_failed when removing the mark fails too', async () => {
+      const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
+      const restoreUser = jest.fn().mockRejectedValue(new Error('restore unavailable'));
+
+      await expect(markedErasure(restoreUser).execute(1)).rejects.toThrow('database unavailable');
+      expect(errorSpy).toHaveBeenCalledWith('delete_account_mark_restore_failed', {
+        userId: 1,
+        error: 'restore unavailable',
+      });
+    });
   });
 });

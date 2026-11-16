@@ -1,3 +1,5 @@
+import type { UserRole } from '@modules/auth/domain/user/user-role';
+
 export interface ExportRowSessions {
   id: string;
   user_id: string;
@@ -30,11 +32,9 @@ export interface ExportRowTicket {
   updated_at: string;
 }
 
-export type ExportActorRole = 'visitor' | 'moderator' | 'museum_manager' | 'admin' | 'super_admin';
-
 export interface ExportInput {
   actorId: number;
-  actorRole: ExportActorRole;
+  actorRole: UserRole;
   museumScope: number | null;
 }
 

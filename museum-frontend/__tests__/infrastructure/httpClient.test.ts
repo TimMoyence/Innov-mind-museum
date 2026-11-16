@@ -181,7 +181,7 @@ describe('httpClient', () => {
       expect(result.kind).toBe('Forbidden');
     });
 
-    it('maps 403 with invalid token to Unauthorized', () => {
+    it('maps a 403 FORBIDDEN to Forbidden even when its text says invalid token', () => {
       const error = {
         isAxiosError: true,
         response: {
@@ -193,7 +193,7 @@ describe('httpClient', () => {
 
       const result = mapAxiosError(error);
 
-      expect(result.kind).toBe('Unauthorized');
+      expect(result.kind).toBe('Forbidden');
     });
 
     it('maps 404 response to NotFound kind', () => {
@@ -298,6 +298,30 @@ describe('httpClient', () => {
       } catch {}
 
       expect(reportError).toHaveBeenCalled();
+    });
+
+    it('LIMITE-CODE · une limite quotidienne (429 DAILY_LIMIT_REACHED) part une seule fois et rejette en DailyLimitReached', async () => {
+      let attempts = 0;
+      const rejection = await httpClient
+        .request({
+          url: '/api/chat/sessions/s1/messages',
+          method: 'POST',
+          requiresAuth: false,
+          adapter: (config: Record<string, unknown>) => {
+            attempts += 1;
+            return Promise.reject(
+              Object.assign(new Error('Request failed with status code 429'), {
+                isAxiosError: true,
+                response: { status: 429, data: { error: { code: 'DAILY_LIMIT_REACHED' } } },
+                config,
+              }),
+            );
+          },
+        } as never)
+        .catch((err: unknown) => err as AppError);
+
+      expect(attempts).toBe(1);
+      expect(rejection).toMatchObject({ kind: 'DailyLimitReached' });
     });
   });
 

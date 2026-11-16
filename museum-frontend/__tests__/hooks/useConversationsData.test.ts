@@ -1,7 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 
 import { useConversationsData } from '@/features/conversation/application/useConversationsData';
-import { makeListSessionsResponse } from '@/__tests__/helpers/factories';
+import { makeAppError, makeListSessionsResponse } from '@/__tests__/helpers/factories';
 
 const mockListSessions = jest.fn();
 
@@ -15,13 +15,6 @@ jest.mock('@/features/settings/runtimeSettings', () => ({
   loadRuntimeSettings: jest
     .fn()
     .mockResolvedValue({ defaultMuseumMode: true, guideLevel: 'beginner' }),
-}));
-
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    return String(err);
-  },
 }));
 
 const mockSetItems = jest.fn();
@@ -102,7 +95,7 @@ describe('useConversationsData', () => {
   });
 
   it('sets error and clears items on API failure', async () => {
-    mockListSessions.mockRejectedValue(new Error('Network failure'));
+    mockListSessions.mockRejectedValue(makeAppError({ kind: 'Network' }));
 
     const { result } = renderHook(() => useConversationsData());
 
@@ -110,7 +103,7 @@ describe('useConversationsData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBe('Network failure');
+    expect(result.current.error).toBe('Network unavailable. Check your connection and try again.');
     expect(mockClearItems).toHaveBeenCalled();
   });
 
@@ -189,7 +182,7 @@ describe('useConversationsData', () => {
     const { result } = renderHook(() => useConversationsData());
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Oops');
+      expect(result.current.error).toBe('Something went wrong. Please try again.');
     });
 
     act(() => {

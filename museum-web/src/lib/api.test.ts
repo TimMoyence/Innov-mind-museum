@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ApiError, registerLogoutHandler, apiGet, apiPost, apiPatch, apiPut } from './api';
+import {
+  ApiError,
+  registerLogoutHandler,
+  apiDownload,
+  apiGet,
+  apiPost,
+  apiPatch,
+  apiPut,
+  errorMessage,
+} from './api';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 
 function mockFetch(response: Partial<Response> & { json?: () => Promise<unknown> }) {
@@ -140,13 +149,15 @@ describe('api.ts — request functions', () => {
       ok: false,
       status: 422,
       statusText: 'Unprocessable Entity',
-      json: () => Promise.resolve({ message: 'Validation failed' }),
+      json: () =>
+        Promise.resolve({ error: { code: 'VALIDATION_ERROR', message: 'Validation failed' } }),
     });
 
     await expect(apiGet('/api/bad')).rejects.toThrow(ApiError);
     await expect(apiGet('/api/bad')).rejects.toMatchObject({
       status: 422,
       message: 'Validation failed',
+      code: 'VALIDATION_ERROR',
     });
   });
 
@@ -220,7 +231,7 @@ describe('api.ts — apiPut', () => {
       ok: false,
       status: 400,
       statusText: 'Bad Request',
-      json: () => Promise.resolve({ message: 'invalid payload' }),
+      json: () => Promise.resolve({ error: { code: 'BAD_REQUEST', message: 'invalid payload' } }),
     });
 
     await expect(apiPut('/api/museums/1', { x: 1 })).rejects.toThrow(ApiError);
@@ -303,5 +314,77 @@ describe('api.ts — apiGet with abort signal', () => {
     await expect(
       apiGet<unknown>('/api/pre-aborted', { signal: controller.signal }),
     ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('api.ts — errorMessage', () => {
+  const byCode = { CONFLICT: 'Slug taken.' };
+
+  it('returns the message mapped to a known contract code', () => {
+    expect(
+      errorMessage(new ApiError(409, 'Conflict', 'raw', 'CONFLICT'), 'Action failed.', byCode),
+    ).toBe('Slug taken.');
+  });
+
+  it('returns the action message for an unmapped code, a code-less ApiError, a plain Error or a non-error', () => {
+    expect(
+      errorMessage(new ApiError(409, 'Conflict', 'raw', 'OTHER'), 'Action failed.', byCode),
+    ).toBe('Action failed.');
+    expect(errorMessage(new ApiError(500, 'Error', 'raw'), 'Action failed.', byCode)).toBe(
+      'Action failed.',
+    );
+    expect(errorMessage(new Error('server text'), 'Action failed.', byCode)).toBe('Action failed.');
+    expect(errorMessage('boom', 'Action failed.')).toBe('Action failed.');
+  });
+
+  it('ignores an empty-string code', () => {
+    expect(
+      errorMessage(new ApiError(400, 'Bad', 'raw', ''), 'Action failed.', { '': 'never' }),
+    ).toBe('Action failed.');
+  });
+});
+
+describe('api.ts — apiDownload', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns the blob and the quoted filename of Content-Disposition', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('a,b\n', {
+        status: 200,
+        headers: { 'Content-Disposition': 'attachment; FILENAME="reviews.csv"' },
+      }),
+    );
+
+    const file = await apiDownload('/api/admin/export/reviews.csv');
+
+    expect(file.filename).toBe('reviews.csv');
+    expect(await file.blob.text()).toBe('a,b\n');
+  });
+
+  it('returns a null filename when the header is missing or unquoted', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('x', { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response('x', {
+          status: 200,
+          headers: { 'Content-Disposition': 'attachment; filename=plain.csv' },
+        }),
+      );
+
+    expect((await apiDownload('/a.csv')).filename).toBeNull();
+    expect((await apiDownload('/b.csv')).filename).toBeNull();
+  });
+
+  it('rejects with the contract code on a refused download', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{"error":{"code":"FORBIDDEN","message":"no"}}', { status: 403 }),
+    );
+
+    await expect(apiDownload('/api/admin/export/tickets.csv')).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
   });
 });

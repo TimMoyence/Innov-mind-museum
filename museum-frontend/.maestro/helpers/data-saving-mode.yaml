@@ -1,6 +1,9 @@
 appId: com.musaium.mobile.preview
 ---
-- openLink: "musaium:///(stack)/settings"
+- runFlow:
+    file: open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/settings'
 - scrollUntilVisible:
     element:
       text: "${MODE}"
@@ -8,5 +11,6 @@ appId: com.musaium.mobile.preview
     timeout: 20000
 - tapOn:
     text: "${MODE}"
-- back
+- runFlow:
+    file: back.yaml
 - waitForAnimationToEnd

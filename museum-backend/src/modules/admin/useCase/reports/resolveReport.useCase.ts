@@ -1,3 +1,4 @@
+import { REPORT_STATUSES } from '@modules/admin/domain/admin/admin.types';
 import { auditService, AUDIT_ADMIN_REPORT_RESOLVED } from '@shared/audit';
 import { invalidInput, notFound } from '@shared/errors/app.error';
 
@@ -13,14 +14,12 @@ interface ResolveReportUseCaseInput {
   requestId?: string;
 }
 
-const VALID_STATUSES: ReportStatus[] = ['pending', 'reviewed', 'dismissed'];
-
 export class ResolveReportUseCase {
   constructor(private readonly repository: IAdminRepository) {}
 
   async execute(input: ResolveReportUseCaseInput): Promise<AdminReportDTO> {
-    if (!VALID_STATUSES.includes(input.status as ReportStatus)) {
-      throw invalidInput(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    if (!REPORT_STATUSES.includes(input.status as ReportStatus)) {
+      throw invalidInput(`Invalid status. Must be one of: ${REPORT_STATUSES.join(', ')}`);
     }
 
     const result = await this.repository.resolveReport({

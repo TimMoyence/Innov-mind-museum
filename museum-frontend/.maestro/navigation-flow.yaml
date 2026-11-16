@@ -87,9 +87,10 @@ appId: com.musaium.mobile.preview
 
 - tapOn:
     text: 'Paramètres|Settings'
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       text: 'Ouvrir les préférences|Open Preferences'
+    direction: DOWN
     timeout: 15000
 
 - scrollUntilVisible:

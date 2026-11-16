@@ -12,11 +12,7 @@ jest.mock('@sentry/react-native', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),
 }));
 
-jest.mock('@/shared/lib/errors', () => ({
-  getErrorMessage: (err: unknown) =>
-    err instanceof Error ? err.message : typeof err === 'string' ? err : String(err),
-}));
-
+import { makeAppError } from '@/__tests__/helpers/factories';
 import { useContentPreferences } from '@/features/settings/application/useContentPreferences';
 import { useUserProfileStore } from '@/features/settings/infrastructure/userProfileStore';
 import type { ContentPreference } from '@/shared/types/content-preference';
@@ -82,7 +78,7 @@ describe('useContentPreferences', () => {
 
   it('on PATCH failure restores the previous preferences and surfaces the error message', async () => {
     resetStore(['history']);
-    mockUpdateContentPreferences.mockRejectedValueOnce(new Error('boom'));
+    mockUpdateContentPreferences.mockRejectedValueOnce(makeAppError({ kind: 'Network' }));
     const { result } = renderHook(() => useContentPreferences());
 
     await act(async () => {
@@ -90,7 +86,7 @@ describe('useContentPreferences', () => {
     });
 
     expect(result.current.preferences).toEqual(['history']);
-    expect(result.current.error).toBe('boom');
+    expect(result.current.error).toBe('Network unavailable. Check your connection and try again.');
     expect(result.current.isSaving).toBe(false);
     expect(mockCaptureException).toHaveBeenCalledTimes(1);
     expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error), {
@@ -99,13 +95,13 @@ describe('useContentPreferences', () => {
   });
 
   it('clearError resets the error to null', async () => {
-    mockUpdateContentPreferences.mockRejectedValueOnce(new Error('network'));
+    mockUpdateContentPreferences.mockRejectedValueOnce(makeAppError({ kind: 'Network' }));
     const { result } = renderHook(() => useContentPreferences());
 
     await act(async () => {
       await result.current.toggle('history');
     });
-    expect(result.current.error).toBe('network');
+    expect(result.current.error).toBe('Network unavailable. Check your connection and try again.');
 
     act(() => {
       result.current.clearError();

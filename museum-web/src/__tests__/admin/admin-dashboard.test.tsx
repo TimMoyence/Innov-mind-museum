@@ -5,6 +5,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminDashboardPage from '@/app/[locale]/admin/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import type { AdminStats } from '@/lib/admin-types';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin',
@@ -29,7 +30,8 @@ vi.mock('next/link', () => ({
 
 const mockApiGet = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPost: vi.fn(),
   registerLogoutHandler: vi.fn(),
@@ -134,7 +136,7 @@ describe('AdminDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the statistics.')).toBeInTheDocument();
     });
 
     expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
@@ -150,7 +152,7 @@ describe('AdminDashboardPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load stats')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the statistics.')).toBeInTheDocument();
     });
   });
 

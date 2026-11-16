@@ -5,6 +5,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AuditLogsPage from '@/app/[locale]/admin/audit-logs/page';
 import type { AdminAuditLogDTO, PaginatedResponse } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
+import type * as ApiModule from '@/lib/api';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/admin/audit-logs',
@@ -29,7 +30,8 @@ vi.mock('next/link', () => ({
 
 const mockApiGet = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPost: vi.fn(),
   registerLogoutHandler: vi.fn(),
@@ -242,7 +244,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Server error')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the audit logs.')).toBeInTheDocument();
     });
   });
 
@@ -256,7 +258,7 @@ describe('AuditLogsPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to load audit logs')).toBeInTheDocument();
+      expect(screen.getByText('Could not load the audit logs.')).toBeInTheDocument();
     });
   });
 

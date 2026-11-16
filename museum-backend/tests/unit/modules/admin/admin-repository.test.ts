@@ -1,6 +1,7 @@
-import type { DataSource, Repository } from 'typeorm';
+import { In, IsNull, type DataSource, type Repository } from 'typeorm';
 
 import { User } from '@modules/auth/domain/user/user.entity';
+import { UserRole } from '@modules/auth/domain/user/user-role';
 import { ChatSession } from '@modules/chat/domain/session/chatSession.entity';
 import { ChatMessage } from '@modules/chat/domain/message/chatMessage.entity';
 import { MessageReport } from '@modules/chat/domain/message/messageReport.entity';
@@ -189,21 +190,42 @@ describe('AdminRepositoryPg', () => {
     });
   });
 
-  describe('countAdmins', () => {
-    it('returns combined count of admin + super_admin users', async () => {
-      userRepo.countBy.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
+  describe('restoreUser', () => {
+    it('writes NULL into deleted_at only for that user still carrying that exact mark', async () => {
+      await sut.restoreUser(5, '2026-11-16T10:00:00.000Z');
 
-      const result = await sut.countAdmins();
-
-      expect(result).toBe(4);
-      expect(userRepo.countBy).toHaveBeenNthCalledWith(1, { role: 'admin' });
-      expect(userRepo.countBy).toHaveBeenNthCalledWith(2, { role: 'super_admin' });
+      expect(userRepo.update).toHaveBeenCalledTimes(1);
+      const [criteria, patch] = userRepo.update.mock.calls[0] as [
+        { id: number; deletedAt: Date },
+        { deletedAt: () => string },
+      ];
+      expect(criteria).toEqual({ id: 5, deletedAt: new Date('2026-11-16T10:00:00.000Z') });
+      expect(patch.deletedAt()).toBe('NULL');
     });
+  });
 
-    it('returns 0 when no privileged users exist', async () => {
+  describe('countActiveAccounts', () => {
+    it.each([[[UserRole.ADMIN, UserRole.SUPER_ADMIN]], [[UserRole.SUPER_ADMIN]]])(
+      'counts the %j accounts that are neither deleted nor suspended',
+      async (roles) => {
+        userRepo.countBy.mockResolvedValueOnce(4);
+
+        const result = await sut.countActiveAccounts(roles);
+
+        expect(result).toBe(4);
+        expect(userRepo.countBy).toHaveBeenCalledTimes(1);
+        expect(userRepo.countBy).toHaveBeenCalledWith({
+          role: In([...roles]),
+          deletedAt: IsNull(),
+          suspended: false,
+        });
+      },
+    );
+
+    it('returns 0 when no account of these roles exists', async () => {
       userRepo.countBy.mockResolvedValue(0);
 
-      const result = await sut.countAdmins();
+      const result = await sut.countActiveAccounts([UserRole.SUPER_ADMIN]);
 
       expect(result).toBe(0);
     });

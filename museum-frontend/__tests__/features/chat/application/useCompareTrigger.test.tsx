@@ -3,6 +3,7 @@ import { act, waitFor } from '@testing-library/react-native';
 
 import { renderHookWithQueryClient } from '../../../helpers/data/renderWithQueryClient';
 import { makeCompareResult } from '../../../helpers/factories';
+import { mapAxiosError } from '@/shared/infrastructure/httpErrorMapper';
 
 const mockCompare = jest.fn();
 jest.mock('@/features/chat/infrastructure/imageComparisonApi', () => ({
@@ -123,6 +124,23 @@ describe('useCompareTrigger — D-01 / D-02 / D-08 (Option C)', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
+  it('ERREUR-GENERIQUE · une panne inattendue de la comparaison affiche le message générique, jamais son texte technique', async () => {
+    mockCompare.mockRejectedValue(mapAxiosError({ isAxiosError: true, response: { status: 500 } }));
+
+    const useCompareTrigger = loadHook();
+    const { result } = renderHookWithQueryClient(() =>
+      useCompareTrigger({ sessionId: SESSION_A, reload: jest.fn() }),
+    );
+
+    await act(async () => {
+      result.current.trigger(sampleImage);
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('Something went wrong. Please try again.');
+    });
+  });
+
   it('exposes isPending while the compare is in-flight and clears it on success (D-08.1 / D-08.4)', async () => {
     const gate = deferred<ReturnType<typeof makeCompareResult>>();
     mockCompare.mockReturnValue(gate.promise);
@@ -151,14 +169,16 @@ describe('useCompareTrigger — D-01 / D-02 / D-08 (Option C)', () => {
     });
   });
 
-  it('surfaces a user-friendly i18n error on 503 COMPARE_ENCODER_UNAVAILABLE, never the raw axios detail (D-08.2)', async () => {
-    const err = Object.assign(new Error('encoder down'), {
-      response: {
-        status: 503,
-        data: { error: { code: 'COMPARE_ENCODER_UNAVAILABLE', message: 'Encoder offline' } },
-      },
-    });
-    mockCompare.mockRejectedValue(err);
+  it('ERREUR-GENERIQUE · l’encodeur indisponible (503 COMPARE_ENCODER_UNAVAILABLE, tel que le client HTTP le rend) affiche son message dédié', async () => {
+    mockCompare.mockRejectedValue(
+      mapAxiosError({
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { error: { code: 'COMPARE_ENCODER_UNAVAILABLE', message: 'Encoder offline' } },
+        },
+      }),
+    );
     const reload = jest.fn().mockResolvedValue(undefined);
 
     const useCompareTrigger = loadHook();
@@ -173,9 +193,9 @@ describe('useCompareTrigger — D-01 / D-02 / D-08 (Option C)', () => {
     await waitFor(() => {
       expect(result.current.error).not.toBeNull();
     });
-    const message = result.current.error ?? '';
-    expect(message).toBe('chat.compare.error.unavailable');
-    expect(message).not.toBe('encoder down');
+    expect(result.current.error).toBe(
+      'Visual similarity is temporarily unavailable. Please try again in a moment.',
+    );
   });
 
   it('does not reload session B with a stale success that resolved after the session changed (D-08.3 anti-stale)', async () => {

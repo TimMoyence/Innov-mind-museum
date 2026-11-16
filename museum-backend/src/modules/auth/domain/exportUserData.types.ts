@@ -1,3 +1,5 @@
+import type { UserRole } from '@modules/auth/domain/user/user-role';
+
 export interface ChatDataExportPort {
   getAllUserData(userId: number): Promise<UserChatExportData>;
 }
@@ -205,7 +207,7 @@ export interface UserExportPayload {
   user: {
     id: number;
     email: string;
-    role: string;
+    role: UserRole;
     firstname: string | null;
     lastname: string | null;
     tier: string;

@@ -10,8 +10,10 @@ appId: com.musaium.mobile.preview
     id: 'analytics-consent-decline'
 
 - stopApp
-- openLink:
-    link: 'musaium:///(stack)/verify-email?token=e2e-verify-token'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/verify-email?token=e2e-verify-token'
 
 - extendedWaitUntil:
     visible:

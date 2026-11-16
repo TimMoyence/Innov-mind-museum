@@ -8,13 +8,12 @@ import {
   setMessageFeedback,
   setSessionContext,
 } from './metadata';
-import { createSession, createSessionOrThrow, postMessage, sendMessageSmart } from './send';
+import { createSession, postMessage, sendMessageSmart } from './send';
 
 const sendMessageSmartBound = sendMessageSmart({ postMessage });
 
 export const chatApi = {
   createSession,
-  createSessionOrThrow,
   postMessage,
   postAudioMessage,
   synthesizeSpeech,
@@ -39,7 +38,6 @@ export {
   setMessageFeedback,
   setSessionContext,
   createSession,
-  createSessionOrThrow,
   postMessage,
 };
 export type { PostMessageParams, SendMessageSmartParams } from './send';

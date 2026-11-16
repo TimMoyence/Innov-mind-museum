@@ -111,8 +111,10 @@ appId: com.musaium.mobile.preview
     visible:
       text: 'Changer le mot de passe|Change Password'
     timeout: 15000
-- openLink:
-    link: 'musaium:///(stack)/change-password'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/change-password'
 - extendedWaitUntil:
     visible:
       text: 'Changer le mot de passe|Change Password'
@@ -135,8 +137,10 @@ appId: com.musaium.mobile.preview
     visible:
       text: "Changer d'email|Change Email"
     timeout: 15000
-- openLink:
-    link: 'musaium:///(stack)/change-email'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/change-email'
 - extendedWaitUntil:
     visible:
       text: "Changer d'email|Change Email"
@@ -161,8 +165,10 @@ appId: com.musaium.mobile.preview
     visible:
       text: 'Faits essentiels|Quick Facts'
     timeout: 15000
-- openLink:
-    link: 'musaium:///(stack)/privacy'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/privacy'
 - extendedWaitUntil:
     visible:
       text: 'Faits essentiels|Quick Facts'
@@ -170,9 +176,10 @@ appId: com.musaium.mobile.preview
 - tapOn:
     text: 'Paramètres|Settings'
     index: 0
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       text: 'Ouvrir les préférences|Open Preferences'
+    direction: DOWN
     timeout: 15000
 
 - scrollUntilVisible:
@@ -186,8 +193,10 @@ appId: com.musaium.mobile.preview
     visible:
       text: '.*(Version .* Dernière mise à jour|Version .* Last updated).*'
     timeout: 15000
-- openLink:
-    link: 'musaium:///(stack)/terms'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/terms'
 - extendedWaitUntil:
     visible:
       text: '.*(Version .* Dernière mise à jour|Version .* Last updated).*'
@@ -195,9 +204,10 @@ appId: com.musaium.mobile.preview
 - tapOn:
     text: 'Paramètres|Settings'
     index: 0
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       text: 'Ouvrir les préférences|Open Preferences'
+    direction: DOWN
     timeout: 15000
 
 - scrollUntilVisible:

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { withAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import MuseumBrandingPage from './page';
 import type * as ApiModule from '@/lib/api';
 
@@ -64,7 +65,7 @@ function typeInto(el: HTMLElement, value: string): void {
 describe('MuseumBrandingPage', () => {
   it('loads the museum and shows existing branding values', async () => {
     mockApiGet.mockResolvedValueOnce({ museum: baseMuseum });
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
 
     expect(await screen.findByRole('heading', { name: /branding — orsay/i })).toBeInTheDocument();
     const hexInputs = screen.getAllByDisplayValue('#aa0000');
@@ -74,17 +75,17 @@ describe('MuseumBrandingPage', () => {
 
   it('shows error state when the museum cannot be loaded', async () => {
     mockApiGet.mockRejectedValueOnce(new Error('not found'));
-    render(<MuseumBrandingPage />);
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not found/i);
+    render(<MuseumBrandingPage />, withAdminDict);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load museum.');
   });
 
   it('blocks save when a hex color is malformed', async () => {
     mockApiGet.mockResolvedValueOnce({
       museum: { ...baseMuseum, config: { kbLocale: 'fr', branding: {} } },
     });
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
 
-    const primaryHex = await screen.findByLabelText(/primaryColor hex value/i);
+    const primaryHex = await screen.findByLabelText(/Primary color hex value/i);
     typeInto(primaryHex, 'not-hex');
     fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
 
@@ -96,7 +97,7 @@ describe('MuseumBrandingPage', () => {
     mockApiGet.mockResolvedValueOnce({
       museum: { ...baseMuseum, config: { branding: {} } },
     });
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
 
     typeInto(await screen.findByLabelText(/logo url/i), 'http://insecure/logo.png');
     fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
@@ -114,7 +115,7 @@ describe('MuseumBrandingPage', () => {
       json: () => Promise.resolve({ museum: baseMuseum }),
     });
 
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
     await screen.findByRole('heading', { name: /branding — orsay/i });
 
     fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
@@ -153,13 +154,13 @@ describe('MuseumBrandingPage', () => {
 
     mockApiGet.mockResolvedValueOnce({ museum: persistedMuseum });
 
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
     await screen.findByRole('heading', { name: /branding — orsay/i });
 
-    typeInto(await screen.findByLabelText(/primaryColor hex value/i), '#123456');
+    typeInto(await screen.findByLabelText(/Primary color hex value/i), '#123456');
     typeInto(screen.getByLabelText(/logo url/i), 'https://cdn/new.svg');
 
-    expect(screen.getByLabelText(/primaryColor hex value/i)).toHaveValue('#123456');
+    expect(screen.getByLabelText(/Primary color hex value/i)).toHaveValue('#123456');
     expect(screen.getByLabelText(/logo url/i)).toHaveValue('https://cdn/new.svg');
 
     fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
@@ -179,7 +180,7 @@ describe('MuseumBrandingPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/branding saved/i);
     await waitFor(() => {
-      expect(screen.getByLabelText(/primaryColor hex value/i)).toHaveValue('#123456');
+      expect(screen.getByLabelText(/Primary color hex value/i)).toHaveValue('#123456');
     });
     expect(screen.getByLabelText(/logo url/i)).toHaveValue('https://cdn/new.svg');
 
@@ -197,10 +198,10 @@ describe('MuseumBrandingPage', () => {
       json: () => Promise.resolve({ message: 'database write failed' }),
     });
 
-    render(<MuseumBrandingPage />);
+    render(<MuseumBrandingPage />, withAdminDict);
     await screen.findByRole('heading');
     fireEvent.click(screen.getByRole('button', { name: /save branding/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/database write failed/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save branding.');
   });
 });

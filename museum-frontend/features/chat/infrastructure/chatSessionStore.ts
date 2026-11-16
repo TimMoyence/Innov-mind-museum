@@ -24,15 +24,17 @@ interface ChatSessionState {
   clearSession: (sessionId: string) => void;
 }
 
+export const sessionsByRecency = (
+  sessions: Record<string, PersistedSession>,
+): [string, PersistedSession][] =>
+  Object.entries(sessions).sort((a, b) => b[1].updatedAt - a[1].updatedAt);
+
 const evictOldSessions = (
   sessions: Record<string, PersistedSession>,
-): Record<string, PersistedSession> => {
-  const entries = Object.entries(sessions);
-  if (entries.length <= MAX_PERSISTED_SESSIONS) return sessions;
-
-  const sorted = entries.sort((a, b) => b[1].updatedAt - a[1].updatedAt);
-  return Object.fromEntries(sorted.slice(0, MAX_PERSISTED_SESSIONS));
-};
+): Record<string, PersistedSession> =>
+  Object.keys(sessions).length <= MAX_PERSISTED_SESSIONS
+    ? sessions
+    : Object.fromEntries(sessionsByRecency(sessions).slice(0, MAX_PERSISTED_SESSIONS));
 
 export const useChatSessionStore = create<ChatSessionState>()((set) => ({
   sessions: {},

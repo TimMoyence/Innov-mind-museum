@@ -1,5 +1,10 @@
-import { DeleteAccountUseCase } from '@modules/auth/useCase/account/deleteAccount.useCase';
+import {
+  DeleteAccountUseCase,
+  type PrivilegedAccountsPort,
+} from '@modules/auth/useCase/account/deleteAccount.useCase';
 import { ExportUserDataUseCase } from '@modules/auth/useCase/account/exportUserData.useCase';
+
+import { makeAdminRepo } from 'tests/helpers/admin/repo.fixtures';
 
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type { User } from '@modules/auth/domain/user/user.entity';
@@ -30,6 +35,7 @@ export interface LegacyLookupLike {
 
 export interface DeleteAccountWiring {
   userRepository: IUserRepository;
+  privilegedAccounts?: PrivilegedAccountsPort;
   imageStorage?: ImageCleanupLike;
   legacyImageRefLookup?: LegacyLookupLike;
   audioCleanup?: AudioCleanupLike;
@@ -41,6 +47,7 @@ export interface DeleteAccountWiring {
 export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountUseCase {
   const Ctor = DeleteAccountUseCase as unknown as new (options: {
     userRepository: IUserRepository;
+    privilegedAccounts: PrivilegedAccountsPort;
     imageStorage?: ImageCleanupLike;
     legacyImageRefLookup?: LegacyLookupLike;
     audioCleanup?: AudioCleanupLike;
@@ -50,6 +57,7 @@ export function makeDeleteAccountUseCase(w: DeleteAccountWiring): DeleteAccountU
   }) => DeleteAccountUseCase;
   return new Ctor({
     userRepository: w.userRepository,
+    privilegedAccounts: w.privilegedAccounts ?? makeAdminRepo(),
     imageStorage: w.imageStorage,
     legacyImageRefLookup: w.legacyImageRefLookup,
     audioCleanup: w.audioCleanup,

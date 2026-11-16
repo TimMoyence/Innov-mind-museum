@@ -1,10 +1,10 @@
 import { isEmail } from '@musaium/shared';
 
-import { toSanitizedLeadError } from '@modules/leads/domain/lead/sanitizeLeadError';
+import { deliverLead } from '@modules/leads/useCase/deliver-lead';
 import { invalidInput } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { extractEmailDomain } from '@shared/pii/extractEmailDomain';
-import { judgeSubmission } from '@shared/validation/honeypot';
+import { screenSubmission } from '@shared/validation/screen-submission';
 
 import type { ILeadRepository } from '@modules/leads/domain/lead/lead.repository.interface';
 import type {
@@ -39,13 +39,7 @@ export class SubmitPaywallInterestUseCase {
       throw invalidInput('email must be valid');
     }
 
-    if (judgeSubmission(input) === 'bot') {
-      logger.warn('paywall_interest_honeypot_triggered', {
-        requestId: input.requestId,
-        hasIp: Boolean(input.ip),
-      });
-      return;
-    }
+    if (screenSubmission(input, 'paywall_interest') === 'bot') return;
 
     const payload: BetaSignupPayload = {
       email,
@@ -66,26 +60,20 @@ export class SubmitPaywallInterestUseCase {
 
     const emailDomain = extractEmailDomain(email);
 
-    try {
-      const outcome = await this.notifier.subscribe(payload);
+    const delivery = await deliverLead({
+      repository: this.repository,
+      lead,
+      send: () => this.notifier.subscribe(payload),
+      failureContext: { emailDomain },
+    });
+    if (delivery.delivered) {
+      const { outcome } = delivery;
       const brevoOutcome: BetaSignupOutcome | 'unknown' =
         outcome && 'outcome' in outcome ? outcome.outcome : 'unknown';
-
-      await this.repository.markDelivered(lead.id);
-      logger.info('lead_delivered', { leadId: lead.id, type: 'paywall' });
-
       logger.info('paywall_email_captured', {
         requestId: input.requestId,
         emailDomain,
         brevoOutcome,
-      });
-    } catch (err) {
-      await this.repository.markFailed(lead.id, toSanitizedLeadError(err));
-      logger.warn('lead_delivery_failed', {
-        leadId: lead.id,
-        type: 'paywall',
-        emailDomain,
-        errorClass: err instanceof Error ? err.name : 'unknown',
       });
     }
   }

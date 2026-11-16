@@ -5,6 +5,7 @@ import { AdminDictProvider } from '@/lib/admin-dictionary';
 import AdminSupportPage from '@/app/[locale]/admin/support/page';
 import type { TicketDetail } from '@/lib/admin-types';
 import { mockAdminDict } from '../helpers/admin-dict.fixture';
+import type * as ApiModule from '@/lib/api';
 
 const mockSearchParamsGet = vi.fn();
 
@@ -35,7 +36,8 @@ vi.mock('next/link', () => ({
 const mockApiGet = vi.fn();
 const mockApiPost = vi.fn();
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: (...args: unknown[]) => mockApiGet(...args) as Promise<unknown>,
   apiPost: (...args: unknown[]) => mockApiPost(...args) as Promise<unknown>,
   registerLogoutHandler: vi.fn(),
@@ -66,6 +68,7 @@ const mockTicketDetail: TicketDetail = {
       ticketId: 'ticket-1',
       senderId: 42,
       senderRole: 'visitor',
+      fromStaff: false,
       text: 'I keep getting errors when uploading photos.',
       createdAt: '2025-06-01T08:05:00Z',
     },
@@ -74,6 +77,7 @@ const mockTicketDetail: TicketDetail = {
       ticketId: 'ticket-1',
       senderId: 1,
       senderRole: 'admin',
+      fromStaff: true,
       text: 'We are investigating this issue.',
       createdAt: '2025-06-01T09:00:00Z',
     },
@@ -204,6 +208,40 @@ describe('AdminSupportPage', () => {
       expect(screen.getByText('We are investigating this issue.')).toBeInTheDocument();
       expect(screen.getByText('visitor')).toBeInTheDocument();
       expect(screen.getByText('admin')).toBeInTheDocument();
+    });
+
+    it('TICKET-PERSONNEL · shows a message as staff only when the server says so', async () => {
+      const [first, second] = mockTicketDetail.messages;
+      mockApiGet.mockResolvedValueOnce({
+        ticket: {
+          ...mockTicketDetail,
+          messages: [
+            {
+              ...second,
+              senderRole: 'super_admin',
+              text: 'Handled by super admin',
+              fromStaff: true,
+            },
+            {
+              ...first,
+              senderRole: 'museum_manager',
+              text: 'Sent by the author',
+              fromStaff: false,
+            },
+          ],
+        },
+      });
+
+      render(
+        <Providers>
+          <AdminSupportPage />
+        </Providers>,
+      );
+
+      const staff = await screen.findByText('Handled by super admin');
+      const author = screen.getByText('Sent by the author');
+      expect(staff.closest('div.rounded-xl')).toHaveClass('bg-primary-50');
+      expect(author.closest('div.rounded-xl')).toHaveClass('bg-gray-50');
     });
 
     it('shows message count in thread header', async () => {
@@ -377,7 +415,7 @@ describe('AdminSupportPage', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Ticket not found')).toBeInTheDocument();
+        expect(screen.getByText('Could not load the ticket.')).toBeInTheDocument();
       });
     });
 
@@ -391,7 +429,7 @@ describe('AdminSupportPage', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to load ticket')).toBeInTheDocument();
+        expect(screen.getByText('Could not load the ticket.')).toBeInTheDocument();
       });
     });
 
@@ -405,7 +443,7 @@ describe('AdminSupportPage', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Not found')).toBeInTheDocument();
+        expect(screen.getByText('Could not load the ticket.')).toBeInTheDocument();
       });
 
       const backLink = screen.getByText(/Back/);

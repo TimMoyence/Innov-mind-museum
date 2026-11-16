@@ -1,6 +1,8 @@
+import { refuseRemovingLastAccount } from '@modules/admin/domain/admin/last-admin';
 import { AppError } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 
+import type { IAdminRepository } from '@modules/admin/domain/admin/admin.repository.interface';
 import type { IUserRepository } from '@modules/auth/domain/user/user.repository.interface';
 import type {
   AudioCleanupPort,
@@ -19,8 +21,14 @@ export interface LegacyImageRefLookup {
 
 export type ImageCleanupPort = SharedImageCleanupPort;
 
+export type PrivilegedAccountsPort = Pick<
+  IAdminRepository,
+  'withPrivilegedAccountsLock' | 'restoreUser'
+>;
+
 export interface DeleteAccountUseCaseOptions {
   userRepository: IUserRepository;
+  privilegedAccounts: PrivilegedAccountsPort;
   imageStorage?: ImageCleanupPort;
   legacyImageRefLookup?: LegacyImageRefLookup;
   audioCleanup?: AudioCleanupPort;
@@ -31,6 +39,7 @@ export interface DeleteAccountUseCaseOptions {
 
 export class DeleteAccountUseCase {
   private readonly userRepository: IUserRepository;
+  private readonly privilegedAccounts: PrivilegedAccountsPort;
   private readonly imageStorage?: ImageCleanupPort;
   private readonly legacyImageRefLookup?: LegacyImageRefLookup;
   private readonly audioCleanup?: AudioCleanupPort;
@@ -40,6 +49,7 @@ export class DeleteAccountUseCase {
 
   constructor(options: DeleteAccountUseCaseOptions) {
     this.userRepository = options.userRepository;
+    this.privilegedAccounts = options.privilegedAccounts;
     this.imageStorage = options.imageStorage;
     this.legacyImageRefLookup = options.legacyImageRefLookup;
     this.audioCleanup = options.audioCleanup;
@@ -58,6 +68,32 @@ export class DeleteAccountUseCase {
       });
     }
 
+    const markedAt = await this.privilegedAccounts.withPrivilegedAccountsLock(async (accounts) => {
+      const account = await accounts.getUserById(userId);
+      if (account?.deletedAt !== null) return null;
+      await refuseRemovingLastAccount(accounts, account, 'DELETE');
+      return (await accounts.softDeleteUser(userId))?.deletedAt ?? null;
+    });
+    try {
+      await this.erase(userId, user.email);
+    } catch (error) {
+      if (markedAt !== null) await this.removeErasureMark(userId, markedAt);
+      throw error;
+    }
+  }
+
+  private async removeErasureMark(userId: number, markedAt: string): Promise<void> {
+    try {
+      await this.privilegedAccounts.restoreUser(userId, markedAt);
+    } catch (error) {
+      logger.error('delete_account_mark_restore_failed', {
+        userId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  private async erase(userId: number, email: string): Promise<void> {
     if (this.imageStorage) {
       try {
         const legacyFetcher = this.buildLegacyFetcher();
@@ -83,7 +119,7 @@ export class DeleteAccountUseCase {
 
     if (this.brevoRemoval) {
       try {
-        await this.brevoRemoval.removeContact(user.email);
+        await this.brevoRemoval.removeContact(email);
       } catch (error) {
         logger.warn('delete_account_brevo_cleanup_failed', {
           userId,
@@ -91,7 +127,7 @@ export class DeleteAccountUseCase {
         });
         if (this.marketingErasureFallback) {
           try {
-            await this.marketingErasureFallback.enqueueBrevoErasure(user.email);
+            await this.marketingErasureFallback.enqueueBrevoErasure(email);
             logger.info('delete_account_brevo_erasure_enqueued', { userId });
           } catch (enqueueError) {
             logger.warn('delete_account_brevo_erasure_enqueue_failed', {
@@ -105,7 +141,7 @@ export class DeleteAccountUseCase {
 
     if (this.leadErasure) {
       try {
-        const deletedCount = await this.leadErasure.deleteByEmail(user.email.trim().toLowerCase());
+        const deletedCount = await this.leadErasure.deleteByEmail(email.trim().toLowerCase());
         logger.info('delete_account_leads_erasure', { userId, deletedCount });
       } catch (error) {
         logger.warn('delete_account_leads_erasure_failed', {

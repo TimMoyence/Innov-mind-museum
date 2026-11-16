@@ -47,15 +47,17 @@ appId: com.musaium.mobile.preview
       text: 'Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium'
     direction: DOWN
     visibilityPercentage: 1
-    timeout: 20000
+    timeout: 30000
 - tapOn:
     text: 'Ouvrir les avis|Open reviews|Noter Musaium|Rate Musaium'
 - extendedWaitUntil:
     visible:
       text: 'Avis|Reviews'
     timeout: 40000
-- openLink:
-    link: 'musaium:///(stack)/reviews'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/reviews'
 - extendedWaitUntil:
     visible:
       text: 'Avis|Reviews'
@@ -76,7 +78,8 @@ appId: com.musaium.mobile.preview
 - inputText: 'An unforgettable visit to this museum, '
 - inputText: 'highly recommend the whole experience.'
 - waitForAnimationToEnd
-- hideKeyboard
+- tapOn:
+    text: 'Écrire un avis|Write a Review'
 - tapOn:
     text: "Envoyer l'avis|Submit Review"
 - waitForAnimationToEnd

@@ -1,6 +1,8 @@
 import '../helpers/test-utils';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
+import { makeAppError } from '../helpers/factories';
+
 const mockChangeEmail = jest.fn();
 jest.mock('@/features/auth/infrastructure/authApi', () => ({
   authService: {
@@ -63,7 +65,9 @@ describe('ChangeEmailScreen', () => {
   });
 
   it('shows error message on API failure', async () => {
-    mockChangeEmail.mockRejectedValue(new Error('Email already taken'));
+    mockChangeEmail.mockRejectedValue(
+      makeAppError({ kind: 'Validation', code: 'CONFLICT', message: 'Email already taken' }),
+    );
     render(<ChangeEmailScreen />);
 
     fireEvent.changeText(screen.getByLabelText('change_email.new_email'), 'taken@test.com');
@@ -71,7 +75,7 @@ describe('ChangeEmailScreen', () => {
     fireEvent.press(screen.getByLabelText('change_email.submit'));
 
     await waitFor(() => {
-      expect(screen.getByText('Email already taken')).toBeTruthy();
+      expect(screen.getByText('An account already exists with this email.')).toBeTruthy();
     });
   });
 });

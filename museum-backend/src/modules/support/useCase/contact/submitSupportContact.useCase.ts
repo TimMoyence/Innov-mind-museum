@@ -1,8 +1,8 @@
-import { describeLimit, isEmail, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+import { isEmail, TEXT_LIMITS } from '@musaium/shared';
 
 import { invalidInput } from '@shared/errors/app.error';
-import { logger } from '@shared/logger/logger';
-import { judgeSubmission } from '@shared/validation/honeypot';
+import { screenSubmission } from '@shared/validation/screen-submission';
+import { assertWithinLimit } from '@shared/validation/text-field';
 
 import type {
   SupportContactNotifier,
@@ -25,9 +25,7 @@ export class SubmitSupportContactUseCase {
 
   async execute(input: SubmitSupportContactInput): Promise<void> {
     const name = input.name.trim();
-    if (!isWithinLimit(name, TEXT_LIMITS.contactName)) {
-      throw invalidInput(describeLimit('name', TEXT_LIMITS.contactName));
-    }
+    assertWithinLimit('name', name, TEXT_LIMITS.contactName);
 
     const email = input.email.trim().toLowerCase();
     if (!isEmail(email)) {
@@ -35,18 +33,10 @@ export class SubmitSupportContactUseCase {
     }
 
     const message = input.message.trim();
-    if (!isWithinLimit(message, TEXT_LIMITS.contactMessage)) {
-      throw invalidInput(describeLimit('message', TEXT_LIMITS.contactMessage));
-    }
+    assertWithinLimit('message', message, TEXT_LIMITS.contactMessage);
 
-    const verdict = judgeSubmission(input);
-    if (verdict === 'bot') {
-      logger.warn('support_contact_honeypot_triggered', {
-        requestId: input.requestId,
-        hasIp: Boolean(input.ip),
-      });
-      return;
-    }
+    const verdict = screenSubmission(input, 'support_contact');
+    if (verdict === 'bot') return;
 
     const payload: SupportContactPayload = {
       name,

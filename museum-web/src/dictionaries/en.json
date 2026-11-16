@@ -2,9 +2,6 @@
   "a11y": {
     "skipToContent": "Skip to main content"
   },
-  "ai_disclosure": {
-    "banner": "Musaium is an AI assistant. Replies are generated automatically and may contain errors."
-  },
   "metadata": {
     "title": "Musaium — The Intelligent Museum Assistant",
     "description": "Photograph an artwork, ask a question, and let AI guide you. Musaium transforms every visit into an enriching experience."
@@ -393,7 +390,13 @@
       "noData": "No data available.",
       "conversations": "Conversations",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "errorDemoteLastAdmin": "The last admin cannot lose the admin role.",
+      "errorSuperAdminRequired": "Only a super admin can grant or remove the super admin role.",
+      "errorSuspendLastAdmin": "The last admin cannot be suspended.",
+      "errorDeleteLastSuperAdmin": "The last super admin cannot be deleted.",
+      "errorDemoteLastSuperAdmin": "The last super admin cannot lose the super admin role.",
+      "errorSuspendLastSuperAdmin": "The last super admin cannot be suspended."
     },
     "dashboardPage": {
       "subtitle": "Overview of your Musaium platform.",
@@ -403,7 +406,8 @@
         "totalMessages": "Total Messages",
         "recentSignups": "New This Week",
         "recentSessions": "Recent Sessions"
-      }
+      },
+      "errorLoad": "Could not load the statistics."
     },
     "auditLogsPage": {
       "subtitle": "Review system audit logs.",
@@ -413,7 +417,8 @@
       "columnResource": "Resource",
       "columnDetails": "Details",
       "emptyState": "No audit logs found.",
-      "tableAriaLabel": "Audit logs table (scroll horizontally)"
+      "tableAriaLabel": "Audit logs table (scroll horizontally)",
+      "errorLoad": "Could not load the audit logs."
     },
     "usersPage": {
       "subtitle": "Manage platform users.",
@@ -426,7 +431,9 @@
       "emptyState": "No users found.",
       "changeRole": "Change Role",
       "view": "View",
-      "viewAria": "View user details"
+      "viewAria": "View user details",
+      "errorLoad": "Could not load the users.",
+      "errorRoleChange": "Could not change the role."
     },
     "userDetailPage": {
       "subtitle": "Detailed user view.",
@@ -487,7 +494,8 @@
         "cancel": "Cancel",
         "success": "Tier updated.",
         "error": "Could not update tier."
-      }
+      },
+      "errorAction": "This action failed. Please try again."
     },
     "reportsPage": {
       "subtitle": "Review and moderate content reports.",
@@ -498,14 +506,18 @@
       "reportedMessage": "Reported message",
       "reviewerNotes": "Reviewer notes",
       "reviewerNotesPlaceholder": "Add notes about your review decision...",
-      "noReports": "No reports found."
+      "noReports": "No reports found.",
+      "errorLoad": "Could not load the reports.",
+      "errorUpdate": "Could not update the report."
     },
     "ticketsPage": {
       "subtitle": "Manage support tickets.",
       "update": "Update",
       "view": "View",
       "updateTicket": "Update Ticket",
-      "noTickets": "No tickets found."
+      "noTickets": "No tickets found.",
+      "errorLoad": "Could not load the tickets.",
+      "errorUpdate": "Could not update the ticket."
     },
     "reviewsPage": {
       "subtitle": "Moderate user-submitted reviews.",
@@ -521,7 +533,9 @@
       "pending": "Pending",
       "approved": "Approved",
       "rejected": "Rejected",
-      "noReviews": "No reviews found."
+      "noReviews": "No reviews found.",
+      "errorLoad": "Could not load the reviews.",
+      "errorModerate": "Could not moderate the review."
     },
     "supportPage": {
       "subtitle": "View and respond to support tickets.",
@@ -534,7 +548,9 @@
       "reply": "Reply",
       "replyPlaceholder": "Type your reply...",
       "send": "Send",
-      "sending": "Sending..."
+      "sending": "Sending...",
+      "errorLoad": "Could not load the ticket.",
+      "errorSend": "Could not send the message."
     },
     "analyticsPage": {
       "subtitle": "Platform usage and engagement statistics.",
@@ -554,7 +570,9 @@
       "topArtworks": "Top Artworks",
       "topMuseums": "Top Museums",
       "museum": "Museum",
-      "guardrailBlockRate": "Guardrail Block Rate"
+      "guardrailBlockRate": "Guardrail Block Rate",
+      "errorLoad": "Could not load the analytics.",
+      "errorLoadUsage": "Could not load the usage data."
     },
     "npsPage": {
       "subtitle": "Visitor recommendation sentiment, on the 0-10 scale.",
@@ -566,7 +584,8 @@
       "distribution": "Response distribution",
       "chartAriaLabel": "Bar chart of promoter, passive and detractor counts",
       "allMuseums": "All museums",
-      "noMuseumAssigned": "No museum is assigned to your account. Please contact an administrator."
+      "noMuseumAssigned": "No museum is assigned to your account. Please contact an administrator.",
+      "errorLoad": "Could not load the NPS."
     },
     "export": {
       "sessions": {
@@ -584,12 +603,78 @@
         "downloading": "Preparing…",
         "error": "Could not retrieve file"
       }
+    },
+    "museumsPage": {
+      "title": "Museums",
+      "subtitle": "Manage B2B-pilot museum tenants. Onboard new museums and configure branding.",
+      "newCta": "+ Onboard new museum",
+      "loading": "Loading museums…",
+      "empty": "No museums yet. Click \"Onboard new museum\" to add the first one.",
+      "errorLoad": "Could not load museums.",
+      "cols": {
+        "name": "Name",
+        "slug": "Slug",
+        "type": "Type",
+        "active": "Active",
+        "actions": "Actions"
+      },
+      "branding": "Branding"
+    },
+    "museumNewPage": {
+      "title": "Onboard a new museum",
+      "subtitle": "Create a B2B-pilot tenant. The museum becomes addressable by its slug and may receive branding in a follow-up step.",
+      "back": "← Back to museums",
+      "fields": {
+        "name": "Name",
+        "nameHelp": "Display name shown in the app. 1–200 characters.",
+        "slug": "Slug",
+        "slugHelp": "URL-safe identifier (lowercase, hyphens). Used in API paths. Cannot be changed easily later — pick carefully.",
+        "address": "Address (optional)",
+        "description": "Description (optional)",
+        "descriptionHelp": "Up to 2 000 characters. Shown on the public museum page.",
+        "museumType": "Type",
+        "latitude": "Latitude (optional)",
+        "longitude": "Longitude (optional)",
+        "geoHint": "Geographic centre of the museum, used for proximity search. Leave blank for now if you do not have it."
+      },
+      "submit": {
+        "idle": "Create museum",
+        "pending": "Creating…"
+      },
+      "errors": {
+        "nameRequired": "Name is required.",
+        "slugRequired": "Slug is required.",
+        "slugFormat": "Slug must be lowercase letters, digits, and hyphens only.",
+        "latRange": "Latitude must be between −90 and 90.",
+        "lngRange": "Longitude must be between −180 and 180.",
+        "serverGeneric": "Could not create museum.",
+        "slugTaken": "This slug is already taken. Choose another one."
+      }
+    },
+    "museumBrandingPage": {
+      "title": "Branding",
+      "subtitle": "Configure brand colors and logo for this museum. Changes take effect on the next visitor session.",
+      "back": "← Back to museums",
+      "loading": "Loading…",
+      "errorLoad": "Could not load museum.",
+      "errorSave": "Could not save branding.",
+      "notFound": "Museum not found.",
+      "fields": {
+        "primary": "Primary color",
+        "primaryHex": "Primary color hex value",
+        "logoUrl": "Logo URL",
+        "logoHint": "Public HTTPS URL for the museum logo (PNG, SVG, or WebP). True file upload is planned for V1.1."
+      },
+      "errors": {
+        "primaryColor": "Must be a #RRGGBB hex color.",
+        "logoUrl": "Must be an HTTPS URL."
+      },
+      "preview": "Preview",
+      "save": {
+        "idle": "Save branding",
+        "pending": "Saving…"
+      },
+      "saved": "Branding saved."
     }
-  },
-  "analytics_consent": {
-    "title": "Analytics and cookies",
-    "description": "Musaium uses Plausible Analytics, a cookieless and privacy-friendly audience measurement tool. No personal data is collected and no advertising tracker is set on your device. You can decline this measurement if you prefer.",
-    "opt_in": "I accept",
-    "opt_out": "Decline"
   }
 }

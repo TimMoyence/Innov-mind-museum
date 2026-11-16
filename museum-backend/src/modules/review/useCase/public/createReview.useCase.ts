@@ -1,6 +1,7 @@
-import { describeLimit, isWithinLimit, TEXT_LIMITS } from '@musaium/shared';
+import { TEXT_LIMITS } from '@musaium/shared';
 
 import { invalidInput, unauthorized } from '@shared/errors/app.error';
+import { assertWithinLimit } from '@shared/validation/text-field';
 
 import type { IReviewSessionLookup } from '@modules/review/domain/ports/review-session-lookup.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
@@ -43,9 +44,7 @@ export class CreateReviewUseCase {
     }
 
     const comment = input.comment.trim();
-    if (!isWithinLimit(comment, TEXT_LIMITS.reviewComment)) {
-      throw invalidInput(describeLimit('comment', TEXT_LIMITS.reviewComment));
-    }
+    assertWithinLimit('comment', comment, TEXT_LIMITS.reviewComment);
 
     const derivedName = buildReviewDisplayName(input.user).slice(0, 128);
 

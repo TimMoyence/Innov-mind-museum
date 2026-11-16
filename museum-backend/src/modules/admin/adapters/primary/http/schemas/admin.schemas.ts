@@ -1,15 +1,16 @@
 import { TEXT_LIMITS } from '@musaium/shared';
 import { z } from 'zod';
 
+import { ANALYTICS_GRANULARITIES, REPORT_STATUSES } from '@modules/admin/domain/admin/admin.types';
 import { UserRole } from '@modules/auth/domain/user/user-role';
 import { REVIEW_STATUSES } from '@modules/review/domain/review/review.types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@modules/support/domain/ticket/support.types';
 import { textField } from '@shared/validation/text-field';
 
-const validRoles = Object.values(UserRole) as [string, ...string[]];
+const userRole = z.enum(Object.values(UserRole) as [UserRole, ...UserRole[]]);
 
 export const changeUserRoleSchema = z.object({
-  role: z.enum(validRoles),
+  role: userRole,
 });
 
 export const changeUserTierSchema = z.object({
@@ -17,13 +18,13 @@ export const changeUserTierSchema = z.object({
 });
 
 export const resolveReportSchema = z.object({
-  status: z.enum(['pending', 'reviewed', 'dismissed']),
+  status: z.enum(REPORT_STATUSES),
   reviewerNotes: textField(TEXT_LIMITS.reviewerNotes).optional(),
 });
 
 export const updateTicketSchema = z.object({
-  status: z.enum(['open', 'in_progress', 'resolved', 'closed']).optional(),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
+  status: z.enum(TICKET_STATUSES).optional(),
+  priority: z.enum(TICKET_PRIORITIES).optional(),
   assignedTo: z.number().int().nullable().optional(),
 });
 
@@ -34,7 +35,7 @@ const paginationQuery = z.object({
 
 export const listUsersQuerySchema = paginationQuery.extend({
   search: z.string().optional(),
-  role: z.string().optional(),
+  role: userRole.optional(),
 });
 
 export const auditLogsQuerySchema = paginationQuery.extend({
@@ -46,7 +47,7 @@ export const auditLogsQuerySchema = paginationQuery.extend({
 });
 
 export const listReportsQuerySchema = paginationQuery.extend({
-  status: z.enum(['pending', 'reviewed', 'dismissed']).optional(),
+  status: z.enum(REPORT_STATUSES).optional(),
   reason: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
@@ -58,7 +59,7 @@ const isoDateString = z.coerce
   .optional();
 
 export const usageAnalyticsQuerySchema = z.strictObject({
-  granularity: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  granularity: z.enum(ANALYTICS_GRANULARITIES).optional(),
   from: isoDateString,
   to: isoDateString,
   days: z.coerce.number().int().min(1).max(365).optional(),
@@ -78,14 +79,14 @@ export const engagementAnalyticsQuerySchema = z.strictObject({
 export const listTicketsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  status: z.enum(TICKET_STATUSES as [string, ...string[]]).optional(),
-  priority: z.enum(TICKET_PRIORITIES as [string, ...string[]]).optional(),
+  status: z.enum(TICKET_STATUSES).optional(),
+  priority: z.enum(TICKET_PRIORITIES).optional(),
 });
 
 export const listReviewsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  status: z.enum(REVIEW_STATUSES as [string, ...string[]]).optional(),
+  status: z.enum(REVIEW_STATUSES).optional(),
 });
 
 export const statsQuerySchema = z.strictObject({

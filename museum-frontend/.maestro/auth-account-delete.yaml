@@ -48,10 +48,10 @@ appId: com.musaium.mobile.preview
 
 - scrollUntilVisible:
     element:
-      text: 'Zone de danger|Danger Zone'
+      id: 'settings-delete-account'
     direction: DOWN
     timeout: 30000
-    visibilityPercentage: 1
+    visibilityPercentage: 100
     speed: 25
     waitToSettleTimeoutMs: 800
 - assertVisible:
@@ -59,10 +59,9 @@ appId: com.musaium.mobile.preview
 
 - tapOn:
     id: 'settings-delete-account'
-
 - extendedWaitUntil:
     visible:
-      text: '.*(permanently|définitivement).*'
+      text: '.*(This will permanently|Cela supprimera définitivement).*'
     timeout: 5000
 
 - tapOn:

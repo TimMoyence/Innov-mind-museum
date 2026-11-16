@@ -24,6 +24,6 @@ test('maps app error kinds to user friendly messages', () => {
 });
 
 test('falls back to generic messages', () => {
-  assert.equal(getErrorMessage(new Error('Boom')), 'Boom');
+  assert.equal(getErrorMessage(new Error('Boom')), 'Something went wrong. Please try again.');
   assert.equal(getErrorMessage(null), 'Something went wrong. Please try again.');
 });

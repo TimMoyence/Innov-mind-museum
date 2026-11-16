@@ -35,8 +35,10 @@ appId: com.musaium.mobile.preview
       text: 'Votre compagnon de musée|Your museum companion'
     timeout: 40000
 
-- openLink:
-    link: 'musaium:///(stack)/museums-picker'
+- runFlow:
+    file: helpers/open-link.yaml
+    env:
+      LINK: 'musaium:///(stack)/museums-picker'
 - waitForAnimationToEnd:
     timeout: 10000
 - extendedWaitUntil:

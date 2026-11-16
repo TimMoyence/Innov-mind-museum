@@ -8,11 +8,11 @@ import { semantic, space } from '@/shared/ui/tokens';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
-const THEME_OPTION_KEYS: { value: ThemeMode; key: string }[] = [
+const THEME_OPTION_KEYS = [
   { value: 'system', key: 'settings.theme_system' },
   { value: 'light', key: 'settings.theme_light' },
   { value: 'dark', key: 'settings.theme_dark' },
-];
+] as const satisfies readonly { value: ThemeMode; key: string }[];
 
 interface SettingsThemeCardProps {
   mode: ThemeMode;
@@ -48,7 +48,7 @@ export const SettingsThemeCard = ({ mode, onSetMode }: SettingsThemeCardProps) =
               void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }}
             accessibilityRole="button"
-            accessibilityLabel={t('a11y.settings.theme_button', { theme: option.key })}
+            accessibilityLabel={t('a11y.settings.theme_button', { theme: t(option.key) })}
             accessibilityState={{ selected: mode === option.value }}
           >
             <Text
@@ -58,7 +58,7 @@ export const SettingsThemeCard = ({ mode, onSetMode }: SettingsThemeCardProps) =
                 mode === option.value && [styles.themeButtonTextSelected, { color: theme.primary }],
               ]}
             >
-              {t(option.key as 'settings.theme_system')}
+              {t(option.key)}
             </Text>
           </Pressable>
         ))}

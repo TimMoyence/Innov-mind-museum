@@ -1,10 +1,10 @@
 import type { PaginationParams } from '@shared/types/pagination';
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
-export type TicketPriority = 'low' | 'medium' | 'high';
+export const TICKET_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
+export const TICKET_PRIORITIES = ['low', 'medium', 'high'] as const;
 
-export const TICKET_STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed'];
-export const TICKET_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high'];
+export type TicketStatus = (typeof TICKET_STATUSES)[number];
+export type TicketPriority = (typeof TICKET_PRIORITIES)[number];
 
 export interface CreateTicketInput {
   userId: number;
@@ -63,4 +63,12 @@ export interface TicketMessageDTO {
 
 export interface TicketDetailDTO extends TicketDTO {
   messages: TicketMessageDTO[];
+}
+
+export interface TicketMessageView extends TicketMessageDTO {
+  fromStaff: boolean;
+}
+
+export interface TicketDetailView extends TicketDTO {
+  messages: TicketMessageView[];
 }

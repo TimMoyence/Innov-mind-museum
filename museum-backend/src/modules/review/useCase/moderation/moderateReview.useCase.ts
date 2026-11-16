@@ -1,12 +1,15 @@
+import { MODERATION_STATUSES } from '@modules/review/domain/review/moderation-statuses';
 import { auditService as defaultAuditService, AUDIT_ADMIN_REVIEW_MODERATED } from '@shared/audit';
+import { isOutsideMuseumScope } from '@shared/authz/tenant-scope';
 import { DEFAULT_EMAIL_LOCALE } from '@shared/email/email-locale';
-import { invalidInput, notFound } from '@shared/errors/app.error';
+import { notFound } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { fireAndForget } from '@shared/utils/fire-and-forget';
+import { assertOneOf } from '@shared/validation/one-of';
 
 import type { ReviewModerationNotifier } from '@modules/review/domain/ports/review-moderation-notifier.port';
 import type { IReviewRepository } from '@modules/review/domain/review/review.repository.interface';
-import type { ReviewDTO, ReviewStatus } from '@modules/review/domain/review/review.types';
+import type { ReviewDTO } from '@modules/review/domain/review/review.types';
 import type { AuditService } from '@shared/audit';
 
 export interface ReviewAuthorSnapshot {
@@ -26,8 +29,6 @@ export interface ModerateReviewUseCaseInput {
   requestId?: string;
   scopeMuseumId?: number | null;
 }
-
-const MODERATION_STATUSES: ReviewStatus[] = ['approved', 'rejected'];
 
 export interface ModerateReviewUseCaseDeps {
   audit?: Pick<AuditService, 'log' | 'logActorAction'>;
@@ -52,22 +53,20 @@ export class ModerateReviewUseCase {
   }
 
   async execute(input: ModerateReviewUseCaseInput): Promise<ReviewDTO> {
-    if (!MODERATION_STATUSES.includes(input.status as ReviewStatus)) {
-      throw invalidInput(`status must be one of: ${MODERATION_STATUSES.join(', ')}`);
-    }
+    assertOneOf('status', MODERATION_STATUSES, input.status);
 
     const before = await this.repository.getReviewById(input.reviewId);
     if (!before) {
       throw notFound('Review not found');
     }
 
-    if (input.scopeMuseumId != null && before.museumId !== input.scopeMuseumId) {
+    if (isOutsideMuseumScope(input.scopeMuseumId, before.museumId)) {
       throw notFound('Review not found');
     }
 
     const updated = await this.repository.moderateReview({
       reviewId: input.reviewId,
-      status: input.status as ReviewStatus,
+      status: input.status,
     });
 
     if (!updated) {

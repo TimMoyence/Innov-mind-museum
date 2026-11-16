@@ -2,6 +2,7 @@ import { type NextFunction, type Request, type Response, Router } from 'express'
 
 import { funnelEventSchema } from '@modules/telemetry/adapters/primary/http/schemas/funnel.schemas';
 import { getTelemetryPort } from '@modules/telemetry/composition/telemetry.module';
+import { consentRequired } from '@shared/errors/app.error';
 import { logger } from '@shared/logger/logger';
 import { byIp, createRateLimitMiddleware } from '@shared/middleware/rate-limit.middleware';
 import { validateBody } from '@shared/middleware/validate-body.middleware';
@@ -48,7 +49,7 @@ const stripPropsPii = (props: PropsBag | undefined): PropsBag | undefined => {
   );
 };
 
-const requireAnalyticsConsentHeader = (req: Request, res: Response, next: NextFunction): void => {
+const requireAnalyticsConsentHeader = (req: Request, _res: Response, next: NextFunction): void => {
   const headerValue = req.headers[CONSENT_HEADER];
   if (headerValue === CONSENT_GRANTED_VALUE) {
     next();
@@ -59,7 +60,7 @@ const requireAnalyticsConsentHeader = (req: Request, res: Response, next: NextFu
     userAgent: req.get('user-agent') ?? undefined,
     headerPresent: headerValue !== undefined,
   });
-  res.status(403).json({ code: 'consent_required', error: 'consent_required' });
+  throw consentRequired();
 };
 
 telemetryRouter.post(

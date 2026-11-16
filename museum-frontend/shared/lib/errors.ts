@@ -23,11 +23,8 @@ export const isAppError = (error: unknown): error is AppError => {
   return 'kind' in error && 'message' in error;
 };
 
-export const isDailyLimitError = (error: unknown): boolean => {
-  if (isAppError(error) && error.kind === 'DailyLimitReached') return true;
-  if (error instanceof Error && error.message.includes('DAILY_LIMIT_REACHED')) return true;
-  return false;
-};
+export const isDailyLimitError = (error: unknown): boolean =>
+  isAppError(error) && error.kind === 'DailyLimitReached';
 
 const DEFAULT_SOCIAL_AUTH = 'Sign-in failed. Please try again.';
 const DEFAULT_CONTRACT = 'Unexpected server response. Please try again.';
@@ -120,8 +117,6 @@ const reviewMessage = (code: string | undefined): string => {
       return t('error.review.load_failed', 'Failed to load reviews.');
     case 'load_more_failed':
       return t('error.review.load_more_failed', 'Failed to load more reviews.');
-    case 'already_reviewed':
-      return t('error.review.already_reviewed', 'You have already submitted a review.');
     case 'submit_failed':
       return t('error.review.submit_failed', 'Review submission failed. Please try again.');
     default:
@@ -149,6 +144,16 @@ const authCodeMessage = (code: string | undefined): string | null => {
       return t('error.auth.account_suspended', 'Your account has been suspended. Contact support.');
     case 'ACCOUNT_DELETED':
       return t('error.auth.account_deleted', 'This account has been deleted.');
+    case 'CANNOT_DELETE_LAST_ADMIN':
+      return t(
+        'error.auth.last_admin_delete',
+        'You are the last administrator. Appoint another administrator before deleting your account.',
+      );
+    case 'CANNOT_DELETE_LAST_SUPER_ADMIN':
+      return t(
+        'error.auth.last_super_admin_delete',
+        'You are the last super administrator. Appoint another super administrator before deleting your account.',
+      );
     case 'AUTH_LOCKED_OUT':
       return t('error.auth.locked_out', 'Too many failed attempts. Try again in a few minutes.');
     case 'MINOR_PARENTAL_CONSENT_REQUIRED':
@@ -200,13 +205,14 @@ export const getErrorMessage = (error: unknown): string => {
         return offlinePackMessage(error.code);
       case 'Review':
         return reviewMessage(error.code);
-      default:
-        return error.message || t('error.unknown', 'Something went wrong. Please try again.');
+      case 'Unknown':
+        return error.code === 'COMPARE_ENCODER_UNAVAILABLE'
+          ? t(
+              'chat.compare.error.unavailable',
+              'Visual similarity is temporarily unavailable. Please try again in a moment.',
+            )
+          : t('error.unknown', 'Something went wrong. Please try again.');
     }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
   }
 
   return t('error.unknown', 'Something went wrong. Please try again.');

@@ -45,7 +45,7 @@ export default function AdminDashboardPage() {
     loading,
     error,
   } = useFetchData<AdminStats>('/api/admin/stats', {
-    errorFallback: 'Failed to load stats',
+    errorFallback: adminDict.dashboardPage.errorLoad,
   });
 
   return (

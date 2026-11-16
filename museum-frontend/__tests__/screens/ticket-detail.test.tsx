@@ -1,6 +1,8 @@
 import '../helpers/test-utils';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
+import { makeAppError } from '../helpers/factories';
 import { makeSupportTicketDetail, makeTicketMessage } from '../helpers/factories/support.factories';
 
 const mockExpoRouter = jest.requireMock<Record<string, unknown>>('expo-router');
@@ -43,6 +45,7 @@ describe('TicketDetailScreen', () => {
             ticketId: 'ticket-123',
             text: 'We are looking into this',
             senderRole: 'staff',
+            fromStaff: true,
           }),
         ],
       }),
@@ -154,6 +157,43 @@ describe('TicketDetailScreen', () => {
     expect(screen.getByText('We are looking into this')).toBeTruthy();
   });
 
+  it('TICKET-PERSONNEL · places a message on the staff side only when the server says so', async () => {
+    mockGetTicketDetail.mockResolvedValueOnce({
+      ticket: makeSupportTicketDetail({
+        id: 'ticket-123',
+        messages: [
+          makeTicketMessage({
+            id: 'own',
+            text: 'Written by the author',
+            senderRole: 'admin',
+            fromStaff: false,
+          }),
+          makeTicketMessage({
+            id: 'staff',
+            text: 'Answered by the staff',
+            senderRole: 'super_admin',
+            fromStaff: true,
+          }),
+        ],
+      }),
+    });
+
+    render(<TicketDetailScreen />);
+
+    const sideOf = (text: string): unknown => {
+      let node = screen.getByText(text).parent;
+      while (node && StyleSheet.flatten(node.props.style)?.alignSelf === undefined) {
+        node = node.parent;
+      }
+      return node ? StyleSheet.flatten(node.props.style).alignSelf : undefined;
+    };
+    await waitFor(() => {
+      expect(screen.getByText('Written by the author')).toBeTruthy();
+    });
+    expect(sideOf('Written by the author')).toBe('flex-start');
+    expect(sideOf('Answered by the staff')).toBe('flex-end');
+  });
+
   it('renders the empty-thread placeholder when messages is empty', async () => {
     mockGetTicketDetail.mockResolvedValue({
       ticket: makeSupportTicketDetail({ messages: [] }),
@@ -220,7 +260,7 @@ describe('TicketDetailScreen', () => {
   });
 
   it('surfaces an inline error when sending a reply fails', async () => {
-    mockAddTicketMessage.mockRejectedValue(new Error('Send failed'));
+    mockAddTicketMessage.mockRejectedValue(makeAppError({ kind: 'Network' }));
     render(<TicketDetailScreen />);
     await waitFor(() => {
       expect(screen.getByLabelText('tickets.send')).toBeTruthy();
@@ -228,16 +268,18 @@ describe('TicketDetailScreen', () => {
     fireEvent.changeText(screen.getByPlaceholderText('tickets.replyPlaceholder'), 'broken');
     fireEvent.press(screen.getByLabelText('tickets.send'));
     await waitFor(() => {
-      expect(screen.getByText('Send failed')).toBeTruthy();
+      expect(
+        screen.getByText('Network unavailable. Check your connection and try again.'),
+      ).toBeTruthy();
     });
   });
 
   it('shows the standalone error notice when initial load fails (no ticket yet)', async () => {
-    mockGetTicketDetail.mockRejectedValue(new Error('Not found'));
+    mockGetTicketDetail.mockRejectedValue(makeAppError({ kind: 'NotFound', status: 404 }));
     render(<TicketDetailScreen />);
     await waitFor(() => {
       expect(screen.getByTestId('error-notice')).toBeTruthy();
     });
-    expect(screen.getByText('Not found')).toBeTruthy();
+    expect(screen.getByText('Content not found.')).toBeTruthy();
   });
 });

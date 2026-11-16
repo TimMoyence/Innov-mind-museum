@@ -1,5 +1,6 @@
 'use client';
 
+import { useAdminDict } from '@/lib/admin-dictionary';
 import Image from 'next/image';
 import { useState, type SyntheticEvent } from 'react';
 import Link from 'next/link';
@@ -11,29 +12,6 @@ import { isHexColor, isHttpsUrl, pickContrastingTextColor } from '@musaium/share
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { FormFieldError } from '@/components/forms/FormFieldError';
 import Button from '@/components/ui/Button';
-
-const STRINGS = {
-  title: 'Branding',
-  subtitle:
-    'Configure brand colors and logo for this museum. Changes take effect on the next visitor session.',
-  back: '← Back to museums',
-  loading: 'Loading…',
-  errorLoad: 'Could not load museum.',
-  errorSave: 'Could not save branding.',
-  notFound: 'Museum not found.',
-  fields: {
-    primary: 'Primary color',
-    logoUrl: 'Logo URL',
-    logoHint:
-      'Public HTTPS URL for the museum logo (PNG, SVG, or WebP). True file upload is planned for V1.1.',
-  },
-  preview: 'Preview',
-  save: {
-    idle: 'Save branding',
-    pending: 'Saving…',
-  },
-  saved: 'Branding saved.',
-} as const;
 
 function asBranding(config: Record<string, unknown> | undefined): MuseumBranding {
   if (!config) return {};
@@ -49,6 +27,8 @@ interface GetMuseumResponse {
 }
 
 export default function MuseumBrandingPage() {
+  const adminDict = useAdminDict();
+  const copy = adminDict.museumBrandingPage;
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -65,7 +45,7 @@ export default function MuseumBrandingPage() {
     refetch: load,
   } = useFetchData<GetMuseumResponse>(id ? `/api/museums/${id}` : null, {
     deps: [id],
-    errorFallback: STRINGS.errorLoad,
+    errorFallback: copy.errorLoad,
   });
   const museum = museumResponse?.museum ?? null;
   const combinedError = error ?? mutationError;
@@ -86,10 +66,10 @@ export default function MuseumBrandingPage() {
   function validate(): typeof fieldErrors {
     const next: typeof fieldErrors = {};
     if (branding.primaryColor && !isHexColor(branding.primaryColor)) {
-      next.primaryColor = 'Must be a #RRGGBB hex color.';
+      next.primaryColor = copy.errors.primaryColor;
     }
     if (branding.logoUrl && !isHttpsUrl(branding.logoUrl)) {
-      next.logoUrl = 'Must be an HTTPS URL.';
+      next.logoUrl = copy.errors.logoUrl;
     }
     return next;
   }
@@ -113,34 +93,34 @@ export default function MuseumBrandingPage() {
         config: nextConfig,
       });
       void load();
-      setSuccess(STRINGS.saved);
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : STRINGS.errorSave);
+      setSuccess(copy.saved);
+    } catch {
+      setMutationError(copy.errorSave);
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-600">{STRINGS.loading}</p>;
+    return <p className="text-sm text-gray-600">{copy.loading}</p>;
   }
   if (combinedError && !museum) {
     return <AlertBanner variant="error" message={combinedError} />;
   }
   if (!museum) {
-    return <p className="text-sm text-gray-600">{STRINGS.notFound}</p>;
+    return <p className="text-sm text-gray-600">{copy.notFound}</p>;
   }
 
   return (
     <section className="mx-auto max-w-2xl space-y-6">
       <header>
         <Link href="../../museums" className="text-sm text-blue-600 hover:underline">
-          {STRINGS.back}
+          {copy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-          {STRINGS.title} — {museum.name}
+          {copy.title} — {museum.name}
         </h1>
-        <p className="mt-1 text-sm text-gray-600">{STRINGS.subtitle}</p>
+        <p className="mt-1 text-sm text-gray-600">{copy.subtitle}</p>
       </header>
 
       {combinedError && <AlertBanner variant="error" message={combinedError} />}
@@ -155,7 +135,7 @@ export default function MuseumBrandingPage() {
       >
         <div>
           <label htmlFor="b-primaryColor" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.primary}
+            {copy.fields.primary}
           </label>
           <div className="mt-1 flex items-center gap-2">
             <input
@@ -175,7 +155,7 @@ export default function MuseumBrandingPage() {
               }}
               placeholder="#000000"
               className="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              aria-label="primaryColor hex value"
+              aria-label={copy.fields.primaryHex}
             />
           </div>
           <FormFieldError error={fieldErrors.primaryColor} />
@@ -183,7 +163,7 @@ export default function MuseumBrandingPage() {
 
         <div>
           <label htmlFor="b-logo" className="block text-sm font-medium text-gray-700">
-            {STRINGS.fields.logoUrl}
+            {copy.fields.logoUrl}
           </label>
           <input
             id="b-logo"
@@ -195,17 +175,17 @@ export default function MuseumBrandingPage() {
             placeholder="https://cdn.musaium.com/museums/louvre/logo.svg"
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <p className="mt-1 text-xs text-gray-500">{STRINGS.fields.logoHint}</p>
+          <p className="mt-1 text-xs text-gray-500">{copy.fields.logoHint}</p>
           <FormFieldError error={fieldErrors.logoUrl} />
         </div>
 
         {(branding.primaryColor ?? branding.logoUrl) && (
           <fieldset
-            aria-label={STRINGS.preview}
+            aria-label={copy.preview}
             className="rounded-md border border-gray-200 bg-gray-50 p-4"
           >
             <legend className="px-2 text-xs font-medium uppercase tracking-wider text-gray-500">
-              {STRINGS.preview}
+              {copy.preview}
             </legend>
             <div
               className="flex items-center gap-3 rounded p-3"
@@ -240,7 +220,7 @@ export default function MuseumBrandingPage() {
             Cancel
           </Link>
           <Button type="submit" variant="primary" size="sm" disabled={saving}>
-            {saving ? STRINGS.save.pending : STRINGS.save.idle}
+            {saving ? copy.save.pending : copy.save.idle}
           </Button>
         </div>
       </form>

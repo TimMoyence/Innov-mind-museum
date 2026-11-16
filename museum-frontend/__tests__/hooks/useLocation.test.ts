@@ -64,7 +64,7 @@ describe('useLocation', () => {
     const { result } = renderHook(() => useLocation());
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Location unavailable');
+      expect(result.current.error).toBe('Unable to determine your location.');
     });
   });
 
@@ -74,7 +74,7 @@ describe('useLocation', () => {
     const { result } = renderHook(() => useLocation());
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Failed to get location');
+      expect(result.current.error).toBe('Unable to determine your location.');
     });
   });
 
@@ -112,7 +112,7 @@ describe('useLocation', () => {
     const { result } = renderHook(() => useLocation());
 
     await waitFor(() => {
-      expect(result.current.error).toBe('Permission API crashed');
+      expect(result.current.error).toBe('Unable to determine your location.');
     });
 
     expect(result.current.latitude).toBeNull();
@@ -183,7 +183,7 @@ describe('useLocation', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.error).toBe('timeout');
+      expect(result.current.error).toBe('Location lookup timed out.');
     });
     expect(result.current.latitude).toBe(38.7223);
     expect(result.current.longitude).toBe(-9.1393);

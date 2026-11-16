@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { AdminDictProvider } from '@/lib/admin-dictionary';
@@ -8,6 +8,7 @@ import UserDetailPage from '@/app/[locale]/admin/users/[id]/page';
 import { mockAdminDict } from '@/__tests__/helpers/admin-dict.fixture';
 import { requireIndex } from '@/__tests__/helpers/require-index';
 import type { AdminUserDTO } from '@/lib/admin-types';
+import type * as ApiModule from '@/lib/api';
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
@@ -32,34 +33,23 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-const { mockApiGet, mockApiPost, mockApiPatch, mockApiDelete, ApiError } = vi.hoisted(() => {
-  class ApiError extends Error {
-    constructor(
-      public status: number,
-      public statusText: string,
-      message: string,
-    ) {
-      super(message);
-      this.name = 'ApiError';
-    }
-  }
-  return {
-    mockApiGet: vi.fn(),
-    mockApiPost: vi.fn(),
-    mockApiPatch: vi.fn(),
-    mockApiDelete: vi.fn(),
-    ApiError,
-  };
-});
+const { mockApiGet, mockApiPost, mockApiPatch, mockApiDelete } = vi.hoisted(() => ({
+  mockApiGet: vi.fn(),
+  mockApiPost: vi.fn(),
+  mockApiPatch: vi.fn(),
+  mockApiDelete: vi.fn(),
+}));
 
-vi.mock('@/lib/api', () => ({
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
   apiGet: mockApiGet,
   apiPost: mockApiPost,
   apiPatch: mockApiPatch,
   apiDelete: mockApiDelete,
   registerLogoutHandler: vi.fn(),
-  ApiError,
 }));
+
+const { ApiError } = await import('@/lib/api');
 
 function makeUser(overrides: Partial<AdminUserDTO> = {}): AdminUserDTO {
   return {
@@ -277,6 +267,32 @@ describe('UserDetailPage', () => {
     });
   });
 
+  it('ACTIONS-UTILISATEUR · issues POST /unsuspend on confirm and announces the reactivation', async () => {
+    mockLoginAs(SUPER_ADMIN_LOGIN);
+    mockApiGet.mockResolvedValueOnce({ user: makeUser({ suspended: true }) });
+    mockApiPost.mockResolvedValueOnce({ user: makeUser({ suspended: false }) });
+
+    render(
+      <Providers>
+        <AuthenticatedDetailPage loginAs={SUPER_ADMIN_LOGIN} />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Bob Smith' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unsuspend' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Unsuspend' }));
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenLastCalledWith('/api/admin/users/42/unsuspend', undefined);
+    });
+    expect(await screen.findByText('User reactivated.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('issues POST /suspend on confirm', async () => {
     mockLoginAs(SUPER_ADMIN_LOGIN);
     mockApiGet.mockResolvedValueOnce({ user: makeUser() });
@@ -358,7 +374,9 @@ describe('UserDetailPage', () => {
   it('surfaces the last-admin error verbatim through the dict mapping', async () => {
     mockLoginAs(SUPER_ADMIN_LOGIN);
     mockApiGet.mockResolvedValueOnce({ user: makeUser({ role: 'admin' }) });
-    mockApiDelete.mockRejectedValueOnce(new ApiError(409, 'Conflict', 'CANNOT_DELETE_LAST_ADMIN'));
+    mockApiDelete.mockRejectedValueOnce(
+      new ApiError(409, 'Conflict', 'CANNOT_DELETE_LAST_ADMIN', 'CANNOT_DELETE_LAST_ADMIN'),
+    );
 
     render(
       <Providers>
@@ -384,6 +402,94 @@ describe('UserDetailPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Cannot delete the last admin.')).toBeInTheDocument();
+    });
+  });
+
+  it('DERNIER-ADMIN · rétrograder le dernier administrateur affiche « The last admin cannot lose the admin role. »', async () => {
+    mockLoginAs(ADMIN_LOGIN);
+    mockApiGet.mockResolvedValueOnce({ user: makeUser({ role: 'admin' }) });
+    mockApiPatch.mockRejectedValueOnce(
+      new ApiError(409, 'Conflict', 'Cannot remove the last admin', 'CANNOT_DEMOTE_LAST_ADMIN'),
+    );
+
+    render(
+      <Providers>
+        <AuthenticatedDetailPage loginAs={ADMIN_LOGIN} />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Bob Smith' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Change role' }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('New role'), { target: { value: 'visitor' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('The last admin cannot lose the admin role.')).toBeInTheDocument();
+    });
+  });
+
+  it('SUPER-ADMIN-SEUL · un super_admin rétrogradé depuis sa connexion qui touche au rôle d’un super_admin lit « Only a super admin can grant or remove the super admin role. »', async () => {
+    mockLoginAs(SUPER_ADMIN_LOGIN);
+    mockApiGet.mockResolvedValueOnce({ user: makeUser({ role: 'super_admin' }) });
+    mockApiPatch.mockRejectedValueOnce(
+      new ApiError(403, 'Forbidden', 'SUPER_ADMIN_REQUIRED', 'SUPER_ADMIN_REQUIRED'),
+    );
+
+    render(
+      <Providers>
+        <AuthenticatedDetailPage loginAs={SUPER_ADMIN_LOGIN} />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Bob Smith' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Change role' }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText('New role'), { target: { value: 'admin' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Only a super admin can grant or remove the super admin role.'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('SUPER-ADMIN-SEUL · suspendre le dernier administrateur actif affiche « The last admin cannot be suspended. »', async () => {
+    mockLoginAs(SUPER_ADMIN_LOGIN);
+    mockApiGet.mockResolvedValueOnce({ user: makeUser({ role: 'admin' }) });
+    mockApiPost.mockRejectedValueOnce(
+      new ApiError(409, 'Conflict', 'CANNOT_SUSPEND_LAST_ADMIN', 'CANNOT_SUSPEND_LAST_ADMIN'),
+    );
+
+    render(
+      <Providers>
+        <AuthenticatedDetailPage loginAs={SUPER_ADMIN_LOGIN} />
+      </Providers>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Bob Smith' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Suspend' }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    const confirm = screen
+      .getAllByRole('button', { name: 'Suspend' })
+      .filter((btn) => btn.classList.contains('bg-red-600'));
+    fireEvent.click(requireIndex(confirm, 0, 'suspend confirm buttons'));
+
+    await waitFor(() => {
+      expect(screen.getByText('The last admin cannot be suspended.')).toBeInTheDocument();
     });
   });
 });

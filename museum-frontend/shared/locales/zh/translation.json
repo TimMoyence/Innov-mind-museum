@@ -690,7 +690,9 @@
       "account_suspended": "您的账户已被暂停，请联系客服。",
       "account_deleted": "该账户已被删除。",
       "locked_out": "失败次数过多，请几分钟后重试。",
-      "minor_parental_consent_required": "注册仅限15岁及以上用户（法国数字成年年龄）。"
+      "minor_parental_consent_required": "注册仅限15岁及以上用户（法国数字成年年龄）。",
+      "last_admin_delete": "您是最后一位管理员。删除账户前，请先任命另一位管理员。",
+      "last_super_admin_delete": "您是最后一位超级管理员。删除账户前，请先任命另一位超级管理员。"
     },
     "chat": {
       "contract_invalid": "服务器返回无效响应，请重试。",
@@ -709,7 +711,6 @@
       "generic": "暂时无法加载评价。",
       "load_failed": "加载评价失败。",
       "load_more_failed": "无法加载更多评价。",
-      "already_reviewed": "您已提交过评价。",
       "submit_failed": "评价提交失败,请重试。"
     }
   },
@@ -1150,10 +1151,8 @@
     "commentPlaceholder": "分享你的体验...",
     "submit": "提交评价",
     "success": "感谢你的评价！",
-    "alreadyReviewed": "你已经提交过评价",
     "empty": "暂无评价，快来写第一条吧！",
     "reviewCount": "{{count}}条评价",
-    "submitFailed": "提交失败，请重试。",
     "age": {
       "today": "今天",
       "yesterday": "昨天",

@@ -121,7 +121,7 @@ describe('useReviews', () => {
     expect(result.current.error).toBe('Failed to load reviews.');
   });
 
-  it('sets already_reviewed error on 409 conflict', async () => {
+  it('AVIS-ERREUR · un envoi refusé affiche « Review submission failed. Please try again. », même quand le texte de l’erreur contient 409 : un compte peut publier plusieurs avis', async () => {
     mockSubmitReview.mockRejectedValue(new Error('Request failed with status 409'));
 
     const { result } = renderHook(() => useReviews());
@@ -136,6 +136,6 @@ describe('useReviews', () => {
     });
 
     expect(submitResult).toBe(false);
-    expect(result.current.submitError).toBe('You have already submitted a review.');
+    expect(result.current.submitError).toBe('Review submission failed. Please try again.');
   });
 });
